@@ -122,7 +122,7 @@ export async function verifyJwtRS256(token: string, publicKeyPem: string): Promi
             claims,
             header,
             expiresAt: exp ?? null,
-            reason: ok ? undefined : 'Signature verify failed',
+            reason: ok ? undefined : '密钥异常，请联系管理员',
         }
     } catch (e) {
         return { validSignature: false, isExpired: true, claims: null, header: null, expiresAt: null, reason: (e as Error).message }
@@ -132,7 +132,14 @@ export async function verifyJwtRS256(token: string, publicKeyPem: string): Promi
 export async function getLicenseInfoFromToken(token: string): Promise<LicenseVerifyResult> {
     const pem = import.meta.env.VITE_JWT_PUBLIC_KEY as string | undefined
     if (!pem || typeof pem !== 'string' || pem.trim().length === 0) {
-        return { validSignature: false, isExpired: true, claims: null, header: null, expiresAt: null, reason: 'Public key not configured (VITE_JWT_PUBLIC_KEY)' }
+        return { 
+            validSignature: false, 
+            isExpired: true, 
+            claims: null, 
+            header: null, 
+            expiresAt: null, 
+            reason: '密钥配置验证失败，请联系管理员',
+        }
     }
     return await verifyJwtRS256(token, pem.trim())
 }

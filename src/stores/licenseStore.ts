@@ -30,6 +30,7 @@ export const useLicenseStore = defineStore('license', () => {
             permission.value = null
             return null
         }
+
         token.value = t
         const result = await getLicenseInfoFromToken(t)
         claims.value = result.claims

@@ -4,6 +4,7 @@ import { useSettingsStore } from '@/stores/settingsStore'
 import { ElMessage } from 'element-plus'
 import { secretApi } from '@/api/secret'
 import { useLicenseStore } from '@/stores/licenseStore'
+import type { LicenseVerifyResult } from '@/utils/license'
 
 /**
  * 密钥设置表单
@@ -46,7 +47,17 @@ async function onSave() {
             settingsStore.secretKey = trimmed
             settingsStore.persist()
             try {
-                await licenseStore.setTokenAndVerify(token)
+                let result: LicenseVerifyResult | null = await licenseStore.setTokenAndVerify(token)
+                if (result === null) {
+                    ElMessage.error('密钥验证失败')
+                    return
+                }
+
+                console.log('onSave: result', result)
+                if (!result.validSignature) {
+                    ElMessage.error(result.reason || '密钥验证失败')
+                    return
+                }
             } catch {}
             input.value = KEY_MASK
             ElMessage.success('密钥已保存')

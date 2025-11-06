@@ -13,7 +13,6 @@ export const useSettingsStore = defineStore('settings', () => {
     const cloudAutoSyncEnabled = ref<boolean>(false)
     const lastCloudSyncAt = ref<number | null>(null)
     const isCloudSyncing = ref<boolean>(false)
-    const secretKey = ref<string | null>(null)
     const dataVersion = ref<number>(0)
     const isLocked = ref<boolean>(false)
     const lockSalt = ref<string | null>(null)
@@ -23,7 +22,6 @@ export const useSettingsStore = defineStore('settings', () => {
         const payload = {
             cloudAutoSyncEnabled: cloudAutoSyncEnabled.value,
             lastCloudSyncAt: lastCloudSyncAt.value,
-            secretKey: secretKey.value,
             isLocked: isLocked.value,
             lockSalt: lockSalt.value,
             lockHash: lockHash.value,
@@ -35,7 +33,6 @@ export const useSettingsStore = defineStore('settings', () => {
         const saved = await asyncStorage.getItem<{
             cloudAutoSyncEnabled?: boolean
             lastCloudSyncAt?: number | null
-            secretKey?: string | null
             isLocked?: boolean
             lockSalt?: string | null
             lockHash?: string | null
@@ -43,19 +40,9 @@ export const useSettingsStore = defineStore('settings', () => {
         if (!saved) return
         if (typeof saved.cloudAutoSyncEnabled === 'boolean') cloudAutoSyncEnabled.value = saved.cloudAutoSyncEnabled
         if (typeof saved.lastCloudSyncAt === 'number' || saved.lastCloudSyncAt === null) lastCloudSyncAt.value = saved.lastCloudSyncAt ?? null
-        if (typeof saved.secretKey === 'string' || saved.secretKey === null) secretKey.value = saved.secretKey ?? null
         if (typeof saved.isLocked === 'boolean') isLocked.value = saved.isLocked
         if (typeof saved.lockSalt === 'string' || saved.lockSalt === null) lockSalt.value = saved.lockSalt ?? null
         if (typeof saved.lockHash === 'string' || saved.lockHash === null) lockHash.value = saved.lockHash ?? null
-    }
-
-    async function validateAndSaveSecretKey(key: string): Promise<boolean> {
-        const trimmed = key.trim()
-        // 简单校验：长度不少于 6，可按需替换为实际校验
-        if (!trimmed || trimmed.length < 6) return false
-        secretKey.value = trimmed
-        persist()
-        return true
     }
 
     function setCloudAutoSyncEnabled(val: boolean) {
@@ -124,14 +111,12 @@ export const useSettingsStore = defineStore('settings', () => {
         cloudAutoSyncEnabled,
         lastCloudSyncAt,
         isCloudSyncing,
-        secretKey,
         dataVersion,
         isLocked,
         lockSalt,
         lockHash,
         setCloudAutoSyncEnabled,
         syncToCloud,
-        validateAndSaveSecretKey,
         persist,
         hydrate,
         bumpVersion,

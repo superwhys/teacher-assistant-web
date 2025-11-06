@@ -1,8 +1,5 @@
 import type { ApiResponse } from "@/types/api";
 import { ElMessage } from "element-plus";
-import { secretApi } from "@/api/secret";
-import { useSettingsStore } from "@/stores/settingsStore";
-import { useLicenseStore } from "@/stores/licenseStore";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
@@ -25,40 +22,6 @@ function handleResponse<T>(response: ApiResponse<T>): ApiResponse<T> {
     showMessage(response.message || "操作失败", "error");
     throw new Error(response.message || "请求失败");
   }
-}
-
-let refreshPromise: Promise<string | null> | null = null;
-
-/**
- * 使用本地保存的明文密钥刷新 token（并发场景下复用同一个 Promise）。
- */
-async function refreshTokenBySecret(): Promise<string | null> {
-  if (!refreshPromise) {
-    refreshPromise = (async () => {
-      try {
-        const settingsStore = useSettingsStore();
-        await settingsStore.hydrate();
-        const secret = settingsStore.secretKey?.trim();
-        if (!secret) return null;
-        const verifyRes = await secretApi.verifySecretKey({ secret });
-        const newToken = verifyRes.data;
-        if (newToken) {
-          localStorage.setItem("token", newToken);
-          try {
-            const licenseStore = useLicenseStore();
-            await licenseStore.setTokenAndVerify(newToken);
-          } catch {}
-          return newToken;
-        }
-        return null;
-      } catch {
-        return null;
-      }
-    })().finally(() => {
-      refreshPromise = null;
-    });
-  }
-  return refreshPromise;
 }
 
 /**
@@ -87,30 +50,17 @@ async function request<T>(
   url: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
-  const token = localStorage.getItem("token");
+  const authToken = localStorage.getItem("auth_token");
   let response = await fetch(`${API_BASE_URL}${url}`, {
-    headers: buildHeaders(token, options.headers),
+    headers: buildHeaders(authToken, options.headers),
     ...options,
   });
 
-  // 未授权且业务码提示已过期 -> 触发单例刷新并重试一次
   if (response.status === 401) {
     const errResp = await safeParseJson<unknown>(response);
-    if (errResp && errResp.code === 10004) {
-      const newToken = await refreshTokenBySecret();
-      if (newToken) {
-        response = await fetch(`${API_BASE_URL}${url}`, {
-          headers: buildHeaders(newToken, options.headers),
-          ...options,
-        });
-      }
-    }
-    if (response.status === 401) {
-      const stillErr = (await safeParseJson<unknown>(response)) as ApiResponse<unknown> | null;
-      const errorMessage = stillErr?.message || `HTTP error! status: ${response.status}`;
-      showMessage(errorMessage, "error");
-      throw new Error(errorMessage);
-    }
+    const errorMessage = errResp?.message || `HTTP error! status: ${response.status}`;
+    showMessage(errorMessage, "error");
+    throw new Error(errorMessage);
   }
 
   if (!response.ok) {

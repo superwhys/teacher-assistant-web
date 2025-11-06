@@ -56,4 +56,16 @@ export async function verifyPassword(password: string, saltBase64: string, hashB
     return calc === hashBase64
 }
 
+export async function sha256Hex(input: string): Promise<string> {
+    const encoder = new TextEncoder()
+    const data = encoder.encode(input)
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+    const bytes = new Uint8Array(hashBuffer)
+    let hex = ''
+    for (const b of bytes) {
+        hex += b.toString(16).padStart(2, '0')
+    }
+    return hex
+}
+
 

@@ -1,7 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
-import { useSettingsStore } from '@/stores/settingsStore'
-import { useLicenseStore } from '@/stores/licenseStore'
-import { LicenseStatus } from '@/types/license'
+import { useUserStore } from '@/stores/userStore'
 
 const routes = [
   {
@@ -50,23 +48,16 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to) => {
-  const settings = useSettingsStore()
-  const license = useLicenseStore()
-  if (!settings.secretKey) {
-    await settings.hydrate()
+  const user = useUserStore()
+  if (!user.hydrated) {
+    await user.hydrate()
   }
-  if (!settings.secretKey && to.path !== '/auth') {
-    return '/auth'
+  if (!user.isAuthenticated && to.path !== '/auth') {
+    return { path: '/auth', query: { redirect: to.fullPath } }
   }
-
-  // 授权 token 验签与到期检查
-  if (to.path !== '/auth') {
-    await license.verifyCurrent()
-    if (license.status !== LicenseStatus.Valid) {
-      return '/auth'
-    }
+  if (user.isAuthenticated && to.path === '/auth') {
+    return { path: '/class' }
   }
-
   return true
 })
 

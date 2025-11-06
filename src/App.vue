@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { formatTimeHHmm, formatChineseDateWithWeek } from '@/utils/date'
 import { ElMessage } from 'element-plus'
 import { useClassStore } from '@/stores/classStore'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { useUserStore } from '@/stores/userStore'
 
 const now = ref(new Date())
 let timer: number | undefined
@@ -20,6 +21,7 @@ onBeforeUnmount(() => {
     if (timer !== undefined) {
         window.clearInterval(timer)
     }
+    clearTrialReminder()
 })
 
 const timeString = computed(() => formatTimeHHmm(now.value))
@@ -27,11 +29,28 @@ const dateString = computed(() => formatChineseDateWithWeek(now.value))
 
 const classStore = useClassStore()
 const settingsStore = useSettingsStore()
+const userStore = useUserStore()
 const classes = computed(() => classStore.classes)
 const activeClassId = computed({
     get: () => classStore.activeClassId,
     set: (val: string | null) => { if (val) classStore.setActiveClass(val) }
 })
+const isAuthenticated = computed(() => userStore.isAuthenticated)
+const userName = computed(() => userStore.displayName || '已登录')
+const userEmail = computed(() => userStore.profile?.email ?? '')
+const userAvatar = computed(() => userStore.profile?.avatar ?? null)
+const userInitial = computed(() => {
+    const name = userName.value.trim()
+    if (!name) return '用'
+    return name.charAt(0).toUpperCase()
+})
+const trialExpired = computed(() => {
+    if (!isAuthenticated.value || !userStore.isTrial) return false
+    if (userStore.trialExpiresAt === null) return false
+    return Math.floor(now.value.getTime() / 1000) >= userStore.trialExpiresAt
+})
+const trialOverlayVisible = ref(false)
+let trialReminderTimer: number | null = null
 
 const createDialogVisible = ref(false)
 const createClassName = ref('')
@@ -62,11 +81,48 @@ function onCreateDialogClosed() {
 
 const router = useRouter()
 const route = useRoute()
-const showFooter = computed(() => !route.meta?.hideFooter)
+const showFooter = computed(() => isAuthenticated.value && !route.meta?.hideFooter)
 
 function goSettings() {
     router.push('/settings')
 }
+
+function onUserCommand(command: string) {
+    if (command === 'logout') {
+        userStore.logout()
+        ElMessage.success('已退出登录')
+        router.replace('/auth')
+    }
+}
+
+function clearTrialReminder() {
+    if (trialReminderTimer !== null) {
+        window.clearTimeout(trialReminderTimer)
+        trialReminderTimer = null
+    }
+}
+
+function onTrialOverlayConfirm() {
+    trialOverlayVisible.value = false
+    clearTrialReminder()
+    if (trialExpired.value) {
+        trialReminderTimer = window.setTimeout(() => {
+            trialOverlayVisible.value = true
+            trialReminderTimer = null
+        }, 30000)
+    }
+}
+
+watch(trialExpired, (expired) => {
+    if (expired) {
+        if (!trialOverlayVisible.value && trialReminderTimer === null) {
+            trialOverlayVisible.value = true
+        }
+    } else {
+        trialOverlayVisible.value = false
+        clearTrialReminder()
+    }
+})
 
 const unlockDialogVisible = computed(() => settingsStore.isLocked)
 const unlockPassword = ref('')
@@ -107,7 +163,7 @@ async function confirmUnlock() {
 <template>
     <div class="main-container">
         <el-container>
-            <el-header class="main-header">
+            <el-header v-if="isAuthenticated" class="main-header">
                 <div class="header-content">
                     <div class="header-left">
                         <img class="app-logo" src="/icon.svg" alt="教师助手图标" />
@@ -116,8 +172,12 @@ async function confirmUnlock() {
                             <div class="app-subtitle">Teacher Assistant</div>
                         </div>
                     </div>
+                    <div class="header-center">
+                        <div class="time">{{ timeString }}</div>
+                        <div class="date">{{ dateString }}</div>
+                    </div>
                     <div class="header-right">
-                        <div class="right-row">
+                        <div class="action-buttons">
                             <el-button class="widget-btn" circle plain size="default" @click="goSettings">
                                 <i-ep-setting />
                             </el-button>
@@ -126,11 +186,27 @@ async function confirmUnlock() {
                                 <i-ep-unlock v-if="!settingsStore.isLocked" />
                                 <i-ep-lock v-else />
                             </el-button>
-                            <div class="time-col">
-                                <div class="time">{{ timeString }}</div>
-                                <div class="date">{{ dateString }}</div>
-                            </div>
                         </div>
+                        <el-dropdown v-if="isAuthenticated" placement="bottom-end" @command="onUserCommand">
+                            <span class="user-entry">
+                                <div v-if="userAvatar" class="user-avatar">
+                                    <img :src="userAvatar" alt="用户头像" />
+                                </div>
+                                <div v-else class="user-avatar initials">{{ userInitial }}</div>
+                                <div class="user-info">
+                                    <div class="user-name">{{ userName }}</div>
+                                    <div v-if="userEmail" class="user-email">{{ userEmail }}</div>
+                                </div>
+                                <i-ep-arrow-down class="user-arrow" />
+                            </span>
+                            <template #dropdown>
+                                <el-dropdown-menu>
+                                    <el-dropdown-item command="logout">
+                                        <i-ep-switch-button class="dropdown-icon" /> 退出登录
+                                    </el-dropdown-item>
+                                </el-dropdown-menu>
+                            </template>
+                        </el-dropdown>
                     </div>
                 </div>
             </el-header>
@@ -183,7 +259,7 @@ async function confirmUnlock() {
                 </template>
             </el-dialog>
         </el-container>
-        <div v-if="unlockDialogVisible" class="lock-overlay">
+        <div v-if="isAuthenticated && unlockDialogVisible" class="lock-overlay">
             <div class="lock-card">
                 <div class="lock-title"><i-ep-lock class="lock-title-icon" /> 已锁定</div>
                 <div class="lock-sub">请输入锁屏密码以继续使用</div>
@@ -191,6 +267,15 @@ async function confirmUnlock() {
                     placeholder="输入密码" @keyup.enter="confirmUnlock" />
                 <el-button type="primary" size="large" class="unlock-btn" :loading="unlocking" @click="confirmUnlock">
                     <i-ep-unlock class="btn-icon" /> 解 锁
+                </el-button>
+            </div>
+        </div>
+        <div v-if="isAuthenticated && trialOverlayVisible" class="trial-overlay">
+            <div class="trial-card">
+                <div class="trial-title">试用已结束</div>
+                <div class="trial-sub">请购买正式版本</div>
+                <el-button type="primary" size="large" class="trial-btn" @click="onTrialOverlayConfirm">
+                    <i-ep-check class="btn-icon" /> 我知道了
                 </el-button>
             </div>
         </div>
@@ -219,11 +304,13 @@ async function confirmUnlock() {
     padding: 0 24px;
 }
 
+
 .header-content {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
-    justify-content: space-between;
     width: 100%;
+    column-gap: 24px;
 }
 
 .header-left {
@@ -255,26 +342,93 @@ async function confirmUnlock() {
     color: #666666;
 }
 
-.header-right {
+.header-center {
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
+    align-items: center;
+    justify-content: center;
     line-height: 1;
+    justify-self: center;
+    text-align: center;
 }
 
-.right-row {
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.action-buttons {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
+.user-entry {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    color: #1f1f1f;
+}
 
+.user-entry:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+}
 
-.time-col {
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #5b7bff 0%, #2d5cf6 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.user-avatar.initials {
+    letter-spacing: 1px;
+}
+
+.user-info {
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
-    line-height: 1;
+    align-items: flex-start;
+    line-height: 1.1;
+}
+
+.user-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f1f1f;
+}
+
+.user-email {
+    font-size: 12px;
+    color: #909399;
+}
+
+.user-arrow {
+    font-size: 16px;
+    color: #a8abb2;
+}
+
+.dropdown-icon {
+    margin-right: 6px;
 }
 
 
@@ -339,6 +493,47 @@ async function confirmUnlock() {
 
 .unlock-btn {
     margin-top: 12px;
+}
+
+.trial-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2100;
+    padding: 16px;
+}
+
+.trial-card {
+    width: 92%;
+    max-width: 420px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+    padding: 26px 20px 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+}
+
+.trial-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #111111;
+}
+
+.trial-sub {
+    font-size: 14px;
+    color: #606266;
+}
+
+.trial-btn {
+    margin-top: 6px;
 }
 
 .time {
@@ -452,6 +647,24 @@ async function confirmUnlock() {
         padding: 0 16px;
     }
 
+    .header-content {
+        grid-template-columns: auto 1fr;
+        column-gap: 12px;
+    }
+
+    .header-center {
+        display: none;
+    }
+
+    .header-right {
+        justify-self: end;
+        justify-content: flex-end;
+    }
+
+    .user-info {
+        display: none;
+    }
+
     .app-logo {
         width: 32px;
         height: 32px;
@@ -464,6 +677,26 @@ async function confirmUnlock() {
 
     .time {
         font-size: 22px;
+    }
+
+    .user-entry {
+        padding: 4px 8px;
+        gap: 8px;
+    }
+
+    .user-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        font-size: 14px;
+    }
+
+    .user-email {
+        display: none;
+    }
+
+    .user-name {
+        font-size: 13px;
     }
 
     .action-panel {
@@ -508,6 +741,16 @@ async function confirmUnlock() {
 
     .main {
         padding: 0;
+    }
+
+    .user-entry {
+        padding: 4px 6px;
+    }
+
+    .user-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 9px;
     }
 
     .action-panel {

@@ -3,7 +3,6 @@ import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import SecretKeyForm from '@/components/SecretKeyForm.vue'
 import { exportAllKV, importAllKV } from '@/utils/storage'
 import { useClassStore } from '@/stores/classStore'
 import { useStudentStore } from '@/stores/studentStore'
@@ -11,7 +10,10 @@ import { usePointsStore } from '@/stores/pointsStore'
 import { usePointsItemStore } from '@/stores/pointsItemStore'
 import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import CloudSyncSettings from '@/components/CloudSyncSettings.vue'
-import { useLicenseStore } from '@/stores/licenseStore'
+import { useUserStore } from '@/stores/userStore'
+import { authApi } from '@/api/auth'
+import { decodeJwtPayload } from '@/utils/jwt'
+import type { JwtPayload } from '@/types/auth'
 
 // 设置页面视图
 const router = useRouter()
@@ -21,7 +23,7 @@ const studentStore = useStudentStore()
 const pointsStore = usePointsStore()
 const pointsItemStore = usePointsItemStore()
 const studentGroupStore = useStudentGroupStore()
-const licenseStore = useLicenseStore()
+const userStore = useUserStore()
 
 onMounted(() => {
     void settingsStore.hydrate()
@@ -34,9 +36,10 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 const newPwd = ref<string>('')
 const confirmPwd = ref<string>('')
 const oldPwd = ref<string>('')
-const authKey = ref<string>('')
 const savingPwd = ref<boolean>(false)
 const hasPwd = computed(() => settingsStore.hasLockPassword())
+const secretInput = ref<string>('')
+const verifyingSecret = ref<boolean>(false)
 
 function goHome() {
     router.push('/class')
@@ -132,23 +135,7 @@ async function onSaveLockPassword() {
         ElMessage.error('两次输入的密码不一致')
         return
     }
-    // 权限校验：未设置过密码 -> 需要授权码密钥；已设置过 -> 需要原密码
-    if (!hasPwd.value) {
-        const inputKey = authKey.value.trim()
-        const savedKey = settingsStore.secretKey?.trim()
-        if (!savedKey) {
-            ElMessage.error('请先在上方“基本设置”中配置授权码密钥')
-            return
-        }
-        if (!inputKey) {
-            ElMessage.error('请输入授权码密钥')
-            return
-        }
-        if (inputKey !== savedKey) {
-            ElMessage.error('授权码密钥不正确')
-            return
-        }
-    } else {
+    if (hasPwd.value) {
         const origin = oldPwd.value.trim()
         if (!origin) {
             ElMessage.error('请输入原密码')
@@ -167,7 +154,6 @@ async function onSaveLockPassword() {
             newPwd.value = ''
             confirmPwd.value = ''
             oldPwd.value = ''
-            authKey.value = ''
             ElMessage.success('锁屏密码已保存')
         } else {
             ElMessage.error('保存失败')
@@ -179,42 +165,69 @@ async function onSaveLockPassword() {
 
 async function onClearLockPassword() {
     try {
-        await ElMessageBox.confirm('确定清除锁屏密码？此操作需要验证授权码密钥或当前密码。', '确认操作', { type: 'warning' })
+        await ElMessageBox.confirm('确定清除锁屏密码？此操作需要验证当前密码。', '确认操作', { type: 'warning' })
     } catch {
         return
     }
 
-    const inputKey = authKey.value.trim()
     const origin = oldPwd.value.trim()
 
-    if (!inputKey && !origin) {
-        ElMessage.error('请输入授权码密钥或当前密码')
+    if (!origin) {
+        ElMessage.error('请输入当前密码')
         return
     }
 
-    // 优先使用授权码密钥校验；否则使用当前密码校验
-    if (inputKey) {
-        const savedKey = settingsStore.secretKey?.trim()
-        if (!savedKey) {
-            ElMessage.error('请先在上方“基本设置”中配置授权码密钥')
-            return
-        }
-        if (inputKey !== savedKey) {
-            ElMessage.error('授权码密钥不正确')
-            return
-        }
-    } else if (origin) {
-        const okOld = await settingsStore.verifyLockPassword(origin)
-        if (!okOld) {
-            ElMessage.error('当前密码不正确')
-            return
-        }
+    const okOld = await settingsStore.verifyLockPassword(origin)
+    if (!okOld) {
+        ElMessage.error('当前密码不正确')
+        return
     }
 
     settingsStore.clearLockPassword()
     oldPwd.value = ''
-    authKey.value = ''
     ElMessage.success('已清除锁屏密码')
+}
+
+async function onVerifySecret() {
+    if (verifyingSecret.value) return
+    const secret = secretInput.value.trim()
+    if (!secret) {
+        ElMessage.error('请输入授权码')
+        return
+    }
+    verifyingSecret.value = true
+    try {
+        const res = await authApi.verifySecret({ secret })
+        const token = res.data?.token
+        if (!token) {
+            ElMessage.error('授权码验证失败：未返回令牌')
+            return
+        }
+        const decoded = decodeJwtPayload<JwtPayload>(token)
+        const info = decoded?.user ?? {
+            id: userStore.profile?.id ?? secret,
+            email: userStore.profile?.email ?? '',
+        }
+        const profile = {
+            id: info.id !== undefined ? String(info.id) : (userStore.profile?.id ?? secret),
+            email: info.email ?? userStore.profile?.email ?? '',
+            name: info.name ?? info.email ?? userStore.profile?.name ?? '',
+            avatar: info.avatar ?? userStore.profile?.avatar ?? null,
+        }
+        const trial = decoded?.secret == null
+        const expiresAt = typeof decoded?.exp === 'number' ? decoded.exp : null
+        userStore.setAuth(token, profile, trial, expiresAt)
+        ElMessage.success(trial ? '已更新授权码，当前仍为试用状态' : '授权码验证成功，已开启云端功能')
+        if (!trial) {
+            await settingsStore.hydrate()
+        }
+        secretInput.value = ''
+    } catch (err) {
+        const message = (err as Error).message || '授权码验证失败'
+        ElMessage.error(message)
+    } finally {
+        verifyingSecret.value = false
+    }
 }
 
 function onLockNow() {
@@ -236,16 +249,31 @@ function onLockNow() {
         </div>
 
         <div class="cards">
-            <BaseCard title="基本设置" shadow="never">
-                <SecretKeyForm />
-            </BaseCard>
-
-            <CloudSyncSettings v-if="!licenseStore.isTrialPermission()" />
-            <BaseCard v-else title="同步设置" shadow="never">
+            <BaseCard title="数据授权码" shadow="never">
                 <el-form label-position="top" class="settings-form">
-                    <el-alert type="warning" title="试用版不可使用云端同步功能" show-icon :closable="false"/>
+                    <el-form-item label="授权码">
+                        <el-input v-model="secretInput" placeholder="输入授权码" :disabled="verifyingSecret" />
+                    </el-form-item>
+                    <div class="secret-actions">
+                        <el-button type="primary" :loading="verifyingSecret" :disabled="verifyingSecret"
+                            @click="onVerifySecret">
+                            <i-ep-check class="btn-icon" /> 验证授权码
+                        </el-button>
+                    </div>
+                    <div class="tips">
+                        {{ userStore.isTrial ? '试用状态下请输入正式授权码以解锁所有功能。' : '如需更新授权码，请重新验证。' }}
+                    </div>
                 </el-form>
             </BaseCard>
+
+            <template v-if="userStore.isTrial">
+                <BaseCard title="同步设置" shadow="never">
+                    <el-alert type="warning" title="试用版不可使用云端同步功能" show-icon :closable="false" />
+                </BaseCard>
+            </template>
+            <template v-else>
+                <CloudSyncSettings />
+            </template>
 
             <BaseCard title="锁屏设置" shadow="never">
                 <div class="lock-vertical">
@@ -264,9 +292,6 @@ function onLockNow() {
                             <el-form-item v-if="hasPwd" label="原密码">
                                 <el-input v-model="oldPwd" type="password" show-password placeholder="输入当前锁屏密码" />
                             </el-form-item>
-                            <el-form-item v-else label="授权码密钥">
-                                <el-input v-model="authKey" type="password" show-password placeholder="输入授权码密钥（在上方基本设置中配置）" />
-                            </el-form-item>
                             <el-form-item label="设置密码">
                                 <el-input v-model="newPwd" type="password" show-password placeholder="输入新的锁屏密码（至少 4 位）" />
                             </el-form-item>
@@ -282,7 +307,7 @@ function onLockNow() {
                                 </el-button>
                             </div>
                             <div class="tips">
-                                {{ hasPwd ? '修改密码需要输入原密码' : '首次设置密码需要输入授权码密钥' }}。
+                                {{ hasPwd ? '修改密码需要输入原密码' : '首次设置密码后可立即启用锁屏功能' }}。
                                 设置后可通过右上角锁图标或此处按钮立即锁定。
                             </div>
                         </el-form>
@@ -364,6 +389,13 @@ function onLockNow() {
     margin-top: 6px;
     color: #9e9e9e;
     font-size: 12px;
+}
+
+.secret-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
 }
 
 .hidden-file {

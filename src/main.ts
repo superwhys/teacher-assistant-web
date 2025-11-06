@@ -11,6 +11,7 @@ import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import { usePointsStore } from '@/stores/pointsStore'
 import { usePointsItemStore } from '@/stores/pointsItemStore'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { useUserStore } from '@/stores/userStore'
 
 const pinia = createPinia()
 const app = createApp(App)
@@ -25,6 +26,7 @@ await Promise.all([
     usePointsStore(pinia).hydrate(),
     usePointsItemStore(pinia).hydrate(),
     useSettingsStore(pinia).hydrate(),
+    useUserStore(pinia).hydrate(),
 ])
 
 app.mount('#app')

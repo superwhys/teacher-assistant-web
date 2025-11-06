@@ -44,10 +44,25 @@ const userInitial = computed(() => {
     if (!name) return '用'
     return name.charAt(0).toUpperCase()
 })
-const trialExpired = computed(() => {
-    if (!isAuthenticated.value || !userStore.isTrial) return false
-    if (userStore.trialExpiresAt === null) return false
-    return Math.floor(now.value.getTime() / 1000) >= userStore.trialExpiresAt
+const trialSecondsLeft = computed(() => {
+    if (!isAuthenticated.value || !userStore.isTrial || userStore.trialExpiresAt === null) return null
+    return userStore.trialExpiresAt - Math.floor(now.value.getTime() / 1000)
+})
+const trialExpired = computed(() => trialSecondsLeft.value !== null && trialSecondsLeft.value <= 0)
+const showTrialBadge = computed(() => isAuthenticated.value && userStore.isTrial)
+const trialBadgeText = computed(() => {
+    if (trialSecondsLeft.value === null) return ''
+    if (trialSecondsLeft.value <= 0) return '试用已过期'
+    const total = trialSecondsLeft.value
+    const days = Math.floor(total / 86400)
+    const hours = Math.floor((total % 86400) / 3600)
+    const minutes = Math.floor((total % 3600) / 60)
+    const parts: string[] = []
+    if (days > 0) parts.push(`${days}天`)
+    if (hours > 0) parts.push(`${hours}小时`)
+    if (days === 0 && minutes > 0) parts.push(`${minutes}分钟`)
+    if (parts.length === 0) parts.push('不到1分钟')
+    return `试用剩余 ${parts.join('')}`
 })
 const trialOverlayVisible = ref(false)
 let trialReminderTimer: number | null = null
@@ -109,7 +124,7 @@ function onTrialOverlayConfirm() {
         trialReminderTimer = window.setTimeout(() => {
             trialOverlayVisible.value = true
             trialReminderTimer = null
-        }, 30000)
+        }, 10000)
     }
 }
 
@@ -122,7 +137,7 @@ watch(trialExpired, (expired) => {
         trialOverlayVisible.value = false
         clearTrialReminder()
     }
-})
+}, { immediate: true })
 
 const unlockDialogVisible = computed(() => settingsStore.isLocked)
 const unlockPassword = ref('')
@@ -177,6 +192,12 @@ async function confirmUnlock() {
                         <div class="date">{{ dateString }}</div>
                     </div>
                     <div class="header-right">
+                        <div v-if="showTrialBadge" class="trial-indicator" :class="{ expired: trialExpired }">
+                            <el-tag :type="trialExpired ? 'danger' : 'warning'" effect="dark">
+                                <i-ep-clock class="indicator-icon" />
+                                <span class="indicator-text">{{ trialBadgeText }}</span>
+                            </el-tag>
+                        </div>
                         <div class="action-buttons">
                             <el-button class="widget-btn" circle plain size="default" @click="goSettings">
                                 <i-ep-setting />
@@ -274,6 +295,7 @@ async function confirmUnlock() {
             <div class="trial-card">
                 <div class="trial-title">试用已结束</div>
                 <div class="trial-sub">请购买正式版本</div>
+                <div class="trial-countdown">{{ trialBadgeText }}</div>
                 <el-button type="primary" size="large" class="trial-btn" @click="onTrialOverlayConfirm">
                     <i-ep-check class="btn-icon" /> 我知道了
                 </el-button>
@@ -431,6 +453,38 @@ async function confirmUnlock() {
     margin-right: 6px;
 }
 
+.trial-indicator :deep(.el-tag) {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 6px 12px;
+    line-height: 1;
+}
+
+.trial-indicator :deep(.el-tag__content) {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.trial-indicator.expired :deep(.el-tag) {
+    background: linear-gradient(135deg, #f64a4a 0%, #f67a4a 100%);
+    border-color: transparent;
+}
+
+.indicator-icon {
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.indicator-text {
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+}
 
 
 :deep(.widget-btn.el-button) {
@@ -659,6 +713,7 @@ async function confirmUnlock() {
     .header-right {
         justify-self: end;
         justify-content: flex-end;
+        gap: 8px;
     }
 
     .user-info {
@@ -677,6 +732,18 @@ async function confirmUnlock() {
 
     .time {
         font-size: 22px;
+    }
+
+    .trial-indicator :deep(.el-tag) {
+        padding: 4px 8px;
+    }
+
+    .trial-indicator :deep(.el-tag__content) {
+        gap: 4px;
+    }
+
+    .indicator-icon {
+        font-size: 14px;
     }
 
     .user-entry {
@@ -741,6 +808,22 @@ async function confirmUnlock() {
 
     .main {
         padding: 0;
+    }
+
+    .header-right {
+        gap: 6px;
+    }
+
+    .indicator-text {
+        display: none;
+    }
+
+    .trial-indicator :deep(.el-tag) {
+        padding: 4px 6px;
+    }
+
+    .indicator-icon {
+        font-size: 14px;
     }
 
     .user-entry {

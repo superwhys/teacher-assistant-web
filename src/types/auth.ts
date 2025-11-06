@@ -1,7 +1,6 @@
 export interface JwtUserPayload {
     id: number | string
     email: string
-    secret_id?: number | null
     status?: number | null
     name?: string | null
     avatar?: string | null
@@ -9,6 +8,7 @@ export interface JwtUserPayload {
 
 export interface JwtSecretPayload {
     id: number | string
+    user_id: number | string
     secret: string
     permissions: number | string
     expires_at?: number | string | null

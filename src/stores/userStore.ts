@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { useSettingsStore } from '@/stores/settingsStore'
 import { asyncStorage } from '@/utils/storage'
 import type { UserProfile } from '@/types/user'
 

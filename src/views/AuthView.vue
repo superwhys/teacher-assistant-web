@@ -205,7 +205,7 @@ onBeforeUnmount(() => {
             <div class="panel">
                 <div class="panel-header">
                     <div class="panel-title">欢迎登录</div>
-                    <div class="panel-desc">先登录账号，再完成授权码验证即可使用全部功能</div>
+                    <div class="panel-desc">首次登录可免费试用 7 天。 过期后如需继续试用，请购买正式版授权码</div>
                 </div>
 
                 <div class="card">

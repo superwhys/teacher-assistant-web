@@ -74,7 +74,14 @@ function buildExportRows(): { rows: any[]; sheetName: string } {
             const nameSet = new Set(g?.members ?? [])
             names = names.filter(n => nameSet.has(n))
         }
-        const rows = names.map(n => ({ '姓名': n, '最终积分': points[n] ?? 0 }))
+        const rows = names.map(n => {
+            const p = points[n]
+            return {
+                '姓名': n,
+                '总积分': p?.total ?? 0,
+                '可用积分': p?.available ?? 0
+            }
+        })
         return { rows, sheetName: '最终积分' }
     }
 }

@@ -6,7 +6,12 @@ import type { PointsSign } from '@/types/pointsItem'
 type ClassId = string
 type StudentName = string
 
-type PointsMap = Record<StudentName, number>
+export type StudentPoints = {
+    total: number
+    available: number
+}
+
+type PointsMap = Record<StudentName, StudentPoints>
 
 export type PointAction = {
     id: string
@@ -17,6 +22,7 @@ export type PointAction = {
     itemName?: string
     itemSign?: PointsSign
     itemValue?: number
+    type?: 'points' | 'shop'
 }
 
 type ClassPointsRecord = {
@@ -43,6 +49,16 @@ function ensureClass(rec: PointsRecords, classId: string): ClassPointsRecord {
     return rec[classId]
 }
 
+function ensureStudentPoints(points: PointsMap, studentName: string): StudentPoints {
+    if (!points[studentName]) {
+        points[studentName] = { total: 0, available: 0 }
+    } else if (typeof points[studentName] === 'number') {
+        const oldValue = points[studentName] as unknown as number
+        points[studentName] = { total: oldValue, available: oldValue }
+    }
+    return points[studentName]
+}
+
 function generateId(prefix: string = 'PA'): string {
     return `${prefix}_${Math.random().toString(36).slice(2, 10)}`
 }
@@ -56,10 +72,11 @@ export const usePointsStore = defineStore('points', () => {
             const cls = records.value[clsId]
             if (!cls || !Array.isArray(cls.history)) continue
             for (const action of cls.history) {
-                if (action && (action.itemName === undefined || action.itemSign === undefined || action.itemValue === undefined)) {
+                if (action && (action.itemName === undefined || action.itemSign === undefined || action.itemValue === undefined || action.type === undefined)) {
                     if (action.itemName === undefined) action.itemName = '快速操作'
                     if (action.itemSign === undefined) action.itemSign = action.delta > 0 ? ('plus' as PointsSign) : ('minus' as PointsSign)
                     if (action.itemValue === undefined) action.itemValue = Math.abs(action.delta)
+                    if (action.type === undefined) action.type = 'points'
                     mutated = true
                 }
             }
@@ -84,10 +101,19 @@ export const usePointsStore = defineStore('points', () => {
         return ensureClass(records.value, classId).points
     }
 
-    function getPointOfStudent(classId: string | null, studentName: string): number {
+    function getPointOfStudent(classId: string | null, studentName: string, type: 'total' | 'available' = 'available'): number {
         if (!classId) return 0
-        const map = ensureClass(records.value, classId).points
-        return map[studentName] ?? 0
+        const cls = ensureClass(records.value, classId)
+        const points = ensureStudentPoints(cls.points, studentName)
+        return points[type]
+    }
+    
+    function getTotalPoints(classId: string | null, studentName: string): number {
+        return getPointOfStudent(classId, studentName, 'total')
+    }
+    
+    function getAvailablePoints(classId: string | null, studentName: string): number {
+        return getPointOfStudent(classId, studentName, 'available')
     }
 
     function addPoints(
@@ -99,8 +125,9 @@ export const usePointsStore = defineStore('points', () => {
         if (!classId || !delta || studentNames.length === 0) return
         const cls = ensureClass(records.value, classId)
         for (const name of studentNames) {
-            const prev = cls.points[name] ?? 0
-            cls.points[name] = prev + delta
+            const points = ensureStudentPoints(cls.points, name)
+            points.total += delta
+            points.available += delta
         }
         cls.history.push({
             id: generateId(),
@@ -111,6 +138,7 @@ export const usePointsStore = defineStore('points', () => {
             itemName: meta?.itemName,
             itemSign: meta?.itemSign,
             itemValue: meta?.itemValue,
+            type: 'points',
         })
         // 限制历史长度，避免无限增长
         if (cls.history.length > 500) cls.history.splice(0, cls.history.length - 500)
@@ -123,9 +151,16 @@ export const usePointsStore = defineStore('points', () => {
         const last = cls.history.pop()
         if (!last) return null
         const reverseDelta = -last.delta
+        const actionType = last.type || 'points'
+        
         for (const name of last.studentNames) {
-            const prev = cls.points[name] ?? 0
-            cls.points[name] = prev + reverseDelta
+            const points = ensureStudentPoints(cls.points, name)
+            if (actionType === 'points') {
+                points.total += reverseDelta
+                points.available += reverseDelta
+            } else {
+                points.available += reverseDelta
+            }
         }
         persist(records.value)
         return last
@@ -144,9 +179,16 @@ export const usePointsStore = defineStore('points', () => {
         const [action] = cls.history.splice(idx, 1)
         if (!action) return null
         const reverseDelta = -action.delta
+        const actionType = action.type || 'points'
+        
         for (const name of action.studentNames) {
-            const prev = cls.points[name] ?? 0
-            cls.points[name] = prev + reverseDelta
+            const points = ensureStudentPoints(cls.points, name)
+            if (actionType === 'points') {
+                points.total += reverseDelta
+                points.available += reverseDelta
+            } else {
+                points.available += reverseDelta
+            }
         }
         persist(records.value)
         return action
@@ -165,11 +207,51 @@ export const usePointsStore = defineStore('points', () => {
         delete cls.points[studentName]
         persist(records.value)
     }
+    
+    function consumePoints(
+        classId: string | null,
+        studentNames: string[],
+        amount: number,
+        meta?: { itemId?: string; itemName?: string }
+    ) {
+        if (!classId || amount <= 0 || studentNames.length === 0) return
+        const cls = ensureClass(records.value, classId)
+        
+        for (const name of studentNames) {
+            const points = ensureStudentPoints(cls.points, name)
+            if (points.available < amount) {
+                throw new Error(`${name} 可用积分不足`)
+            }
+        }
+        
+        for (const name of studentNames) {
+            const points = ensureStudentPoints(cls.points, name)
+            points.available -= amount
+        }
+        
+        cls.history.push({
+            id: generateId(),
+            at: Date.now(),
+            studentNames: [...studentNames],
+            delta: -amount,
+            itemId: meta?.itemId,
+            itemName: meta?.itemName || '商城兑换',
+            itemSign: 'minus',
+            itemValue: amount,
+            type: 'shop',
+        })
+        
+        if (cls.history.length > 500) cls.history.splice(0, cls.history.length - 500)
+        persist(records.value)
+    }
 
     return {
         getPointsOf,
         getPointOfStudent,
+        getTotalPoints,
+        getAvailablePoints,
         addPoints,
+        consumePoints,
         undoLast,
         getHistoryOf,
         undoById,

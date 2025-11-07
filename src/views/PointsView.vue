@@ -8,6 +8,7 @@ import { usePointsStore } from '@/stores/pointsStore'
 import type { PointsItem } from '@/types/pointsItem'
 import PointsItemSelectorDialog from '@/components/PointsItemSelectorDialog.vue'
 import PointsHeaderActions from '@/components/PointsHeaderActions.vue'
+import PointsRankingCard from '@/components/PointsRankingCard.vue'
 
 const classStore = useClassStore()
 const studentStore = useStudentStore()
@@ -31,6 +32,30 @@ const groupsOfActive = computed(() => {
 })
 
 const pointsMap = computed(() => pointsStore.getPointsOf(activeClassId.value))
+
+const availablePointsMap = computed(() => {
+    const map: Record<string, number> = {}
+    const rawMap = pointsMap.value
+    for (const name in rawMap) {
+        const points = rawMap[name]
+        if (points) {
+            map[name] = points.available
+        }
+    }
+    return map
+})
+
+const totalPointsMap = computed(() => {
+    const map: Record<string, number> = {}
+    const rawMap = pointsMap.value
+    for (const name in rawMap) {
+        const points = rawMap[name]
+        if (points) {
+            map[name] = points.total
+        }
+    }
+    return map
+})
 
 // 学生搜索
 const studentKeyword = ref('')
@@ -110,61 +135,76 @@ function undoOnce() {
 <template>
     <div class="points-page">
         <div class="content-area">
-            <el-card shadow="never" class="list-card">
-                <template #header>
-                    <div class="list-header">
-                        <span v-if="activeClass" class="class-name">{{ activeClass.name }}</span>
-                        <span v-else>学生积分</span>
-                        <PointsHeaderActions 
-                            :active-class-id="activeClassId" 
-                            :active-class-name="activeClass?.name || '未命名班级'" 
-                        />
-                    </div>
-                </template>
+            <div class="ranking-column">
+                <PointsRankingCard 
+                    :students="studentsOfActive" 
+                    :points-map="totalPointsMap"
+                    :max-display="10"
+                />
+            </div>
+            
+            <div class="list-column">
+                <el-card shadow="never" class="list-card">
+                    <template #header>
+                        <div class="list-header">
+                            <span v-if="activeClass" class="class-name">{{ activeClass.name }}</span>
+                            <span v-else>学生积分</span>
+                            <PointsHeaderActions 
+                                :active-class-id="activeClassId" 
+                                :active-class-name="activeClass?.name || '未命名班级'" 
+                            />
+                        </div>
+                    </template>
 
-                <div v-if="activeClass">
-                    <div v-if="studentsOfActive.length > 0">
-                        <div v-if="filteredStudents.length > 0" class="student-grid">
-                            <div v-for="s in filteredStudents" :key="s.studentName" class="student-row">
-                                <div :class="['avatar', s.gender]">
-                                    <i-ep-male v-if="s.gender === 'male'" />
-                                    <i-ep-female v-else />
+                    <div v-if="activeClass">
+                        <div v-if="studentsOfActive.length > 0">
+                            <div v-if="filteredStudents.length > 0" class="student-grid">
+                                <div v-for="s in filteredStudents" :key="s.studentName" class="student-row">
+                                    <div :class="['avatar', s.gender]">
+                                        <i-ep-male v-if="s.gender === 'male'" />
+                                        <i-ep-female v-else />
+                                    </div>
+                                    <div class="info">
+                                        <div class="name">{{ s.studentName }}</div>
+                                        <div class="points-info">
+                                            <div class="score available">{{ availablePointsMap[s.studentName] ?? 0 }}</div>
+                                            <div class="score-label">可用</div>
+                                            <div class="score total">{{ totalPointsMap[s.studentName] ?? 0 }}</div>
+                                            <div class="score-label">总分</div>
+                                        </div>
+                                    </div>
+                                    <div class="ops">
+                                        <el-button class="op" type="primary" plain size="small"
+                                            @click="openSelectorForStudents([s.studentName], 'plus')"><i-ep-plus />
+                                            加分</el-button>
+                                        <el-button class="op" type="danger" plain size="small"
+                                            @click="openSelectorForStudents([s.studentName], 'minus')"><i-ep-minus />
+                                            扣分</el-button>
+                                        <el-button class="op" type="default" plain size="small"
+                                            @click="$router.push({ path: '/points/history', query: { q: s.studentName } })"><i-ep-document />
+                                            记录</el-button>
+                                    </div>
                                 </div>
-                                <div class="info">
-                                    <div class="name">{{ s.studentName }}</div>
-                                    <div class="score">{{ pointsMap[s.studentName] ?? 0 }}</div>
-                                </div>
-                                <div class="ops">
-                                    <el-button class="op" type="primary" plain size="small"
-                                        @click="openSelectorForStudents([s.studentName], 'plus')"><i-ep-plus />
-                                        加分</el-button>
-                                    <el-button class="op" type="danger" plain size="small"
-                                        @click="openSelectorForStudents([s.studentName], 'minus')"><i-ep-minus />
-                                        扣分</el-button>
-                                    <el-button class="op" type="default" plain size="small"
-                                        @click="$router.push({ path: '/points/history', query: { q: s.studentName } })"><i-ep-document />
-                                        记录</el-button>
-                                </div>
+                            </div>
+                            <div v-else class="empty empty-students">
+                                <i-ep-user class="empty-icon" />
+                                <div class="empty-title">没有匹配的学生</div>
+                                <div class="empty-sub">请修改搜索关键词</div>
                             </div>
                         </div>
                         <div v-else class="empty empty-students">
                             <i-ep-user class="empty-icon" />
-                            <div class="empty-title">没有匹配的学生</div>
-                            <div class="empty-sub">请修改搜索关键词</div>
+                            <div class="empty-title">还没有学生</div>
+                            <div class="empty-sub">请先在班级管理中添加学生</div>
                         </div>
                     </div>
-                    <div v-else class="empty empty-students">
-                        <i-ep-user class="empty-icon" />
-                        <div class="empty-title">还没有学生</div>
-                        <div class="empty-sub">请先在班级管理中添加学生</div>
+                    <div v-else class="empty">
+                        <i-ep-school class="empty-icon" />
+                        <div class="empty-title">还没有班级</div>
+                        <div class="empty-sub">请先创建一个班级</div>
                     </div>
-                </div>
-                <div v-else class="empty">
-                    <i-ep-school class="empty-icon" />
-                    <div class="empty-title">还没有班级</div>
-                    <div class="empty-sub">请先创建一个班级</div>
-                </div>
-            </el-card>
+                </el-card>
+            </div>
         </div>
 
         <div class="bottom-actions">
@@ -228,6 +268,19 @@ function undoOnce() {
     min-height: 0;
     overflow: hidden;
     padding-bottom: 16px;
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 16px;
+}
+
+.ranking-column {
+    height: 100%;
+    overflow: hidden;
+}
+
+.list-column {
+    height: 100%;
+    overflow: hidden;
 }
 
 .list-card {
@@ -641,27 +694,45 @@ function undoOnce() {
 
 .info {
     display: flex;
-    align-items: center;
-    gap: 12px;
+    flex-direction: column;
+    gap: 8px;
     min-width: 0;
 }
 
 .name {
     font-size: 16px;
     font-weight: 600;
-    flex: 1;
-    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
+.points-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .score {
     padding: 2px 8px;
-    background: #f5f7ff;
-    color: #2d5cf6;
     border-radius: 999px;
     font-weight: 700;
+    font-size: 14px;
+}
+
+.score.available {
+    background: #f5f7ff;
+    color: #2d5cf6;
+}
+
+.score.total {
+    background: #fff7ed;
+    color: #ea580c;
+}
+
+.score-label {
+    font-size: 12px;
+    color: #666;
 }
 
 .ops {
@@ -704,7 +775,23 @@ function undoOnce() {
     padding: 64px 12px;
 }
 
+@media (max-width: 1024px) {
+    .content-area {
+        grid-template-columns: 300px 1fr;
+        gap: 12px;
+    }
+}
+
 @media (max-width: 768px) {
+    .content-area {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .ranking-column {
+        max-height: 400px;
+    }
+    
     .bottom-actions {
         padding: 16px;
         gap: 10px;

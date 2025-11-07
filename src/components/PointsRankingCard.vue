@@ -42,8 +42,13 @@ function getRankClass(rank: number) {
     <el-card shadow="never" class="ranking-card">
         <template #header>
             <div class="ranking-header">
-                <i-ep-trophy class="trophy-icon" />
-                <span class="header-title">积分排行榜</span>
+                <div class="header-left">
+                    <i-ep-trophy class="trophy-icon" />
+                    <span class="header-title">积分排行榜</span>
+                </div>
+                <el-button type="primary" size="small" @click="$router.push('/points/shop')">
+                    <i-ep-shop /> 商城
+                </el-button>
             </div>
         </template>
 
@@ -99,9 +104,15 @@ function getRankClass(rank: number) {
 .ranking-header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: space-between;
     font-size: 18px;
     font-weight: 700;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .trophy-icon {

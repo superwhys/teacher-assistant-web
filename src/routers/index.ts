@@ -19,6 +19,10 @@ const routes = [
     component: () => import('@/views/PointsHistoryView.vue'),
   },
   {
+    path: '/points/shop',
+    component: () => import('@/views/ShopView.vue'),
+  },
+  {
     path: '/tools',
     component: () => import('@/views/ToolsView.vue'),
   },
@@ -55,7 +59,7 @@ router.beforeEach(async (to) => {
     return { path: '/auth', query: { redirect: to.fullPath } }
   }
   if (user.isAuthenticated && to.path === '/auth') {
-    return { path: '/class' }
+    return { path: '/points' }
   }
   return true
 })

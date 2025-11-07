@@ -236,9 +236,9 @@ function onLockNow() {
 <template>
     <div class="settings-page">
         <div class="cards">
-            <BaseCard title="数据授权码" shadow="never">
+            <BaseCard title="授权码" shadow="never">
                 <el-form label-position="top" class="settings-form">
-                    <el-form-item label="授权码">
+                    <el-form-item>
                         <el-input v-model="secretInput" placeholder="输入授权码" :disabled="verifyingSecret" />
                     </el-form-item>
                     <div class="secret-actions">
@@ -340,6 +340,9 @@ function onLockNow() {
 .settings-page {
     width: 100%;
     height: 100%;
+    overflow-y: auto;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 .btn-icon {
@@ -353,6 +356,7 @@ function onLockNow() {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
+    padding-bottom: 20px;
 }
 
 .settings-form :deep(.el-form-item) {

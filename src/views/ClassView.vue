@@ -312,20 +312,13 @@ function onSaveStudentEdit() {
         <div class="content-area">
             <el-card shadow="never" class="list-card">
                 <template #header>
-                    <div class="list-header-row">
-                        <div class="list-header">
-                            <span v-if="activeClass" class="class-name">{{ activeClass.name }}</span>
-                            <span v-else>学生名单</span>
-                            <span v-if="activeClass" class="student-count">
-                                共 {{ totalCount }} 人
-                                <span class="count-detail">(男 {{ maleCount }} / 女 {{ femaleCount }})</span>
-                            </span>
-                        </div>
-                        <el-select v-if="activeClass" v-model="selectedGroupFilter" size="large" placeholder="全部学生"
-                            class="group-filter">
-                            <el-option label="全部学生" value="" />
-                            <el-option v-for="g in groupsOfActive" :key="g.id" :label="g.name" :value="g.id" />
-                        </el-select>
+                    <div class="list-header">
+                        <span v-if="activeClass" class="class-name">{{ activeClass.name }}</span>
+                        <span v-else>学生名单</span>
+                        <span v-if="activeClass" class="student-count">
+                            共 {{ totalCount }} 人
+                            <span class="count-detail">(男 {{ maleCount }} / 女 {{ femaleCount }})</span>
+                        </span>
                     </div>
                 </template>
 
@@ -351,14 +344,22 @@ function onSaveStudentEdit() {
         </div>
 
         <div class="bottom-actions">
-            <el-button size="large" type="primary" :disabled="!activeClassId"
-                @click="addStudentDialogVisible = true" class="action-btn">
-                <i-ep-plus /> 添加学生
-            </el-button>
-            <el-button size="large" type="primary" plain :disabled="!activeClassId"
-                @click="groupDialogVisible = true" class="action-btn">
-                <i-ep-user /> 分组管理
-            </el-button>
+            <el-select v-if="activeClass" v-model="selectedGroupFilter" size="large" placeholder="全部学生"
+                class="group-filter">
+                <el-option label="全部学生" value="" />
+                <el-option v-for="g in groupsOfActive" :key="g.id" :label="g.name" :value="g.id" />
+            </el-select>
+            
+            <div class="action-buttons-row">
+                <el-button size="large" type="primary" :disabled="!activeClassId"
+                    @click="addStudentDialogVisible = true" class="action-btn">
+                    <i-ep-plus /> 添加学生
+                </el-button>
+                <el-button size="large" type="primary" plain :disabled="!activeClassId"
+                    @click="groupDialogVisible = true" class="action-btn">
+                    <i-ep-user /> 分组管理
+                </el-button>
+            </div>
         </div>
     </div>
 
@@ -521,14 +522,6 @@ function onSaveStudentEdit() {
     overflow-y: auto;
 }
 
-.list-header-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-}
-
 .list-header {
     display: flex;
     flex-direction: column;
@@ -553,24 +546,31 @@ function onSaveStudentEdit() {
     margin-left: 8px;
 }
 
-.group-filter {
-    min-width: 200px;
-}
-
 .bottom-actions {
     flex-shrink: 0;
     display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
+    flex-direction: column;
+    gap: 12px;
     padding: 20px;
     background: #ffffff;
     border-radius: 16px;
     box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
 }
 
+.group-filter {
+    width: 100%;
+}
+
+.action-buttons-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+}
+
 .action-btn {
-    min-width: 160px;
+    flex: 1;
     height: 56px;
     font-size: 18px;
     font-weight: 600;
@@ -794,12 +794,6 @@ function onSaveStudentEdit() {
 }
 
 @media (max-width: 768px) {
-    .list-header-row {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 12px;
-    }
-
     .class-name {
         font-size: 20px;
     }
@@ -808,19 +802,18 @@ function onSaveStudentEdit() {
         font-size: 14px;
     }
 
-    .group-filter {
-        width: 100%;
+    .bottom-actions {
+        padding: 16px;
+        gap: 10px;
     }
 
-    .bottom-actions {
-        flex-direction: column;
-        padding: 16px;
+    .action-buttons-row {
         gap: 12px;
     }
 
     .action-btn {
-        width: 100%;
-        min-width: unset;
+        height: 48px;
+        font-size: 16px;
     }
 
     .student-grid {
@@ -842,9 +835,18 @@ function onSaveStudentEdit() {
         font-size: 12px;
     }
 
+    .bottom-actions {
+        padding: 12px;
+        gap: 8px;
+    }
+
+    .action-buttons-row {
+        gap: 10px;
+    }
+
     .action-btn {
-        height: 50px;
-        font-size: 16px;
+        height: 46px;
+        font-size: 15px;
     }
 
     .student-grid {

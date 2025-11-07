@@ -6,10 +6,8 @@ import { useStudentStore } from '@/stores/studentStore'
 import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import { usePointsStore } from '@/stores/pointsStore'
 import type { PointsItem } from '@/types/pointsItem'
-import PointsItemManageDialog from '@/components/PointsItemManageDialog.vue'
 import PointsItemSelectorDialog from '@/components/PointsItemSelectorDialog.vue'
-import PointsImportExport from '@/components/PointsImportExport.vue'
-import PointsItemsImport from '@/components/PointsItemsImport.vue'
+import PointsHeaderActions from '@/components/PointsHeaderActions.vue'
 
 const classStore = useClassStore()
 const studentStore = useStudentStore()
@@ -107,38 +105,20 @@ function undoOnce() {
     ElMessage.success(`已撤回对「${target}」${action.delta > 0 ? '加' : '减'}${Math.abs(action.delta)} 分`)
 }
 
-// 分值项管理（新增分组与积分项）
-const manageVisible = ref(false)
-
-function openManageDialog() {
-    manageVisible.value = true
-}
-
 </script>
 
 <template>
     <div class="points-page">
-        <div class="header-row">
-            <div class="title">积分管理 <span v-if="activeClass">（{{ activeClass.name }}）</span></div>
-            <div class="header-actions">
-                <el-button type="primary" plain :disabled="!activeClassId" @click="openManageDialog">
-                    <i-ep-setting /> 管理分值项
-                </el-button>
-                <PointsItemsImport :active-class-id="activeClassId" />
-                <el-button type="default" plain :disabled="!activeClassId" @click="$router.push('/points/history')">
-                    <i-ep-document /> 积分记录
-                </el-button>
-                <PointsImportExport :active-class-id="activeClassId" 
-                    :active-class-name="activeClass?.name || '未命名班级'" />
-            </div>
-        </div>
-
         <div class="content-area">
             <el-card shadow="never" class="list-card">
                 <template #header>
                     <div class="list-header">
                         <span v-if="activeClass" class="class-name">{{ activeClass.name }}</span>
                         <span v-else>学生积分</span>
+                        <PointsHeaderActions 
+                            :active-class-id="activeClassId" 
+                            :active-class-name="activeClass?.name || '未命名班级'" 
+                        />
                     </div>
                 </template>
 
@@ -206,24 +186,31 @@ function openManageDialog() {
                 <el-button size="large" type="primary" class="action-btn" 
                     :disabled="!activeClassId || filteredStudents.length === 0"
                     @click="openSelectorForAll('plus')">
-                    <i-ep-plus /> 全体加分
+                    <template #icon>
+                        <i-ep-plus />
+                    </template>
+                    全体加分
                 </el-button>
                 <el-button size="large" type="warning" plain class="undo-btn"
                     :disabled="!activeClassId" @click="undoOnce">
-                    <i-ep-refresh-left /> 撤回
+                    <template #icon>
+                        <i-ep-refresh-left />
+                    </template>
+                    撤回
                 </el-button>
                 <el-button size="large" type="danger" class="action-btn"
                     :disabled="!activeClassId || filteredStudents.length === 0"
                     @click="openSelectorForAll('minus')">
-                    <i-ep-minus /> 全体扣分
+                    <template #icon>
+                        <i-ep-minus />
+                    </template>
+                    全体扣分
                 </el-button>
             </div>
         </div>
 
         <PointsItemSelectorDialog v-model="selectorVisible" v-model:tab="selectorTab" :active-class-id="activeClassId"
             @select="onSelectItem" />
-
-        <PointsItemManageDialog v-model="manageVisible" :active-class-id="activeClassId" />
     </div>
 </template>
 
@@ -234,26 +221,6 @@ function openManageDialog() {
     display: flex;
     flex-direction: column;
     padding: 0;
-}
-
-.header-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-    flex-shrink: 0;
-}
-
-.title {
-    font-size: 20px;
-    font-weight: 700;
-}
-
-.header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
 }
 
 .content-area {
@@ -501,6 +468,9 @@ function openManageDialog() {
 }
 
 .list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     font-size: 18px;
     font-weight: 700;
 }
@@ -525,16 +495,15 @@ function openManageDialog() {
     justify-content: center;
     align-items: center;
     gap: 12px;
+    width: 100%;
 }
 
 .group-filter {
     flex: 1;
-    max-width: 250px;
 }
 
 .search-input {
     flex: 1;
-    max-width: 250px;
 }
 
 .main-actions-row {
@@ -736,78 +705,81 @@ function openManageDialog() {
 }
 
 @media (max-width: 768px) {
-    .header-row {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 8px;
-    }
-
-    .header-actions {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        width: 100%;
-        gap: 8px;
-    }
-
-    .header-actions :deep(.el-button) {
-        width: 100%;
-    }
-
-    .filter-row {
-        flex-direction: column;
-        width: 100%;
+    .bottom-actions {
+        padding: 16px;
         gap: 10px;
     }
 
-    .group-filter {
-        width: 100%;
-    }
-
-    .search-input {
-        width: 100%;
+    .filter-row {
+        gap: 8px;
     }
 
     .main-actions-row {
-        flex-direction: column;
-        width: 100%;
-        gap: 12px;
+        gap: 10px;
     }
 
     .action-btn {
-        width: 100%;
-        max-width: unset;
-    }
-
-    .undo-btn {
-        width: 100%;
-    }
-
-    .bottom-actions {
-        padding: 16px;
-    }
-
-    .student-grid {
-        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    }
-}
-
-@media (max-width: 480px) {
-    .header-actions {
-        grid-template-columns: 1fr;
-    }
-
-    .action-btn {
-        height: 50px;
+        max-width: 200px;
+        height: 48px;
         font-size: 16px;
     }
 
     .undo-btn {
-        height: 50px;
-        font-size: 15px;
+        width: 100px;
+        height: 48px;
+        font-size: 14px;
     }
 
     .student-grid {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .filter-row {
+        gap: 6px;
+    }
+
+    .group-filter {
+        min-width: 0;
+    }
+
+    .search-input {
+        min-width: 0;
+    }
+
+    .main-actions-row {
+        gap: 8px;
+    }
+
+    .action-btn {
+        flex: 1;
+        max-width: none;
+        height: 46px;
+        font-size: 15px;
+    }
+
+    .undo-btn {
+        width: 80px;
+        height: 46px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    .bottom-actions {
+        padding: 12px;
+    }
+
+    .action-btn {
+        height: 44px;
+        font-size: 14px;
+    }
+
+    .undo-btn {
+        width: 70px;
+        height: 44px;
+        font-size: 12px;
     }
 
     .student-row {
@@ -819,7 +791,7 @@ function openManageDialog() {
     .ops {
         grid-column: 1 / -1;
         display: flex;
-        gap: 14px;
+        gap: 10px;
         justify-content: space-between;
         align-items: center;
         width: 100%;
@@ -830,8 +802,9 @@ function openManageDialog() {
 
     .op {
         flex: 1;
-        height: 40px;
+        height: 36px;
         border-radius: 24px;
+        font-size: 13px;
     }
 }
 </style>

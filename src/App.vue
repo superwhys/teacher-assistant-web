@@ -235,7 +235,7 @@ async function confirmUnlock() {
                 </div>
             </el-header>
             <el-container class="body-container">
-                <el-aside v-if="showFooter" class="sidebar" width="250px">
+                <el-aside v-if="showFooter" class="sidebar" width="180px">
                     <div class="sidebar-content">
                         <div class="sidebar-section">
                             <div class="section-title">功能菜单</div>
@@ -357,15 +357,16 @@ async function confirmUnlock() {
     display: flex;
     align-items: center;
     padding: 0 24px;
+    position: relative;
 }
 
 
 .header-content {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
     width: 100%;
-    column-gap: 24px;
+    gap: 24px;
 }
 
 .header-left {
@@ -398,19 +399,25 @@ async function confirmUnlock() {
 }
 
 .header-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     line-height: 1;
-    justify-self: center;
     text-align: center;
+    pointer-events: none;
+    z-index: 1;
 }
 
 .header-right {
     display: flex;
     align-items: center;
     gap: 12px;
+    position: relative;
+    z-index: 2;
 }
 
 .user-entry {
@@ -637,7 +644,7 @@ async function confirmUnlock() {
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 20px 16px;
+    padding: 20px 12px;
     gap: 24px;
     overflow-y: auto;
 }
@@ -658,13 +665,14 @@ async function confirmUnlock() {
     color: #909399;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    padding: 0 8px;
+    padding: 0 4px;
 }
 
 .nav-list {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    width: 100%;
 }
 
 .nav-icon {
@@ -676,13 +684,14 @@ async function confirmUnlock() {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 16px;
+    padding: 12px 12px;
     border-radius: 10px;
     background-color: transparent;
     color: #606266;
     cursor: pointer;
     transition: all 0.2s ease;
     text-decoration: none;
+    width: 100%;
 }
 
 :deep(.action-item:hover) {
@@ -718,6 +727,7 @@ async function confirmUnlock() {
     flex-direction: column;
     gap: 8px;
     margin-top: 8px;
+    align-items: center;
 }
 
 .class-actions :deep(.el-button) {
@@ -754,12 +764,14 @@ async function confirmUnlock() {
     width: 100%;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 8px;
-    padding: 10px 16px;
+    padding: 10px 12px;
     color: #606266;
     font-size: 14px;
     transition: all 0.2s ease;
+    margin-left: 0 !important;
+    border-radius: 10px;
 }
 
 .logout-btn:hover {
@@ -792,6 +804,103 @@ async function confirmUnlock() {
 }
 
 
+@media (max-width: 1100px) {
+    .header-center {
+        display: none;
+    }
+}
+
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 70px !important;
+    }
+
+    .sidebar-content {
+        padding: 16px 8px;
+        gap: 20px;
+        align-items: center;
+    }
+
+    .section-title {
+        display: none;
+    }
+
+    :deep(.action-item) {
+        padding: 12px 0;
+        justify-content: center;
+        align-items: center;
+        border-radius: 12px;
+    }
+
+    :deep(.action-text) {
+        display: none;
+    }
+
+    .nav-icon {
+        width: 24px;
+        height: 24px;
+    }
+
+    .class-section {
+        width: 100%;
+    }
+
+    .class-select {
+        display: none;
+    }
+
+    .class-actions {
+        gap: 12px;
+    }
+
+    .class-actions :deep(.el-button) {
+        width: 46px;
+        height: 46px;
+        padding: 0;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .class-actions :deep(.el-button span) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .class-actions :deep(.el-button span span) {
+        display: none;
+    }
+
+    .class-actions .btn-icon {
+        font-size: 20px;
+        margin: 0 !important;
+    }
+
+    .sidebar-footer {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .logout-btn {
+        width: 46px;
+        height: 46px;
+        padding: 0;
+        border-radius: 12px;
+        font-size: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .logout-icon {
+        font-size: 20px;
+    }
+}
+
 @media (max-width: 768px) {
     .main-header {
         padding: 0 16px;
@@ -802,16 +911,10 @@ async function confirmUnlock() {
     }
 
     .header-content {
-        grid-template-columns: auto 1fr;
-        column-gap: 12px;
-    }
-
-    .header-center {
-        display: none;
+        gap: 12px;
     }
 
     .header-right {
-        justify-self: end;
         justify-content: flex-end;
         gap: 8px;
     }
@@ -867,29 +970,44 @@ async function confirmUnlock() {
     }
 
     .sidebar {
-        width: 200px !important;
+        width: 64px !important;
     }
 
     .sidebar-content {
-        padding: 16px 12px;
-        gap: 20px;
-    }
-
-    .section-title {
-        font-size: 12px;
+        padding: 12px 6px;
+        gap: 16px;
     }
 
     :deep(.action-item) {
-        padding: 10px 12px;
-    }
-
-    :deep(.action-text) {
-        font-size: 14px;
+        padding: 10px 0;
     }
 
     .nav-icon {
-        width: 18px;
-        height: 18px;
+        width: 22px;
+        height: 22px;
+    }
+
+    .class-actions :deep(.el-button) {
+        width: 42px;
+        height: 42px;
+    }
+
+    .class-actions .btn-icon {
+        font-size: 18px;
+    }
+
+    .logout-btn {
+        width: 42px;
+        height: 42px;
+        font-size: 0;
+    }
+
+    .logout-icon {
+        font-size: 18px;
+    }
+
+    .sidebar-footer {
+        align-items: center;
     }
 }
 
@@ -930,34 +1048,44 @@ async function confirmUnlock() {
     }
 
     .sidebar {
-        width: 180px !important;
+        width: 58px !important;
     }
 
     .sidebar-content {
-        padding: 12px 8px;
-        gap: 16px;
-    }
-
-    .section-title {
-        font-size: 11px;
+        padding: 10px 4px;
+        gap: 12px;
     }
 
     :deep(.action-item) {
-        padding: 8px 10px;
-    }
-
-    :deep(.action-text) {
-        font-size: 13px;
+        padding: 8px 0;
     }
 
     .nav-icon {
-        width: 16px;
-        height: 16px;
+        width: 20px;
+        height: 20px;
+    }
+
+    .class-actions :deep(.el-button) {
+        width: 38px;
+        height: 38px;
+    }
+
+    .class-actions .btn-icon {
+        font-size: 16px;
     }
 
     .logout-btn {
-        font-size: 13px;
-        padding: 8px 12px;
+        width: 38px;
+        height: 38px;
+        font-size: 0;
+    }
+
+    .logout-icon {
+        font-size: 16px;
+    }
+
+    .sidebar-footer {
+        align-items: center;
     }
 }
 </style>

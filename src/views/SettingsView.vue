@@ -302,35 +302,42 @@ function onLockNow() {
                 </div>
             </BaseCard>
 
-            <BaseCard title="备份与恢复" shadow="never">
-                <div class="backup-grid">
-                    <div class="backup-item">
-                        <div class="icon-wrap success"><i-ep-download /></div>
-                        <div class="content">
-                            <div class="title">导出备份数据</div>
-                            <div class="desc">将本地全部数据导出为 JSON 文件，建议定期备份。</div>
-                            <div class="actions">
-                                <el-button type="primary" size="large" :loading="exporting" :disabled="exporting" @click="onExportBackup">
-                                    <i-ep-download class="btn-icon" /> 导出备份数据
-                                </el-button>
+            <template v-if="userStore.isTrial">
+                <BaseCard title="备份与恢复" shadow="never">
+                    <el-alert type="warning" title="试用版不支持备份与恢复功能" show-icon :closable="false" />
+                </BaseCard>
+            </template>
+            <template v-else>
+                <BaseCard title="备份与恢复" shadow="never">
+                    <div class="backup-grid">
+                        <div class="backup-item">
+                            <div class="icon-wrap success"><i-ep-download /></div>
+                            <div class="content">
+                                <div class="title">导出备份数据</div>
+                                <div class="desc">将本地全部数据导出为 JSON 文件，建议定期备份。</div>
+                                <div class="actions">
+                                    <el-button type="primary" size="large" :loading="exporting" :disabled="exporting" @click="onExportBackup">
+                                        <i-ep-download class="btn-icon" /> 导出备份数据
+                                    </el-button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="backup-item">
+                            <div class="icon-wrap info"><i-ep-upload /></div>
+                            <div class="content">
+                                <div class="title">导入备份数据</div>
+                                <div class="desc">从 JSON 文件恢复数据，可能覆盖同名数据，操作前请确认。</div>
+                                <div class="actions">
+                                    <el-button size="large" :loading="importing" :disabled="importing" @click="triggerImport">
+                                        <i-ep-upload class="btn-icon" /> 导入备份数据
+                                    </el-button>
+                                    <input ref="fileInputRef" type="file" accept="application/json" class="hidden-file" @change="onImportFileChange" />
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="backup-item">
-                        <div class="icon-wrap info"><i-ep-upload /></div>
-                        <div class="content">
-                            <div class="title">导入备份数据</div>
-                            <div class="desc">从 JSON 文件恢复数据，可能覆盖同名数据，操作前请确认。</div>
-                            <div class="actions">
-                                <el-button size="large" :loading="importing" :disabled="importing" @click="triggerImport">
-                                    <i-ep-upload class="btn-icon" /> 导入备份数据
-                                </el-button>
-                                <input ref="fileInputRef" type="file" accept="application/json" class="hidden-file" @change="onImportFileChange" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </BaseCard>
+                </BaseCard>
+            </template>
         </div>
     </div>
 

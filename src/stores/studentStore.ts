@@ -1,29 +1,40 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { asyncStorage } from '@/utils/storage'
+import { asyncStorage, getUserStorageKey } from '@/utils/storage'
 import type { Student } from '@/types/student'
+import { useUserStore } from './userStore'
 
 type StudentRecords = Record<string, Student[]> // key: classId
 
-const STORAGE_KEY = 'ta_student_store_v1'
+const STORAGE_KEY_BASE = 'ta_student_store_v1'
 
 function loadInitial(): StudentRecords {
     return {}
 }
 
 export const useStudentStore = defineStore('student', () => {
+    const userStore = useUserStore()
     const records = ref<StudentRecords>(loadInitial())
 
+    function getStorageKey(): string {
+        const userId = userStore.profile?.id || null
+        return getUserStorageKey(STORAGE_KEY_BASE, userId)
+    }
+
     function persist() {
-        void asyncStorage.setItem<StudentRecords>(STORAGE_KEY, records.value)
+        void asyncStorage.setItem<StudentRecords>(getStorageKey(), records.value)
     }
 
     async function hydrate() {
-        const saved = await asyncStorage.getItem<StudentRecords>(STORAGE_KEY)
+        const saved = await asyncStorage.getItem<StudentRecords>(getStorageKey())
         if (!saved) return
         if (saved && typeof saved === 'object') {
             records.value = saved
         }
+    }
+
+    function clear() {
+        records.value = {}
     }
 
     function listByClassId(classId: string): Student[] {
@@ -81,6 +92,7 @@ export const useStudentStore = defineStore('student', () => {
         updateStudent,
         persist,
         hydrate,
+        clear,
     }
 })
 

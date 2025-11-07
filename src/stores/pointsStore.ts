@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { asyncStorage } from '@/utils/storage'
+import { asyncStorage, getUserStorageKey } from '@/utils/storage'
 import type { PointsSign } from '@/types/pointsItem'
+import { useUserStore } from './userStore'
 
 type ClassId = string
 type StudentName = string
@@ -32,14 +33,10 @@ type ClassPointsRecord = {
 
 type PointsRecords = Record<ClassId, ClassPointsRecord>
 
-const STORAGE_KEY = 'ta_points_store_v1'
+const STORAGE_KEY_BASE = 'ta_points_store_v1'
 
 function loadInitial(): PointsRecords {
     return {}
-}
-
-function persist(records: PointsRecords) {
-    void asyncStorage.setItem<PointsRecords>(STORAGE_KEY, records)
 }
 
 function ensureClass(rec: PointsRecords, classId: string): ClassPointsRecord {
@@ -64,7 +61,17 @@ function generateId(prefix: string = 'PA'): string {
 }
 
 export const usePointsStore = defineStore('points', () => {
+    const userStore = useUserStore()
     const records = ref<PointsRecords>(loadInitial())
+
+    function getStorageKey(): string {
+        const userId = userStore.profile?.id || null
+        return getUserStorageKey(STORAGE_KEY_BASE, userId)
+    }
+
+    function persist(records: PointsRecords) {
+        void asyncStorage.setItem<PointsRecords>(getStorageKey(), records)
+    }
 
     function normalizeHistory() {
         let mutated = false
@@ -84,16 +91,19 @@ export const usePointsStore = defineStore('points', () => {
         if (mutated) persist(records.value)
     }
 
-    // 初始化时也进行一次规范化
     normalizeHistory()
 
     async function hydrate() {
-        const saved = await asyncStorage.getItem<PointsRecords>(STORAGE_KEY)
+        const saved = await asyncStorage.getItem<PointsRecords>(getStorageKey())
         if (!saved) return
         if (saved && typeof saved === 'object') {
             records.value = saved
             normalizeHistory()
         }
+    }
+
+    function clear() {
+        records.value = {}
     }
 
     function getPointsOf(classId: string | null): PointsMap {
@@ -258,6 +268,7 @@ export const usePointsStore = defineStore('points', () => {
         clearHistory,
         clearStudent,
         hydrate,
+        clear,
     }
 })
 

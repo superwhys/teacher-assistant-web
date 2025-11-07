@@ -1,12 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { asyncStorage } from '@/utils/storage'
+import { asyncStorage, getUserStorageKey } from '@/utils/storage'
 import type { Student } from '@/types/student'
 import type { StudentGroup } from '@/types/studentGroup'
+import { useUserStore } from './userStore'
 
 type GroupRecords = Record<string, StudentGroup[]> // key: classId
 
-const STORAGE_KEY = 'ta_student_group_store_v1'
+const STORAGE_KEY_BASE = 'ta_student_group_store_v1'
 
 function generateId(prefix: string = 'G'): string {
     return `${prefix}_${Math.random().toString(36).slice(2, 10)}`
@@ -17,18 +18,28 @@ function loadInitial(): GroupRecords {
 }
 
 export const useStudentGroupStore = defineStore('studentGroup', () => {
+    const userStore = useUserStore()
     const records = ref<GroupRecords>(loadInitial())
 
+    function getStorageKey(): string {
+        const userId = userStore.profile?.id || null
+        return getUserStorageKey(STORAGE_KEY_BASE, userId)
+    }
+
     function persist() {
-        void asyncStorage.setItem<GroupRecords>(STORAGE_KEY, records.value)
+        void asyncStorage.setItem<GroupRecords>(getStorageKey(), records.value)
     }
 
     async function hydrate() {
-        const saved = await asyncStorage.getItem<GroupRecords>(STORAGE_KEY)
+        const saved = await asyncStorage.getItem<GroupRecords>(getStorageKey())
         if (!saved) return
         if (saved && typeof saved === 'object') {
             records.value = saved
         }
+    }
+
+    function clear() {
+        records.value = {}
     }
 
     function listByClassId(classId: string | null): StudentGroup[] {
@@ -120,6 +131,7 @@ export const useStudentGroupStore = defineStore('studentGroup', () => {
         listUnassigned,
         persist,
         hydrate,
+        clear,
     }
 })
 

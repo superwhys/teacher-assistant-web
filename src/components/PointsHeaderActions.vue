@@ -73,7 +73,7 @@ const mobileMenuVisible = ref(false)
     margin-bottom: 0 !important;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1320px) {
     .desktop-actions {
         display: none;
     }

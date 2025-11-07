@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { asyncStorage } from '@/utils/storage'
+import { asyncStorage, getUserStorageKey } from '@/utils/storage'
 import type { ClassInfo } from '@/types/class'
+import { useUserStore } from './userStore'
 
-const STORAGE_KEY = 'ta_class_store_v1'
+const STORAGE_KEY_BASE = 'ta_class_store_v1'
 
 function generateId(prefix: string = 'cls'): string {
     return `${prefix}_${Math.random().toString(36).slice(2, 10)}`
@@ -16,22 +17,33 @@ const defaultInitial: { classes: ClassInfo[]; activeClassId: string | null } = {
 
 export const useClassStore = defineStore('class', () => {
     const initial = defaultInitial
+    const userStore = useUserStore()
 
     const classes = ref<ClassInfo[]>(initial.classes)
     const activeClassId = ref<string | null>(initial.activeClassId)
 
     const activeClass = computed<ClassInfo | null>(() => classes.value.find(c => c.id === activeClassId.value) ?? null)
 
+    function getStorageKey(): string {
+        const userId = userStore.profile?.id || null
+        return getUserStorageKey(STORAGE_KEY_BASE, userId)
+    }
+
     function persist() {
         const payload = { classes: classes.value, activeClassId: activeClassId.value }
-        void asyncStorage.setItem(STORAGE_KEY, payload)
+        void asyncStorage.setItem(getStorageKey(), payload)
     }
 
     async function hydrate() {
-        const saved = await asyncStorage.getItem<{ classes: ClassInfo[]; activeClassId: string | null }>(STORAGE_KEY)
+        const saved = await asyncStorage.getItem<{ classes: ClassInfo[]; activeClassId: string | null }>(getStorageKey())
         if (!saved) return
         classes.value = Array.isArray(saved.classes) ? saved.classes : []
         activeClassId.value = saved.activeClassId ?? null
+    }
+
+    function clear() {
+        classes.value = []
+        activeClassId.value = null
     }
 
     function setActiveClass(id: string) {
@@ -71,6 +83,7 @@ export const useClassStore = defineStore('class', () => {
         removeClass,
         persist,
         hydrate,
+        clear,
     }
 })
 

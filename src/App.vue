@@ -6,15 +6,52 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useClassStore } from '@/stores/classStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUserStore } from '@/stores/userStore'
+import { useStudentStore } from '@/stores/studentStore'
+import { usePointsStore } from '@/stores/pointsStore'
+import { usePointsItemStore } from '@/stores/pointsItemStore'
+import { useStudentGroupStore } from '@/stores/studentGroupStore'
+import { useShopStore } from '@/stores/shopStore'
+
+const classStore = useClassStore()
+const settingsStore = useSettingsStore()
+const userStore = useUserStore()
+const studentStore = useStudentStore()
+const pointsStore = usePointsStore()
+const pointsItemStore = usePointsItemStore()
+const studentGroupStore = useStudentGroupStore()
+const shopStore = useShopStore()
+
+function clearAllStores() {
+    classStore.clear()
+    studentStore.clear()
+    pointsStore.clear()
+    pointsItemStore.clear()
+    studentGroupStore.clear()
+    shopStore.clear()
+}
+
+async function loadAllStores() {
+    await Promise.all([
+        classStore.hydrate(),
+        studentStore.hydrate(),
+        pointsStore.hydrate(),
+        pointsItemStore.hydrate(),
+        studentGroupStore.hydrate(),
+        shopStore.hydrate(),
+    ])
+}
 
 const now = ref(new Date())
 let timer: number | undefined
 
-onMounted(() => {
+onMounted(async () => {
     timer = window.setInterval(() => {
         now.value = new Date()
     }, 1000)
-    void settingsStore.hydrate()
+    await settingsStore.hydrate()
+    if (userStore.profile?.id) {
+        await loadAllStores()
+    }
 })
 
 onBeforeUnmount(() => {
@@ -26,10 +63,6 @@ onBeforeUnmount(() => {
 
 const timeString = computed(() => formatTimeHHmm(now.value))
 const dateString = computed(() => formatChineseDateWithWeek(now.value))
-
-const classStore = useClassStore()
-const settingsStore = useSettingsStore()
-const userStore = useUserStore()
 const classes = computed(() => classStore.classes)
 const activeClassId = computed({
     get: () => classStore.activeClassId,
@@ -117,11 +150,18 @@ const showFooter = computed(() => isAuthenticated.value && !route.meta?.hideFoot
 
 function onUserCommand(command: string) {
     if (command === 'logout') {
+        clearAllStores()
         userStore.logout()
         ElMessage.success('已退出登录')
         router.replace('/auth')
     }
 }
+
+watch(() => userStore.profile?.id, (newUserId, oldUserId) => {
+    if (newUserId && newUserId !== oldUserId) {
+        void loadAllStores()
+    }
+}, { immediate: false })
 
 function clearTrialReminder() {
     if (trialReminderTimer !== null) {

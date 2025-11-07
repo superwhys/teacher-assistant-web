@@ -35,7 +35,7 @@ let countdownTimer: number | undefined
 
 const redirectPath = computed(() => {
     const target = route.query.redirect
-    return typeof target === 'string' && target.trim() ? target : '/class'
+    return typeof target === 'string' && target.trim() ? target : '/points'
 })
 
 function clearCountdown(): void {

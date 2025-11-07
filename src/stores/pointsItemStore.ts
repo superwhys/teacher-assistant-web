@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { asyncStorage } from '@/utils/storage'
+import { asyncStorage, getUserStorageKey } from '@/utils/storage'
 import type { PointsGroup, PointsItem, PointsSign } from '@/types/pointsItem'
+import { useUserStore } from './userStore'
 
 type ClassId = string
 
@@ -12,7 +13,7 @@ type ClassPointsConfig = {
 
 type Records = Record<ClassId, ClassPointsConfig>
 
-const STORAGE_KEY = 'ta_points_item_store_v1'
+const STORAGE_KEY_BASE = 'ta_points_item_store_v1'
 
 function generateId(prefix: string): string {
     return `${prefix}_${Math.random().toString(36).slice(2, 10)}`
@@ -20,10 +21,6 @@ function generateId(prefix: string): string {
 
 function loadInitial(): Records {
     return {}
-}
-
-function persist(records: Records) {
-    void asyncStorage.setItem<Records>(STORAGE_KEY, records)
 }
 
 function defaultConfig(): ClassPointsConfig {
@@ -53,14 +50,28 @@ function ensureClass(records: Records, classId: string): ClassPointsConfig {
 }
 
 export const usePointsItemStore = defineStore('pointsItem', () => {
+    const userStore = useUserStore()
     const records = ref<Records>(loadInitial())
 
+    function getStorageKey(): string {
+        const userId = userStore.profile?.id || null
+        return getUserStorageKey(STORAGE_KEY_BASE, userId)
+    }
+
+    function persist(records: Records) {
+        void asyncStorage.setItem<Records>(getStorageKey(), records)
+    }
+
     async function hydrate() {
-        const saved = await asyncStorage.getItem<Records>(STORAGE_KEY)
+        const saved = await asyncStorage.getItem<Records>(getStorageKey())
         if (!saved) return
         if (saved && typeof saved === 'object') {
             records.value = saved
         }
+    }
+
+    function clear() {
+        records.value = {}
     }
 
     function listGroups(classId: string | null): PointsGroup[] {
@@ -141,6 +152,7 @@ export const usePointsItemStore = defineStore('pointsItem', () => {
         updateItem,
         removeItem,
         hydrate,
+        clear,
     }
 })
 

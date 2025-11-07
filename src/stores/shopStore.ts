@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { asyncStorage } from '@/utils/storage'
+import { asyncStorage, getUserStorageKey } from '@/utils/storage'
 import type { ShopItem, ExchangeRecord } from '@/types/shopItem'
+import { useUserStore } from './userStore'
 
-const STORAGE_KEY = 'ta_shop_store_v1'
+const STORAGE_KEY_BASE = 'ta_shop_store_v1'
 
 type ShopStoreData = {
     items: ShopItem[]
@@ -17,21 +18,34 @@ function loadInitial(): ShopStoreData {
     }
 }
 
-function persist(data: ShopStoreData) {
-    void asyncStorage.setItem<ShopStoreData>(STORAGE_KEY, data)
-}
-
 function generateId(prefix: string = 'SI'): string {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
 }
 
 export const useShopStore = defineStore('shop', () => {
+    const userStore = useUserStore()
     const data = ref<ShopStoreData>(loadInitial())
 
+    function getStorageKey(): string {
+        const userId = userStore.profile?.id || null
+        return getUserStorageKey(STORAGE_KEY_BASE, userId)
+    }
+
+    function persist(data: ShopStoreData) {
+        void asyncStorage.setItem<ShopStoreData>(getStorageKey(), data)
+    }
+
     async function hydrate() {
-        const saved = await asyncStorage.getItem<ShopStoreData>(STORAGE_KEY)
+        const saved = await asyncStorage.getItem<ShopStoreData>(getStorageKey())
         if (saved && typeof saved === 'object') {
             data.value = saved
+        }
+    }
+
+    function clear() {
+        data.value = {
+            items: [],
+            records: []
         }
     }
 
@@ -151,7 +165,8 @@ export const useShopStore = defineStore('shop', () => {
         getAllRecords,
         importItems,
         clearAllItems,
-        hydrate
+        hydrate,
+        clear,
     }
 })
 

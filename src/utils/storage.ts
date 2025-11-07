@@ -94,5 +94,10 @@ export async function replaceAllKV(payload: Record<string, any>, preserveKeys: s
     await importAllKV(payload)
 }
 
+export function getUserStorageKey(baseKey: string, userId: string | null): string {
+    if (!userId) return baseKey
+    return `${baseKey}_user_${userId}`
+}
+
 export type AsyncStorage = typeof asyncStorage
 

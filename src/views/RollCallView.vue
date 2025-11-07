@@ -118,65 +118,52 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="roll-page">
-        <div class="header-row">
-            <div class="title">
-                <i-ep-user class="title-icon" />
-                <span class="title-text">点名器</span>
-            </div>
-            <div class="header-actions">
-                <el-button type="default" plain @click="$router.push('/tools')">
-                    <i-ep-arrow-left /> 返回课堂工具
-                </el-button>
+        <div class="content-area">
+            <div class="main-panel">
+                <div class="display-card">
+                    <div class="display-name" :class="{ placeholder: !currentName }">
+                        {{ currentName || '准备就绪' }}
+                    </div>
+                    <div class="sub-info">
+                        <el-text type="info">
+                            班级：{{ activeClassId ? (classStore.activeClass?.name || '未命名班级') : '未选择班级' }}
+                        </el-text>
+                    </div>
+                </div>
+
+                <div class="history" v-if="history.length">
+                    <div class="history-title">抽取历史</div>
+                    <div class="history-list">
+                        <el-tag v-for="name in history" :key="name" round class="history-tag">{{ name }}</el-tag>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="main-panel">
-            <div class="display-card">
-                <div class="display-name" :class="{ placeholder: !currentName }">
-                    {{ currentName || '准备就绪' }}
-                </div>
-                <div class="sub-info">
-                    <el-text type="info">
-                        班级：{{ activeClassId ? (classStore.activeClass?.name || '未命名班级') : '未选择班级' }}
-                    </el-text>
-                </div>
-            </div>
-
-            <div class="controls">
+        <div class="bottom-actions">
+            <div class="controls-row">
                 <el-button size="large" type="primary" class="control-btn" @click="toggleRolling">
-                    <template #icon>
-                        <i-ep-video-play v-if="!isRolling" />
-                        <i-ep-video-pause v-else />
-                    </template>
+                    <i-ep-video-play v-if="!isRolling" />
+                    <i-ep-video-pause v-else />
                     {{ isRolling ? '停止' : '开始抽取' }}
                 </el-button>
                 <el-button size="large" class="control-btn" @click="drawOnce" :disabled="isRolling">
-                    <template #icon>
-                        <i-ep-magic-stick />
-                    </template>
+                    <i-ep-magic-stick />
                     抽取1人
                 </el-button>
                 <el-button size="large" class="control-btn" @click="resetHistory" :disabled="isRolling && history.length === 0">
-                    <template #icon>
-                        <i-ep-refresh />
-                    </template>
+                    <i-ep-refresh />
                     重置
                 </el-button>
-                <div class="group-select">
-                    <el-select v-model="selectedGroupId" placeholder="选择分组（可选）" :disabled="!activeClassId" size="large" clearable>
-                        <el-option label="全部学生" value="" />
-                        <el-option v-for="g in groupsOfActive" :key="g.id" :label="`${g.name}（${g.members.length}）`" :value="g.id" />
-                    </el-select>
-                </div>
-                <div class="switcher">
-                    <el-switch v-model="noRepeat" active-text="不重复抽取" inactive-text="允许重复" />
-                </div>
             </div>
-
-            <div class="history" v-if="history.length">
-                <div class="history-title">抽取历史</div>
-                <div class="history-list">
-                    <el-tag v-for="name in history" :key="name" round class="history-tag">{{ name }}</el-tag>
+            <div class="settings-row">
+                <el-select v-model="selectedGroupId" placeholder="选择分组（可选）" :disabled="!activeClassId" 
+                    size="large" clearable class="group-select">
+                    <el-option label="全部学生" value="" />
+                    <el-option v-for="g in groupsOfActive" :key="g.id" :label="`${g.name}（${g.members.length}）`" :value="g.id" />
+                </el-select>
+                <div class="switcher">
+                    <el-switch v-model="noRepeat" active-text="不重复抽取" inactive-text="允许重复" size="large" />
                 </div>
             </div>
         </div>
@@ -188,43 +175,17 @@ onBeforeUnmount(() => {
 .roll-page {
     width: 100%;
     height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+}
+
+.content-area {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
     padding: 20px;
-}
-
-.header-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-}
-
-.title {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.header-actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.title-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 16px;
-}
-
-.title-icon {
-    width: 24px;
-    height: 24px;
-}
-
-.title-text {
-    font-size: 18px;
-    font-weight: 700;
+    padding-bottom: 16px;
 }
 
 .main-panel {
@@ -233,8 +194,7 @@ onBeforeUnmount(() => {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 18px;
-    padding-bottom: 120px;
+    gap: 24px;
 }
 
 .display-card {
@@ -266,27 +226,47 @@ onBeforeUnmount(() => {
     margin-top: 10px;
 }
 
-.controls {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+.bottom-actions {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
     gap: 12px;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.controls-row {
+    display: flex;
+    justify-content: center;
     align-items: center;
+    gap: 16px;
 }
 
 .control-btn {
-    height: 54px;
+    min-width: 140px;
+    height: 56px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 12px;
 }
 
-.switcher {
-    grid-column: 1 / -1;
+.settings-row {
     display: flex;
+    align-items: center;
     justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
 }
 
 .group-select {
-    grid-column: 1 / -1;
+    min-width: 240px;
+}
+
+.switcher {
     display: flex;
+    align-items: center;
 }
 
 .history {
@@ -309,28 +289,62 @@ onBeforeUnmount(() => {
     background: #f5f7ff;
 }
 
-@media (max-width: 900px) {
-    .roll-page {
+@media (max-width: 768px) {
+    .content-area {
         padding: 16px;
     }
+
     .display-name {
         font-size: 44px;
+    }
+
+    .controls-row {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .control-btn {
+        width: 100%;
+        min-width: unset;
+    }
+
+    .settings-row {
+        flex-direction: column;
+        width: 100%;
+        gap: 12px;
+    }
+
+    .group-select {
+        width: 100%;
+    }
+
+    .switcher {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .bottom-actions {
+        padding: 16px;
     }
 }
 
 @media (max-width: 480px) {
-    .roll-page {
+    .content-area {
         padding: 12px;
     }
+
     .display-card {
         border-radius: 14px;
         padding: 26px 16px;
     }
+
     .display-name {
         font-size: 32px;
     }
-    .controls {
-        grid-template-columns: 1fr 1fr;
+
+    .control-btn {
+        height: 50px;
+        font-size: 15px;
     }
 }
 </style>

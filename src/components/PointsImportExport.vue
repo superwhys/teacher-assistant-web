@@ -184,10 +184,10 @@ function doExportExcel() {
 
 <template>
     <span class="points-import-export">
-        <el-button type="success" plain :disabled="!activeClassId" @click="openImportDialog">
+        <el-button type="success" plain :disabled="!activeClassId" @click="openImportDialog" class="sub-btn">
             <i-ep-upload-filled /> 导入积分
         </el-button>
-        <el-button type="info" plain :disabled="!activeClassId" @click="openExportDialog">
+        <el-button type="info" plain :disabled="!activeClassId" @click="openExportDialog" class="sub-btn">
             <i-ep-download /> 导出 Excel
         </el-button>
 

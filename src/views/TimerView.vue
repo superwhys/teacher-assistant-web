@@ -82,51 +82,41 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="timer-page">
-        <div class="header-row">
-            <div class="title">
-                <i-ep-timer class="title-icon" />
-                <span class="title-text">计时器</span>
-            </div>
-            <div class="header-actions">
-                <el-button type="default" plain @click="$router.push('/tools')">
-                    <i-ep-arrow-left /> 返回课堂工具
-                </el-button>
+        <div class="content-area">
+            <div class="main-panel">
+                <div class="display-card">
+                    <div class="time-display">{{ display }}</div>
+                    <el-progress :percentage="progress" :stroke-width="10" :show-text="false" status="success" />
+                </div>
             </div>
         </div>
 
-        <div class="main-panel">
-            <div class="display-card">
-                <div class="time-display">{{ display }}</div>
-                <el-progress :percentage="progress" :stroke-width="10" :show-text="false" status="success" />
+        <div class="bottom-actions">
+            <div class="presets-row">
+                <el-button class="preset-btn" @click="setPreset(1)">1 分钟</el-button>
+                <el-button class="preset-btn" @click="setPreset(3)">3 分钟</el-button>
+                <el-button class="preset-btn" @click="setPreset(5)">5 分钟</el-button>
+                <el-button class="preset-btn" @click="setPreset(10)">10 分钟</el-button>
+                <el-button class="preset-btn" @click="setPreset(15)">15 分钟</el-button>
             </div>
 
-            <div class="inputs">
-                <el-input-number v-model="minutesInput" :min="0" :max="999" :step="1" size="large" />
+            <div class="inputs-row">
+                <el-input-number v-model="minutesInput" :min="0" :max="999" :step="1" size="large" 
+                    :disabled="isRunning" class="time-input" />
                 <span class="sep">分</span>
-                <el-input-number v-model="secondsInput" :min="0" :max="59" :step="5" size="large" />
+                <el-input-number v-model="secondsInput" :min="0" :max="59" :step="5" size="large" 
+                    :disabled="isRunning" class="time-input" />
                 <span class="sep">秒</span>
             </div>
 
-            <div class="presets">
-                <el-button class="preset" @click="setPreset(1)">1 分钟</el-button>
-                <el-button class="preset" @click="setPreset(3)">3 分钟</el-button>
-                <el-button class="preset" @click="setPreset(5)">5 分钟</el-button>
-                <el-button class="preset" @click="setPreset(10)">10 分钟</el-button>
-                <el-button class="preset" @click="setPreset(15)">15 分钟</el-button>
-            </div>
-
-            <div class="controls">
+            <div class="controls-row">
                 <el-button size="large" type="primary" class="control-btn" @click="isRunning ? stop() : start()">
-                    <template #icon>
-                        <i-ep-video-play v-if="!isRunning" />
-                        <i-ep-video-pause v-else />
-                    </template>
+                    <i-ep-video-play v-if="!isRunning" />
+                    <i-ep-video-pause v-else />
                     {{ isRunning ? '暂停' : '开始' }}
                 </el-button>
                 <el-button size="large" class="control-btn" @click="reset" :disabled="isRunning">
-                    <template #icon>
-                        <i-ep-refresh />
-                    </template>
+                    <i-ep-refresh />
                     重置
                 </el-button>
             </div>
@@ -138,36 +128,17 @@ onBeforeUnmount(() => {
 .timer-page {
     width: 100%;
     height: 100%;
-    padding: 20px;
-}
-
-.header-row {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
+    flex-direction: column;
+    padding: 0;
 }
 
-.title {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.title-icon {
-    width: 24px;
-    height: 24px;
-}
-
-.title-text {
-    font-size: 18px;
-    font-weight: 700;
-}
-
-.header-actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+.content-area {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px;
+    padding-bottom: 16px;
 }
 
 .main-panel {
@@ -176,8 +147,7 @@ onBeforeUnmount(() => {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 18px;
-    padding-bottom: 120px;
+    gap: 24px;
 }
 
 .display-card {
@@ -200,58 +170,127 @@ onBeforeUnmount(() => {
     color: #111111;
 }
 
-.inputs {
-    display: inline-flex;
+.bottom-actions {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.presets-row {
+    display: flex;
+    justify-content: center;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.preset-btn {
+    min-width: 100px;
+    height: 48px;
+    font-size: 15px;
+}
+
+.inputs-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+}
+
+.time-input {
+    width: 120px;
 }
 
 .sep {
     color: #666;
-    padding: 0 4px;
+    font-size: 16px;
+    font-weight: 500;
 }
 
-.presets {
+.controls-row {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.preset {
-    min-width: 96px;
-}
-
-.controls {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    justify-content: center;
     align-items: center;
+    gap: 16px;
 }
 
 .control-btn {
-    height: 54px;
+    min-width: 140px;
+    height: 56px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 12px;
 }
 
-@media (max-width: 900px) {
-    .timer-page {
+@media (max-width: 768px) {
+    .content-area {
         padding: 16px;
     }
+
     .time-display {
         font-size: 44px;
+    }
+
+    .presets-row {
+        width: 100%;
+    }
+
+    .preset-btn {
+        flex: 1;
+        min-width: 80px;
+    }
+
+    .controls-row {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .control-btn {
+        width: 100%;
+        min-width: unset;
+    }
+
+    .bottom-actions {
+        padding: 16px;
     }
 }
 
 @media (max-width: 480px) {
-    .timer-page {
+    .content-area {
         padding: 12px;
     }
+
     .display-card {
         border-radius: 14px;
         padding: 26px 16px;
     }
+
     .time-display {
         font-size: 32px;
+    }
+
+    .preset-btn {
+        height: 44px;
+        font-size: 14px;
+        min-width: 70px;
+    }
+
+    .control-btn {
+        height: 50px;
+        font-size: 15px;
+    }
+
+    .time-input {
+        width: 100px;
+    }
+
+    .sep {
+        font-size: 14px;
     }
 }
 </style>

@@ -6,5 +6,6 @@
 // biome-ignore lint: disable
 export {}
 declare global {
+  const ElMessageBox: typeof import('element-plus/es')['ElMessageBox']
   const iconSize: typeof import('~icons/si/ze')['default']
 }

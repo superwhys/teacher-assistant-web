@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import type { UploadRawFile, UploadFile, UploadInstance } from 'element-plus'
+import * as XLSX from 'xlsx'
 import { useClassStore } from '@/stores/classStore'
 import { useStudentStore } from '@/stores/studentStore'
 import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import StudentCard from '@/components/StudentCard.vue'
-import ClassManageCard from '@/components/ClassManageCard.vue'
-import ClassPeopleStatCard from '@/components/ClassPeopleStatCard.vue'
-import AddStudentCard from '@/components/AddStudentCard.vue'
+import type { Student } from '@/types/student'
 
 const classStore = useClassStore()
 
@@ -23,6 +23,156 @@ const studentsOfActive = computed(() => {
     return id ? studentStore.listByClassId(id) : []
 })
 
+const maleCount = computed(() => studentsOfActive.value.filter(s => s.gender === 'male').length)
+const femaleCount = computed(() => studentsOfActive.value.filter(s => s.gender === 'female').length)
+const totalCount = computed(() => studentsOfActive.value.length)
+
+// 添加学生对话框
+const addStudentDialogVisible = ref(false)
+const addMode = ref<'single' | 'batch' | 'excel'>('single')
+const singleName = ref('')
+const singleGender = ref<'male' | 'female'>('male')
+const batchText = ref('')
+const batchGender = ref<'male' | 'female'>('male')
+
+function addStudentSingle() {
+    if (!activeClassId.value) {
+        ElMessage.error('请先选择班级')
+        return
+    }
+    const name = singleName.value.trim()
+    if (!name) {
+        ElMessage.error('请输入学生姓名')
+        return
+    }
+    const student: Student = { studentName: name, gender: singleGender.value }
+    studentStore.addStudent(activeClassId.value, student)
+    singleName.value = ''
+    ElMessage.success('已添加学生')
+}
+
+function addStudentBatch() {
+    if (!activeClassId.value) {
+        ElMessage.error('请先选择班级')
+        return
+    }
+    const raw = batchText.value
+    const tokens = raw.split(/[\s,]+/).map(t => t.trim()).filter(Boolean)
+    if (tokens.length === 0) {
+        ElMessage.error('请输入要批量添加的学生姓名，使用逗号/空格/换行分隔')
+        return
+    }
+    const students: Student[] = tokens.map(n => ({ studentName: n, gender: batchGender.value }))
+    studentStore.addStudentsBatch(activeClassId.value, students)
+    batchText.value = ''
+    ElMessage.success('已批量添加')
+}
+
+const excelImporting = ref(false)
+const uploadRef = ref<UploadInstance>()
+const excelParsedStudents = ref<Student[]>([])
+const excelSkippedCount = ref(0)
+const excelFileName = ref('')
+
+function parseGender(value: unknown, fallback: 'male' | 'female' = 'male'): 'male' | 'female' {
+    const text = String(value ?? '').trim().toLowerCase()
+    if (!text) return fallback
+    if (['男', 'male', 'm', '1', 'boy', '♂'].includes(text)) return 'male'
+    if (['女', 'female', 'f', '0', 'girl', '♀'].includes(text)) return 'female'
+    return fallback
+}
+
+function findFirst<T extends Record<string, any>>(row: T, keys: string[]): any {
+    for (const key of keys) {
+        const val = row[key]
+        if (val !== undefined && String(val).trim() !== '') return val
+    }
+    return undefined
+}
+
+async function importExcelFromFile(file: File) {
+    if (!activeClassId.value) {
+        ElMessage.error('请先选择班级')
+        return false
+    }
+    if (excelImporting.value) return false
+    excelImporting.value = true
+    try {
+        const arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(reader.result as ArrayBuffer)
+            reader.onerror = reject
+            reader.readAsArrayBuffer(file)
+        })
+
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' })
+        const firstSheetName = workbook.SheetNames[0]
+        if (!firstSheetName) throw new Error('Excel 文件没有工作表')
+        const worksheet = workbook.Sheets[firstSheetName]!
+        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' })
+
+        const nameKeys = ['姓名', 'name', 'Name', '学生姓名', 'studentname', 'StudentName']
+        const genderKeys = ['性别', 'gender', 'Gender']
+
+        let skipped = 0
+        const students: Student[] = []
+        for (const row of rows) {
+            const nameVal = findFirst(row, nameKeys)
+            if (!nameVal) {
+                skipped += 1
+                continue
+            }
+            const genderVal = findFirst(row, genderKeys)
+            const student: Student = {
+                studentName: String(nameVal).trim(),
+                gender: parseGender(genderVal, 'male')
+            }
+            students.push(student)
+        }
+
+        if (students.length === 0) {
+            ElMessage.warning('未解析到有效的学生记录，请检查表头是否包含"姓名/性别"')
+            return false
+        }
+
+        excelParsedStudents.value = students
+        excelSkippedCount.value = skipped
+        ElMessage.success(`解析成功：${students.length} 条，跳过 ${skipped} 条`)
+    } catch (err: any) {
+        ElMessage.error(`导入失败：${err?.message || '未知错误'}`)
+    } finally {
+        excelImporting.value = false
+    }
+    return false
+}
+
+async function beforeExcelUpload(file: UploadRawFile) {
+    return importExcelFromFile(file as unknown as File)
+}
+
+async function handleExcelChange(file: UploadFile) {
+    if (!file || !file.raw) return
+    await importExcelFromFile(file.raw)
+    excelFileName.value = file.name || ''
+}
+
+function clearExcelPreview() {
+    excelParsedStudents.value = []
+    excelSkippedCount.value = 0
+    excelFileName.value = ''
+    uploadRef.value?.clearFiles()
+}
+
+function confirmExcelImport() {
+    if (excelParsedStudents.value.length === 0) {
+        ElMessage.warning('暂无可导入的数据')
+        return
+    }
+    if (!activeClassId.value) return
+    studentStore.addStudentsBatch(activeClassId.value, excelParsedStudents.value)
+    ElMessage.success(`已导入 ${excelParsedStudents.value.length} 条`)
+    clearExcelPreview()
+}
 
 async function onRemoveStudent(name: string) {
     try {
@@ -159,54 +309,139 @@ function onSaveStudentEdit() {
 
 <template>
     <div class="class-page">
-        <div class="grid">
-            <div class="left">
-                <ClassManageCard />
-                <ClassPeopleStatCard />
-                <AddStudentCard />
-            </div>
-
-            <div class="right">
-                <el-card shadow="never" class="list-card">
-                    <template #header>
-                        <div class="list-header-row">
-                            <div class="list-header">学生名单 <span v-if="activeClass">（{{ activeClass.name }}）</span></div>
-                            <div class="header-actions">
-                                <el-select v-model="selectedGroupFilter" size="large" placeholder="选择分组"
-                                    class="group-filter" :disabled="!activeClassId">
-                                    <el-option label="全部学生" value="" />
-                                    <el-option v-for="g in groupsOfActive" :key="g.id" :label="g.name" :value="g.id" />
-                                </el-select>
-                                <el-button size="large" type="primary" plain :disabled="!activeClassId"
-                                    @click="groupDialogVisible = true">
-                                    <i-ep-user /> 分组管理
-                                </el-button>
-                            </div>
+        <div class="content-area">
+            <el-card shadow="never" class="list-card">
+                <template #header>
+                    <div class="list-header-row">
+                        <div class="list-header">
+                            <span v-if="activeClass" class="class-name">{{ activeClass.name }}</span>
+                            <span v-else>学生名单</span>
+                            <span v-if="activeClass" class="student-count">
+                                共 {{ totalCount }} 人
+                                <span class="count-detail">(男 {{ maleCount }} / 女 {{ femaleCount }})</span>
+                            </span>
                         </div>
-                    </template>
+                        <el-select v-if="activeClass" v-model="selectedGroupFilter" size="large" placeholder="全部学生"
+                            class="group-filter">
+                            <el-option label="全部学生" value="" />
+                            <el-option v-for="g in groupsOfActive" :key="g.id" :label="g.name" :value="g.id" />
+                        </el-select>
+                    </div>
+                </template>
 
-                    <div v-if="activeClass">
-                        <div v-if="filteredStudents.length > 0" class="student-grid">
-                            <StudentCard v-for="s in filteredStudents" :key="s.studentName" :student="s"
-                                @remove="onRemoveStudent" @edit="onEditStudent" />
-                        </div>
-                        <div v-else class="empty empty-students">
-                            <i-ep-user class="empty-icon" />
-                            <div class="empty-title">{{ selectedGroupFilter ? '该分组暂无成员' : '还没有学生' }}</div>
-                            <div class="empty-sub">
-                                {{ selectedGroupFilter ? '可在分组管理中添加成员，或清除筛选查看全部学生' : '请在左侧添加学生，或导入 Excel' }}
-                            </div>
+                <div v-if="activeClass">
+                    <div v-if="filteredStudents.length > 0" class="student-grid">
+                        <StudentCard v-for="s in filteredStudents" :key="s.studentName" :student="s"
+                            @remove="onRemoveStudent" @edit="onEditStudent" />
+                    </div>
+                    <div v-else class="empty empty-students">
+                        <i-ep-user class="empty-icon" />
+                        <div class="empty-title">{{ selectedGroupFilter ? '该分组暂无成员' : '还没有学生' }}</div>
+                        <div class="empty-sub">
+                            {{ selectedGroupFilter ? '可在分组管理中添加成员，或清除筛选查看全部学生' : '点击下方"添加学生"按钮开始添加学生' }}
                         </div>
                     </div>
-                    <div v-else class="empty">
-                        <i-ep-school class="empty-icon" />
-                        <div class="empty-title">还没有班级</div>
-                        <div class="empty-sub">请在左侧创建一个班级后开始管理学生</div>
-                    </div>
-                </el-card>
-            </div>
+                </div>
+                <div v-else class="empty">
+                    <i-ep-school class="empty-icon" />
+                    <div class="empty-title">还没有班级</div>
+                    <div class="empty-sub">请先创建或选择一个班级</div>
+                </div>
+            </el-card>
+        </div>
+
+        <div class="bottom-actions">
+            <el-button size="large" type="primary" :disabled="!activeClassId"
+                @click="addStudentDialogVisible = true" class="action-btn">
+                <i-ep-plus /> 添加学生
+            </el-button>
+            <el-button size="large" type="primary" plain :disabled="!activeClassId"
+                @click="groupDialogVisible = true" class="action-btn">
+                <i-ep-user /> 分组管理
+            </el-button>
         </div>
     </div>
+
+    <el-dialog v-model="addStudentDialogVisible" title="添加学生" width="600px">
+        <el-tabs v-model="addMode" class="add-tabs">
+            <el-tab-pane label="单个添加" name="single">
+                <el-form label-position="top" class="add-form">
+                    <el-form-item label="姓名">
+                        <el-input v-model="singleName" placeholder="请输入学生姓名" size="large" />
+                    </el-form-item>
+                    <el-form-item label="性别">
+                        <el-radio-group v-model="singleGender" size="large">
+                            <el-radio-button label="male">男</el-radio-button>
+                            <el-radio-button label="female">女</el-radio-button>
+                        </el-radio-group>
+                    </el-form-item>
+                    <el-button class="add-btn" type="primary" size="large" @click="addStudentSingle">
+                        <i-ep-plus class="btn-icon" /> 添加
+                    </el-button>
+                </el-form>
+            </el-tab-pane>
+            <el-tab-pane label="批量添加" name="batch">
+                <el-form label-position="top" class="add-form">
+                    <el-form-item label="姓名列表（逗号/空格/换行分隔）">
+                        <el-input v-model="batchText" type="textarea" :rows="4" size="large"
+                            placeholder="例：张三, 李四&#10;王五 刘六" />
+                    </el-form-item>
+                    <el-form-item label="默认性别">
+                        <el-radio-group v-model="batchGender" size="large">
+                            <el-radio-button label="male">男</el-radio-button>
+                            <el-radio-button label="female">女</el-radio-button>
+                        </el-radio-group>
+                    </el-form-item>
+                    <el-button class="add-btn" type="primary" size="large" @click="addStudentBatch">
+                        <i-ep-plus class="btn-icon" /> 批量添加
+                    </el-button>
+                </el-form>
+            </el-tab-pane>
+            <el-tab-pane label="导入 Excel" name="excel">
+                <el-upload ref="uploadRef" class="upload-area" drag accept=".xls,.xlsx" :auto-upload="false"
+                    :show-file-list="false" :before-upload="beforeExcelUpload" :on-change="handleExcelChange">
+                    <i-ep-upload-filled class="upload-icon" />
+                    <div v-if="!excelFileName" class="el-upload__text">将文件拖到此处，或点击上传</div>
+                    <div v-else class="upload-file-name">
+                        <i-ep-document class="file-icon" /> {{ excelFileName }}
+                        <span class="change-hint">（点击重新选择）</span>
+                    </div>
+                    <template #tip>
+                        <div class="el-upload__tip">支持 .xls/.xlsx，表头包含"姓名"和可选"性别"。</div>
+                    </template>
+                </el-upload>
+                <div class="excel-guide">
+                    <div class="guide-title">可用的 Excel 表头示例：</div>
+                    <ul class="guide-list">
+                        <li>必填：姓名（或 Name/学生姓名）</li>
+                        <li>可选：性别（或 Gender），支持值：男/女、male/female、m/f、1/0</li>
+                    </ul>
+                </div>
+                <div v-if="excelParsedStudents.length" class="excel-preview">
+                    <div class="preview-header">
+                        <div class="preview-title">解析结果</div>
+                        <el-space class="preview-meta" wrap size="small">
+                            <el-tag v-if="excelFileName" type="info" effect="light">文件：{{ excelFileName }}</el-tag>
+                            <el-tag type="primary" effect="light">共 {{ excelParsedStudents.length }} 条</el-tag>
+                            <el-tag :type="excelSkippedCount ? 'warning' : 'success'" effect="light">跳过 {{
+                                excelSkippedCount }} 条</el-tag>
+                        </el-space>
+                    </div>
+                    <el-table :data="excelParsedStudents" border size="small" class="preview-table" max-height="260">
+                        <el-table-column prop="studentName" label="姓名" min-width="140" />
+                        <el-table-column label="性别" min-width="100">
+                            <template #default="{ row }">{{ row.gender === 'male' ? '男' : '女' }}</template>
+                        </el-table-column>
+                    </el-table>
+                    <div class="preview-actions">
+                        <el-button type="primary" :disabled="!excelParsedStudents.length" @click="confirmExcelImport">
+                            确认导入</el-button>
+                        <el-button @click="clearExcelPreview">清空</el-button>
+                    </div>
+                </div>
+            </el-tab-pane>
+        </el-tabs>
+    </el-dialog>
 
     <el-dialog v-model="groupDialogVisible" title="分组管理" width="720px">
         <div class="group-manage">
@@ -262,177 +497,84 @@ function onSaveStudentEdit() {
 .class-page {
     width: 100%;
     height: 100%;
-}
-
-.grid {
-    width: 100%;
-    height: 100%;
-    display: grid;
-    grid-template-columns: 360px 1fr;
-    gap: 20px;
-}
-
-.left {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    padding: 0;
 }
 
-.class-card {
-    border-radius: 16px;
-}
-
-.class-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.class-title {
-    font-size: 18px;
-    font-weight: 700;
-}
-
-.class-manage {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-top: 10px;
-}
-
-.current-class {
+.content-area {
     flex: 1;
-    min-width: 0;
-    color: #666666;
-    font-size: 14px;
-    white-space: nowrap;
+    min-height: 0;
     overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.class-select {
-    flex: 1;
-}
-
-.class-name {
-    color: #333333;
-    font-weight: 600;
-}
-
-.class-actions {
-    display: flex;
-    gap: 12px;
-    flex-shrink: 0;
-}
-
-.stat-card {
-    border-radius: 16px;
-}
-
-.stat {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.stat-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    background: #f2f2f3;
-}
-
-.stat-content {
-    display: flex;
-    flex-direction: column;
-}
-
-.stat-label {
-    color: #666;
-}
-
-.stat-value {
-    margin-top: 4px;
-    font-size: 32px;
-    font-weight: 700;
-}
-
-.stat-people {
-    background: linear-gradient(180deg, #eef6ff, #ffffff);
-}
-
-.stat-attendance {
-    background: linear-gradient(180deg, #edf9f1, #ffffff);
-}
-
-.stat-score {
-    background: linear-gradient(180deg, #f5edff, #ffffff);
-}
-
-.positive {
-    color: #1db954;
-}
-
-.info {
-    color: #3b82f6;
-}
-
-.add-card {
-    border-radius: 16px;
-}
-
-.form-title {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 8px;
-}
-
-.add-form :deep(.el-form-item) {
-    margin-bottom: 12px;
-}
-
-.add-btn {
-    width: 100%;
-}
-
-.btn-icon {
-    margin-right: 6px;
-}
-
-.right {
-    min-width: 0;
+    padding-bottom: 16px;
 }
 
 .list-card {
     height: 100%;
     border-radius: 16px;
+    display: flex;
+    flex-direction: column;
 }
 
-.list-header {
-    font-size: 20px;
-    font-weight: 700;
+.list-card :deep(.el-card__body) {
+    flex: 1;
+    overflow-y: auto;
 }
 
 .list-header-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 16px;
+    flex-wrap: wrap;
 }
 
-.header-actions {
+.list-header {
     display: flex;
-    align-items: center;
-    gap: 12px;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.class-name {
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+}
+
+.student-count {
+    font-size: 16px;
+    color: #666;
+    font-weight: 500;
+}
+
+.count-detail {
+    color: #999;
+    font-size: 14px;
+    margin-left: 8px;
 }
 
 .group-filter {
-    width: 220px;
+    min-width: 200px;
+}
+
+.bottom-actions {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.action-btn {
+    min-width: 160px;
+    height: 56px;
+    font-size: 18px;
+    font-weight: 600;
+    border-radius: 12px;
 }
 
 .student-grid {
@@ -558,55 +700,156 @@ function onSaveStudentEdit() {
     color: #888;
 }
 
-@media (max-width: 1024px) {
-    .grid {
-        grid-template-columns: 1fr;
-    }
+.add-tabs {
+    margin-top: -10px;
 }
 
-@media (max-width: 600px) {
-    .class-page {
-        padding: 12px;
-    }
+.add-form :deep(.el-form-item) {
+    margin-bottom: 16px;
+}
 
-    .student-item {
-        padding: 12px;
-    }
+.add-btn {
+    width: 100%;
+}
 
-    .stat-value {
-        font-size: 26px;
-    }
+.btn-icon {
+    margin-right: 6px;
+}
 
+.upload-area {
+    margin-bottom: 12px;
+}
+
+.upload-icon {
+    font-size: 56px;
+    color: var(--el-text-color-secondary);
+    margin-bottom: 12px;
+}
+
+.upload-file-name {
+    margin-top: 4px;
+    color: var(--el-text-color-regular);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.upload-file-name .file-icon {
+    font-size: 16px;
+}
+
+.upload-file-name .change-hint {
+    color: var(--el-text-color-secondary);
+}
+
+.excel-guide {
+    margin-top: 8px;
+    color: var(--el-text-color-regular);
+    font-size: 13px;
+}
+
+.guide-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.guide-list {
+    padding-left: 18px;
+    margin: 0;
+}
+
+.excel-preview {
+    margin-top: 16px;
+    padding: 12px;
+    border: 1px dashed var(--el-border-color);
+    border-radius: 8px;
+}
+
+.preview-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.preview-title {
+    font-weight: 600;
+}
+
+.preview-meta {
+    width: 100%;
+}
+
+.preview-table {
+    margin-bottom: 10px;
+}
+
+.preview-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+@media (max-width: 768px) {
     .list-header-row {
         flex-direction: column;
         align-items: stretch;
-        gap: 8px;
+        gap: 12px;
     }
 
-    .list-header {
-        font-size: 18px;
-        line-height: 1.25;
-        word-break: break-word;
+    .class-name {
+        font-size: 20px;
     }
 
-    .header-actions {
-        width: 100%;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 8px;
+    .student-count {
+        font-size: 14px;
     }
 
     .group-filter {
         width: 100%;
     }
 
-    .header-actions .el-button {
+    .bottom-actions {
+        flex-direction: column;
+        padding: 16px;
+        gap: 12px;
+    }
+
+    .action-btn {
         width: 100%;
+        min-width: unset;
     }
 
     .student-grid {
-        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
         gap: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .class-name {
+        font-size: 18px;
+    }
+
+    .student-count {
+        font-size: 13px;
+    }
+
+    .count-detail {
+        font-size: 12px;
+    }
+
+    .action-btn {
+        height: 50px;
+        font-size: 16px;
+    }
+
+    .student-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
     }
 }
 </style>

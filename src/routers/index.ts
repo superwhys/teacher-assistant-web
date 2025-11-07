@@ -4,10 +4,10 @@ import { useUserStore } from '@/stores/userStore'
 const routes = [
   {
     path: '/',
-    redirect: '/class',
+    redirect: '/points',
   },
   {
-    path: '/class',
+    path: '/students',
     component: () => import('@/views/ClassView.vue'),
   },
   {
@@ -33,7 +33,6 @@ const routes = [
   {
     path: '/settings',
     component: () => import('@/views/SettingsView.vue'),
-    meta: { hideFooter: true },
   },
   {
     path: '/auth',

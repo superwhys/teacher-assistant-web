@@ -103,7 +103,7 @@ function confirmImport() {
 
 <template>
     <span class="points-items-import">
-        <el-button type="success" plain :disabled="!activeClassId" @click="openDialog">
+        <el-button type="success" plain :disabled="!activeClassId" @click="openDialog" class="sub-btn">
             <i-ep-upload-filled /> 导入积分项
         </el-button>
 

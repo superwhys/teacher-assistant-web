@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { exportAllKV, importAllKV } from '@/utils/storage'
@@ -15,8 +14,6 @@ import { authApi } from '@/api/auth'
 import { decodeJwtPayload } from '@/utils/jwt'
 import type { JwtPayload } from '@/types/auth'
 
-// 设置页面视图
-const router = useRouter()
 const settingsStore = useSettingsStore()
 const classStore = useClassStore()
 const studentStore = useStudentStore()
@@ -40,10 +37,6 @@ const savingPwd = ref<boolean>(false)
 const hasPwd = computed(() => settingsStore.hasLockPassword())
 const secretInput = ref<string>('')
 const verifyingSecret = ref<boolean>(false)
-
-function goHome() {
-    router.push('/class')
-}
 
 function formatNowStr(): string {
     const d = new Date()
@@ -242,12 +235,6 @@ function onLockNow() {
 
 <template>
     <div class="settings-page">
-        <div class="top-bar">
-            <el-button size="large" @click="goHome">
-                <i-ep-back class="btn-icon" /> 返回首页
-            </el-button>
-        </div>
-
         <div class="cards">
             <BaseCard title="数据授权码" shadow="never">
                 <el-form label-position="top" class="settings-form">
@@ -353,14 +340,6 @@ function onLockNow() {
 .settings-page {
     width: 100%;
     height: 100%;
-    padding: 20px;
-}
-
-.top-bar {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    margin-bottom: 16px;
 }
 
 .btn-icon {
@@ -520,13 +499,7 @@ function onLockNow() {
     text-overflow: ellipsis;
 }
 
-/* 竖向布局无需特殊响应式，这里保留默认栅格规则 */
-
 @media (max-width: 900px) {
-    .settings-page {
-        padding: 16px;
-    }
-
     .cards {
         grid-template-columns: 1fr;
         gap: 14px;
@@ -534,10 +507,6 @@ function onLockNow() {
 }
 
 @media (max-width: 480px) {
-    .settings-page {
-        padding: 12px;
-    }
-
     .cards {
         gap: 12px;
     }

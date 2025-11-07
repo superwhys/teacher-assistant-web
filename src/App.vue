@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { formatTimeHHmm, formatChineseDateWithWeek } from '@/utils/date'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useClassStore } from '@/stores/classStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUserStore } from '@/stores/userStore'
@@ -94,13 +94,26 @@ function onCreateDialogClosed() {
     createClassName.value = ''
 }
 
+async function removeCurrentClass() {
+    if (!activeClassId.value) return
+    const currentClass = classes.value.find(c => c.id === activeClassId.value)
+    if (!currentClass) return
+    try {
+        await ElMessageBox.confirm(`确定删除班级「${currentClass.name}」吗？`, '删除确认', {
+            type: 'warning',
+            confirmButtonText: '删除',
+            cancelButtonText: '取消',
+        })
+        classStore.removeClass(activeClassId.value)
+        ElMessage.success('已删除班级')
+    } catch (e) {
+        // 用户取消
+    }
+}
+
 const router = useRouter()
 const route = useRoute()
 const showFooter = computed(() => isAuthenticated.value && !route.meta?.hideFooter)
-
-function goSettings() {
-    router.push('/settings')
-}
 
 function onUserCommand(command: string) {
     if (command === 'logout') {
@@ -198,16 +211,6 @@ async function confirmUnlock() {
                                 <span class="indicator-text">{{ trialBadgeText }}</span>
                             </el-tag>
                         </div>
-                        <div class="action-buttons">
-                            <el-button class="widget-btn" circle plain size="default" @click="goSettings">
-                                <i-ep-setting />
-                            </el-button>
-                            <el-button class="widget-btn" circle plain size="default"
-                                :disabled="!settingsStore.hasLockPassword()" @click="lockNow">
-                                <i-ep-unlock v-if="!settingsStore.isLocked" />
-                                <i-ep-lock v-else />
-                            </el-button>
-                        </div>
                         <el-dropdown v-if="isAuthenticated" placement="bottom-end" @command="onUserCommand">
                             <span class="user-entry">
                                 <div v-if="userAvatar" class="user-avatar">
@@ -231,41 +234,66 @@ async function confirmUnlock() {
                     </div>
                 </div>
             </el-header>
-            <el-main class="main">
-                <div class="content-area">
-                    <router-view :key="settingsStore.dataVersion" />
-                </div>
-            </el-main>
-            <el-footer class="action-panel" v-if="showFooter">
-                <div class="action-bar">
-                    <div class="class-quick">
-                        <el-select v-model="activeClassId" placeholder="选择班级" class="class-select" size="large">
-                            <el-option v-for="c in classes" :key="c.id" :label="c.name" :value="c.id" />
-                        </el-select>
-                        <el-button class="create-btn" type="primary" size="large" @click="openCreateDialog">
-                            <i-ep-plus class="btn-icon" /> 新建班级
-                        </el-button>
+            <el-container class="body-container">
+                <el-aside v-if="showFooter" class="sidebar" width="250px">
+                    <div class="sidebar-content">
+                        <div class="sidebar-section">
+                            <div class="section-title">功能菜单</div>
+                            <div class="nav-list">
+                                <ActionItem label="积分管理" to="/points">
+                                    <template #icon>
+                                        <i-ep-medal class="nav-icon" />
+                                    </template>
+                                </ActionItem>
+                                <ActionItem label="学生管理" to="/students">
+                                    <template #icon>
+                                        <i-ep-user-filled class="nav-icon" />
+                                    </template>
+                                </ActionItem>
+                                <ActionItem label="工具箱" to="/tools">
+                                    <template #icon>
+                                        <i-ep-magic-stick class="nav-icon" />
+                                    </template>
+                                </ActionItem>
+                                <ActionItem label="设置" to="/settings">
+                                    <template #icon>
+                                        <i-ep-setting class="nav-icon" />
+                                    </template>
+                                </ActionItem>
+                            </div>
+                        </div>
+                        <div class="sidebar-section class-section">
+                            <div class="section-title">班级选择</div>
+                            <el-select v-model="activeClassId" placeholder="选择班级" class="class-select" size="large">
+                                <el-option v-for="c in classes" :key="c.id" :label="c.name" :value="c.id" />
+                            </el-select>
+                            <div class="class-actions">
+                                <el-button type="primary" size="default" @click="openCreateDialog">
+                                    <i-ep-plus class="btn-icon" /><span>新建班级</span>
+                                </el-button>
+                                <el-button type="danger" plain size="default" :disabled="!activeClassId" @click="removeCurrentClass">
+                                    <i-ep-delete class="btn-icon" /><span>删除班级</span>
+                                </el-button>
+                            </div>
+                        </div>
+                        <div class="sidebar-footer">
+                            <el-button class="logout-btn" text :disabled="!settingsStore.hasLockPassword()" @click="lockNow">
+                                <i-ep-lock class="logout-icon" /> 锁屏
+                            </el-button>
+                            <el-button class="logout-btn" text @click="onUserCommand('logout')">
+                                <i-ep-switch-button class="logout-icon" /> 退出登录
+                            </el-button>
+                        </div>
                     </div>
-                    <div class="divider"></div>
-                    <div class="action-list">
-                        <ActionItem label="班级管理" to="/class">
-                            <template #icon>
-                                <i-ep-user-filled class="action-icon" />
-                            </template>
-                        </ActionItem>
-                        <ActionItem label="积分管理" to="/points">
-                            <template #icon>
-                                <i-ep-medal class="action-icon" />
-                            </template>
-                        </ActionItem>
-                        <ActionItem label="课堂工具" to="/tools">
-                            <template #icon>
-                                <i-ep-tools class="action-icon" />
-                            </template>
-                        </ActionItem>
+                </el-aside>
+                <el-main class="main">
+                    <div class="content-area">
+                        <router-view v-slot="{ Component }">
+                            <component :is="Component" :key="settingsStore.dataVersion" />
+                        </router-view>
                     </div>
-                </div>
-            </el-footer>
+                </el-main>
+            </el-container>
             <el-dialog v-model="createDialogVisible" title="新建班级" width="420px" @closed="onCreateDialogClosed">
                 <el-form label-position="top">
                     <el-form-item label="班级名称">
@@ -314,6 +342,11 @@ async function confirmUnlock() {
     height: 100%;
     display: flex;
     flex-direction: column;
+}
+
+.main-container :deep(.el-main) {
+    display: block;
+    flex: 1;
 }
 
 .main-header {
@@ -378,12 +411,6 @@ async function confirmUnlock() {
     display: flex;
     align-items: center;
     gap: 12px;
-}
-
-.action-buttons {
-    display: flex;
-    align-items: center;
-    gap: 8px;
 }
 
 .user-entry {
@@ -484,20 +511,6 @@ async function confirmUnlock() {
     font-weight: 600;
     display: inline-flex;
     align-items: center;
-}
-
-
-:deep(.widget-btn.el-button) {
-    border-color: transparent;
-    background-color: transparent;
-    box-shadow: none;
-}
-
-:deep(.widget-btn.el-button:hover),
-:deep(.widget-btn.el-button:focus),
-:deep(.widget-btn.el-button.is-active) {
-    border-color: #dcdfe6;
-    background-color: rgba(0, 0, 0, 0.02);
 }
 
 .lock-overlay {
@@ -602,103 +615,190 @@ async function confirmUnlock() {
     color: #666666;
 }
 
-.main {
+.body-container {
     flex: 1;
-    overflow: auto;
+    overflow: hidden;
+    display: flex !important;
+    flex-direction: row !important;
+    height: calc(100vh - 80px);
 }
 
-.content-area {
-    min-height: 0;
-}
-
-.action-panel {
-    width: 100%;
-    height: 108px;
-    padding: 12px 16px calc(12px + env(safe-area-inset-bottom)) 16px;
-    background: transparent;
-    border-top: none;
-    box-shadow: none;
+.sidebar {
+    background-color: #f5f7fa;
+    border-right: 1px solid #e4e7ed;
     display: flex;
-    align-items: flex-end;
-    position: sticky;
-    bottom: 0;
-    z-index: 10;
-}
-
-.action-bar {
-    width: 100%;
-    max-width: 1000px;
-    margin: 0 auto;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: saturate(150%) blur(10px);
-    border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(0, 0, 0, 0.06);
-    padding: 10px 12px;
-    display: grid;
-    grid-template-columns: auto 1px 1fr;
-    align-items: center;
-    gap: 12px;
-}
-
-.divider {
+    flex-direction: column;
     height: 100%;
-    border-left: 1px dashed #d9d9d9;
+    overflow: hidden;
+    flex-shrink: 0;
 }
 
-.class-quick {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-    align-items: stretch;
+.sidebar-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 20px 16px;
+    gap: 24px;
+    overflow-y: auto;
 }
 
-.class-select {
-    min-width: 160px;
-}
-
-.create-btn {
-    width: 100%;
-}
-
-.action-list {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+.sidebar-section {
+    display: flex;
+    flex-direction: column;
     gap: 12px;
 }
 
-.action-icon {
-    width: 28px;
-    height: 28px;
+.class-section {
+    margin-top: auto;
+}
+
+.section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #909399;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0 8px;
+}
+
+.nav-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.nav-icon {
+    width: 20px;
+    height: 20px;
 }
 
 :deep(.action-item) {
-    background: #f9f9fb;
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
-    padding: 12px 8px;
-    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background-color: transparent;
+    color: #606266;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+:deep(.action-item:hover) {
+    background-color: #e9ecf1;
 }
 
 :deep(.action-item.is-active) {
     background: linear-gradient(135deg, #2d5cf6 0%, #6a8bff 100%);
     color: #ffffff;
-    box-shadow: 0 8px 24px rgba(45, 92, 246, 0.25);
+    box-shadow: 0 4px 12px rgba(45, 92, 246, 0.25);
 }
 
 :deep(.action-corner) {
     display: none;
 }
 
+:deep(.action-icon-wrapper) {
+    flex-shrink: 0;
+}
+
 :deep(.action-text) {
-    margin-top: 6px;
+    font-size: 15px;
+    font-weight: 500;
+    margin: 0;
+}
+
+.class-select {
+    width: 100%;
+}
+
+.class-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.class-actions :deep(.el-button) {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0 !important;
+}
+
+.class-actions :deep(.el-button span) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.class-actions .btn-icon {
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+.sidebar-footer {
+    padding-top: 16px;
+    border-top: 1px solid #e4e7ed;
+}
+
+.logout-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    color: #606266;
     font-size: 14px;
-    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+    color: #f56c6c;
+    background-color: #fef0f0;
+}
+
+.logout-icon {
+    font-size: 16px;
+}
+
+.main {
+    flex: 1 1 auto !important;
+    overflow: hidden !important;
+    background-color: #f0f2f5 !important;
+    padding: 20px !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.content-area {
+    width: 100%;
+    height: 100%;
+    min-height: 600px;
+}
+
+.content-area > * {
+    height: 100%;
 }
 
 
 @media (max-width: 768px) {
     .main-header {
         padding: 0 16px;
+    }
+
+    .main {
+        padding: 16px !important;
     }
 
     .header-content {
@@ -766,48 +866,41 @@ async function confirmUnlock() {
         font-size: 13px;
     }
 
-    .action-panel {
-        height: 84px;
-        padding: 8px 12px calc(10px + env(safe-area-inset-bottom)) 12px;
+    .sidebar {
+        width: 200px !important;
     }
 
-    .action-bar {
-        padding: 8px 10px;
-        border-radius: 14px;
-        grid-template-columns: 1fr;
-        row-gap: 10px;
+    .sidebar-content {
+        padding: 16px 12px;
+        gap: 20px;
     }
 
-    .action-list {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 10px;
+    .section-title {
+        font-size: 12px;
     }
 
-    .class-quick {
-        grid-template-columns: 1fr;
-    }
-
-    .divider {
-        display: none;
-    }
-
-    .action-icon {
-        width: 24px;
-        height: 24px;
+    :deep(.action-item) {
+        padding: 10px 12px;
     }
 
     :deep(.action-text) {
-        font-size: 13px;
+        font-size: 14px;
+    }
+
+    .nav-icon {
+        width: 18px;
+        height: 18px;
     }
 }
 
 @media (max-width: 432px) {
     .main-header {
         padding: 0 10px;
+        height: 60px;
     }
 
     .main {
-        padding: 0;
+        padding: 12px !important;
     }
 
     .header-right {
@@ -836,31 +929,35 @@ async function confirmUnlock() {
         border-radius: 9px;
     }
 
-    .action-panel {
-        height: 76px;
-        padding: 6px 8px calc(10px + env(safe-area-inset-bottom)) 8px;
+    .sidebar {
+        width: 180px !important;
     }
 
-    .action-bar {
-        max-width: 100%;
-        border-radius: 12px;
-        padding: 8px;
-        grid-template-columns: 1fr;
-        row-gap: 8px;
+    .sidebar-content {
+        padding: 12px 8px;
+        gap: 16px;
     }
 
-    .action-list {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 8px;
+    .section-title {
+        font-size: 11px;
     }
 
-    .action-icon {
-        width: 22px;
-        height: 22px;
+    :deep(.action-item) {
+        padding: 8px 10px;
     }
 
     :deep(.action-text) {
-        font-size: 12px;
+        font-size: 13px;
+    }
+
+    .nav-icon {
+        width: 16px;
+        height: 16px;
+    }
+
+    .logout-btn {
+        font-size: 13px;
+        padding: 8px 12px;
     }
 }
 </style>

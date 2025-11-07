@@ -1,5 +1,6 @@
 import type { ApiResponse } from "@/types/api";
 import { ElMessage } from "element-plus";
+import { useUserStore } from "@/stores/userStore";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
@@ -50,7 +51,8 @@ async function request<T>(
   url: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
-  const authToken = localStorage.getItem("auth_token");
+  const userStore = useUserStore();
+  const authToken = userStore.token;
   let response = await fetch(`${API_BASE_URL}${url}`, {
     headers: buildHeaders(authToken, options.headers),
     ...options,

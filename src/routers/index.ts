@@ -50,11 +50,8 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach(async (to) => {
+router.beforeEach((to) => {
   const user = useUserStore()
-  if (!user.hydrated) {
-    await user.hydrate()
-  }
   if (!user.isAuthenticated && to.path !== '/auth') {
     return { path: '/auth', query: { redirect: to.fullPath } }
   }

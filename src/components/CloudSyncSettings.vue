@@ -3,12 +3,14 @@ import { computed, ref, onMounted } from 'vue'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { ElMessage } from 'element-plus'
 import { cloudApi } from '@/api/cloud'
-import { replaceAllKV } from '@/utils/storage'
+import { importUserData } from '@/utils/storage'
 import { useClassStore } from '@/stores/classStore'
+import { useUserStore } from '@/stores/userStore'
 import { useStudentStore } from '@/stores/studentStore'
 import { usePointsStore } from '@/stores/pointsStore'
 import { usePointsItemStore } from '@/stores/pointsItemStore'
 import { useStudentGroupStore } from '@/stores/studentGroupStore'
+import { useShopStore } from '@/stores/shopStore'
 
 /**
  * 云同步设置卡片
@@ -71,11 +73,13 @@ function formatTime(ts: number): string {
     }
 }
 
+const userStore = useUserStore()
 const classStore = useClassStore()
 const studentStore = useStudentStore()
 const pointsStore = usePointsStore()
 const pointsItemStore = usePointsItemStore()
 const studentGroupStore = useStudentGroupStore()
+const shopStore = useShopStore()
 
 async function onRestore(ts: number) {
     if (restoringTs.value) return
@@ -83,13 +87,15 @@ async function onRestore(ts: number) {
     try {
         const res = await cloudApi.getBackup(ts)
         const payload = res?.data || {}
-        await replaceAllKV(payload)
+        const userId = userStore.profile?.id || null
+        await importUserData(payload, userId)
         await Promise.all([
             classStore.hydrate(),
             studentStore.hydrate(),
             pointsStore.hydrate(),
             pointsItemStore.hydrate(),
             studentGroupStore.hydrate(),
+            shopStore.hydrate(),
         ])
         settingsStore.bumpVersion()
         ElMessage.success('已从该节点恢复')

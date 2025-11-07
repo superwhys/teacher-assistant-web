@@ -99,5 +99,65 @@ export function getUserStorageKey(baseKey: string, userId: string | null): strin
     return `${baseKey}_user_${userId}`
 }
 
+export function removeUserIdFromKey(key: string): string {
+    return key.replace(/_user_[^_]+$/, '')
+}
+
+export function extractUserIdFromKey(key: string): string | null {
+    const match = key.match(/_user_([^_]+)$/)
+    return match ? (match[1] ?? null) : null
+}
+
+export async function exportUserData(userId: string | null): Promise<Record<string, any>> {
+    const out: Record<string, any> = {}
+    if (!userId) {
+        console.warn('exportUserData: userId is null, no data will be exported')
+        return out
+    }
+    
+    try {
+        await lf.iterate((value, key) => {
+            const keyStr = String(key)
+            if (keyStr === 'ta_settings_v1' || keyStr === 'ta_user_store_v1') {
+                return
+            }
+            
+            if (keyStr.endsWith(`_user_${userId}`)) {
+                const cleanKey = removeUserIdFromKey(keyStr)
+                out[cleanKey] = value
+            }
+        })
+    } catch (err) {
+        console.error('Failed to export user data', err)
+    }
+    return out
+}
+
+export async function importUserData(payload: Record<string, any>, userId: string | null): Promise<void> {
+    if (!payload || typeof payload !== 'object') {
+        console.error('importUserData: invalid payload', payload)
+        return
+    }
+    
+    if (!userId) {
+        console.warn('importUserData: userId is null, data will be imported without user suffix')
+    }
+    
+    const entries = Object.entries(payload)
+    for (const [key, value] of entries) {
+        if (key === 'ta_settings_v1' || key === 'ta_user_store_v1') {
+            continue
+        }
+        
+        const storageKey = userId ? `${key}_user_${userId}` : key
+        
+        try {
+            await lf.setItem(storageKey, value)
+        } catch (err) {
+            console.error('Failed to import key', key, err)
+        }
+    }
+}
+
 export type AsyncStorage = typeof asyncStorage
 

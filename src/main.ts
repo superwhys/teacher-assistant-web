@@ -1,5 +1,6 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import './style.css'
 import App from './App.vue'
 import router from './routers'
@@ -11,10 +12,10 @@ import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import { usePointsStore } from '@/stores/pointsStore'
 import { usePointsItemStore } from '@/stores/pointsItemStore'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { useUserStore } from '@/stores/userStore'
 import { useShopStore } from '@/stores/shopStore'
 
 const pinia = createPinia()
+pinia.use(piniaPluginPersistedstate)
 const app = createApp(App)
 app.use(pinia)
 app.use(router)
@@ -27,7 +28,6 @@ await Promise.all([
     usePointsStore(pinia).hydrate(),
     usePointsItemStore(pinia).hydrate(),
     useSettingsStore(pinia).hydrate(),
-    useUserStore(pinia).hydrate(),
     useShopStore(pinia).hydrate(),
 ])
 

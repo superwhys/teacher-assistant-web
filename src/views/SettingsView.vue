@@ -2,12 +2,13 @@
 import { onMounted, ref, computed } from 'vue'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { exportAllKV, importAllKV } from '@/utils/storage'
+import { exportUserData, importUserData } from '@/utils/storage'
 import { useClassStore } from '@/stores/classStore'
 import { useStudentStore } from '@/stores/studentStore'
 import { usePointsStore } from '@/stores/pointsStore'
 import { usePointsItemStore } from '@/stores/pointsItemStore'
 import { useStudentGroupStore } from '@/stores/studentGroupStore'
+import { useShopStore } from '@/stores/shopStore'
 import CloudSyncSettings from '@/components/CloudSyncSettings.vue'
 import { useUserStore } from '@/stores/userStore'
 import { authApi } from '@/api/auth'
@@ -20,6 +21,7 @@ const studentStore = useStudentStore()
 const pointsStore = usePointsStore()
 const pointsItemStore = usePointsItemStore()
 const studentGroupStore = useStudentGroupStore()
+const shopStore = useShopStore()
 const userStore = useUserStore()
 
 onMounted(() => {
@@ -54,7 +56,12 @@ async function onExportBackup() {
     if (exporting.value) return
     exporting.value = true
     try {
-        const data = await exportAllKV()
+        const userId = userStore.profile?.id || null
+        if (!userId) {
+            ElMessage.error('无法获取用户信息，请重新登录后再试')
+            return
+        }
+        const data = await exportUserData(userId)
         const json = JSON.stringify(data)
         const blob = new Blob([json], { type: 'application/json;charset=utf-8' })
         const url = URL.createObjectURL(blob)
@@ -97,7 +104,11 @@ async function onImportFileChange(e: Event) {
             throw new Error('文件非合法 JSON')
         }
         const payload = parsed && typeof parsed === 'object' && parsed.data && typeof parsed.data === 'object' ? parsed.data : parsed
-        await importAllKV(payload)
+        const userId = userStore.profile?.id || null
+        if (!userId) {
+            throw new Error('无法获取用户信息，请重新登录后再试')
+        }
+        await importUserData(payload, userId)
         // 导入后刷新各 store
         await Promise.all([
             settingsStore.hydrate(),
@@ -106,6 +117,7 @@ async function onImportFileChange(e: Event) {
             pointsStore.hydrate(),
             pointsItemStore.hydrate(),
             studentGroupStore.hydrate(),
+            shopStore.hydrate(),
         ])
         ElMessage.success('数据已导入并刷新')
     } catch (err) {

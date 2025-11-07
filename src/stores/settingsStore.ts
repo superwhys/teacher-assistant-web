@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { asyncStorage, exportAllKV } from '@/utils/storage'
+import { asyncStorage, exportUserData } from '@/utils/storage'
 import { generateSaltBase64, hashPassword, verifyPassword as verifyPasswordHash } from '@/utils/crypto'
 import { cloudApi } from '@/api/cloud'
+import { useUserStore } from './userStore'
 
 /**
  * 应用设置 Store（本地持久化）
@@ -10,6 +11,7 @@ import { cloudApi } from '@/api/cloud'
 const STORAGE_KEY = 'ta_settings_v1'
 
 export const useSettingsStore = defineStore('settings', () => {
+    const userStore = useUserStore()
     const cloudAutoSyncEnabled = ref<boolean>(false)
     const lastCloudSyncAt = ref<number | null>(null)
     const isCloudSyncing = ref<boolean>(false)
@@ -54,9 +56,8 @@ export const useSettingsStore = defineStore('settings', () => {
         if (isCloudSyncing.value) return
         isCloudSyncing.value = true
         try {
-            // 汇总本地所有 KV，排除 settings 配置
-            const all = await exportAllKV()
-            delete (all as any)[STORAGE_KEY]
+            const userId = userStore.profile?.id || null
+            const all = await exportUserData(userId)
             await cloudApi.sync(all)
             lastCloudSyncAt.value = Date.now()
             persist()

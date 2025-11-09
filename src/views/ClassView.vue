@@ -324,6 +324,215 @@ function downloadTemplate() {
     XLSX.writeFile(workbook, '学生名单导入模板.xlsx')
     ElMessage.success('模板下载成功')
 }
+
+// 分组导入
+const groupImportDialogVisible = ref(false)
+const groupExcelImporting = ref(false)
+const groupUploadRef = ref<UploadInstance>()
+const groupExcelFileName = ref('')
+const groupExcelParsedData = ref<Array<{ 
+    groupName: string, 
+    members: Array<{ name: string, isInvalid: boolean, isDuplicateInImport: boolean }>,
+    isDuplicate: boolean
+}>>([])
+const groupExcelSkippedCount = ref(0)
+
+async function importGroupExcelFromFile(file: File) {
+    if (!activeClassId.value) {
+        ElMessage.error('请先选择班级')
+        return false
+    }
+    if (groupExcelImporting.value) return false
+    groupExcelImporting.value = true
+    try {
+        const arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(reader.result as ArrayBuffer)
+            reader.onerror = reject
+            reader.readAsArrayBuffer(file)
+        })
+
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' })
+        const firstSheetName = workbook.SheetNames[0]
+        if (!firstSheetName) throw new Error('Excel 文件没有工作表')
+        const worksheet = workbook.Sheets[firstSheetName]!
+        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' })
+
+        const groupNameKeys = ['分组名称', 'groupname', 'GroupName', '分组', 'group', 'Group']
+        const studentNameKeys = ['学生姓名', '姓名', 'studentname', 'StudentName', 'name', 'Name']
+
+        const groupMap = new Map<string, Set<string>>()
+        let skipped = 0
+
+        for (const row of rows) {
+            const groupNameVal = findFirst(row, groupNameKeys)
+            const studentNameVal = findFirst(row, studentNameKeys)
+
+            if (!groupNameVal || !studentNameVal) {
+                skipped += 1
+                continue
+            }
+
+            const groupName = String(groupNameVal).trim()
+            const studentName = String(studentNameVal).trim()
+
+            if (!groupName || !studentName) {
+                skipped += 1
+                continue
+            }
+
+            if (!groupMap.has(groupName)) {
+                groupMap.set(groupName, new Set())
+            }
+            groupMap.get(groupName)!.add(studentName)
+        }
+
+        if (groupMap.size === 0) {
+            ElMessage.warning('未解析到有效的分组记录，请检查表头是否包含"分组名称"和"学生姓名"')
+            return false
+        }
+
+        const existingStudents = new Set(studentsOfActive.value.map(s => s.studentName))
+        const existingGroups = new Set(groupsOfActive.value.map(g => g.name))
+
+        const studentGroupCount = new Map<string, number>()
+        groupMap.forEach((members) => {
+            members.forEach(studentName => {
+                studentGroupCount.set(studentName, (studentGroupCount.get(studentName) || 0) + 1)
+            })
+        })
+
+        const parsedGroups: Array<{ 
+            groupName: string, 
+            members: Array<{ name: string, isInvalid: boolean, isDuplicateInImport: boolean }>,
+            isDuplicate: boolean
+        }> = []
+
+        groupMap.forEach((members, groupName) => {
+            const isDuplicate = existingGroups.has(groupName)
+            const membersList = Array.from(members).map(name => ({
+                name,
+                isInvalid: !existingStudents.has(name),
+                isDuplicateInImport: (studentGroupCount.get(name) || 0) > 1
+            }))
+            
+            parsedGroups.push({
+                groupName,
+                members: membersList,
+                isDuplicate
+            })
+        })
+
+        groupExcelParsedData.value = parsedGroups
+        groupExcelSkippedCount.value = skipped
+        const totalMembers = parsedGroups.reduce((sum, g) => sum + g.members.length, 0)
+        const invalidMembers = parsedGroups.reduce((sum, g) => sum + g.members.filter(m => m.isInvalid).length, 0)
+        const duplicateGroups = parsedGroups.filter(g => g.isDuplicate).length
+        const duplicateInImportMembers = new Set<string>()
+        parsedGroups.forEach(g => {
+            g.members.forEach(m => {
+                if (m.isDuplicateInImport) duplicateInImportMembers.add(m.name)
+            })
+        })
+        
+        let msg = `解析成功：${parsedGroups.length} 个分组，${totalMembers} 个成员`
+        if (skipped > 0) msg += `，跳过 ${skipped} 条`
+        if (duplicateGroups > 0) msg += `，${duplicateGroups} 个重复分组`
+        if (invalidMembers > 0) msg += `，${invalidMembers} 个不存在的学生`
+        if (duplicateInImportMembers.size > 0) msg += `，${duplicateInImportMembers.size} 个学生在多个分组中`
+        ElMessage.success(msg)
+    } catch (err: any) {
+        ElMessage.error(`导入失败：${err?.message || '未知错误'}`)
+    } finally {
+        groupExcelImporting.value = false
+    }
+    return false
+}
+
+async function beforeGroupExcelUpload(file: UploadRawFile) {
+    return importGroupExcelFromFile(file as unknown as File)
+}
+
+async function handleGroupExcelChange(file: UploadFile) {
+    if (!file || !file.raw) return
+    await importGroupExcelFromFile(file.raw)
+    groupExcelFileName.value = file.name || ''
+}
+
+function clearGroupExcelPreview() {
+    groupExcelParsedData.value = []
+    groupExcelSkippedCount.value = 0
+    groupExcelFileName.value = ''
+    groupUploadRef.value?.clearFiles()
+}
+
+function confirmGroupExcelImport() {
+    if (groupExcelParsedData.value.length === 0) {
+        ElMessage.warning('暂无可导入的数据')
+        return
+    }
+    if (!activeClassId.value) return
+
+    let createdCount = 0
+    let updatedCount = 0
+
+    for (const { groupName, members, isDuplicate } of groupExcelParsedData.value) {
+        const validMembers = members.filter(m => !m.isInvalid && !m.isDuplicateInImport).map(m => m.name)
+        if (validMembers.length === 0) continue
+
+        if (isDuplicate) {
+            const existingGroup = groupsOfActive.value.find(g => g.name === groupName)
+            if (existingGroup) {
+                groupStore.setGroupMembers(activeClassId.value, existingGroup.id, validMembers)
+                updatedCount += 1
+            }
+        } else {
+            const newGroup = groupStore.addGroup(activeClassId.value, groupName)
+            groupStore.setGroupMembers(activeClassId.value, newGroup.id, validMembers)
+            createdCount += 1
+        }
+    }
+
+    ElMessage.success(`导入完成：新建 ${createdCount} 个分组，更新 ${updatedCount} 个分组`)
+    clearGroupExcelPreview()
+    groupImportDialogVisible.value = false
+}
+
+function downloadGroupTemplate() {
+    const templateData = [
+        { 分组名称: '第一组', 学生姓名: '张三' },
+        { 分组名称: '第一组', 学生姓名: '李四' },
+        { 分组名称: '第二组', 学生姓名: '王五' },
+        { 分组名称: '第二组', 学生姓名: '赵六' },
+    ]
+
+    const worksheet = XLSX.utils.json_to_sheet(templateData)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, '分组导入模板')
+    XLSX.writeFile(workbook, '分组导入模板.xlsx')
+    ElMessage.success('模板下载成功')
+}
+
+function getStudentWarningText(member: { name: string, isInvalid: boolean, isDuplicateInImport: boolean }): string {
+    const warnings: string[] = []
+    if (member.isInvalid) {
+        warnings.push('学生不存在')
+    }
+    if (member.isDuplicateInImport) {
+        warnings.push('在多个分组中')
+    }
+    return warnings.join('，') + (warnings.length > 0 ? '，将被忽略' : '')
+}
+
+function getStudentTagType(member: { name: string, isInvalid: boolean, isDuplicateInImport: boolean }): 'info' | 'warning' | 'danger' {
+    if (member.isInvalid) {
+        return 'danger'
+    }
+    if (member.isDuplicateInImport) {
+        return 'warning'
+    }
+    return 'info'
+}
 </script>
 
 <template>
@@ -471,6 +680,9 @@ function downloadTemplate() {
             <div class="group-row">
                 <el-input v-model="newGroupName" placeholder="新分组名称" class="group-name-input" />
                 <el-button type="primary" @click="onAddGroup"><i-ep-plus /> 新建分组</el-button>
+                <el-button type="success" plain @click="groupImportDialogVisible = true">
+                    <i-ep-upload /> 导入分组
+                </el-button>
             </div>
 
             <div class="group-row">
@@ -491,6 +703,90 @@ function downloadTemplate() {
             </div>
 
             <div v-else class="empty-group">请选择或新建一个分组后编辑成员</div>
+        </div>
+    </el-dialog>
+
+    <el-dialog v-model="groupImportDialogVisible" title="导入分组" width="600px">
+        <el-upload ref="groupUploadRef" class="upload-area" drag accept=".xls,.xlsx" :auto-upload="false"
+            :show-file-list="false" :before-upload="beforeGroupExcelUpload" :on-change="handleGroupExcelChange">
+            <i-ep-upload-filled class="upload-icon" />
+            <div v-if="!groupExcelFileName" class="el-upload__text">将文件拖到此处，或点击上传</div>
+            <div v-else class="upload-file-name">
+                <i-ep-document class="file-icon" /> {{ groupExcelFileName }}
+                <span class="change-hint">（点击重新选择）</span>
+            </div>
+            <template #tip>
+                <div class="el-upload__tip">支持 .xls/.xlsx，表头包含"分组名称"和"学生姓名"。</div>
+            </template>
+        </el-upload>
+        
+        <div class="excel-guide">
+            <div class="guide-title">Excel 表头示例：</div>
+            <ul class="guide-list">
+                <li>必填：分组名称（或 GroupName/分组）</li>
+                <li>必填：学生姓名（或 Name/姓名）</li>
+                <li>相同分组名称的多行会自动归为一个分组</li>
+                <li>只会导入已存在的学生（不存在的学生会被忽略）</li>
+                <li>每个学生只能在一个分组中（在多个分组的学生会被忽略）</li>
+                <li>如果分组已存在，则会更新其成员</li>
+            </ul>
+            <el-button type="primary" link @click="downloadGroupTemplate" class="download-template-btn">
+                <i-ep-download /> 下载模板
+            </el-button>
+        </div>
+
+        <div v-if="groupExcelParsedData.length" class="excel-preview">
+            <div class="preview-header">
+                <div class="preview-title">解析结果</div>
+                <el-space class="preview-meta" wrap size="small">
+                    <el-tag v-if="groupExcelFileName" type="info" effect="light">文件：{{ groupExcelFileName }}</el-tag>
+                    <el-tag type="primary" effect="light">{{ groupExcelParsedData.length }} 个分组</el-tag>
+                    <el-tag type="success" effect="light">共 {{ groupExcelParsedData.reduce((sum, g) => sum + g.members.length, 0) }} 个成员</el-tag>
+                    <el-tag v-if="groupExcelSkippedCount" type="warning" effect="light">跳过 {{ groupExcelSkippedCount }} 条</el-tag>
+                </el-space>
+            </div>
+            <el-table :data="groupExcelParsedData" border size="small" class="preview-table" max-height="300">
+                <el-table-column label="分组名称" min-width="120">
+                    <template #default="{ row }">
+                        <span :class="{ 'text-error': row.isDuplicate }">
+                            {{ row.groupName }}
+                            <el-tooltip v-if="row.isDuplicate" content="分组已存在，导入时将更新其成员" placement="top">
+                                <i-ep-warning class="warning-icon" />
+                            </el-tooltip>
+                        </span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="成员" min-width="200">
+                    <template #default="{ row }">
+                        <el-space wrap :size="4">
+                            <el-tag 
+                                v-for="member in row.members" 
+                                :key="member.name" 
+                                size="small" 
+                                :type="getStudentTagType(member)"
+                                :effect="(member.isInvalid || member.isDuplicateInImport) ? 'dark' : 'light'"
+                            >
+                                {{ member.name }}
+                                <el-tooltip 
+                                    v-if="member.isInvalid || member.isDuplicateInImport" 
+                                    :content="getStudentWarningText(member)" 
+                                    placement="top"
+                                >
+                                    <i-ep-warning-filled style="margin-left: 2px;" />
+                                </el-tooltip>
+                            </el-tag>
+                        </el-space>
+                    </template>
+                </el-table-column>
+                <el-table-column label="人数" width="80" align="center">
+                    <template #default="{ row }">{{ row.members.length }}</template>
+                </el-table-column>
+            </el-table>
+            <div class="preview-actions">
+                <el-button type="primary" :disabled="!groupExcelParsedData.length" @click="confirmGroupExcelImport">
+                    确认导入</el-button>
+                <el-button @click="clearGroupExcelPreview">清空</el-button>
+            </div>
         </div>
     </el-dialog>
 
@@ -883,5 +1179,16 @@ function downloadTemplate() {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
         gap: 10px;
     }
+}
+
+.text-error {
+    color: #f56c6c;
+    font-weight: 600;
+}
+
+.warning-icon {
+    margin-left: 4px;
+    font-size: 14px;
+    color: #e6a23c;
 }
 </style>

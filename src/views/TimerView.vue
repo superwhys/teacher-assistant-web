@@ -9,6 +9,7 @@ defineOptions({
 const isRunning = ref(false)
 const totalSeconds = ref(300)
 const remainingSeconds = ref<number>(totalSeconds.value)
+const isTimeUp = ref(false)
 
 const minutesInput = ref(5)
 const secondsInput = ref(0)
@@ -50,13 +51,15 @@ function start() {
         return
     }
     if (remainingSeconds.value <= 0) remainingSeconds.value = totalSeconds.value
+    isTimeUp.value = false
     isRunning.value = true
     timer = window.setInterval(() => {
         if (remainingSeconds.value > 0) {
             remainingSeconds.value -= 1
         } else {
             stop()
-            ElMessage.success('时间到')
+            isTimeUp.value = true
+            ElMessage.success('时间到！')
         }
     }, 1000)
 }
@@ -72,6 +75,7 @@ function stop() {
 
 function reset() {
     stop()
+    isTimeUp.value = false
     remainingSeconds.value = totalSeconds.value
 }
 
@@ -88,9 +92,14 @@ onBeforeUnmount(() => {
     <div class="timer-page">
         <div class="content-area">
             <div class="main-panel">
-                <div class="display-card">
+                <div class="display-card" :class="{ 'time-up': isTimeUp }">
                     <div class="time-display">{{ display }}</div>
                     <el-progress :percentage="progress" :stroke-width="10" :show-text="false" status="success" />
+                    <transition name="fade">
+                        <div v-if="isTimeUp" class="time-up-overlay">
+                            <div class="time-up-text">⏰ 时间到！</div>
+                        </div>
+                    </transition>
                 </div>
             </div>
         </div>
@@ -148,6 +157,7 @@ onBeforeUnmount(() => {
 .main-panel {
     max-width: 1000px;
     margin: 0 auto;
+    margin-top: 60px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -165,6 +175,8 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: center;
     gap: 12px;
+    position: relative;
+    transition: all 0.3s ease;
 }
 
 .time-display {
@@ -236,8 +248,16 @@ onBeforeUnmount(() => {
         padding: 16px;
     }
 
+    .main-panel {
+        margin-top: 40px;
+    }
+
     .time-display {
         font-size: 44px;
+    }
+
+    .time-up-text {
+        font-size: 56px;
     }
 
     .presets-row {
@@ -269,6 +289,10 @@ onBeforeUnmount(() => {
         padding: 12px;
     }
 
+    .main-panel {
+        margin-top: 30px;
+    }
+
     .display-card {
         border-radius: 14px;
         padding: 26px 16px;
@@ -276,6 +300,10 @@ onBeforeUnmount(() => {
 
     .time-display {
         font-size: 32px;
+    }
+
+    .time-up-text {
+        font-size: 40px;
     }
 
     .preset-btn {
@@ -296,6 +324,77 @@ onBeforeUnmount(() => {
     .sep {
         font-size: 14px;
     }
+}
+
+.display-card.time-up {
+    animation: pulse-red 1s ease-in-out infinite;
+}
+
+@keyframes pulse-red {
+    0%, 100% {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+        box-shadow: 0 8px 32px rgba(255, 107, 107, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+        transform: scale(1);
+    }
+    50% {
+        background: linear-gradient(135deg, #ff5252 0%, #f44336 100%);
+        box-shadow: 0 12px 40px rgba(255, 82, 82, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+        transform: scale(1.02);
+    }
+}
+
+.time-up-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 18px;
+    backdrop-filter: blur(2px);
+}
+
+.time-up-text {
+    font-size: 72px;
+    font-weight: 900;
+    color: #ffffff;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+    animation: bounce 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes bounce {
+    0% {
+        transform: translateY(0) scale(1);
+    }
+    100% {
+        transform: translateY(-10px) scale(1.05);
+    }
+}
+
+.fade-enter-active {
+    transition: all 0.4s ease;
+}
+
+.fade-leave-active {
+    transition: all 0.3s ease;
+}
+
+.fade-enter-from {
+    opacity: 0;
+    transform: scale(0.8);
+}
+
+.fade-leave-to {
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+.display-card.time-up .time-display {
+    color: #ffffff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 </style>
 

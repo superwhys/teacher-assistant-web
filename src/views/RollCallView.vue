@@ -24,8 +24,10 @@ const noRepeat = ref(true)
 const currentName = ref<string>('')
 const usedNames = ref<Set<string>>(new Set())
 const history = ref<string[]>([])
+const isSelected = ref(false)
 
 let timer: number | undefined
+let selectedTimer: number | undefined
 
 function getCandidates(): Student[] {
     const baseList = students.value
@@ -77,7 +79,18 @@ function stopRolling() {
     if (currentName.value) {
         if (noRepeat.value) usedNames.value.add(currentName.value)
         history.value.unshift(currentName.value)
+        triggerSelectedEffect()
     }
+}
+
+function triggerSelectedEffect() {
+    isSelected.value = true
+    if (selectedTimer !== undefined) {
+        window.clearTimeout(selectedTimer)
+    }
+    selectedTimer = window.setTimeout(() => {
+        isSelected.value = false
+    }, 3000)
 }
 
 function toggleRolling() {
@@ -98,12 +111,18 @@ function drawOnce() {
     currentName.value = one.studentName
     if (noRepeat.value) usedNames.value.add(one.studentName)
     history.value.unshift(one.studentName)
+    triggerSelectedEffect()
 }
 
 function resetHistory() {
     usedNames.value = new Set()
     history.value = []
     currentName.value = ''
+    isSelected.value = false
+    if (selectedTimer !== undefined) {
+        window.clearTimeout(selectedTimer)
+        selectedTimer = undefined
+    }
 }
 
 watch(selectedGroupId, () => {
@@ -117,6 +136,7 @@ watch(activeClassId, () => {
 
 onBeforeUnmount(() => {
     if (timer !== undefined) window.clearInterval(timer)
+    if (selectedTimer !== undefined) window.clearTimeout(selectedTimer)
 })
 </script>
 
@@ -124,8 +144,8 @@ onBeforeUnmount(() => {
     <div class="roll-page">
         <div class="content-area">
             <div class="main-panel">
-                <div class="display-card">
-                    <div class="display-name" :class="{ placeholder: !currentName }">
+                <div class="display-card" :class="{ selected: isSelected }">
+                    <div class="display-name" :class="{ placeholder: !currentName, selected: isSelected }">
                         {{ currentName || '准备就绪' }}
                     </div>
                     <div class="sub-info">
@@ -133,6 +153,11 @@ onBeforeUnmount(() => {
                             班级：{{ activeClassId ? (classStore.activeClass?.name || '未命名班级') : '未选择班级' }}
                         </el-text>
                     </div>
+                    <transition name="celebrate">
+                        <div v-if="isSelected" class="selected-overlay">
+                            <div class="celebrate-icon">🎉</div>
+                        </div>
+                    </transition>
                 </div>
 
                 <div class="history" v-if="history.length">
@@ -195,6 +220,7 @@ onBeforeUnmount(() => {
 .main-panel {
     max-width: 1000px;
     margin: 0 auto;
+    margin-top: 80px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -211,6 +237,8 @@ onBeforeUnmount(() => {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    position: relative;
+    transition: all 0.5s ease;
 }
 
 .display-name {
@@ -298,8 +326,20 @@ onBeforeUnmount(() => {
         padding: 16px;
     }
 
+    .main-panel {
+        margin-top: 60px;
+    }
+
     .display-name {
         font-size: 44px;
+    }
+
+    .celebrate-icon {
+        font-size: 64px;
+    }
+
+    .selected-overlay {
+        top: -50px;
     }
 
     .controls-row {
@@ -337,6 +377,10 @@ onBeforeUnmount(() => {
         padding: 12px;
     }
 
+    .main-panel {
+        margin-top: 50px;
+    }
+
     .display-card {
         border-radius: 14px;
         padding: 26px 16px;
@@ -346,10 +390,100 @@ onBeforeUnmount(() => {
         font-size: 32px;
     }
 
+    .celebrate-icon {
+        font-size: 48px;
+    }
+
+    .selected-overlay {
+        top: -40px;
+    }
+
     .control-btn {
         height: 50px;
         font-size: 15px;
     }
+}
+
+.display-card.selected {
+    animation: pulse-gold 1s ease-in-out infinite;
+}
+
+@keyframes pulse-gold {
+    0%, 100% {
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #ffd700 100%);
+        box-shadow: 0 8px 32px rgba(255, 215, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+        transform: scale(1);
+    }
+    50% {
+        background: linear-gradient(135deg, #ffed4e 0%, #ffd700 50%, #ffed4e 100%);
+        box-shadow: 0 12px 40px rgba(255, 237, 78, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+        transform: scale(1.02);
+    }
+}
+
+.display-name.selected {
+    color: #8b4513;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    animation: name-bounce 0.8s ease-in-out infinite;
+}
+
+@keyframes name-bounce {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+.selected-overlay {
+    position: absolute;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+}
+
+.celebrate-icon {
+    font-size: 80px;
+    animation: celebrate-spin 1s ease-in-out infinite;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+@keyframes celebrate-spin {
+    0% {
+        transform: rotate(0deg) scale(1);
+    }
+    25% {
+        transform: rotate(-15deg) scale(1.2);
+    }
+    50% {
+        transform: rotate(15deg) scale(1);
+    }
+    75% {
+        transform: rotate(-10deg) scale(1.2);
+    }
+    100% {
+        transform: rotate(0deg) scale(1);
+    }
+}
+
+.celebrate-enter-active {
+    transition: all 0.5s ease;
+}
+
+.celebrate-leave-active {
+    transition: all 0.3s ease;
+}
+
+.celebrate-enter-from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px) scale(0.5);
+}
+
+.celebrate-leave-to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px) scale(0.5);
 }
 </style>
 

@@ -11,6 +11,8 @@ import { usePointsStore } from '@/stores/pointsStore'
 import { usePointsItemStore } from '@/stores/pointsItemStore'
 import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import { useShopStore } from '@/stores/shopStore'
+import { cloudApi } from '@/api/cloud'
+import { importUserData } from '@/utils/storage'
 
 const classStore = useClassStore()
 const settingsStore = useSettingsStore()
@@ -226,6 +228,103 @@ async function confirmUnlock() {
     }
 }
 
+const isSavingData = ref(false)
+const updateDialogVisible = ref(false)
+const loadingBackups = ref(false)
+const backupsList = ref<number[]>([])
+const restoringTs = ref<number | null>(null)
+
+async function onSaveDataToCloud() {
+    if (userStore.isTrial) {
+        ElMessage.warning('试用版不支持云端同步')
+        return
+    }
+    try {
+        await ElMessageBox.confirm('保存数据会将当前数据同步到云端，是否继续？', '保存数据', {
+            type: 'info',
+            confirmButtonText: '保存',
+            cancelButtonText: '取消',
+        })
+    } catch {
+        return
+    }
+    if (isSavingData.value) return
+    isSavingData.value = true
+    try {
+        await settingsStore.syncToCloud()
+        ElMessage.success('数据已保存到云端')
+    } catch (err) {
+        ElMessage.error('保存失败：' + (err as Error).message)
+    } finally {
+        isSavingData.value = false
+    }
+}
+
+function onOpenUpdateDialog() {
+    if (userStore.isTrial) {
+        ElMessage.warning('试用版不支持云端同步')
+        return
+    }
+    updateDialogVisible.value = true
+    backupsList.value = []
+    loadingBackups.value = true
+    void loadBackupsList()
+}
+
+async function loadBackupsList() {
+    try {
+        const res = await cloudApi.getBackups()
+        const list = Array.isArray(res.data) ? res.data : []
+        backupsList.value = list
+            .map((n) => Number(n))
+            .filter((n) => Number.isFinite(n) && n > 0)
+            .sort((a, b) => b - a)
+        if (backupsList.value.length === 0) {
+            ElMessage.warning('云端暂无备份数据')
+            updateDialogVisible.value = false
+        }
+    } catch (err) {
+        ElMessage.error('获取备份列表失败：' + (err as Error).message)
+        updateDialogVisible.value = false
+    } finally {
+        loadingBackups.value = false
+    }
+}
+
+function formatBackupTime(ts: number): string {
+    try {
+        return new Date(ts).toLocaleString('zh-CN', { hour12: false })
+    } catch {
+        return String(ts)
+    }
+}
+
+async function onRestoreFromBackup(ts: number) {
+    if (restoringTs.value) return
+    restoringTs.value = ts
+    try {
+        const res = await cloudApi.getBackup(ts)
+        const payload = res?.data || {}
+        const userId = userStore.profile?.id || null
+        await importUserData(payload, userId)
+        await Promise.all([
+            classStore.hydrate(),
+            studentStore.hydrate(),
+            pointsStore.hydrate(),
+            pointsItemStore.hydrate(),
+            studentGroupStore.hydrate(),
+            shopStore.hydrate(),
+        ])
+        settingsStore.bumpVersion()
+        updateDialogVisible.value = false
+        ElMessage.success('已从云端恢复数据')
+    } catch (err) {
+        ElMessage.error('恢复失败：' + (err as Error).message)
+    } finally {
+        restoringTs.value = null
+    }
+}
+
 </script>
 
 <template>
@@ -302,6 +401,17 @@ async function confirmUnlock() {
                                 </ActionItem>
                             </div>
                         </div>
+                        <div class="sidebar-section sync-section">
+                            <div class="section-title">数据同步</div>
+                            <div class="sync-actions">
+                                <el-button type="success" size="default" :loading="isSavingData" :disabled="isSavingData" @click="onSaveDataToCloud">
+                                    <i-ep-upload-filled class="btn-icon" /><span>保存数据</span>
+                                </el-button>
+                                <el-button type="primary" plain size="default" @click="onOpenUpdateDialog">
+                                    <i-ep-download class="btn-icon" /><span>更新数据</span>
+                                </el-button>
+                            </div>
+                        </div>
                         <div class="sidebar-section class-section">
                             <div class="section-title">班级选择</div>
                             <el-select v-model="activeClassId" placeholder="选择班级" class="class-select" size="large">
@@ -349,6 +459,37 @@ async function confirmUnlock() {
                         <el-button type="primary" @click="confirmCreateClass">确 定</el-button>
                     </span>
                 </template>
+            </el-dialog>
+            <el-dialog v-model="updateDialogVisible" width="560px" :close-on-click-modal="true">
+                <template #header>
+                    <div class="update-dlg-header">
+                        <div class="title">更新数据</div>
+                        <div class="subtitle">该操作会将云端最新的数据应用到本地</div>
+                    </div>
+                </template>
+                <div v-loading="loadingBackups" element-loading-text="正在获取云端备份数据..." class="update-content">
+                    <div v-if="!loadingBackups" class="update-content-inner">
+                        <div v-if="backupsList.length === 0" class="latest-backup-card">
+                            <el-empty description="暂无云端备份" />
+                        </div>
+                        <div v-else class="latest-backup-card">
+                            <div class="latest-icon-wrapper">
+                                <i-ep-cloudy class="cloud-icon" />
+                            </div>
+                            <div class="latest-info">
+                                <div class="latest-title">最新云端备份</div>
+                                <div class="latest-time">{{ formatBackupTime(backupsList[0]!) }}</div>
+                                <div class="latest-desc">点击下方按钮将此备份应用到本地，会覆盖当前数据</div>
+                            </div>
+                            <div class="latest-actions">
+                                <el-button type="primary" size="large" :loading="restoringTs === backupsList[0]" :disabled="!!restoringTs" @click="onRestoreFromBackup(backupsList[0]!)">
+                                    <i-ep-refresh-left class="btn-icon" /> 应用此备份
+                                </el-button>
+                                <el-button size="large" @click="updateDialogVisible = false">取消</el-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </el-dialog>
         </el-container>
         <div v-if="isAuthenticated && unlockDialogVisible" class="lock-overlay">
@@ -698,8 +839,45 @@ async function confirmUnlock() {
     gap: 12px;
 }
 
-.class-section {
+.sync-section {
     margin-top: auto;
+}
+
+.sync-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+    align-items: center;
+}
+
+.sync-actions :deep(.el-button) {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0 !important;
+}
+
+.sync-actions :deep(.el-button span) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.sync-actions .btn-icon {
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+.class-section {
+    margin-top: 16px;
 }
 
 .section-title {
@@ -920,6 +1098,35 @@ async function confirmUnlock() {
         margin: 0 !important;
     }
 
+    .sync-actions {
+        gap: 12px;
+    }
+
+    .sync-actions :deep(.el-button) {
+        width: 46px;
+        height: 46px;
+        padding: 0;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .sync-actions :deep(.el-button span) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .sync-actions :deep(.el-button span span) {
+        display: none;
+    }
+
+    .sync-actions .btn-icon {
+        font-size: 20px;
+        margin: 0 !important;
+    }
+
     .sidebar-footer {
         display: flex;
         flex-direction: column;
@@ -1038,6 +1245,19 @@ async function confirmUnlock() {
         font-size: 18px;
     }
 
+    .sync-actions :deep(.el-button) {
+        width: 42px;
+        height: 42px;
+    }
+
+    .sync-actions :deep(.el-button span span) {
+        display: none;
+    }
+
+    .sync-actions .btn-icon {
+        font-size: 18px;
+    }
+
     .logout-btn {
         width: 42px;
         height: 42px;
@@ -1116,6 +1336,15 @@ async function confirmUnlock() {
         font-size: 16px;
     }
 
+    .sync-actions :deep(.el-button) {
+        width: 38px;
+        height: 38px;
+    }
+
+    .sync-actions .btn-icon {
+        font-size: 16px;
+    }
+
     .logout-btn {
         width: 38px;
         height: 38px;
@@ -1129,5 +1358,106 @@ async function confirmUnlock() {
     .sidebar-footer {
         align-items: center;
     }
+
+    .sync-actions :deep(.el-button span) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .sync-actions :deep(.el-button span span) {
+        display: none;
+    }
+}
+
+.update-dlg-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.update-dlg-header .title {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.update-dlg-header .subtitle {
+    color: #909399;
+    font-size: 12px;
+}
+
+.update-content {
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.update-content-inner {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.latest-backup-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 32px 24px;
+    gap: 20px;
+    width: 100%;
+}
+
+.latest-icon-wrapper {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 20px rgba(64, 158, 255, 0.3);
+}
+
+.cloud-icon {
+    font-size: 40px;
+}
+
+.latest-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.latest-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #303133;
+}
+
+.latest-time {
+    font-size: 16px;
+    color: #409eff;
+    font-weight: 600;
+}
+
+.latest-desc {
+    font-size: 14px;
+    color: #909399;
+    margin-top: 4px;
+    line-height: 1.6;
+}
+
+.latest-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.latest-actions :deep(.el-button) {
+    min-width: 140px;
 }
 </style>

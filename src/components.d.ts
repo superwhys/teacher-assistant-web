@@ -108,4 +108,7 @@ declare module 'vue' {
     StudentCard: typeof import('./components/StudentCard.vue')['default']
     ToolCard: typeof import('./components/ToolCard.vue')['default']
   }
+  export interface GlobalDirectives {
+    vLoading: typeof import('element-plus/es')['ElLoadingDirective']
+  }
 }

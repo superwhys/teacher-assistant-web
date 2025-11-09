@@ -104,9 +104,21 @@ let trialReminderTimer: number | null = null
 
 const createDialogVisible = ref(false)
 const createClassName = ref('')
+const editDialogVisible = ref(false)
+const editClassName = ref('')
+const editingClassId = ref<string | null>(null)
 
 function openCreateDialog() {
     createDialogVisible.value = true
+}
+
+function openEditDialog() {
+    if (!activeClassId.value) return
+    const currentClass = classes.value.find(c => c.id === activeClassId.value)
+    if (!currentClass) return
+    editingClassId.value = currentClass.id
+    editClassName.value = currentClass.name
+    editDialogVisible.value = true
 }
 
 function confirmCreateClass() {
@@ -127,6 +139,29 @@ function confirmCreateClass() {
 
 function onCreateDialogClosed() {
     createClassName.value = ''
+}
+
+function confirmEditClass() {
+    const name = editClassName.value.trim()
+    if (!name) {
+        ElMessage.error('请输入班级名称')
+        return
+    }
+    if (!editingClassId.value) return
+    if (classes.value.some(c => c.name === name && c.id !== editingClassId.value)) {
+        ElMessage.error('班级名称已存在')
+        return
+    }
+    classStore.updateClassName(editingClassId.value, name)
+    editDialogVisible.value = false
+    editClassName.value = ''
+    editingClassId.value = null
+    ElMessage.success('已修改班级名称')
+}
+
+function onEditDialogClosed() {
+    editClassName.value = ''
+    editingClassId.value = null
 }
 
 async function removeCurrentClass() {
@@ -421,6 +456,9 @@ async function onRestoreFromBackup(ts: number) {
                                 <el-button type="primary" size="default" @click="openCreateDialog">
                                     <i-ep-plus class="btn-icon" /><span>新建班级</span>
                                 </el-button>
+                                <el-button type="warning" plain size="default" :disabled="!activeClassId" @click="openEditDialog">
+                                    <i-ep-edit class="btn-icon" /><span>编辑班级</span>
+                                </el-button>
                                 <el-button type="danger" plain size="default" :disabled="!activeClassId" @click="removeCurrentClass">
                                     <i-ep-delete class="btn-icon" /><span>删除班级</span>
                                 </el-button>
@@ -457,6 +495,19 @@ async function onRestoreFromBackup(ts: number) {
                     <span class="dialog-footer">
                         <el-button @click="createDialogVisible = false">取 消</el-button>
                         <el-button type="primary" @click="confirmCreateClass">确 定</el-button>
+                    </span>
+                </template>
+            </el-dialog>
+            <el-dialog v-model="editDialogVisible" title="编辑班级" width="420px" @closed="onEditDialogClosed">
+                <el-form label-position="top">
+                    <el-form-item label="班级名称">
+                        <el-input v-model="editClassName" placeholder="请输入新的班级名称" />
+                    </el-form-item>
+                </el-form>
+                <template #footer>
+                    <span class="dialog-footer">
+                        <el-button @click="editDialogVisible = false">取 消</el-button>
+                        <el-button type="primary" @click="confirmEditClass">确 定</el-button>
                     </span>
                 </template>
             </el-dialog>

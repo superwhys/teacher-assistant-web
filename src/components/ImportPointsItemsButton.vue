@@ -6,10 +6,6 @@ import { parseItemsExcelToRows, type ImportItemRow } from '@/utils/pointsImport'
 import { usePointsItemStore } from '@/stores/pointsItemStore'
 import * as XLSX from 'xlsx'
 
-const props = defineProps<{
-    activeClassId: string | null
-}>()
-
 const pointsItemStore = usePointsItemStore()
 
 const importVisible = ref(false)
@@ -20,18 +16,10 @@ const importSkipped = ref(0)
 const importFileName = ref('')
 
 function openDialog() {
-    if (!props.activeClassId) {
-        ElMessage.error('请先选择班级')
-        return
-    }
     importVisible.value = true
 }
 
 async function handleExcelFile(file: File) {
-    if (!props.activeClassId) {
-        ElMessage.error('请先选择班级')
-        return false
-    }
     if (importLoading.value) return false
     importLoading.value = true
     try {
@@ -69,14 +57,12 @@ function clearImportPreview() {
 }
 
 function confirmImport() {
-    const classId = props.activeClassId
-    if (!classId) return
     if (!importParsed.value.length) {
         ElMessage.warning('暂无可导入的数据')
         return
     }
 
-    const existingGroups = pointsItemStore.listGroups(classId)
+    const existingGroups = pointsItemStore.listGroups()
     const groupNameToId = new Map<string, string>()
     for (const g of existingGroups) groupNameToId.set(g.name, g.id)
 
@@ -86,12 +72,12 @@ function confirmImport() {
     for (const row of importParsed.value) {
         let gid = groupNameToId.get(row.groupName)
         if (!gid) {
-            const g = pointsItemStore.addGroup(classId, row.groupName)
+            const g = pointsItemStore.addGroup(row.groupName)
             gid = g.id
             groupNameToId.set(row.groupName, gid)
             createdGroups += 1
         }
-        pointsItemStore.addItem(classId, gid, row.itemName, row.value, row.sign)
+        pointsItemStore.addItem(gid, row.itemName, row.value, row.sign)
         createdItems += 1
     }
 
@@ -117,7 +103,7 @@ function downloadTemplate() {
 </script>
 
 <template>
-    <el-button type="success" plain :disabled="!activeClassId" @click="openDialog">
+    <el-button type="success" plain @click="openDialog">
         <i-ep-upload-filled /> 导入积分项
     </el-button>
 

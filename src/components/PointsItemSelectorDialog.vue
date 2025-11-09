@@ -7,7 +7,6 @@ type SelectorTab = 'all' | 'plus' | 'minus'
 
 type Props = {
     modelValue: boolean
-    activeClassId: string | null
     tab?: SelectorTab
 }
 
@@ -30,9 +29,9 @@ const innerTab = computed<SelectorTab>({
     set: (v: SelectorTab) => emit('update:tab', v),
 })
 
-const itemGroups = computed(() => pointsItemStore.listGroups(props.activeClassId))
+const itemGroups = computed(() => pointsItemStore.listGroups())
 function itemsOfGroup(groupId: string, tab: SelectorTab): PointsItem[] {
-    return pointsItemStore.listItemsByGroup(props.activeClassId, groupId, tab)
+    return pointsItemStore.listItemsByGroup(groupId, tab)
 }
 
 function onSelectItem(item: PointsItem) {

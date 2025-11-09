@@ -17,8 +17,8 @@ const mobileMenuVisible = ref(false)
 <template>
     <div class="points-header-actions">
         <div class="desktop-actions">
-            <ManagePointsItemsButton :active-class-id="activeClassId" />
-            <ImportPointsItemsButton :active-class-id="activeClassId" />
+            <ManagePointsItemsButton />
+            <ImportPointsItemsButton />
             <PointsHistoryButton :active-class-id="activeClassId" />
             <ImportPointsButton :active-class-id="activeClassId" :active-class-name="activeClassName" />
             <ExportPointsButton :active-class-id="activeClassId" :active-class-name="activeClassName" />
@@ -30,8 +30,8 @@ const mobileMenuVisible = ref(false)
 
         <el-dialog v-model="mobileMenuVisible" title="功能菜单" width="400px" :close-on-click-modal="true">
             <div class="mobile-menu-list">
-                <ManagePointsItemsButton :active-class-id="activeClassId" @click="mobileMenuVisible = false" />
-                <ImportPointsItemsButton :active-class-id="activeClassId" />
+                <ManagePointsItemsButton @click="mobileMenuVisible = false" />
+                <ImportPointsItemsButton />
                 <PointsHistoryButton :active-class-id="activeClassId" @click="mobileMenuVisible = false" />
                 <ImportPointsButton :active-class-id="activeClassId" :active-class-name="activeClassName" />
                 <ExportPointsButton :active-class-id="activeClassId" :active-class-name="activeClassName" />

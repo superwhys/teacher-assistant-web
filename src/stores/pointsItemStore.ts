@@ -4,26 +4,23 @@ import { asyncStorage, getUserStorageKey } from '@/utils/storage'
 import type { PointsGroup, PointsItem, PointsSign } from '@/types/pointsItem'
 import { useUserStore } from './userStore'
 
-type ClassId = string
-
-type ClassPointsConfig = {
+type PointsConfig = {
     groups: PointsGroup[]
     items: PointsItem[]
 }
 
-type Records = Record<ClassId, ClassPointsConfig>
-
-const STORAGE_KEY_BASE = 'ta_points_item_store_v1'
+const STORAGE_KEY_BASE = 'ta_points_item_store_v2'
+const OLD_STORAGE_KEY_BASE = 'ta_points_item_store_v1'
 
 function generateId(prefix: string): string {
     return `${prefix}_${Math.random().toString(36).slice(2, 10)}`
 }
 
-function loadInitial(): Records {
-    return {}
+function loadInitial(): PointsConfig {
+    return defaultConfig()
 }
 
-function defaultConfig(): ClassPointsConfig {
+function defaultConfig(): PointsConfig {
     const gidHomework = generateId('PG')
     const gidBehavior = generateId('PG')
     const groups: PointsGroup[] = [
@@ -42,103 +39,122 @@ function defaultConfig(): ClassPointsConfig {
     return { groups, items }
 }
 
-function ensureClass(records: Records, classId: string): ClassPointsConfig {
-    if (!records[classId]) {
-        records[classId] = defaultConfig()
-    }
-    return records[classId]
-}
-
 export const usePointsItemStore = defineStore('pointsItem', () => {
     const userStore = useUserStore()
-    const records = ref<Records>(loadInitial())
+    const config = ref<PointsConfig>(loadInitial())
 
     function getStorageKey(): string {
         const userId = userStore.profile?.id || null
         return getUserStorageKey(STORAGE_KEY_BASE, userId)
     }
 
-    function persist(records: Records) {
-        void asyncStorage.setItem<Records>(getStorageKey(), records)
+    function getOldStorageKey(): string {
+        const userId = userStore.profile?.id || null
+        return getUserStorageKey(OLD_STORAGE_KEY_BASE, userId)
+    }
+
+    function persist(cfg: PointsConfig) {
+        void asyncStorage.setItem<PointsConfig>(getStorageKey(), cfg)
     }
 
     async function hydrate() {
-        const saved = await asyncStorage.getItem<Records>(getStorageKey())
-        if (!saved) return
-        if (saved && typeof saved === 'object') {
-            records.value = saved
+        const saved = await asyncStorage.getItem<PointsConfig>(getStorageKey())
+        if (saved && saved.groups && Array.isArray(saved.groups) && saved.items && Array.isArray(saved.items)) {
+            config.value = saved
+            return
+        }
+
+        const oldData = await asyncStorage.getItem<Record<string, PointsConfig>>(getOldStorageKey())
+        if (oldData && typeof oldData === 'object') {
+            const mergedGroups: PointsGroup[] = []
+            const mergedItems: PointsItem[] = []
+            const groupNameMap = new Map<string, string>()
+
+            for (const classId in oldData) {
+                const cfg = oldData[classId]
+                if (!cfg || !cfg.groups || !cfg.items) continue
+
+                for (const group of cfg.groups) {
+                    const existingGroupId = groupNameMap.get(group.name)
+                    if (!existingGroupId) {
+                        mergedGroups.push({ ...group })
+                        groupNameMap.set(group.name, group.id)
+                    }
+                }
+
+                for (const item of cfg.items) {
+                    const groupOfItem = cfg.groups.find(g => g.id === item.groupId)
+                    const targetGroupId = (groupOfItem && groupNameMap.get(groupOfItem.name)) || item.groupId
+                    mergedItems.push({ ...item, groupId: targetGroupId })
+                }
+            }
+
+            if (mergedGroups.length > 0) {
+                config.value = { groups: mergedGroups, items: mergedItems }
+                persist(config.value)
+            }
         }
     }
 
     function clear() {
-        records.value = {}
+        config.value = loadInitial()
     }
 
-    function listGroups(classId: string | null): PointsGroup[] {
-        if (!classId) return []
-        return ensureClass(records.value, classId).groups
+    function listGroups(): PointsGroup[] {
+        return config.value.groups
     }
 
-    function listItems(classId: string | null, sign: PointsSign | 'all' = 'all'): PointsItem[] {
-        if (!classId) return []
-        const { items } = ensureClass(records.value, classId)
+    function listItems(sign: PointsSign | 'all' = 'all'): PointsItem[] {
+        const items = config.value.items
         return sign === 'all' ? items : items.filter(i => i.sign === sign)
     }
 
-    function listItemsByGroup(classId: string | null, groupId: string, sign: PointsSign | 'all' = 'all'): PointsItem[] {
-        if (!classId) return []
-        const list = listItems(classId, sign)
+    function listItemsByGroup(groupId: string, sign: PointsSign | 'all' = 'all'): PointsItem[] {
+        const list = listItems(sign)
         return list.filter(i => i.groupId === groupId)
     }
 
-    // CRUD 略，预留接口
-    function addGroup(classId: string, name: string, icon?: string): PointsGroup {
-        const cfg = ensureClass(records.value, classId)
+    function addGroup(name: string, icon?: string): PointsGroup {
         const g: PointsGroup = { id: generateId('PG'), name, icon }
-        cfg.groups.push(g)
-        persist(records.value)
+        config.value.groups.push(g)
+        persist(config.value)
         return g
     }
 
-    function addItem(classId: string, groupId: string, name: string, value: number, sign: PointsSign): PointsItem {
-        const cfg = ensureClass(records.value, classId)
+    function addItem(groupId: string, name: string, value: number, sign: PointsSign): PointsItem {
         const it: PointsItem = { id: generateId('PI'), groupId, name, value: Math.abs(value), sign }
-        cfg.items.push(it)
-        persist(records.value)
+        config.value.items.push(it)
+        persist(config.value)
         return it
     }
 
-    function renameGroup(classId: string, groupId: string, name: string, icon?: string) {
-        const cfg = ensureClass(records.value, classId)
-        const g = cfg.groups.find(x => x.id === groupId)
+    function renameGroup(groupId: string, name: string, icon?: string) {
+        const g = config.value.groups.find(x => x.id === groupId)
         if (!g) return
         g.name = name
-        g.icon = icon
-        persist(records.value)
+        if (icon !== undefined) g.icon = icon
+        persist(config.value)
     }
 
-    function removeGroup(classId: string, groupId: string) {
-        const cfg = ensureClass(records.value, classId)
-        cfg.groups = cfg.groups.filter(g => g.id !== groupId)
-        cfg.items = cfg.items.filter(i => i.groupId !== groupId)
-        persist(records.value)
+    function removeGroup(groupId: string) {
+        config.value.groups = config.value.groups.filter(g => g.id !== groupId)
+        config.value.items = config.value.items.filter(i => i.groupId !== groupId)
+        persist(config.value)
     }
 
-    function updateItem(classId: string, itemId: string, payload: Partial<Pick<PointsItem, 'name' | 'value' | 'sign' | 'groupId'>>) {
-        const cfg = ensureClass(records.value, classId)
-        const it = cfg.items.find(x => x.id === itemId)
+    function updateItem(itemId: string, payload: Partial<Pick<PointsItem, 'name' | 'value' | 'sign' | 'groupId'>>) {
+        const it = config.value.items.find(x => x.id === itemId)
         if (!it) return
         if (payload.name !== undefined) it.name = payload.name
         if (payload.value !== undefined) it.value = Math.abs(payload.value)
         if (payload.sign !== undefined) it.sign = payload.sign
         if (payload.groupId !== undefined) it.groupId = payload.groupId
-        persist(records.value)
+        persist(config.value)
     }
 
-    function removeItem(classId: string, itemId: string) {
-        const cfg = ensureClass(records.value, classId)
-        cfg.items = cfg.items.filter(i => i.id !== itemId)
-        persist(records.value)
+    function removeItem(itemId: string) {
+        config.value.items = config.value.items.filter(i => i.id !== itemId)
+        persist(config.value)
     }
 
     return {

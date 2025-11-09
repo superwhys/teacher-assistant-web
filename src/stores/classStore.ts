@@ -74,6 +74,14 @@ export const useClassStore = defineStore('class', () => {
         persist()
     }
 
+    function updateClassName(id: string, newName: string) {
+        const cls = classes.value.find(c => c.id === id)
+        if (cls) {
+            cls.name = newName
+            persist()
+        }
+    }
+
     return {
         classes,
         activeClassId,
@@ -81,6 +89,7 @@ export const useClassStore = defineStore('class', () => {
         setActiveClass,
         addClass,
         removeClass,
+        updateClassName,
         persist,
         hydrate,
         clear,

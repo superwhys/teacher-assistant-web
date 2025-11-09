@@ -6,7 +6,6 @@ import type { PointsItem, PointsSign } from '@/types/pointsItem'
 
 type Props = {
     modelValue: boolean
-    activeClassId: string | null
 }
 
 const props = defineProps<Props>()
@@ -21,7 +20,7 @@ const innerVisible = computed({
     set: (val: boolean) => emit('update:modelValue', val),
 })
 
-const itemGroups = computed(() => pointsItemStore.listGroups(props.activeClassId))
+const itemGroups = computed(() => pointsItemStore.listGroups())
 
 const manageSelectedGroupId = ref<string | ''>('')
 const newGroupName = ref('')
@@ -42,13 +41,12 @@ watch(() => props.modelValue, (val) => {
 })
 
 function onAddGroup() {
-    if (!props.activeClassId) return
     const name = newGroupName.value.trim()
     if (!name) {
         ElMessage.error('请输入分组名称')
         return
     }
-    const g = pointsItemStore.addGroup(props.activeClassId, name, newGroupIcon.value.trim() || undefined)
+    const g = pointsItemStore.addGroup(name, newGroupIcon.value.trim() || undefined)
     newGroupName.value = ''
     newGroupIcon.value = ''
     manageSelectedGroupId.value = g.id
@@ -73,12 +71,11 @@ function openEditItem(it: PointsItem) {
 }
 
 async function onRemoveGroupManage(groupId: string) {
-    if (!props.activeClassId) return
     const g = itemGroups.value.find(x => x.id === groupId)
     if (!g) return
     try {
         await ElMessageBox.confirm(`确定删除分组「${g.name}」及其下的所有分值项吗？`, '删除确认', { type: 'warning' })
-        pointsItemStore.removeGroup(props.activeClassId, groupId)
+        pointsItemStore.removeGroup(groupId)
         const next = itemGroups.value[0]?.id ?? ''
         manageSelectedGroupId.value = next
         ElMessage.success('已删除分组及其分值项')
@@ -86,16 +83,15 @@ async function onRemoveGroupManage(groupId: string) {
 }
 
 async function onRemoveItem(it: PointsItem) {
-    if (!props.activeClassId) return
     try {
         await ElMessageBox.confirm(`确定删除分值项「${it.name}」吗？`, '删除确认', { type: 'warning' })
-        pointsItemStore.removeItem(props.activeClassId, it.id)
+        pointsItemStore.removeItem(it.id)
         ElMessage.success('已删除')
     } catch { }
 }
 
 function onAddItem() {
-    if (!props.activeClassId || !manageSelectedGroupId.value) return
+    if (!manageSelectedGroupId.value) return
     const name = newItemName.value.trim()
     const value = Math.abs(newItemValue.value || 0)
     if (!name) {
@@ -107,10 +103,10 @@ function onAddItem() {
         return
     }
     if (itemEditMode.value === 'create') {
-        pointsItemStore.addItem(props.activeClassId, manageSelectedGroupId.value, name, value, newItemSign.value)
+        pointsItemStore.addItem(manageSelectedGroupId.value, name, value, newItemSign.value)
         ElMessage.success('已新增积分项')
     } else {
-        pointsItemStore.updateItem(props.activeClassId, editingItemId.value, { name, value, sign: newItemSign.value })
+        pointsItemStore.updateItem(editingItemId.value, { name, value, sign: newItemSign.value })
         ElMessage.success('已保存修改')
     }
     itemEditVisible.value = false
@@ -157,7 +153,7 @@ function onAddItem() {
                         </el-button>
                     </div>
                     <el-table v-if="manageSelectedGroupId"
-                        :data="pointsItemStore.listItemsByGroup(props.activeClassId, manageSelectedGroupId, 'all')" border
+                        :data="pointsItemStore.listItemsByGroup(manageSelectedGroupId, 'all')" border
                         size="large" height="52vh">
                         <el-table-column type="index" label="#" width="60" />
                         <el-table-column label="名称" min-width="240">

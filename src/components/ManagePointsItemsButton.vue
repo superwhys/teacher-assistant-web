@@ -2,10 +2,6 @@
 import { ref } from 'vue'
 import PointsItemManageDialog from './PointsItemManageDialog.vue'
 
-defineProps<{
-    activeClassId: string | null
-}>()
-
 const manageVisible = ref(false)
 
 function openManageDialog() {
@@ -14,10 +10,10 @@ function openManageDialog() {
 </script>
 
 <template>
-    <el-button type="primary" plain :disabled="!activeClassId" @click="openManageDialog">
+    <el-button type="primary" plain @click="openManageDialog">
         <i-ep-setting /> 管理分值项
     </el-button>
 
-    <PointsItemManageDialog v-model="manageVisible" :active-class-id="activeClassId" />
+    <PointsItemManageDialog v-model="manageVisible" />
 </template>
 

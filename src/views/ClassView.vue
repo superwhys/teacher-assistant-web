@@ -309,6 +309,21 @@ function onSaveStudentEdit() {
     ElMessage.success('已保存')
     editDialogVisible.value = false
 }
+
+function downloadTemplate() {
+    const templateData = [
+        { 姓名: '张三', 性别: '男' },
+        { 姓名: '李四', 性别: '女' },
+        { 姓名: '王五', 性别: '男' },
+        { 姓名: '赵六', 性别: '女' },
+    ]
+
+    const worksheet = XLSX.utils.json_to_sheet(templateData)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, '学生名单模板')
+    XLSX.writeFile(workbook, '学生名单导入模板.xlsx')
+    ElMessage.success('模板下载成功')
+}
 </script>
 
 <template>
@@ -421,6 +436,9 @@ function onSaveStudentEdit() {
                         <li>必填：姓名（或 Name/学生姓名）</li>
                         <li>可选：性别（或 Gender），支持值：男/女、male/female、m/f、1/0</li>
                     </ul>
+                    <el-button type="primary" link @click="downloadTemplate" class="download-template-btn">
+                        <i-ep-download /> 下载模板
+                    </el-button>
                 </div>
                 <div v-if="excelParsedStudents.length" class="excel-preview">
                     <div class="preview-header">
@@ -762,6 +780,14 @@ function onSaveStudentEdit() {
 .guide-list {
     padding-left: 18px;
     margin: 0;
+    margin-bottom: 8px;
+}
+
+.download-template-btn {
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .excel-preview {

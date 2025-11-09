@@ -464,7 +464,7 @@ function undoOnce() {
             </div>
         </div>
 
-        <PointsItemSelectorDialog v-model="selectorVisible" v-model:tab="selectorTab" :active-class-id="activeClassId"
+        <PointsItemSelectorDialog v-model="selectorVisible" v-model:tab="selectorTab"
             @select="onSelectItem" />
     </div>
 </template>

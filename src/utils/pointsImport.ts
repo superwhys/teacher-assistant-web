@@ -9,6 +9,8 @@ export type ImportRow = {
     delta: number
     itemName?: string
     itemSign: 'plus' | 'minus'
+    isInvalid: boolean
+    itemIsInvalid: boolean
 }
 
 function parseNumber(value: unknown): number | null {
@@ -51,6 +53,7 @@ function getByHeaderCandidates(row: Record<string, any>, candidates: string[]) {
 export async function parseExcelToImportRows(
     file: File,
     validStudentNames: Iterable<string>,
+    validItemNames: Iterable<string>,
 ): Promise<{ rows: ImportRow[]; skipped: number }> {
     const arrayBuffer = await readArrayBuffer(file)
     const workbook = XLSX.read(arrayBuffer, { type: 'array' })
@@ -64,6 +67,7 @@ export async function parseExcelToImportRows(
     const itemKeys = ['项目', '原因', '备注', 'item', 'Item', 'itemName', 'ItemName']
 
     const studentSet = new Set(validStudentNames)
+    const itemSet = new Set(validItemNames)
 
     let skipped = 0
     const parsed: ImportRow[] = []
@@ -80,13 +84,18 @@ export async function parseExcelToImportRows(
         const delta = sign === 'minus' ? -abs : abs
 
         const studentName = String(nameVal).trim()
-        if (!studentSet.has(studentName)) { skipped += 1; continue }
+        const isInvalid = !studentSet.has(studentName)
+
+        const itemName = rawItem ? String(rawItem).trim() : undefined
+        const itemIsInvalid = itemName ? !itemSet.has(itemName) : false
 
         parsed.push({
             studentName,
             delta,
-            itemName: rawItem ? String(rawItem).trim() : undefined,
+            itemName,
             itemSign: sign,
+            isInvalid,
+            itemIsInvalid,
         })
     }
 

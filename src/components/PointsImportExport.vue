@@ -7,6 +7,7 @@ import { parseExcelToImportRows, type ImportRow } from '@/utils/pointsImport'
 import { useStudentStore } from '@/stores/studentStore'
 import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import { usePointsStore } from '@/stores/pointsStore'
+import { usePointsItemStore } from '@/stores/pointsItemStore'
 
 const props = defineProps<{
     activeClassId: string | null
@@ -16,6 +17,7 @@ const props = defineProps<{
 const studentStore = useStudentStore()
 const groupStore = useStudentGroupStore()
 const pointsStore = usePointsStore()
+const pointsItemStore = usePointsItemStore()
 
 const studentsOfActive = computed(() => {
     const id = props.activeClassId
@@ -25,6 +27,10 @@ const studentsOfActive = computed(() => {
 const groupsOfActive = computed(() => {
     const id = props.activeClassId
     return id ? groupStore.listByClassId(id) : []
+})
+
+const pointsItemsOfActive = computed(() => {
+    return pointsItemStore.listItems()
 })
 
 // 导入
@@ -52,14 +58,24 @@ async function handleExcelFile(file: File) {
     importLoading.value = true
     try {
         const names = new Set(studentsOfActive.value.map(s => s.studentName))
-        const { rows, skipped } = await parseExcelToImportRows(file, names)
+        const itemNames = new Set(pointsItemsOfActive.value.map(i => i.name))
+        const { rows, skipped } = await parseExcelToImportRows(file, names, itemNames)
         if (!rows.length) {
-            ElMessage.warning('未解析到有效的记录，请检查表头是否包含“姓名/分值”')
+            ElMessage.warning('未解析到有效的记录，请检查表头是否包含"姓名/分值"')
             return false
         }
         importParsed.value = rows
         importSkipped.value = skipped
-        ElMessage.success(`解析成功：${rows.length} 条，跳过 ${skipped} 条`)
+        const invalidCount = rows.filter(r => r.isInvalid).length
+        const itemInvalidCount = rows.filter(r => r.itemIsInvalid).length
+        let msg = `解析成功：${rows.length} 条，跳过 ${skipped} 条`
+        if (invalidCount > 0) {
+            msg += `，${invalidCount} 个学生不存在`
+        }
+        if (itemInvalidCount > 0) {
+            msg += `，${itemInvalidCount} 个项目不存在`
+        }
+        ElMessage.success(msg)
     } catch (err: any) {
         ElMessage.error(`导入失败：${err?.message || '未知错误'}`)
     } finally {
@@ -91,14 +107,24 @@ function confirmImportPoints() {
         ElMessage.warning('暂无可导入的数据')
         return
     }
-    for (const r of importParsed.value) {
+    const validRows = importParsed.value.filter(r => !r.isInvalid && !r.itemIsInvalid)
+    if (validRows.length === 0) {
+        ElMessage.warning('没有有效的记录可以导入')
+        return
+    }
+    for (const r of validRows) {
         pointsStore.addPoints(props.activeClassId, [r.studentName], r.delta, {
             itemName: r.itemName || '导入',
             itemSign: r.itemSign,
             itemValue: Math.abs(r.delta),
         })
     }
-    ElMessage.success(`已导入 ${importParsed.value.length} 条积分变动`)
+    const invalidCount = importParsed.value.length - validRows.length
+    let msg = `已导入 ${validRows.length} 条积分变动`
+    if (invalidCount > 0) {
+        msg += `，已忽略 ${invalidCount} 条无效记录`
+    }
+    ElMessage.success(msg)
     clearImportPreview()
     importVisible.value = false
 }
@@ -229,17 +255,47 @@ function doExportExcel() {
                         <el-tag v-if="importFileName" type="info" effect="light">文件：{{ importFileName }}</el-tag>
                         <el-tag type="primary" effect="light">共 {{ importParsed.length }} 条</el-tag>
                         <el-tag :type="importSkipped ? 'warning' : 'success'" effect="light">跳过 {{ importSkipped }} 条</el-tag>
+                        <el-tag 
+                            v-if="importParsed.filter(r => r.isInvalid).length > 0" 
+                            type="danger" 
+                            effect="light"
+                        >
+                            {{ importParsed.filter(r => r.isInvalid).length }} 个学生不存在
+                        </el-tag>
+                        <el-tag 
+                            v-if="importParsed.filter(r => r.itemIsInvalid).length > 0" 
+                            type="warning" 
+                            effect="light"
+                        >
+                            {{ importParsed.filter(r => r.itemIsInvalid).length }} 个项目不存在
+                        </el-tag>
                     </el-space>
                 </div>
                 <el-table :data="importParsed" border size="small" class="preview-table" max-height="260">
-                    <el-table-column prop="studentName" label="姓名" min-width="140" />
+                    <el-table-column label="姓名" min-width="140">
+                        <template #default="{ row }">
+                            <span :class="{ 'text-error': row.isInvalid }">
+                                {{ row.studentName }}
+                                <el-tooltip v-if="row.isInvalid" content="学生不存在，将被忽略" placement="top">
+                                    <i-ep-warning-filled class="warning-icon" />
+                                </el-tooltip>
+                            </span>
+                        </template>
+                    </el-table-column>
                     <el-table-column label="分值" min-width="120" align="center">
                         <template #default="{ row }">
                             <span :class="['badge', row.delta > 0 ? 'plus' : 'minus']">{{ row.delta > 0 ? '+' : '-' }}{{ Math.abs(row.delta) }}</span>
                         </template>
                     </el-table-column>
-                    <el-table-column prop="itemName" label="项目" min-width="160">
-                        <template #default="{ row }">{{ row.itemName || '导入' }}</template>
+                    <el-table-column label="项目" min-width="160">
+                        <template #default="{ row }">
+                            <span :class="{ 'text-warning': row.itemIsInvalid }">
+                                {{ row.itemName || '导入' }}
+                                <el-tooltip v-if="row.itemIsInvalid" content="项目不存在，将被忽略" placement="top">
+                                    <i-ep-warning-filled class="warning-icon-item" />
+                                </el-tooltip>
+                            </span>
+                        </template>
                     </el-table-column>
                 </el-table>
                 <div class="preview-actions">
@@ -362,6 +418,28 @@ function doExportExcel() {
 
 .group-filter {
     width: 220px;
+}
+
+.text-error {
+    color: #f56c6c;
+    font-weight: 600;
+}
+
+.text-warning {
+    color: #e6a23c;
+    font-weight: 600;
+}
+
+.warning-icon {
+    margin-left: 4px;
+    font-size: 14px;
+    color: #f56c6c;
+}
+
+.warning-icon-item {
+    margin-left: 4px;
+    font-size: 14px;
+    color: #e6a23c;
 }
 </style>
 

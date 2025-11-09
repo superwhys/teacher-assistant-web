@@ -2,6 +2,10 @@
 import { ref, computed, onBeforeUnmount, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 
+defineOptions({
+    name: 'TimerView'
+})
+
 const isRunning = ref(false)
 const totalSeconds = ref(300)
 const remainingSeconds = ref<number>(totalSeconds.value)

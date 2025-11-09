@@ -9,6 +9,10 @@ import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import StudentCard from '@/components/StudentCard.vue'
 import type { Student } from '@/types/student'
 
+defineOptions({
+    name: 'ClassView'
+})
+
 const classStore = useClassStore()
 
 const activeClass = computed(() => classStore.activeClass)

@@ -6,6 +6,10 @@ import IEpTimer from '~icons/ep/timer'
 import IEpUser from '~icons/ep/user'
 import ToolCard from '@/components/ToolCard.vue'
 
+defineOptions({
+    name: 'ToolsView'
+})
+
 interface ToolItem {
     key: string
     title: string

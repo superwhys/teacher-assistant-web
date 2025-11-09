@@ -7,6 +7,10 @@ import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import { usePointsStore } from '@/stores/pointsStore'
 import { formatTimeHHmm } from '@/utils/date'
 
+defineOptions({
+    name: 'PointsHistoryView'
+})
+
 const classStore = useClassStore()
 const groupStore = useStudentGroupStore()
 const pointsStore = usePointsStore()

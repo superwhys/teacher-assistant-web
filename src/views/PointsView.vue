@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useClassStore } from '@/stores/classStore'
 import { useStudentStore } from '@/stores/studentStore'
@@ -10,10 +10,55 @@ import PointsItemSelectorDialog from '@/components/PointsItemSelectorDialog.vue'
 import PointsHeaderActions from '@/components/PointsHeaderActions.vue'
 import PointsRankingCard from '@/components/PointsRankingCard.vue'
 
+defineOptions({
+    name: 'PointsView'
+})
+
 const classStore = useClassStore()
 const studentStore = useStudentStore()
 const groupStore = useStudentGroupStore()
 const pointsStore = usePointsStore()
+
+const isRankingCollapsed = ref(false)
+const isRankingAnimating = ref(false)
+const showRankingContent = ref(true)
+const windowWidth = ref(window.innerWidth)
+
+function handleResize() {
+    windowWidth.value = window.innerWidth
+    if (windowWidth.value <= 768) {
+        isRankingCollapsed.value = false
+        showRankingContent.value = true
+    }
+}
+
+onBeforeUnmount(() => {
+    window.removeEventListener('resize', handleResize)
+})
+
+watch(isRankingCollapsed, (val) => {
+    localStorage.setItem('ranking-collapsed', String(val))
+})
+
+function toggleRanking() {
+    if (isRankingAnimating.value) return
+    
+    isRankingAnimating.value = true
+    
+    if (isRankingCollapsed.value) {
+        isRankingCollapsed.value = false
+        setTimeout(() => {
+            showRankingContent.value = true
+            isRankingAnimating.value = false
+        }, 300)
+    } else {
+        showRankingContent.value = false
+        setTimeout(() => {
+            isRankingCollapsed.value = true
+            isRankingAnimating.value = false
+        }, 50)
+    }
+}
 
 const activeClass = computed(() => classStore.activeClass)
 const activeClassId = computed({
@@ -59,6 +104,33 @@ const totalPointsMap = computed(() => {
 
 // 学生搜索
 const studentKeyword = ref('')
+
+// 学生排序
+type SortOption = 'default' | 'name-asc' | 'name-desc' | 'available-asc' | 'available-desc' | 'total-asc' | 'total-desc'
+const sortBy = ref<SortOption>('default')
+
+onMounted(() => {
+    const saved = localStorage.getItem('ranking-collapsed')
+    if (windowWidth.value > 768 && saved !== null) {
+        isRankingCollapsed.value = saved === 'true'
+        showRankingContent.value = !isRankingCollapsed.value
+    } else if (windowWidth.value <= 768) {
+        isRankingCollapsed.value = false
+        showRankingContent.value = true
+    }
+    
+    const savedSort = localStorage.getItem('students-sort')
+    if (savedSort) {
+        sortBy.value = savedSort as SortOption
+    }
+    
+    window.addEventListener('resize', handleResize)
+})
+
+watch(sortBy, (val) => {
+    localStorage.setItem('students-sort', val)
+})
+
 const filteredStudents = computed(() => {
     const keyword = studentKeyword.value.trim().toLowerCase()
     const gid = selectedGroupId.value
@@ -68,8 +140,77 @@ const filteredStudents = computed(() => {
         const nameSet = new Set(g?.members ?? [])
         list = list.filter(s => nameSet.has(s.studentName))
     }
-    if (!keyword) return list
-    return list.filter(s => s.studentName.toLowerCase().includes(keyword))
+    if (keyword) {
+        list = list.filter(s => s.studentName.toLowerCase().includes(keyword))
+    }
+    
+    const sort = sortBy.value
+    if (sort === 'default') return list
+    
+    const sorted = [...list]
+    if (sort === 'name-asc') {
+        sorted.sort((a, b) => a.studentName.localeCompare(b.studentName, 'zh-CN'))
+    } else if (sort === 'name-desc') {
+        sorted.sort((a, b) => b.studentName.localeCompare(a.studentName, 'zh-CN'))
+    } else if (sort === 'available-asc') {
+        sorted.sort((a, b) => {
+            const aPoints = availablePointsMap.value[a.studentName] ?? 0
+            const bPoints = availablePointsMap.value[b.studentName] ?? 0
+            return aPoints - bPoints
+        })
+    } else if (sort === 'available-desc') {
+        sorted.sort((a, b) => {
+            const aPoints = availablePointsMap.value[a.studentName] ?? 0
+            const bPoints = availablePointsMap.value[b.studentName] ?? 0
+            return bPoints - aPoints
+        })
+    } else if (sort === 'total-asc') {
+        sorted.sort((a, b) => {
+            const aPoints = totalPointsMap.value[a.studentName] ?? 0
+            const bPoints = totalPointsMap.value[b.studentName] ?? 0
+            return aPoints - bPoints
+        })
+    } else if (sort === 'total-desc') {
+        sorted.sort((a, b) => {
+            const aPoints = totalPointsMap.value[a.studentName] ?? 0
+            const bPoints = totalPointsMap.value[b.studentName] ?? 0
+            return bPoints - aPoints
+        })
+    }
+    
+    return sorted
+})
+
+// 分组操作
+const selectedGroupId = ref<string | ''>('')
+
+// 批量选择学生
+const selectedStudents = ref<string[]>([])
+
+function toggleStudentSelection(studentName: string) {
+    const index = selectedStudents.value.indexOf(studentName)
+    if (index > -1) {
+        selectedStudents.value.splice(index, 1)
+    } else {
+        selectedStudents.value.push(studentName)
+    }
+}
+
+function isStudentSelected(studentName: string) {
+    return selectedStudents.value.includes(studentName)
+}
+
+function clearSelection() {
+    selectedStudents.value = []
+}
+
+watch(activeClassId, () => {
+    clearSelection()
+    selectedGroupId.value = ''
+})
+
+watch(selectedGroupId, () => {
+    clearSelection()
 })
 
 // 分值项选择弹窗
@@ -86,7 +227,10 @@ function openSelectorForStudents(studentNames: string[], tab: SelectorTab) {
 }
 
 function openSelectorForAll(tab: SelectorTab) {
-    const names = filteredStudents.value.map(s => s.studentName)
+    const names = selectedStudents.value.length > 0 
+        ? selectedStudents.value 
+        : filteredStudents.value.map(s => s.studentName)
+    
     if (!activeClassId.value || names.length === 0) {
         ElMessage.info('没有可操作的学生')
         return
@@ -108,13 +252,11 @@ function onSelectItem(item: PointsItem) {
         ? `${selectorTargets.value.slice(0, 3).join('、')} 等${selectorTargets.value.length}人`
         : selectorTargets.value.join('、')
     ElMessage.success(`已对「${target}」${delta > 0 ? '加' : '减'}${Math.abs(delta)} 分（${item.name}）`)
+    
+    if (selectedStudents.value.length > 0) {
+        clearSelection()
+    }
 }
-
-// 分组操作
-const selectedGroupId = ref<string | ''>('')
-watch(activeClassId, () => {
-    selectedGroupId.value = ''
-})
 
 // 撤回最近一次操作
 function undoOnce() {
@@ -134,14 +276,22 @@ function undoOnce() {
 
 <template>
     <div class="points-page">
-        <div class="content-area">
+        <div class="content-area" :class="{ 'ranking-collapsed': isRankingCollapsed }">
             <div class="ranking-column">
-                <PointsRankingCard 
-                    :students="studentsOfActive" 
-                    :points-map="totalPointsMap"
-                    :max-display="10"
-                />
+                <Transition name="ranking-fade">
+                    <PointsRankingCard 
+                        v-show="showRankingContent"
+                        :students="studentsOfActive" 
+                        :points-map="totalPointsMap"
+                        :max-display="10"
+                    />
+                </Transition>
             </div>
+            
+            <button class="ranking-toggle-btn" @click="toggleRanking" :title="isRankingCollapsed ? '展开排行榜' : '收起排行榜'">
+                <i-ep-d-arrow-right v-if="isRankingCollapsed" />
+                <i-ep-d-arrow-left v-else />
+            </button>
             
             <div class="list-column">
                 <el-card shadow="never" class="list-card">
@@ -159,7 +309,12 @@ function undoOnce() {
                     <div v-if="activeClass">
                         <div v-if="studentsOfActive.length > 0">
                             <div v-if="filteredStudents.length > 0" class="student-grid">
-                                <div v-for="s in filteredStudents" :key="s.studentName" class="student-row">
+                                <div 
+                                    v-for="s in filteredStudents" 
+                                    :key="s.studentName" 
+                                    :class="['student-row', { 'is-selected': isStudentSelected(s.studentName) }]"
+                                    @click="toggleStudentSelection(s.studentName)"
+                                >
                                     <div :class="['avatar', s.gender]">
                                         <i-ep-male v-if="s.gender === 'male'" />
                                         <i-ep-female v-else />
@@ -173,7 +328,7 @@ function undoOnce() {
                                             <div class="score-label">总分</div>
                                         </div>
                                     </div>
-                                    <div class="ops">
+                                    <div class="ops" @click.stop>
                                         <el-button class="op" type="primary" plain size="small"
                                             @click="openSelectorForStudents([s.studentName], 'plus')"><i-ep-plus />
                                             加分</el-button>
@@ -215,6 +370,46 @@ function undoOnce() {
                     <el-option v-for="g in groupsOfActive" :key="g.id"
                         :label="`${g.name}（${g.members.length}）`" :value="g.id" />
                 </el-select>
+                <el-select v-model="sortBy" placeholder="排序方式" class="sort-filter"
+                    :disabled="!activeClassId" size="large">
+                    <el-option label="默认排序" value="default" />
+                    <el-option label="姓名 A-Z" value="name-asc">
+                        <div class="sort-option">
+                            <i-ep-sort-up />
+                            <span>姓名 A-Z</span>
+                        </div>
+                    </el-option>
+                    <el-option label="姓名 Z-A" value="name-desc">
+                        <div class="sort-option">
+                            <i-ep-sort-down />
+                            <span>姓名 Z-A</span>
+                        </div>
+                    </el-option>
+                    <el-option label="可用积分 ↑" value="available-asc">
+                        <div class="sort-option">
+                            <i-ep-sort-up />
+                            <span>可用积分 ↑</span>
+                        </div>
+                    </el-option>
+                    <el-option label="可用积分 ↓" value="available-desc">
+                        <div class="sort-option">
+                            <i-ep-sort-down />
+                            <span>可用积分 ↓</span>
+                        </div>
+                    </el-option>
+                    <el-option label="总积分 ↑" value="total-asc">
+                        <div class="sort-option">
+                            <i-ep-sort-up />
+                            <span>总积分 ↑</span>
+                        </div>
+                    </el-option>
+                    <el-option label="总积分 ↓" value="total-desc">
+                        <div class="sort-option">
+                            <i-ep-sort-down />
+                            <span>总积分 ↓</span>
+                        </div>
+                    </el-option>
+                </el-select>
                 <el-input v-model="studentKeyword" class="search-input" placeholder="搜索学生" clearable size="large">
                     <template #prefix>
                         <i-ep-search />
@@ -229,10 +424,30 @@ function undoOnce() {
                     <template #icon>
                         <i-ep-plus />
                     </template>
-                    全体加分
+                    {{ selectedStudents.length > 0 ? `批量加分（${selectedStudents.length}）` : '全体加分' }}
                 </el-button>
-                <el-button size="large" type="warning" plain class="undo-btn"
-                    :disabled="!activeClassId" @click="undoOnce">
+                <el-button 
+                    v-if="selectedStudents.length > 0"
+                    size="large" 
+                    type="info" 
+                    plain 
+                    class="clear-btn"
+                    @click="clearSelection"
+                >
+                    <template #icon>
+                        <i-ep-close />
+                    </template>
+                    清空
+                </el-button>
+                <el-button 
+                    v-else
+                    size="large" 
+                    type="warning" 
+                    plain 
+                    class="undo-btn"
+                    :disabled="!activeClassId" 
+                    @click="undoOnce"
+                >
                     <template #icon>
                         <i-ep-refresh-left />
                     </template>
@@ -244,7 +459,7 @@ function undoOnce() {
                     <template #icon>
                         <i-ep-minus />
                     </template>
-                    全体扣分
+                    {{ selectedStudents.length > 0 ? `批量扣分（${selectedStudents.length}）` : '全体扣分' }}
                 </el-button>
             </div>
         </div>
@@ -269,18 +484,85 @@ function undoOnce() {
     overflow: hidden;
     padding-bottom: 16px;
     display: grid;
-    grid-template-columns: 360px 1fr;
-    gap: 16px;
+    grid-template-columns: 360px auto 1fr;
+    gap: 0;
+    transition: grid-template-columns 0.3s ease;
+}
+
+.content-area.ranking-collapsed {
+    grid-template-columns: 0px auto 1fr;
 }
 
 .ranking-column {
     height: 100%;
     overflow: hidden;
+    transition: all 0.3s ease;
+    padding-right: 8px;
+}
+
+.ranking-fade-enter-active {
+    transition: opacity 0.2s ease 0.1s;
+}
+
+.ranking-fade-leave-active {
+    transition: opacity 0.15s ease;
+}
+
+.ranking-fade-enter-from,
+.ranking-fade-leave-to {
+    opacity: 0;
+}
+
+.ranking-toggle-btn {
+    width: 32px;
+    height: 80px;
+    border: none;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.04);
+    color: #999;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    padding: 0;
+}
+
+.ranking-toggle-btn :deep(.el-icon) {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.04);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ranking-toggle-btn:hover {
+    color: #667eea;
+}
+
+.ranking-toggle-btn:hover :deep(.el-icon) {
+    background: rgba(102, 126, 234, 0.08);
+    transform: scale(1.1);
+}
+
+.ranking-toggle-btn:active :deep(.el-icon) {
+    transform: scale(0.95);
 }
 
 .list-column {
     height: 100%;
     overflow: hidden;
+    margin-left: 12px;
+}
+
+.ranking-collapsed + .ranking-toggle-btn {
+    margin-left: 12px;
 }
 
 .list-card {
@@ -555,6 +837,16 @@ function undoOnce() {
     flex: 1;
 }
 
+.sort-filter {
+    flex: 1;
+}
+
+.sort-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .search-input {
     flex: 1;
 }
@@ -575,7 +867,8 @@ function undoOnce() {
     border-radius: 12px;
 }
 
-.undo-btn {
+.undo-btn,
+.clear-btn {
     width: 140px;
     height: 56px;
     font-size: 16px;
@@ -667,9 +960,27 @@ function undoOnce() {
     align-items: start;
     gap: 10px;
     padding: 12px;
-    border: 1px solid #eee;
+    border: 2px solid #eee;
     border-radius: 12px;
     background: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.student-row:hover {
+    border-color: #d0d0d0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.student-row.is-selected {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #f5f7ff 0%, #eef2ff 100%);
+    box-shadow: 0 2px 12px rgba(102, 126, 234, 0.2);
+}
+
+.student-row.is-selected .name {
+    color: #667eea;
 }
 
 .avatar {
@@ -777,23 +1088,53 @@ function undoOnce() {
 
 @media (max-width: 1024px) {
     .content-area {
-        grid-template-columns: 300px 1fr;
-        gap: 12px;
+        grid-template-columns: 300px auto 1fr;
+    }
+
+    .content-area.ranking-collapsed {
+        grid-template-columns: 0px auto 1fr;
+    }
+
+    .ranking-toggle-btn {
+        width: 28px;
+    }
+
+    .list-column {
+        margin-left: 10px;
+    }
+    
+    .ranking-collapsed + .ranking-toggle-btn {
+        margin-left: 10px;
     }
 }
 
 @media (max-width: 768px) {
     .content-area {
         grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
         gap: 12px;
+    }
+
+    .content-area.ranking-collapsed {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
     }
     
     .ranking-column {
-        max-height: 400px;
+        max-height: 350px;
+        padding-right: 0;
+    }
+
+    .ranking-toggle-btn {
+        display: none;
+    }
+
+    .list-column {
+        margin-left: 0;
     }
     
     .bottom-actions {
-        padding: 16px;
+        padding: 14px;
         gap: 10px;
     }
 
@@ -806,14 +1147,15 @@ function undoOnce() {
     }
 
     .action-btn {
-        max-width: 200px;
-        height: 48px;
+        max-width: 180px;
+        height: 50px;
         font-size: 16px;
     }
 
-    .undo-btn {
+    .undo-btn,
+    .clear-btn {
         width: 100px;
-        height: 48px;
+        height: 50px;
         font-size: 14px;
     }
 
@@ -823,16 +1165,27 @@ function undoOnce() {
 }
 
 @media (max-width: 640px) {
+    .ranking-column {
+        max-height: 320px;
+    }
+
     .filter-row {
-        gap: 6px;
+        gap: 8px;
     }
 
     .group-filter {
         min-width: 0;
+        flex: 1;
+    }
+
+    .sort-filter {
+        min-width: 0;
+        flex: 1;
     }
 
     .search-input {
         min-width: 0;
+        flex: 1;
     }
 
     .main-actions-row {
@@ -842,56 +1195,170 @@ function undoOnce() {
     .action-btn {
         flex: 1;
         max-width: none;
-        height: 46px;
+        height: 48px;
         font-size: 15px;
     }
 
-    .undo-btn {
-        width: 80px;
-        height: 46px;
+    .undo-btn,
+    .clear-btn {
+        width: 85px;
+        height: 48px;
         font-size: 13px;
     }
 }
 
 @media (max-width: 480px) {
+    .ranking-column {
+        max-height: 280px;
+    }
+
     .bottom-actions {
-        padding: 12px;
+        padding: 10px;
+        gap: 8px;
+    }
+
+    .filter-row {
+        gap: 6px;
+    }
+
+    .main-actions-row {
+        gap: 6px;
     }
 
     .action-btn {
-        height: 44px;
+        height: 46px;
         font-size: 14px;
+        padding: 0 12px;
     }
 
-    .undo-btn {
-        width: 70px;
-        height: 44px;
+    .undo-btn,
+    .clear-btn {
+        width: 75px;
+        height: 46px;
         font-size: 12px;
+        padding: 0 8px;
     }
 
     .student-row {
-        grid-template-columns: 40px 1fr;
-        grid-template-rows: auto auto;
-        align-items: start;
+        padding: 10px;
+        gap: 8px;
     }
 
     .ops {
         grid-column: 1 / -1;
-        display: flex;
-        gap: 10px;
-        justify-content: space-between;
-        align-items: center;
-        width: 100%;
-        margin-top: 12px;
-        padding-top: 12px;
-        border-top: 1px solid #e6e8f0;
+        gap: 8px;
+        margin-top: 10px;
+        padding-top: 10px;
     }
 
     .op {
         flex: 1;
-        height: 36px;
-        border-radius: 24px;
+        height: 38px;
         font-size: 13px;
+        padding: 0 8px;
+    }
+}
+
+@media (max-width: 420px) {
+    .action-btn {
+        font-size: 14px;
+        padding: 0 10px;
+    }
+
+    .undo-btn,
+    .clear-btn {
+        width: 70px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 390px) {
+    .ranking-column {
+        max-height: 260px;
+    }
+
+    .bottom-actions {
+        padding: 8px;
+        gap: 6px;
+    }
+
+    .filter-row {
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .group-filter,
+    .sort-filter,
+    .search-input {
+        width: 100%;
+    }
+
+    .group-filter :deep(.el-input__wrapper),
+    .sort-filter :deep(.el-input__wrapper),
+    .search-input :deep(.el-input__wrapper) {
+        padding: 8px 12px;
+    }
+
+    .main-actions-row {
+        gap: 6px;
+    }
+
+    .action-btn {
+        height: 44px;
+        font-size: 13px;
+        padding: 0 8px;
+    }
+
+    .undo-btn,
+    .clear-btn {
+        width: 64px;
+        height: 44px;
+        font-size: 11px;
+        padding: 0 4px;
+    }
+
+    .student-row {
+        padding: 10px;
+        gap: 8px;
+    }
+
+    .avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 18px;
+    }
+
+    .name {
+        font-size: 15px;
+    }
+
+    .score {
+        padding: 2px 6px;
+        font-size: 13px;
+    }
+
+    .score-label {
+        font-size: 11px;
+    }
+
+    .ops {
+        gap: 6px;
+        margin-top: 8px;
+        padding-top: 8px;
+    }
+
+    .op {
+        height: 36px;
+        font-size: 12px;
+        padding: 0 6px;
+    }
+
+    .op :deep(.el-icon) {
+        margin-right: 2px;
+    }
+
+    .list-card :deep(.el-card__header) {
+        padding: 14px;
     }
 }
 </style>

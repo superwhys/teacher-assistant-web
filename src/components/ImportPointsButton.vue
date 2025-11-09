@@ -5,6 +5,7 @@ import type { UploadRawFile, UploadFile, UploadInstance } from 'element-plus'
 import { parseExcelToImportRows, type ImportRow } from '@/utils/pointsImport'
 import { useStudentStore } from '@/stores/studentStore'
 import { usePointsStore } from '@/stores/pointsStore'
+import * as XLSX from 'xlsx'
 
 const props = defineProps<{
     activeClassId: string | null
@@ -93,6 +94,28 @@ function confirmImportPoints() {
     clearImportPreview()
     importVisible.value = false
 }
+
+function downloadTemplate() {
+    const students = studentsOfActive.value
+    const templateData = students.length > 0
+        ? students.slice(0, 3).map((student, index) => ({
+            姓名: student.studentName,
+            分值: index === 0 ? 5 : index === 1 ? -3 : 3,
+            项目: index === 0 ? '作业完成' : index === 1 ? '迟到' : '主动发言'
+        }))
+        : [
+            { 姓名: '张三', 分值: 5, 项目: '作业完成' },
+            { 姓名: '李四', 分值: -3, 项目: '迟到' },
+            { 姓名: '王五', 分值: 3, 项目: '主动发言' }
+        ]
+
+    const worksheet = XLSX.utils.json_to_sheet(templateData)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, '积分导入模板')
+    const fileName = props.activeClassName ? `${props.activeClassName}-积分导入模板.xlsx` : '积分导入模板.xlsx'
+    XLSX.writeFile(workbook, fileName)
+    ElMessage.success('模板下载成功')
+}
 </script>
 
 <template>
@@ -129,6 +152,9 @@ function confirmImportPoints() {
                 <li>分值（必填）：正数加分、负数扣分（例如：5、-3）</li>
                 <li>项目（可选）：积分项名称（例如：作业完成、课堂表现）</li>
             </ul>
+            <el-button type="primary" link @click="downloadTemplate" class="download-template-btn">
+                <i-ep-download /> 下载模板
+            </el-button>
         </div>
 
         <div v-if="importParsed.length" class="excel-preview">
@@ -202,6 +228,14 @@ function confirmImportPoints() {
 .guide-list {
     padding-left: 18px;
     margin: 0;
+    margin-bottom: 8px;
+}
+
+.download-template-btn {
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .excel-preview {

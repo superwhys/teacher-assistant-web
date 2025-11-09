@@ -20,6 +20,10 @@ import {
     Basketball as IEpBasketball
 } from '@element-plus/icons-vue'
 
+defineOptions({
+    name: 'ShopView'
+})
+
 const classStore = useClassStore()
 const studentStore = useStudentStore()
 const shopStore = useShopStore()

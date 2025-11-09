@@ -30,7 +30,7 @@ html,
 body {
   margin: 0;
   padding: 0;
-  min-width: 430px;
+  min-width: 390px;
 }
 
 body {
@@ -43,5 +43,5 @@ body {
   min-height: 100vh;
   margin: 0;
   padding: 0;
-  min-width: 430px;
+  min-width: 390px;
 }

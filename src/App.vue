@@ -328,8 +328,11 @@ async function confirmUnlock() {
                 </el-aside>
                 <el-main class="main">
                     <div class="content-area">
-                        <router-view v-slot="{ Component }">
-                            <component :is="Component" :key="settingsStore.dataVersion" />
+                        <router-view v-slot="{ Component, route }">
+                            <keep-alive v-if="route.meta?.keepAlive">
+                                <component :is="Component" :key="route.path" />
+                            </keep-alive>
+                            <component v-else :is="Component" :key="settingsStore.dataVersion" />
                         </router-view>
                     </div>
                 </el-main>
@@ -825,7 +828,7 @@ async function confirmUnlock() {
 
 .main {
     flex: 1 1 auto !important;
-    overflow: hidden !important;
+    /* overflow: hidden !important; */
     background-color: #f0f2f5 !important;
     padding: 20px !important;
     height: 100% !important;
@@ -836,7 +839,6 @@ async function confirmUnlock() {
 .content-area {
     width: 100%;
     height: 100%;
-    min-height: 600px;
 }
 
 .content-area > * {

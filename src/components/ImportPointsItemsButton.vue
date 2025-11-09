@@ -4,6 +4,7 @@ import { ElMessage } from 'element-plus'
 import type { UploadRawFile, UploadFile, UploadInstance } from 'element-plus'
 import { parseItemsExcelToRows, type ImportItemRow } from '@/utils/pointsImport'
 import { usePointsItemStore } from '@/stores/pointsItemStore'
+import * as XLSX from 'xlsx'
 
 const props = defineProps<{
     activeClassId: string | null
@@ -98,6 +99,21 @@ function confirmImport() {
     clearImportPreview()
     importVisible.value = false
 }
+
+function downloadTemplate() {
+    const templateData = [
+        { 组名: '常规操作', 项目名: '作业完成', 分值: 5 },
+        { 组名: '常规操作', 项目名: '忘带作业', 分值: -3 },
+        { 组名: '课堂表现', 项目名: '主动发言', 分值: 3 },
+        { 组名: '课堂表现', 项目名: '课堂违纪', 分值: -5 },
+    ]
+
+    const worksheet = XLSX.utils.json_to_sheet(templateData)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, '积分项模板')
+    XLSX.writeFile(workbook, '积分项导入模板.xlsx')
+    ElMessage.success('模板下载成功')
+}
 </script>
 
 <template>
@@ -134,6 +150,9 @@ function confirmImport() {
                 <li>项目名：积分项名称（例如：作业完成、主动发言）</li>
                 <li>分值：正数为加分，负数为扣分（例如：5、-3）</li>
             </ul>
+            <el-button type="primary" link @click="downloadTemplate" class="download-template-btn">
+                <i-ep-download /> 下载模板
+            </el-button>
         </div>
 
         <div v-if="importParsed.length" class="excel-preview">
@@ -207,6 +226,14 @@ function confirmImport() {
 .guide-list {
     padding-left: 18px;
     margin: 0;
+    margin-bottom: 8px;
+}
+
+.download-template-btn {
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .excel-preview {

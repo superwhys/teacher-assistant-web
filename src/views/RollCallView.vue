@@ -6,6 +6,10 @@ import { useStudentStore } from '@/stores/studentStore'
 import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import type { Student } from '@/types/student'
 
+defineOptions({
+    name: 'RollCallView'
+})
+
 const classStore = useClassStore()
 const studentStore = useStudentStore()
 const groupStore = useStudentGroupStore()

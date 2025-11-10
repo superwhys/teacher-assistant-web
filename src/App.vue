@@ -210,6 +210,7 @@ function onUserCommand(command: string) {
 watch(() => userStore.profile?.id, (newUserId, oldUserId) => {
     if (newUserId && newUserId !== oldUserId) {
         void loadAllStores()
+        void settingsStore.hydrate()
     }
 }, { immediate: false })
 
@@ -1516,8 +1517,9 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
 .latest-grid {
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 16px;
+    justify-items: center;
 }
 
 .latest-backup-card {

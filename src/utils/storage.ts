@@ -24,6 +24,13 @@ export const asyncStorage = {
             console.error('Failed to set item', key, value)
         }
     },
+    async removeItem(key: string): Promise<void> {
+        try {
+            await lf.removeItem(key)
+        } catch {
+            console.error('Failed to remove item', key)
+        }
+    },
 }
 
 function deepUnwrap(val: any): any {
@@ -118,12 +125,16 @@ export async function exportUserData(userId: string | null): Promise<Record<stri
     try {
         await lf.iterate((value, key) => {
             const keyStr = String(key)
-            if (keyStr === 'ta_settings_v1' || keyStr === 'ta_user_store_v1') {
+            if (keyStr === 'ta_user_store_v1') {
                 return
             }
             
             if (keyStr.endsWith(`_user_${userId}`)) {
                 const cleanKey = removeUserIdFromKey(keyStr)
+                // 用户信息键不导出
+                if (cleanKey === 'ta_user_store_v1') {
+                    return
+                }
                 out[cleanKey] = value
             }
         })
@@ -145,7 +156,7 @@ export async function importUserData(payload: Record<string, any>, userId: strin
     
     const entries = Object.entries(payload)
     for (const [key, value] of entries) {
-        if (key === 'ta_settings_v1' || key === 'ta_user_store_v1') {
+        if (key === 'ta_user_store_v1') {
             continue
         }
         

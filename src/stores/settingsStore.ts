@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { asyncStorage, exportUserData } from '@/utils/storage'
+import { asyncStorage, exportUserData, getUserStorageKey } from '@/utils/storage'
 import { generateSaltBase64, hashPassword, verifyPassword as verifyPasswordHash } from '@/utils/crypto'
 import { cloudApi } from '@/api/cloud'
 import { useUserStore } from './userStore'
@@ -22,6 +22,11 @@ export const useSettingsStore = defineStore('settings', () => {
     const lockSalt = ref<string | null>(null)
     const lockHash = ref<string | null>(null)
 
+    function getStorageKey(): string {
+        const userId = userStore.profile?.id || null
+        return getUserStorageKey(STORAGE_KEY, userId)
+    }
+
     function persist() {
         const payload = {
             cloudAutoSyncEnabled: cloudAutoSyncEnabled.value,
@@ -32,11 +37,12 @@ export const useSettingsStore = defineStore('settings', () => {
             lockSalt: lockSalt.value,
             lockHash: lockHash.value,
         }
-        void asyncStorage.setItem(STORAGE_KEY, payload)
+        void asyncStorage.setItem(getStorageKey(), payload)
     }
 
     async function hydrate() {
-        const saved = await asyncStorage.getItem<{
+        const currentKey = getStorageKey()
+        let saved = await asyncStorage.getItem<{
             cloudAutoSyncEnabled?: boolean
             cloudAutoSyncIntervalHours?: number
             lastCloudSyncAt?: number | null
@@ -44,7 +50,30 @@ export const useSettingsStore = defineStore('settings', () => {
             isLocked?: boolean
             lockSalt?: string | null
             lockHash?: string | null
-        }>(STORAGE_KEY)
+        }>(currentKey)
+        // 向后兼容：检查旧的全局键
+        const legacy =
+            currentKey !== STORAGE_KEY
+                ? await asyncStorage.getItem<{
+                    cloudAutoSyncEnabled?: boolean
+                    cloudAutoSyncIntervalHours?: number
+                    lastCloudSyncAt?: number | null
+                    lastAutoCloudSyncAt?: number | null
+                    isLocked?: boolean
+                    lockSalt?: string | null
+                    lockHash?: string | null
+                }>(STORAGE_KEY)
+                : null
+        // 迁移与清理策略：
+        // 1) 如果当前键没有数据但旧键有：迁移到当前键并删除旧键
+        // 2) 如果当前键与旧键同时存在：优先使用当前键并删除旧键
+        if (!saved && legacy) {
+            await asyncStorage.setItem(currentKey, legacy)
+            await asyncStorage.removeItem(STORAGE_KEY)
+            saved = legacy
+        } else if (saved && legacy) {
+            await asyncStorage.removeItem(STORAGE_KEY)
+        }
         if (!saved) return
         if (typeof saved.cloudAutoSyncEnabled === 'boolean') cloudAutoSyncEnabled.value = saved.cloudAutoSyncEnabled
         if (typeof saved.cloudAutoSyncIntervalHours === 'number') cloudAutoSyncIntervalHours.value = saved.cloudAutoSyncIntervalHours

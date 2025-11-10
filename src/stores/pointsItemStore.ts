@@ -58,13 +58,17 @@ export const usePointsItemStore = defineStore('pointsItem', () => {
     }
 
     async function hydrate() {
-        const saved = await asyncStorage.getItem<PointsConfig>(getStorageKey())
+        const v2Key = getStorageKey()
+        const v1Key = getOldStorageKey()
+        const saved = await asyncStorage.getItem<PointsConfig>(v2Key)
         if (saved && saved.groups && Array.isArray(saved.groups) && saved.items && Array.isArray(saved.items)) {
             config.value = saved
+            // v2 已存在时，直接清理 v1
+            await asyncStorage.removeItem(v1Key)
             return
         }
 
-        const oldData = await asyncStorage.getItem<Record<string, PointsConfig>>(getOldStorageKey())
+        const oldData = await asyncStorage.getItem<Record<string, PointsConfig>>(v1Key)
         if (oldData && typeof oldData === 'object') {
             const mergedGroups: PointsGroup[] = []
             const mergedItems: PointsItem[] = []
@@ -93,6 +97,8 @@ export const usePointsItemStore = defineStore('pointsItem', () => {
                 config.value = { groups: mergedGroups, items: mergedItems }
                 persist(config.value)
             }
+            // 迁移完成后，无论是否合并出数据，都清理 v1
+            await asyncStorage.removeItem(v1Key)
         }
     }
 

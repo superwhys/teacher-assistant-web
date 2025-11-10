@@ -122,6 +122,13 @@ export async function exportUserData(userId: string | null): Promise<Record<stri
         return out
     }
     
+    // 需要排除的基础键（不带 user 后缀）
+    const EXCLUDED_BASE_KEYS = new Set<string>([
+        'ta_user_store_v1',
+        'ta_settings_v1', // 本地设置仅本地隔离，不参与导入导出/云同步
+        'ta_points_item_store_v1', // 旧版积分项配置不再导出
+    ])
+
     try {
         await lf.iterate((value, key) => {
             const keyStr = String(key)
@@ -131,8 +138,8 @@ export async function exportUserData(userId: string | null): Promise<Record<stri
             
             if (keyStr.endsWith(`_user_${userId}`)) {
                 const cleanKey = removeUserIdFromKey(keyStr)
-                // 用户信息键不导出
-                if (cleanKey === 'ta_user_store_v1') {
+                // 排除不应导出的键
+                if (EXCLUDED_BASE_KEYS.has(cleanKey)) {
                     return
                 }
                 out[cleanKey] = value
@@ -154,9 +161,16 @@ export async function importUserData(payload: Record<string, any>, userId: strin
         console.warn('importUserData: userId is null, data will be imported without user suffix')
     }
     
+    // 需要排除的基础键（不带 user 后缀）
+    const EXCLUDED_BASE_KEYS = new Set<string>([
+        'ta_user_store_v1',
+        'ta_settings_v1', // 本地设置仅本地隔离，不参与导入导出/云同步
+        'ta_points_item_store_v1', // 旧版积分项配置不再导入
+    ])
+
     const entries = Object.entries(payload)
     for (const [key, value] of entries) {
-        if (key === 'ta_user_store_v1') {
+        if (EXCLUDED_BASE_KEYS.has(key)) {
             continue
         }
         

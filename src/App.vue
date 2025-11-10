@@ -45,6 +45,7 @@ async function loadAllStores() {
 
 const now = ref(new Date())
 let timer: number | undefined
+let autoSyncTimer: number | undefined
 
 onMounted(async () => {
     timer = window.setInterval(() => {
@@ -54,11 +55,23 @@ onMounted(async () => {
     if (userStore.profile?.id) {
         await loadAllStores()
     }
+    // setup auto sync checker
+    if (autoSyncTimer !== undefined) {
+        window.clearInterval(autoSyncTimer)
+        autoSyncTimer = undefined
+    }
+    autoSyncTimer = window.setInterval(() => {
+        tryAutoSync()
+    }, 60 * 1000)
 })
 
 onBeforeUnmount(() => {
     if (timer !== undefined) {
         window.clearInterval(timer)
+    }
+    if (autoSyncTimer !== undefined) {
+        window.clearInterval(autoSyncTimer)
+        autoSyncTimer = undefined
     }
     clearTrialReminder()
 })
@@ -200,6 +213,24 @@ watch(() => userStore.profile?.id, (newUserId, oldUserId) => {
     }
 }, { immediate: false })
 
+function tryAutoSync() {
+    if (!userStore.isAuthenticated) return
+    if (userStore.isTrial) return
+    if (!settingsStore.cloudAutoSyncEnabled) return
+    const hours = settingsStore.cloudAutoSyncIntervalHours
+    if (![0.5, 1, 3, 6, 12].includes(hours)) return
+    const intervalMs = hours * 60 * 60 * 1000
+    const last = settingsStore.lastAutoCloudSyncAt
+    const nowTs = Date.now()
+    if (last == null) {
+        void settingsStore.syncToCloud('auto')
+        return
+    }
+    if (nowTs - last >= intervalMs) {
+        void settingsStore.syncToCloud('auto')
+    }
+}
+
 function clearTrialReminder() {
     if (trialReminderTimer !== null) {
         window.clearTimeout(trialReminderTimer)
@@ -266,8 +297,9 @@ async function confirmUnlock() {
 const isSavingData = ref(false)
 const updateDialogVisible = ref(false)
 const loadingBackups = ref(false)
-const backupsList = ref<number[]>([])
-const restoringTs = ref<number | null>(null)
+const latestManualTs = ref<number | null>(null)
+const latestAutoTs = ref<number | null>(null)
+const restoring = ref<{ ts: number | null; type: 'manual' | 'auto' | null }>({ ts: null, type: null })
 
 async function onSaveDataToCloud() {
     if (userStore.isTrial) {
@@ -286,7 +318,7 @@ async function onSaveDataToCloud() {
     if (isSavingData.value) return
     isSavingData.value = true
     try {
-        await settingsStore.syncToCloud()
+        await settingsStore.syncToCloud('manual')
         ElMessage.success('数据已保存到云端')
     } catch (err) {
         ElMessage.error('保存失败：' + (err as Error).message)
@@ -301,7 +333,8 @@ function onOpenUpdateDialog() {
         return
     }
     updateDialogVisible.value = true
-    backupsList.value = []
+    latestManualTs.value = null
+    latestAutoTs.value = null
     loadingBackups.value = true
     void loadBackupsList()
 }
@@ -309,12 +342,20 @@ function onOpenUpdateDialog() {
 async function loadBackupsList() {
     try {
         const res = await cloudApi.getBackups()
-        const list = Array.isArray(res.data) ? res.data : []
-        backupsList.value = list
-            .map((n) => Number(n))
-            .filter((n) => Number.isFinite(n) && n > 0)
-            .sort((a, b) => b - a)
-        if (backupsList.value.length === 0) {
+        const raw: any = res.data as any
+        const listManual: number[] = Array.isArray(raw?.manual) ? (raw.manual as number[]) : []
+        const listAuto: number[] = Array.isArray(raw?.auto) ? (raw.auto as number[]) : []
+        const sortedManual = listManual
+            .map((n: number) => Number(n))
+            .filter((n: number) => Number.isFinite(n) && n > 0)
+            .sort((a: number, b: number) => b - a)
+        const sortedAuto = listAuto
+            .map((n: number) => Number(n))
+            .filter((n: number) => Number.isFinite(n) && n > 0)
+            .sort((a: number, b: number) => b - a)
+        latestManualTs.value = sortedManual[0] ?? null
+        latestAutoTs.value = sortedAuto[0] ?? null
+        if (latestManualTs.value === null && latestAutoTs.value === null) {
             ElMessage.warning('云端暂无备份数据')
             updateDialogVisible.value = false
         }
@@ -334,11 +375,11 @@ function formatBackupTime(ts: number): string {
     }
 }
 
-async function onRestoreFromBackup(ts: number) {
-    if (restoringTs.value) return
-    restoringTs.value = ts
+async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
+    if (restoring.value.ts !== null) return
+    restoring.value = { ts, type }
     try {
-        const res = await cloudApi.getBackup(ts)
+        const res = await cloudApi.getBackup(ts, type)
         const payload = res?.data || {}
         const userId = userStore.profile?.id || null
         await importUserData(payload, userId)
@@ -356,7 +397,7 @@ async function onRestoreFromBackup(ts: number) {
     } catch (err) {
         ElMessage.error('恢复失败：' + (err as Error).message)
     } finally {
-        restoringTs.value = null
+        restoring.value = { ts: null, type: null }
     }
 }
 
@@ -520,27 +561,48 @@ async function onRestoreFromBackup(ts: number) {
                 </template>
                 <div v-loading="loadingBackups" element-loading-text="正在获取云端备份数据..." class="update-content">
                     <div v-if="!loadingBackups" class="update-content-inner">
-                        <div v-if="backupsList.length === 0" class="latest-backup-card">
+                        <div v-if="!latestManualTs && !latestAutoTs" class="latest-backup-card">
                             <el-empty description="暂无云端备份" />
                         </div>
-                        <div v-else class="latest-backup-card">
-                            <div class="latest-icon-wrapper">
-                                <i-ep-cloudy class="cloud-icon" />
+                        <div v-else class="latest-grid">
+                            <div v-if="latestManualTs" class="latest-backup-card">
+                                <div class="latest-icon-wrapper">
+                                    <i-ep-cloudy class="cloud-icon" />
+                                </div>
+                                <div class="latest-info">
+                                    <div class="latest-title">最新手动备份</div>
+                                    <div class="latest-time">{{ formatBackupTime(latestManualTs!) }}</div>
+                                    <div class="latest-desc">应用此备份会覆盖当前本地数据。</div>
+                                </div>
+                                <div class="latest-actions">
+                                    <el-button type="primary" size="large" :loading="restoring.ts === latestManualTs && restoring.type === 'manual'" :disabled="!!restoring.type" @click="onRestoreFromBackup(latestManualTs!, 'manual')">
+                                        <i-ep-refresh-left class="btn-icon" /> 应用此备份
+                                    </el-button>
+                                </div>
                             </div>
-                            <div class="latest-info">
-                                <div class="latest-title">最新云端备份</div>
-                                <div class="latest-time">{{ formatBackupTime(backupsList[0]!) }}</div>
-                                <div class="latest-desc">点击下方按钮将此备份应用到本地，会覆盖当前数据</div>
-                            </div>
-                            <div class="latest-actions">
-                                <el-button type="primary" size="large" :loading="restoringTs === backupsList[0]" :disabled="!!restoringTs" @click="onRestoreFromBackup(backupsList[0]!)">
-                                    <i-ep-refresh-left class="btn-icon" /> 应用此备份
-                                </el-button>
-                                <el-button size="large" @click="updateDialogVisible = false">取消</el-button>
+                            <div v-if="latestAutoTs" class="latest-backup-card">
+                                <div class="latest-icon-wrapper">
+                                    <i-ep-cloudy class="cloud-icon" />
+                                </div>
+                                <div class="latest-info">
+                                    <div class="latest-title">最新自动备份</div>
+                                    <div class="latest-time">{{ formatBackupTime(latestAutoTs!) }}</div>
+                                    <div class="latest-desc">应用此备份会覆盖当前本地数据。</div>
+                                </div>
+                                <div class="latest-actions">
+                                    <el-button type="primary" size="large" :loading="restoring.ts === latestAutoTs && restoring.type === 'auto'" :disabled="!!restoring.type" @click="onRestoreFromBackup(latestAutoTs!, 'auto')">
+                                        <i-ep-refresh-left class="btn-icon" /> 应用此备份
+                                    </el-button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                <template #footer>
+                    <div class="update-dlg-footer">
+                        <el-button size="large" @click="updateDialogVisible = false">取消</el-button>
+                    </div>
+                </template>
             </el-dialog>
         </el-container>
         <div v-if="isAuthenticated && unlockDialogVisible" class="lock-overlay">
@@ -1451,6 +1513,13 @@ async function onRestoreFromBackup(ts: number) {
     justify-content: center;
 }
 
+.latest-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
 .latest-backup-card {
     display: flex;
     flex-direction: column;
@@ -1510,5 +1579,12 @@ async function onRestoreFromBackup(ts: number) {
 
 .latest-actions :deep(.el-button) {
     min-width: 140px;
+}
+
+.update-dlg-footer {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 </style>

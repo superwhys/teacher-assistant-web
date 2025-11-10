@@ -42,6 +42,11 @@ const routes = [
     meta: { keepAlive: true },
   },
   {
+    path: '/tools/lottery',
+    component: () => import('@/views/LotteryView.vue'),
+    meta: { keepAlive: true },
+  },
+  {
     path: '/settings',
     component: () => import('@/views/SettingsView.vue'),
     meta: { keepAlive: false },

@@ -4,6 +4,7 @@ import type { Component } from 'vue'
 import { useRouter } from 'vue-router'
 import IEpTimer from '~icons/ep/timer'
 import IEpUser from '~icons/ep/user'
+import IEpTrophy from '~icons/ep/trophy'
 import ToolCard from '@/components/ToolCard.vue'
 
 defineOptions({
@@ -21,6 +22,7 @@ interface ToolItem {
 const tools: ToolItem[] = [
     { key: 'timer', title: '计时器', desc: '课堂倒计时', icon: IEpTimer, to: '/tools/timer' },
     { key: 'rollcall', title: '点名器', desc: '随机选择学生', icon: IEpUser, to: '/tools/rollcall' },
+    { key: 'lottery', title: '抽奖器', desc: '自定义奖品/从商城导入', icon: IEpTrophy, to: '/tools/lottery' },
 ]
 
 const router = useRouter()

@@ -437,7 +437,7 @@ onBeforeUnmount(() => {
 .layout {
     width: 100%;
     height: 100%;
-    max-width: 1200px;
+    /* max-width: 1200px; */
     margin: 0 auto;
     display: grid;
     grid-template-columns: 320px 1fr;
@@ -658,6 +658,7 @@ onBeforeUnmount(() => {
 
 .display-card {
     width: 100%;
+    height: 300px;
     border-radius: 18px;
     background: #ffffff;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06), inset 0 0 0 1px #eee;
@@ -671,7 +672,7 @@ onBeforeUnmount(() => {
 }
 
 .display-name {
-    font-size: 56px;
+    font-size: 42px;
     font-weight: 800;
     letter-spacing: 2px;
     color: #111111;

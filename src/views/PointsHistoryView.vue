@@ -5,7 +5,7 @@ import { useRoute } from 'vue-router'
 import { useClassStore } from '@/stores/classStore'
 import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import { usePointsStore } from '@/stores/pointsStore'
-import { formatTimeHHmm } from '@/utils/date'
+import { formatChineseDateTime } from '@/utils/date'
 
 defineOptions({
     name: 'PointsHistoryView'
@@ -128,9 +128,9 @@ function undoAction(actionId: string) {
                     <div v-if="historyOfActive.length > 0">
                         <el-table :data="filteredHistory" border size="large" height="60vh">
                             <el-table-column type="index" label="#" width="60" />
-                            <el-table-column label="时间" width="120" align="center">
+                            <el-table-column label="时间" width="180" align="center">
                                 <template #default="{ row }">
-                                    {{ formatTimeHHmm(new Date(row.at)) }}
+                                    {{ formatChineseDateTime(new Date(row.at)) }}
                                 </template>
                             </el-table-column>
                             <el-table-column label="积分项" min-width="220">

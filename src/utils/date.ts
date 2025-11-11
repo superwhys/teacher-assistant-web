@@ -18,4 +18,15 @@ export function formatChineseDateWithWeek(date: Date): string {
     return `${year}年${month}月${day}日${week}`
 }
 
+export function formatChineseDateTime(date: Date): string {
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    const twoDigits = (n: number) => n.toString().padStart(2, '0')
+    const hours = twoDigits(date.getHours())
+    const minutes = twoDigits(date.getMinutes())
+    const seconds = twoDigits(date.getSeconds())
+    return `${year}-${twoDigits(month)}-${twoDigits(day)} ${hours}:${minutes}:${seconds}`
+}
+
 

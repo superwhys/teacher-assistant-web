@@ -127,6 +127,7 @@ export async function exportUserData(userId: string | null): Promise<Record<stri
         'ta_user_store_v1',
         'ta_settings_v1', // 本地设置仅本地隔离，不参与导入导出/云同步
         'ta_points_item_store_v1', // 旧版积分项配置不再导出
+        'ta_lottery_store_v1', // 旧版抽奖配置不再导出
     ])
 
     try {

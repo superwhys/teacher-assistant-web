@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useLotteryStore } from '@/stores/lotteryStore'
 import { useShopStore } from '@/stores/shopStore'
-import type { Prize } from '@/types/lottery'
+import type { Prize, PrizePool } from '@/types/lottery'
 import type { ShopItem } from '@/types/shopItem'
 
 defineOptions({
@@ -16,6 +16,8 @@ const shopStore = useShopStore()
 onMounted(() => {
     void Promise.all([lotteryStore.hydrate(), shopStore.hydrate?.()])
         .then(() => {
+            pools.value = lotteryStore.getAllPools()
+            currentPoolId.value = lotteryStore.currentPool?.id || null
             refreshPrizes()
             records.value = lotteryStore.getAllRecords()
         })
@@ -24,9 +26,12 @@ onMounted(() => {
 
 const prizes = ref<Prize[]>([])
 const records = ref(lotteryStore.getAllRecords())
+const pools = ref(lotteryStore.getAllPools())
+const currentPoolId = ref<string | null>(lotteryStore.currentPool?.id || null)
 
 function refreshPrizes() {
     prizes.value = lotteryStore.getAllPrizes()
+    records.value = lotteryStore.getAllRecords()
 }
 refreshPrizes()
 
@@ -242,6 +247,77 @@ function clearRecords() {
     }).catch(() => {})
 }
 
+const poolManageDialogVisible = ref(false)
+const poolForm = reactive({
+    id: '',
+    name: '',
+})
+const poolEditMode = ref<'add' | 'edit'>('add')
+
+function openAddPoolDialog() {
+    poolEditMode.value = 'add'
+    poolForm.id = ''
+    poolForm.name = ''
+    poolManageDialogVisible.value = true
+}
+
+function openEditPoolDialog(pool: PrizePool) {
+    poolEditMode.value = 'edit'
+    poolForm.id = pool.id
+    poolForm.name = pool.name
+    poolManageDialogVisible.value = true
+}
+
+function savePool() {
+    if (!poolForm.name.trim()) {
+        ElMessage.warning('请输入奖池名称')
+        return
+    }
+    if (poolEditMode.value === 'add') {
+        const newPool = lotteryStore.createPool(poolForm.name.trim())
+        lotteryStore.setCurrentPool(newPool.id)
+        currentPoolId.value = newPool.id
+        pools.value = lotteryStore.getAllPools()
+        refreshPrizes()
+        ElMessage.success('已创建奖池')
+    } else {
+        lotteryStore.updatePool(poolForm.id, { name: poolForm.name.trim() })
+        pools.value = lotteryStore.getAllPools()
+        ElMessage.success('已更新奖池')
+    }
+    poolManageDialogVisible.value = false
+}
+
+function deletePool(pool: PrizePool) {
+    if (lotteryStore.getAllPools().length <= 1) {
+        ElMessage.warning('至少需要保留一个奖池')
+        return
+    }
+    ElMessageBox.confirm(`确定删除奖池「${pool.name}」吗？此操作将删除该奖池下的所有奖品和记录，且不可撤销。`, '删除确认', {
+        type: 'warning'
+    }).then(() => {
+        lotteryStore.deletePool(pool.id)
+        pools.value = lotteryStore.getAllPools()
+        currentPoolId.value = lotteryStore.currentPool?.id || null
+        refreshPrizes()
+        ElMessage.success('已删除')
+    }).catch(() => {})
+}
+
+function handlePoolChange(poolId: string | null) {
+    if (!poolId) return
+    lotteryStore.setCurrentPool(poolId)
+    currentPoolId.value = poolId
+    refreshPrizes()
+}
+
+watch(() => lotteryStore.currentPool?.id, (newId) => {
+    if (newId !== currentPoolId.value) {
+        currentPoolId.value = newId || null
+    }
+    refreshPrizes()
+})
+
 onBeforeUnmount(() => {
     if (rollingTimer !== undefined) window.clearInterval(rollingTimer)
     if (selectedTimer !== undefined) window.clearTimeout(selectedTimer)
@@ -257,9 +333,55 @@ onBeforeUnmount(() => {
                         <i-ep-trophy class="panel-icon" />
                         抽奖器
                     </div>
-                    <div class="panel-buttons">
+                    <div class="pool-section">
+                        <div class="pool-selector-group">
+                            <el-select
+                                v-model="currentPoolId"
+                                @change="handlePoolChange"
+                                size="small"
+                                class="pool-selector"
+                                placeholder="选择奖池"
+                            >
+                                <el-option
+                                    v-for="pool in pools"
+                                    :key="pool.id"
+                                    :label="pool.name"
+                                    :value="pool.id"
+                                />
+                                <template #empty>
+                                    <div class="pool-selector-empty">
+                                        <el-button text type="primary" size="small" @click.stop="openAddPoolDialog">
+                                            <i-ep-plus /> 新建奖池
+                                        </el-button>
+                                    </div>
+                                </template>
+                            </el-select>
+                            <el-button
+                                v-if="lotteryStore.currentPool"
+                                text
+                                type="primary"
+                                size="small"
+                                @click="openEditPoolDialog(lotteryStore.currentPool)"
+                                class="pool-action-btn"
+                                title="编辑奖池"
+                            >
+                                <i-ep-edit />
+                            </el-button>
+                            <el-button
+                                text
+                                type="primary"
+                                size="small"
+                                @click="openAddPoolDialog"
+                                class="pool-action-btn"
+                                title="新建奖池"
+                            >
+                                <i-ep-folder-add />
+                            </el-button>
+                        </div>
+                    </div>
+                    <div class="prize-actions">
                         <el-button size="small" type="primary" @click="openAddDialog">
-                            <i-ep-plus /> 添加
+                            <i-ep-plus /> 添加奖品
                         </el-button>
                         <el-button size="small" type="success" plain @click="openImportDialog">
                             <i-ep-upload-filled /> 导入
@@ -297,6 +419,8 @@ onBeforeUnmount(() => {
                                     <span v-if="p.source==='shop'" class="pi-tag origin">商城商品</span>
                                     <span class="pi-tag weight">权重 {{ p.weight }}</span>
                                 </div>
+                            </div>
+                            <div class="pi-actions">
                             </div>
                             <div class="pi-switch">
                                 <el-switch size="small" :model-value="p.enabled" @change="toggleEnabled(p)" />
@@ -421,6 +545,29 @@ onBeforeUnmount(() => {
                 <el-table-column label="描述" prop="description" min-width="200" show-overflow-tooltip />
             </el-table>
         </el-dialog>
+
+        <el-dialog v-model="poolManageDialogVisible" :title="poolEditMode==='add' ? '新建奖池' : '编辑奖池'" width="480px">
+            <el-form :model="poolForm" label-position="top" class="pool-form">
+                <el-form-item label="奖池名称" required>
+                    <el-input v-model="poolForm.name" placeholder="请输入奖池名称" />
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <div class="dialog-footer">
+                    <el-button @click="poolManageDialogVisible=false">取消</el-button>
+                    <el-button v-if="poolEditMode==='edit'" type="danger" plain @click="() => {
+                        const pool = pools.find(p => p.id === poolForm.id)
+                        if (pool) {
+                            deletePool(pool)
+                            poolManageDialogVisible = false
+                        }
+                    }">
+                        删除
+                    </el-button>
+                    <el-button type="primary" @click="savePool">保存</el-button>
+                </div>
+            </template>
+        </el-dialog>
         
     </div>
 </template>
@@ -459,8 +606,10 @@ onBeforeUnmount(() => {
 .panel-header {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e5e7eb;
 }
 
 .panel-title {
@@ -477,7 +626,43 @@ onBeforeUnmount(() => {
     color: #f59e0b;
 }
 
-.panel-buttons {
+.pool-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pool-selector-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+}
+
+.pool-selector {
+    flex: 1;
+    min-width: 0;
+}
+
+.pool-action-btn {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    font-size: 16px;
+}
+
+.pool-action-btn :deep(.el-icon) {
+    font-size: 16px;
+}
+
+.pool-selector-empty {
+    padding: 8px;
+    text-align: center;
+}
+
+.prize-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
@@ -499,7 +684,7 @@ onBeforeUnmount(() => {
 .prize-item {
     display: flex;
     align-items: stretch;
-    gap: 16px;
+    gap: 12px;
     padding: 16px 18px;
     border-radius: 16px;
     background: #ffffff;
@@ -590,6 +775,12 @@ onBeforeUnmount(() => {
 .pi-switch {
     display: flex;
     align-items: center;
+}
+
+.pi-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .pi-edit-btn {
@@ -888,6 +1079,28 @@ onBeforeUnmount(() => {
     }
     .panel-title {
         font-size: 18px;
+    }
+    .panel-header {
+        gap: 12px;
+        padding-bottom: 12px;
+    }
+    .pool-selector-group {
+        flex-wrap: wrap;
+        padding: 8px 10px;
+    }
+    .pool-selector {
+        width: 100%;
+        min-width: 0;
+    }
+    .pool-action-btn {
+        flex: 1;
+        min-width: 0;
+    }
+    .prize-actions {
+        flex-direction: column;
+    }
+    .prize-actions .el-button {
+        width: 100%;
     }
     .display-panel {
         padding: 18px;

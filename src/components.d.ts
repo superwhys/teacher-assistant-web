@@ -68,6 +68,7 @@ declare module 'vue' {
     IEpDownload: typeof import('~icons/ep/download')['default']
     IEpEdit: typeof import('~icons/ep/edit')['default']
     IEpFemale: typeof import('~icons/ep/female')['default']
+    IEpFolderAdd: typeof import('~icons/ep/folder-add')['default']
     IEpGoodsFilled: typeof import('~icons/ep/goods-filled')['default']
     IEpLock: typeof import('~icons/ep/lock')['default']
     IEpMagicStick: typeof import('~icons/ep/magic-stick')['default']

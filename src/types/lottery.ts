@@ -15,4 +15,12 @@ export type DrawRecord = {
     drawnAt: number
 }
 
+export type PrizePool = {
+    id: string
+    name: string
+    prizes: Prize[]
+    records: DrawRecord[]
+    createdAt: number
+}
+
 

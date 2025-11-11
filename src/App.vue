@@ -476,6 +476,11 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
                                         <i-ep-setting class="nav-icon" />
                                     </template>
                                 </ActionItem>
+                                <ActionItem label="意见反馈" to="/opinion">
+                                    <template #icon>
+                                        <i-ep-comment class="nav-icon" />
+                                    </template>
+                                </ActionItem>
                             </div>
                         </div>
                         <div class="sidebar-section sync-section">

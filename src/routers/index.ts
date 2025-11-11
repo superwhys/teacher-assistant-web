@@ -52,6 +52,11 @@ const routes = [
     meta: { keepAlive: false },
   },
   {
+    path: '/opinion',
+    component: () => import('@/views/OpinionView.vue'),
+    meta: { keepAlive: false },
+  },
+  {
     path: '/auth',
     component: () => import('@/views/AuthView.vue'),
     meta: { hideFooter: true, keepAlive: false },

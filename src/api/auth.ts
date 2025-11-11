@@ -1,5 +1,5 @@
 import { post } from '@/api/api'
-import type { ApiResponse, RegisterRequest, LoginRequest, LoginResponse, SendEmailCodeRequest, VerifySecretRequest, VerifySecretResponse } from '@/types/api'
+import type { ApiResponse, RegisterRequest, LoginRequest, LoginResponse, SendEmailCodeRequest, VerifySecretRequest } from '@/types/api'
 import type { UserProfile } from '@/types/user'
 
 export const authApi = {
@@ -12,8 +12,8 @@ export const authApi = {
     sendEmailCode(data: SendEmailCodeRequest): Promise<ApiResponse<null>> {
         return post<null>('/auth/send-code', { email: data.email, scene: 1 })
     },
-    verifySecret(data: VerifySecretRequest): Promise<ApiResponse<VerifySecretResponse>> {
-        return post<VerifySecretResponse>('/secret/verify', data)
+    verifySecret(data: VerifySecretRequest): Promise<ApiResponse<string>> {
+        return post<string>('/secret/verify', data)
     },
 }
 

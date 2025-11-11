@@ -203,7 +203,7 @@ async function onVerifySecret() {
     verifyingSecret.value = true
     try {
         const res = await authApi.verifySecret({ secret })
-        const token = res.data?.token
+        const token = res.data
         if (!token) {
             ElMessage.error('授权码验证失败：未返回令牌')
             return

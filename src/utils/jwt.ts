@@ -3,11 +3,22 @@ function base64UrlDecode(input: string): string {
     const padLength = (4 - (normalized.length % 4)) % 4
     const padded = normalized + '='.repeat(padLength)
     const binary = atob(padded)
-    let output = ''
-    for (let i = 0; i < binary.length; i++) {
-        output += String.fromCharCode(binary.charCodeAt(i))
+    const length = binary.length
+    const bytes = new Uint8Array(length)
+    for (let i = 0; i < length; i++) {
+        bytes[i] = binary.charCodeAt(i)
     }
-    return output
+    if (typeof TextDecoder === 'function') {
+        const decoder = new TextDecoder('utf-8')
+        return decoder.decode(bytes)
+    }
+    let escaped = ''
+    for (let i = 0; i < length; i++) {
+        const byte = bytes[i]
+        if (byte === undefined) continue
+        escaped += `%${byte.toString(16).padStart(2, '0')}`
+    }
+    return decodeURIComponent(escaped)
 }
 
 export function decodeJwtPayload<T = unknown>(token: string): T | null {

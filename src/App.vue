@@ -300,6 +300,16 @@ const updateDialogVisible = ref(false)
 const loadingBackups = ref(false)
 const latestManualTs = ref<number | null>(null)
 const latestAutoTs = ref<number | null>(null)
+const activeBackupTab = ref<'manual' | 'auto'>('manual')
+const activeBackupTs = computed<number | null>(() => {
+    return activeBackupTab.value === 'manual' ? latestManualTs.value : latestAutoTs.value
+})
+const activeBackupTitle = computed(() => {
+    return activeBackupTab.value === 'manual' ? '最新手动备份' : '最新自动备份'
+})
+const activeBackupTypeText = computed(() => {
+    return activeBackupTab.value === 'manual' ? '手动' : '自动'
+})
 const restoring = ref<{ ts: number | null; type: 'manual' | 'auto' | null }>({ ts: null, type: null })
 
 async function onSaveDataToCloud() {
@@ -336,6 +346,7 @@ function onOpenUpdateDialog() {
     updateDialogVisible.value = true
     latestManualTs.value = null
     latestAutoTs.value = null
+    activeBackupTab.value = 'manual'
     loadingBackups.value = true
     void loadBackupsList()
 }
@@ -356,6 +367,11 @@ async function loadBackupsList() {
             .sort((a: number, b: number) => b - a)
         latestManualTs.value = sortedManual[0] ?? null
         latestAutoTs.value = sortedAuto[0] ?? null
+        if (!latestManualTs.value && latestAutoTs.value) {
+            activeBackupTab.value = 'auto'
+        } else if (latestManualTs.value) {
+            activeBackupTab.value = 'manual'
+        }
         if (latestManualTs.value === null && latestAutoTs.value === null) {
             ElMessage.warning('云端暂无备份数据')
             updateDialogVisible.value = false
@@ -366,6 +382,13 @@ async function loadBackupsList() {
     } finally {
         loadingBackups.value = false
     }
+}
+
+function onSwitchBackupTab(type: 'manual' | 'auto') {
+    if (activeBackupTab.value === type) return
+    if (type === 'manual' && !latestManualTs.value) return
+    if (type === 'auto' && !latestAutoTs.value) return
+    activeBackupTab.value = type
 }
 
 function formatBackupTime(ts: number): string {
@@ -570,36 +593,32 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
                         <div v-if="!latestManualTs && !latestAutoTs" class="latest-backup-card">
                             <el-empty description="暂无云端备份" />
                         </div>
-                        <div v-else class="latest-grid">
-                            <div v-if="latestManualTs" class="latest-backup-card">
+                        <div v-else class="latest-panel">
+                            <div class="backup-tab-bar">
+                                <el-button size="large" :type="activeBackupTab === 'manual' ? 'primary' : 'default'" :plain="activeBackupTab !== 'manual'" :disabled="!latestManualTs" @click="onSwitchBackupTab('manual')">
+                                    手动备份
+                                </el-button>
+                                <el-button size="large" :type="activeBackupTab === 'auto' ? 'primary' : 'default'" :plain="activeBackupTab !== 'auto'" :disabled="!latestAutoTs" @click="onSwitchBackupTab('auto')">
+                                    自动备份
+                                </el-button>
+                            </div>
+                            <div v-if="activeBackupTs" class="latest-backup-card single">
                                 <div class="latest-icon-wrapper">
                                     <i-ep-cloudy class="cloud-icon" />
                                 </div>
                                 <div class="latest-info">
-                                    <div class="latest-title">最新手动备份</div>
-                                    <div class="latest-time">{{ formatBackupTime(latestManualTs!) }}</div>
-                                    <div class="latest-desc">应用此备份会覆盖当前本地数据。</div>
+                                    <div class="latest-title">{{ activeBackupTitle }}</div>
+                                    <div class="latest-time">{{ formatBackupTime(activeBackupTs!) }}</div>
+                                    <div class="latest-desc">应用此{{ activeBackupTypeText }}备份会覆盖当前本地数据。</div>
                                 </div>
                                 <div class="latest-actions">
-                                    <el-button type="primary" size="large" :loading="restoring.ts === latestManualTs && restoring.type === 'manual'" :disabled="!!restoring.type" @click="onRestoreFromBackup(latestManualTs!, 'manual')">
+                                    <el-button type="primary" size="large" :loading="restoring.ts === activeBackupTs && restoring.type === activeBackupTab" :disabled="!!restoring.type" @click="onRestoreFromBackup(activeBackupTs!, activeBackupTab)">
                                         <i-ep-refresh-left class="btn-icon" /> 应用此备份
                                     </el-button>
                                 </div>
                             </div>
-                            <div v-if="latestAutoTs" class="latest-backup-card">
-                                <div class="latest-icon-wrapper">
-                                    <i-ep-cloudy class="cloud-icon" />
-                                </div>
-                                <div class="latest-info">
-                                    <div class="latest-title">最新自动备份</div>
-                                    <div class="latest-time">{{ formatBackupTime(latestAutoTs!) }}</div>
-                                    <div class="latest-desc">应用此备份会覆盖当前本地数据。</div>
-                                </div>
-                                <div class="latest-actions">
-                                    <el-button type="primary" size="large" :loading="restoring.ts === latestAutoTs && restoring.type === 'auto'" :disabled="!!restoring.type" @click="onRestoreFromBackup(latestAutoTs!, 'auto')">
-                                        <i-ep-refresh-left class="btn-icon" /> 应用此备份
-                                    </el-button>
-                                </div>
+                            <div v-else class="latest-empty-tip">
+                                <el-empty :description="`暂无${activeBackupTypeText}备份`" />
                             </div>
                         </div>
                     </div>
@@ -1519,14 +1538,6 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
     justify-content: center;
 }
 
-.latest-grid {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 16px;
-    justify-items: center;
-}
-
 .latest-backup-card {
     display: flex;
     flex-direction: column;
@@ -1586,6 +1597,33 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
 
 .latest-actions :deep(.el-button) {
     min-width: 140px;
+}
+
+.latest-panel {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+}
+
+.backup-tab-bar {
+    display: flex;
+    gap: 12px;
+}
+
+.backup-tab-bar :deep(.el-button) {
+    min-width: 140px;
+}
+
+.latest-backup-card.single {
+    max-width: 360px;
+}
+
+.latest-empty-tip {
+    width: 100%;
+    display: flex;
+    justify-content: center;
 }
 
 .update-dlg-footer {

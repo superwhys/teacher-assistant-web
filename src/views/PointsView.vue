@@ -419,7 +419,7 @@ function scrollToLetter(letter: string) {
                     </div>
                 </div>
             </div>
-            <el-card shadow="never" class="list-card list-content">
+            <el-card shadow="never" :class="['list-card', 'list-content', { 'is-list-mode': layoutMode === 'list' }]">
                 <template #header>
                     <div class="list-header">
                         <span v-if="activeClass" class="class-name">{{ activeClass.name }}</span>
@@ -492,14 +492,17 @@ function scrollToLetter(letter: string) {
                                             </div>
                                             <div class="ops" @click.stop>
                                                 <el-button class="op" type="primary" plain size="small"
-                                                    @click="openSelectorForStudents([s.studentName], 'plus')"><i-ep-plus />
-                                                    加分</el-button>
+                                                    @click="openSelectorForStudents([s.studentName], 'plus')">
+                                                    <i-ep-plus />
+                                                </el-button>
                                                 <el-button class="op" type="danger" plain size="small"
-                                                    @click="openSelectorForStudents([s.studentName], 'minus')"><i-ep-minus />
-                                                    扣分</el-button>
+                                                    @click="openSelectorForStudents([s.studentName], 'minus')">
+                                                    <i-ep-minus />
+                                                </el-button>
                                                 <el-button class="op" type="default" plain size="small"
-                                                    @click="$router.push({ path: '/points/history', query: { q: s.studentName } })"><i-ep-document />
-                                                    记录</el-button>
+                                                    @click="$router.push({ path: '/points/history', query: { q: s.studentName } })">
+                                                    <i-ep-document />
+                                                </el-button>
                                             </div>
                                         </div>
                                     </div>
@@ -835,6 +838,14 @@ function scrollToLetter(letter: string) {
 .list-card :deep(.el-card__body) {
     flex: 1;
     overflow-y: auto;
+}
+
+.is-list-mode :deep(.el-card__body) {
+    overflow-x: auto;
+}
+
+.is-list-mode .student-row.list-mode {
+    min-width: 640px;
 }
 
 .card-title {
@@ -1321,6 +1332,22 @@ function scrollToLetter(letter: string) {
     min-width: 0;
 }
 
+.student-row.list-mode .info {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+}
+
+.student-row.list-mode .name {
+    flex: 0 0 auto;
+    min-width: 3em;
+    max-width: 3em;
+}
+
+.student-row.list-mode .points-info.list {
+    margin-left: 0;
+}
+
 .name {
     font-size: 16px;
     font-weight: 600;
@@ -1337,6 +1364,7 @@ function scrollToLetter(letter: string) {
 
 .points-info.list {
     gap: 12px;
+    white-space: nowrap;
 }
 
 .score {
@@ -1428,28 +1456,29 @@ function scrollToLetter(letter: string) {
 
     .list-column {
         margin-left: 10px;
-        flex-direction: column;
+        flex-direction: row;
     }
     
     .index-container {
-        flex-direction: row;
-        width: 100%;
-        margin-right: 0;
-        margin-bottom: 10px;
-        overflow-x: auto;
-        padding-bottom: 4px;
+        width: 32px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        margin-right: 12px;
     }
     
     .letter-index {
-        flex-direction: row;
-        gap: 6px;
-        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px 0;
     }
     
     .index-item {
-        width: 28px;
-        height: 28px;
-        font-size: 14px;
+        width: 24px;
+        height: 24px;
+        font-size: 12px;
     }
     
     .ranking-collapsed + .ranking-toggle-btn {
@@ -1460,16 +1489,17 @@ function scrollToLetter(letter: string) {
 @media (max-width: 768px) {
     .content-area {
         grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr;
+        grid-template-rows: 1fr;
         gap: 12px;
     }
 
     .content-area.ranking-collapsed {
         grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr;
+        grid-template-rows: 1fr;
     }
     
     .ranking-column {
+        display: none;
         max-height: 350px;
         padding-right: 0;
     }
@@ -1520,7 +1550,7 @@ function scrollToLetter(letter: string) {
 
     .student-row.list-mode .points-info.list {
         gap: 10px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
     }
 
     .student-row.list-mode .op {
@@ -1531,6 +1561,7 @@ function scrollToLetter(letter: string) {
 
 @media (max-width: 640px) {
     .ranking-column {
+        display: none;
         max-height: 320px;
     }
 
@@ -1572,9 +1603,8 @@ function scrollToLetter(letter: string) {
     }
 
     .student-row.list-mode {
-        grid-template-columns: 44px 1fr;
-        grid-template-rows: auto auto;
-        align-items: start;
+        grid-template-columns: 44px 1fr auto;
+        align-items: center;
         gap: 8px;
     }
 
@@ -1583,9 +1613,9 @@ function scrollToLetter(letter: string) {
     }
 
     .student-row.list-mode .ops {
-        grid-column: 1 / -1;
-        width: 100%;
-        justify-content: space-between;
+        grid-column: auto;
+        width: auto;
+        justify-content: flex-end;
     }
 
     .student-row.list-mode .op {
@@ -1596,6 +1626,7 @@ function scrollToLetter(letter: string) {
 
 @media (max-width: 480px) {
     .ranking-column {
+        display: none;
         max-height: 280px;
     }
 
@@ -1643,11 +1674,9 @@ function scrollToLetter(letter: string) {
 
     .student-row.card-mode .ops,
     .student-row.list-mode .ops {
-        grid-column: 1 / -1;
         gap: 8px;
         margin-top: 10px;
         padding-top: 10px;
-        width: 100%;
     }
 
     .student-row.list-mode .op {
@@ -1691,6 +1720,7 @@ function scrollToLetter(letter: string) {
 
 @media (max-width: 390px) {
     .ranking-column {
+        display: none;
         max-height: 260px;
     }
 
@@ -1743,10 +1773,9 @@ function scrollToLetter(letter: string) {
     }
 
     .student-row.list-mode {
-        grid-template-columns: 36px 1fr;
-        grid-template-rows: auto auto;
+        grid-template-columns: 36px 1fr auto;
         gap: 8px;
-        align-items: start;
+        align-items: center;
     }
 
     .student-row.list-mode .points-info.list {
@@ -1755,8 +1784,8 @@ function scrollToLetter(letter: string) {
 
     .student-row.list-mode .ops {
         gap: 6px;
-        width: 100%;
-        justify-content: space-between;
+        width: auto;
+        justify-content: flex-end;
     }
 
     .avatar {
@@ -1804,6 +1833,36 @@ function scrollToLetter(letter: string) {
 
     .list-card :deep(.el-card__header) {
         padding: 14px;
+    }
+}
+
+/* 列表模式下：操作按钮缩小为仅图标并保持胶囊外观 */
+.student-row.list-mode .ops .op {
+    min-width: 44px;
+    width: 44px;
+    height: 32px;
+    padding: 0;
+    border-radius: 999px;
+}
+
+.student-row.list-mode .ops .op :deep(.el-icon) {
+    margin-right: 0;
+    font-size: 16px;
+}
+
+@media (max-width: 480px) {
+    .student-row.list-mode .ops .op {
+        min-width: 40px;
+        width: 40px;
+        height: 30px;
+    }
+}
+
+@media (max-width: 390px) {
+    .student-row.list-mode .ops .op {
+        min-width: 36px;
+        width: 36px;
+        height: 28px;
     }
 }
 </style>

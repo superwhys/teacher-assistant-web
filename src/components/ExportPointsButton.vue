@@ -29,12 +29,15 @@ const exportVisible = ref(false)
 const exportType = ref<'history' | 'final'>('final')
 const exportScope = ref<'all' | 'group'>('all')
 const exportGroupId = ref<string | ''>('')
+const dateRange = ref<[Date, Date] | []>([])
 
 function openExportDialog() {
     if (!props.activeClassId) {
         ElMessage.error('请先选择班级')
         return
     }
+    // 重置日期范围
+    dateRange.value = []
     exportVisible.value = true
 }
 
@@ -54,11 +57,29 @@ function buildExportRows(): { rows: any[]; sheetName: string } {
     if (exportType.value === 'history') {
         const list = pointsStore.getHistoryOf(classId)
         let filtered = list
+        
+        // 应用时间范围过滤
+        if (dateRange.value.length === 2) {
+            const [startDate, endDate] = dateRange.value
+            // 设置结束日期为当天的最后一毫秒
+            const endOfDay = new Date(endDate)
+            endOfDay.setHours(23, 59, 59, 999)
+            filtered = filtered.filter(a => {
+                const recordDate = new Date(a.at)
+                return recordDate >= startDate && recordDate <= endOfDay
+            })
+        }
+        
         if (exportScope.value === 'group' && exportGroupId.value) {
             const g = groupsOfActive.value.find(x => x.id === exportGroupId.value)
             const nameSet = new Set(g?.members ?? [])
-            filtered = list.filter(a => a.studentNames.some(n => nameSet.has(n)))
+            filtered = filtered.filter(a => a.studentNames.some(n => nameSet.has(n)))
         }
+        
+        if (filtered.length === 0) {
+            return { rows: [], sheetName: '历史记录' }
+        }
+        
         const rows = filtered.map(a => ({
             '时间': formatDateTime(new Date(a.at)),
             '积分项': a.itemName || '未知',
@@ -107,6 +128,8 @@ function doExportExcel() {
     XLSX.writeFile(wb, filename)
     ElMessage.success('导出成功')
     exportVisible.value = false
+    // 重置日期范围
+    dateRange.value = []
 }
 </script>
 
@@ -137,6 +160,18 @@ function doExportExcel() {
                         :value="g.id" />
                 </el-select>
             </el-form-item>
+
+            <el-form-item v-if="exportType === 'history'" label="时间范围">
+                <el-date-picker
+                    v-model="dateRange"
+                    type="daterange"
+                    range-separator="至"
+                    start-placeholder="开始日期"
+                    end-placeholder="结束日期"
+                    size="large"
+                    class="date-range-picker"
+                />
+            </el-form-item>
         </el-form>
 
         <template #footer>
@@ -164,6 +199,10 @@ function doExportExcel() {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+}
+
+.date-range-picker {
+    width: 100%;
 }
 </style>
 

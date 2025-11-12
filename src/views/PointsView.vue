@@ -426,26 +426,26 @@ function scrollToLetter(letter: string) {
                         <span v-else>学生积分</span>
                         <div class="header-actions">
                             <div class="layout-toggle">
-                                <el-button 
-                                    :class="['layout-btn', { 'is-active': layoutMode === 'card' }]" 
-                                    size="small" 
-                                    :type="layoutMode === 'card' ? 'primary' : undefined" 
-                                    :plain="layoutMode !== 'card'" 
-                                    @click="setLayoutMode('card')"
-                                >
-                                    <i-ep-grid />
-                                    卡片
-                                </el-button>
-                                <el-button 
-                                    :class="['layout-btn', { 'is-active': layoutMode === 'list' }]" 
-                                    size="small" 
-                                    :type="layoutMode === 'list' ? 'primary' : undefined" 
-                                    :plain="layoutMode !== 'list'" 
-                                    @click="setLayoutMode('list')"
-                                >
-                                    <i-ep-menu />
-                                    列表
-                                </el-button>
+                                <el-button-group>
+                                    <el-button 
+                                        :class="['layout-btn', { 'is-active': layoutMode === 'card' }]" 
+                                        size="small" 
+                                        :type="layoutMode === 'card' ? 'primary' : undefined" 
+                                        :plain="layoutMode !== 'card'" 
+                                        @click="setLayoutMode('card')"
+                                    >
+                                        <i-ep-grid />
+                                    </el-button>
+                                    <el-button 
+                                        :class="['layout-btn', { 'is-active': layoutMode === 'list' }]" 
+                                        size="small" 
+                                        :type="layoutMode === 'list' ? 'primary' : undefined" 
+                                        :plain="layoutMode !== 'list'" 
+                                        @click="setLayoutMode('list')"
+                                    >
+                                        <i-ep-list />
+                                    </el-button>
+                                </el-button-group>
                             </div>
                             <PointsHeaderActions 
                                 :active-class-id="activeClassId" 
@@ -1087,6 +1087,12 @@ function scrollToLetter(letter: string) {
 .layout-btn {
     font-weight: 600;
     border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 32px;
+    padding: 0;
 }
 
 .layout-btn.is-active {
@@ -1094,7 +1100,8 @@ function scrollToLetter(letter: string) {
 }
 
 .layout-btn :deep(.el-icon) {
-    margin-right: 4px;
+    margin-right: 0;
+    font-size: 18px;
 }
 
 .class-name {

@@ -59,8 +59,13 @@ async function request<T>(
   });
 
   if (response.status === 401) {
-    const errResp = await safeParseJson<unknown>(response);
-    const errorMessage = errResp?.message || `HTTP error! status: ${response.status}`;
+    // await safeParseJson<unknown>(response);
+    // const errorMessage = errResp?.message || `HTTP error! status: ${response.status}`;
+    
+    userStore.setExpired(true);
+    const errorMessage = '登录已过期, 请退出并重新登录, 否则会影响云端功能的正常使用！';
+    showMessage(errorMessage, "error");
+    showMessage(errorMessage, "error");
     showMessage(errorMessage, "error");
     throw new Error(errorMessage);
   }

@@ -98,6 +98,7 @@ const trialSecondsLeft = computed(() => {
 })
 const trialExpired = computed(() => trialSecondsLeft.value !== null && trialSecondsLeft.value <= 0)
 const showTrialBadge = computed(() => isAuthenticated.value && userStore.isTrial)
+const isLoginExpired = computed(() => userStore.isExpired)
 const trialBadgeText = computed(() => {
     if (trialSecondsLeft.value === null) return ''
     if (trialSecondsLeft.value <= 0) return '试用已过期'
@@ -444,6 +445,14 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
                         <div class="date">{{ dateString }}</div>
                     </div>
                     <div class="header-right">
+                        <div v-if="isLoginExpired" class="expired-indicator">
+                            <el-tooltip content="登录已过期，请重新登录以恢复云端功能" placement="bottom" effect="dark">
+                                <el-tag type="danger" effect="dark" class="expired-tag">
+                                    <i-ep-warning-filled class="indicator-icon" />
+                                    <span class="indicator-text">登录已过期</span>
+                                </el-tag>
+                            </el-tooltip>
+                        </div>
                         <div v-if="showTrialBadge" class="trial-indicator" :class="{ expired: trialExpired }">
                             <el-tag :type="trialExpired ? 'danger' : 'warning'" effect="dark">
                                 <i-ep-clock class="indicator-icon" />
@@ -807,6 +816,25 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
 
 .dropdown-icon {
     margin-right: 6px;
+}
+
+.expired-indicator {
+    cursor: help;
+}
+
+.expired-indicator :deep(.el-tag) {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 6px 12px;
+    line-height: 1;
+    cursor: inherit;
+}
+
+.expired-indicator :deep(.el-tag__content) {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .trial-indicator :deep(.el-tag) {

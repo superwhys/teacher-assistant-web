@@ -7,22 +7,29 @@ export const useUserStore = defineStore('user', () => {
     const profile = ref<UserProfile | null>(null)
     const isTrial = ref<boolean>(false)
     const trialExpiresAt = ref<number | null>(null)
+    const isExpired = ref<boolean>(false)
 
     function setAuth(tokenValue: string, user: UserProfile, trial: boolean, expiresAt?: number | null): void {
         token.value = tokenValue
         profile.value = user
         isTrial.value = trial
         trialExpiresAt.value = typeof expiresAt === 'number' ? expiresAt : null
+        isExpired.value = false
     }
 
     function setTokenOnly(tokenValue: string, trial: boolean, expiresAt?: number | null): void {
         token.value = tokenValue
         isTrial.value = trial
         trialExpiresAt.value = typeof expiresAt === 'number' ? expiresAt : null
+        isExpired.value = false
     }
 
     function updateProfile(user: UserProfile): void {
         profile.value = user
+    }
+
+    function setExpired(expired: boolean): void {
+        isExpired.value = expired
     }
 
     function logout(): void {
@@ -30,6 +37,7 @@ export const useUserStore = defineStore('user', () => {
         profile.value = null
         isTrial.value = false
         trialExpiresAt.value = null
+        isExpired.value = false
     }
 
     const isAuthenticated = computed<boolean>(() => !!token.value)
@@ -40,11 +48,13 @@ export const useUserStore = defineStore('user', () => {
         profile,
         isTrial,
         trialExpiresAt,
+        isExpired,
         isAuthenticated,
         displayName,
         setAuth,
         setTokenOnly,
         updateProfile,
+        setExpired,
         logout,
     }
 }, {

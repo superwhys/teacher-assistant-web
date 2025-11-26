@@ -11,6 +11,9 @@ importers:
       '@element-plus/icons-vue':
         specifier: ^2.3.2
         version: 2.3.2(vue@3.5.22(typescript@5.8.3))
+      echarts:
+        specifier: ^6.0.0
+        version: 6.0.0
       element-plus:
         specifier: ^2.11.2
         version: 2.11.4(vue@3.5.22(typescript@5.8.3))
@@ -591,6 +594,9 @@ packages:
   defu@6.1.4:
     resolution: {integrity: sha512-mEQCMmwJu317oSz8CwdIOdwf3xMif1ttiM8LTufzc3g6kR+9Pe236twL8j3IYT1F7GfRgGcW6MWxzZjLIkuHIg==}
 
+  echarts@6.0.0:
+    resolution: {integrity: sha512-Tte/grDQRiETQP4xz3iZWSvoHrkCQtwqd6hs+mifXcjrCuo2iKWbajFObuLJVBlDIJlOzgQPd1hsaKt/3+OMkQ==}
+
   element-plus@2.11.4:
     resolution: {integrity: sha512-sLq+Ypd0cIVilv8wGGMEGvzRVBBsRpJjnAS5PsI/1JU1COZXqzH3N1UYMUc/HCdvdjf6dfrBy80Sj7KcACsT7w==}
     peerDependencies:
@@ -855,6 +861,9 @@ packages:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
     engines: {node: '>=8.0'}
 
+  tslib@2.3.0:
+    resolution: {integrity: sha512-N82ooyxVNm6h1riLCoyS9e3fuJ3AMG2zIZs2Gd1ATcSFjSA23Q0fzjjZeh0jbJvWVDZ0cJT8yaNNaaXHzueNjg==}
+
   typescript@5.8.3:
     resolution: {integrity: sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ==}
     engines: {node: '>=14.17'}
@@ -1011,6 +1020,9 @@ packages:
     resolution: {integrity: sha512-dmg3LCjBPHZnQp5/F/+nnTa+miPJxUXB6vtk42YjBBKayDNagxGEeIdWApkYPOf3Z3pm3k62Knjzp7lMeTEtFQ==}
     engines: {node: '>=0.8'}
     hasBin: true
+
+  zrender@6.0.0:
+    resolution: {integrity: sha512-41dFXEEXuJpNecuUQq6JlbybmnHaqqpGlbH1yxnA5V9MMP4SbohSVZsJIwz+zdjQXSSlR1Vc34EgH1zxyTDvhg==}
 
 snapshots:
 
@@ -1451,6 +1463,11 @@ snapshots:
 
   defu@6.1.4: {}
 
+  echarts@6.0.0:
+    dependencies:
+      tslib: 2.3.0
+      zrender: 6.0.0
+
   element-plus@2.11.4(vue@3.5.22(typescript@5.8.3)):
     dependencies:
       '@ctrl/tinycolor': 3.6.1
@@ -1734,6 +1751,8 @@ snapshots:
     dependencies:
       is-number: 7.0.0
 
+  tslib@2.3.0: {}
+
   typescript@5.8.3: {}
 
   ufo@1.6.1: {}
@@ -1860,3 +1879,7 @@ snapshots:
       ssf: 0.11.2
       wmf: 1.0.2
       word: 0.3.0
+
+  zrender@6.0.0:
+    dependencies:
+      tslib: 2.3.0

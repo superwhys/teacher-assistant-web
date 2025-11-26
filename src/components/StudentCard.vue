@@ -5,6 +5,7 @@ const props = defineProps<{ student: Student }>()
 const emit = defineEmits<{
     (e: 'remove', name: string): void
     (e: 'edit', student: Student): void
+    (e: 'view-stats', student: Student): void
 }>()
 
 function onRemove() {
@@ -14,23 +15,36 @@ function onRemove() {
 function onEdit() {
     emit('edit', props.student)
 }
+
+function onViewStats() {
+    emit('view-stats', props.student)
+}
 </script>
 
 <template>
     <div class="student-card">
-        <div class="overlay-actions">
-            <el-button text class="overlay-btn" @click.stop="onEdit">
-                <i-ep-edit />
-            </el-button>
-            <el-button text class="overlay-btn danger" @click.stop="onRemove">
-                <i-ep-delete />
+        <div class="card-main">
+            <div class="overlay-actions">
+                <el-button text class="overlay-btn" @click.stop="onEdit" title="编辑">
+                    <i-ep-edit />
+                </el-button>
+                <el-button text class="overlay-btn danger" @click.stop="onRemove" title="删除">
+                    <i-ep-delete />
+                </el-button>
+            </div>
+            
+            <div :class="['student-avatar', student.gender]">
+                <i-ep-male v-if="student.gender === 'male'" />
+                <i-ep-female v-else />
+            </div>
+            <div class="student-name">{{ student.studentName }}</div>
+        </div>
+        
+        <div class="card-footer">
+            <el-button text class="action-btn primary" @click.stop="onViewStats">
+                <i-ep-trend-charts />
             </el-button>
         </div>
-        <div :class="['student-avatar', student.gender]">
-            <i-ep-male v-if="student.gender === 'male'" />
-            <i-ep-female v-else />
-        </div>
-        <div class="student-name">{{ student.studentName }}</div>
     </div>
     
 </template>
@@ -38,15 +52,29 @@ function onEdit() {
 <style scoped>
 .student-card {
     position: relative;
-    padding: 16px 12px;
     border: 1px solid #eee;
-    border-radius: 14px;
+    border-radius: 12px;
     background: #ffffff;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 8px;
     overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.student-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border-color: #e0e0e0;
+}
+
+.card-main {
+    position: relative;
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
 }
 
 .overlay-actions {
@@ -60,38 +88,14 @@ function onEdit() {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease;
+    z-index: 2;
 }
 
-.student-card:hover .overlay-actions,
-.student-card:focus-within .overlay-actions,
-.student-card:active .overlay-actions {
+.card-main:hover .overlay-actions,
+.card-main:focus-within .overlay-actions,
+.card-main:active .overlay-actions {
     opacity: 1;
     pointer-events: auto;
-}
-
-.student-avatar {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #ffffff;
-    font-size: 22px;
-    box-shadow: var(--shadow-light);
-}
-
-.student-avatar.male {
-    background: linear-gradient(135deg, #4f8df9, #6aa2ff);
-}
-
-.student-avatar.female {
-    background: linear-gradient(135deg, #f975a8, #f9948a);
-}
-
-.student-name {
-    font-size: 18px;
-    font-weight: 600;
 }
 
 .overlay-btn {
@@ -114,6 +118,66 @@ function onEdit() {
 .overlay-btn.danger {
     color: #e24a4a;
 }
+
+.student-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 24px;
+    box-shadow: var(--shadow-light);
+}
+
+.student-avatar.male {
+    background: linear-gradient(135deg, #4f8df9, #6aa2ff);
+}
+
+.student-avatar.female {
+    background: linear-gradient(135deg, #f975a8, #f9948a);
+}
+
+.student-name {
+    font-size: 17px;
+    font-weight: 600;
+    color: #333;
+}
+
+.card-footer {
+    background: #fcfcfc;
+    border-top: 1px solid #f0f0f0;
+    height: 40px;
+    display: flex;
+    padding: 0;
+}
+
+.action-btn {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    margin: 0 !important;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #909399;
+    font-size: 18px;
+}
+
+.action-btn:hover {
+    background: #f5f7fa;
+    color: #606266;
+}
+
+.action-btn.primary {
+    color: #909399; /* 默认灰色 */
+}
+
+.action-btn.primary:hover {
+    background: #ecf5ff;
+    color: #409eff;
+}
+
 </style>
-
-

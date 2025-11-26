@@ -96,6 +96,7 @@ declare module 'vue' {
     IEpSortUp: typeof import('~icons/ep/sort-up')['default']
     IEpStarFilled: typeof import('~icons/ep/star-filled')['default']
     IEpSwitchButton: typeof import('~icons/ep/switch-button')['default']
+    IEpTrendCharts: typeof import('~icons/ep/trend-charts')['default']
     IEpTrophy: typeof import('~icons/ep/trophy')['default']
     IEpUnlock: typeof import('~icons/ep/unlock')['default']
     IEpUpload: typeof import('~icons/ep/upload')['default']
@@ -120,6 +121,7 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     StudentCard: typeof import('./components/StudentCard.vue')['default']
+    StudentStatsDialog: typeof import('./components/StudentStatsDialog.vue')['default']
     ToolCard: typeof import('./components/ToolCard.vue')['default']
   }
   export interface GlobalDirectives {

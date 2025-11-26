@@ -7,6 +7,7 @@ import { useClassStore } from '@/stores/classStore'
 import { useStudentStore } from '@/stores/studentStore'
 import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import StudentCard from '@/components/StudentCard.vue'
+import StudentStatsDialog from '@/components/StudentStatsDialog.vue'
 import type { Student } from '@/types/student'
 
 defineOptions({
@@ -192,6 +193,16 @@ async function onRemoveStudent(name: string) {
     } catch (e) {
         // 用户取消
     }
+}
+
+// 学生统计
+const statsDialogVisible = ref(false)
+const currentStatsStudentName = ref('')
+
+function onViewStats(student: Student) {
+    if (!activeClassId.value) return
+    currentStatsStudentName.value = student.studentName
+    statsDialogVisible.value = true
 }
 
 // 分组管理
@@ -553,7 +564,7 @@ function getStudentTagType(member: { name: string, isInvalid: boolean, isDuplica
                 <div v-if="activeClass">
                     <div v-if="filteredStudents.length > 0" class="student-grid">
                         <StudentCard v-for="s in filteredStudents" :key="s.studentName" :student="s"
-                            @remove="onRemoveStudent" @edit="onEditStudent" />
+                            @remove="onRemoveStudent" @edit="onEditStudent" @view-stats="onViewStats" />
                     </div>
                     <div v-else class="empty empty-students">
                         <i-ep-user class="empty-icon" />
@@ -809,6 +820,12 @@ function getStudentTagType(member: { name: string, isInvalid: boolean, isDuplica
             </span>
         </template>
     </el-dialog>
+
+    <StudentStatsDialog 
+        v-model="statsDialogVisible"
+        :class-id="activeClassId"
+        :student-name="currentStatsStudentName"
+    />
 
 </template>
 

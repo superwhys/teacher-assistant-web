@@ -24,6 +24,7 @@ const pointsStore = usePointsStore()
 const isRankingCollapsed = ref(false)
 const isRankingAnimating = ref(false)
 const showRankingContent = ref(true)
+const activeRankingTab = ref('total')
 const windowWidth = ref(window.innerWidth)
 
 function handleResize() {
@@ -141,7 +142,16 @@ onMounted(() => {
         layoutMode.value = savedLayout
     }
 
+    const savedTab = localStorage.getItem('ranking-tab')
+    if (savedTab) {
+        activeRankingTab.value = savedTab
+    }
+
     window.addEventListener('resize', handleResize)
+})
+
+watch(activeRankingTab, (val) => {
+    localStorage.setItem('ranking-tab', val)
 })
 
 watch(sortBy, (val) => {
@@ -408,10 +418,14 @@ function scrollToLetter(letter: string) {
             <div class="ranking-column">
                 <Transition name="ranking-fade">
                     <div v-show="showRankingContent" class="ranking-container">
-                        <PointsRankingCard :students="studentsOfActive" :points-map="totalPointsMap" :max-display="10"
-                            class="ranking-half" />
-                        <PointsItemRankingCard :students="studentsOfActive" :class-id="activeClassId" :max-display="10"
-                            class="ranking-half" />
+                        <el-tabs v-model="activeRankingTab" class="ranking-tabs" stretch>
+                            <el-tab-pane label="总积分榜" name="total">
+                                <PointsRankingCard :students="studentsOfActive" :points-map="totalPointsMap" :max-display="10" />
+                            </el-tab-pane>
+                            <el-tab-pane label="单项榜" name="item">
+                                <PointsItemRankingCard :students="studentsOfActive" :class-id="activeClassId" :max-display="10" />
+                            </el-tab-pane>
+                        </el-tabs>
                     </div>
                 </Transition>
             </div>
@@ -689,13 +703,49 @@ function scrollToLetter(letter: string) {
     height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 12px;
 }
 
-.ranking-half {
+.ranking-tabs {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.ranking-tabs :deep(.el-tabs__header) {
+    margin: 0;
+    background: #fafbff;
+    border-bottom: 1px solid #e6e8f0;
+}
+
+.ranking-tabs :deep(.el-tabs__nav-wrap::after) {
+    height: 1px;
+    background-color: #e6e8f0;
+}
+
+.ranking-tabs :deep(.el-tabs__content) {
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+}
+
+.ranking-tabs :deep(.el-tab-pane) {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.ranking-tabs :deep(.ranking-card) {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
 }
 
 .ranking-fade-enter-active {

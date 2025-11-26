@@ -113,6 +113,7 @@ declare module 'vue' {
     PointsHistoryButton: typeof import('./components/PointsHistoryButton.vue')['default']
     PointsImportExport: typeof import('./components/PointsImportExport.vue')['default']
     PointsItemManageDialog: typeof import('./components/PointsItemManageDialog.vue')['default']
+    PointsItemRankingCard: typeof import('./components/PointsItemRankingCard.vue')['default']
     PointsItemSelectorDialog: typeof import('./components/PointsItemSelectorDialog.vue')['default']
     PointsItemsImport: typeof import('./components/PointsItemsImport.vue')['default']
     PointsRankingCard: typeof import('./components/PointsRankingCard.vue')['default']

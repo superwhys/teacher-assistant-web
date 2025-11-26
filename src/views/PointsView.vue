@@ -9,6 +9,7 @@ import type { PointsItem } from '@/types/pointsItem'
 import PointsItemSelectorDialog from '@/components/PointsItemSelectorDialog.vue'
 import PointsHeaderActions from '@/components/PointsHeaderActions.vue'
 import PointsRankingCard from '@/components/PointsRankingCard.vue'
+import PointsItemRankingCard from '@/components/PointsItemRankingCard.vue'
 import { pinyin } from 'pinyin-pro'
 
 defineOptions({
@@ -406,8 +407,12 @@ function scrollToLetter(letter: string) {
         <div class="content-area" :class="{ 'ranking-collapsed': isRankingCollapsed }">
             <div class="ranking-column">
                 <Transition name="ranking-fade">
-                    <PointsRankingCard v-show="showRankingContent" :students="studentsOfActive"
-                        :points-map="totalPointsMap" :max-display="10" />
+                    <div v-show="showRankingContent" class="ranking-container">
+                        <PointsRankingCard :students="studentsOfActive" :points-map="totalPointsMap" :max-display="10"
+                            class="ranking-half" />
+                        <PointsItemRankingCard :students="studentsOfActive" :class-id="activeClassId" :max-display="10"
+                            class="ranking-half" />
+                    </div>
                 </Transition>
             </div>
 
@@ -678,6 +683,19 @@ function scrollToLetter(letter: string) {
     overflow: hidden;
     transition: all 0.3s ease;
     padding-right: 8px;
+}
+
+.ranking-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ranking-half {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .ranking-fade-enter-active {

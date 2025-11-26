@@ -206,10 +206,10 @@ async function downloadImage() {
                     
                     <div class="stats-data-row">
                         <div class="rank-info-box">
-                            <div class="rank-label">班级排名</div>
+                            <div class="rank-label">班级超越</div>
                             <div class="rank-main">
-                                <span class="rank-val">{{ typeof ranking === 'object' ? ranking.text : ranking }}</span>
-                                <span v-if="typeof ranking === 'object'" class="percentile-tag">超过 {{ ranking.percentile }}% 同学</span>
+                                <span class="rank-val">{{ typeof ranking === 'object' ? `超过 ${ranking.percentile}%` : '-' }}</span>
+                                <span v-if="typeof ranking === 'object'" class="percentile-tag">的同学</span>
                             </div>
                         </div>
                         

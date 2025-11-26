@@ -162,7 +162,7 @@ function initChart() {
             },
             tooltip: {
                 trigger: 'axis',
-                formatter: '{b}<br/>扣分: <b>{c}</b>'
+                formatter: '{b}<br/>扣分: <b>{c}</b> 分'
             },
             grid: { left: '10px', right: '20px', bottom: '10px', top: '40px', containLabel: true },
             xAxis: { 

@@ -151,6 +151,7 @@ function onViewStats() {
     height: 40px;
     display: flex;
     padding: 0;
+    width: 100%;
 }
 
 .action-btn {

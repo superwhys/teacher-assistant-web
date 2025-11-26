@@ -341,8 +341,8 @@ const groupImportDialogVisible = ref(false)
 const groupExcelImporting = ref(false)
 const groupUploadRef = ref<UploadInstance>()
 const groupExcelFileName = ref('')
-const groupExcelParsedData = ref<Array<{ 
-    groupName: string, 
+const groupExcelParsedData = ref<Array<{
+    groupName: string,
     members: Array<{ name: string, isInvalid: boolean, isDuplicateInImport: boolean }>,
     isDuplicate: boolean
 }>>([])
@@ -413,8 +413,8 @@ async function importGroupExcelFromFile(file: File) {
             })
         })
 
-        const parsedGroups: Array<{ 
-            groupName: string, 
+        const parsedGroups: Array<{
+            groupName: string,
             members: Array<{ name: string, isInvalid: boolean, isDuplicateInImport: boolean }>,
             isDuplicate: boolean
         }> = []
@@ -426,7 +426,7 @@ async function importGroupExcelFromFile(file: File) {
                 isInvalid: !existingStudents.has(name),
                 isDuplicateInImport: (studentGroupCount.get(name) || 0) > 1
             }))
-            
+
             parsedGroups.push({
                 groupName,
                 members: membersList,
@@ -445,7 +445,7 @@ async function importGroupExcelFromFile(file: File) {
                 if (m.isDuplicateInImport) duplicateInImportMembers.add(m.name)
             })
         })
-        
+
         let msg = `解析成功：${parsedGroups.length} 个分组，${totalMembers} 个成员`
         if (skipped > 0) msg += `，跳过 ${skipped} 条`
         if (duplicateGroups > 0) msg += `，${duplicateGroups} 个重复分组`
@@ -588,7 +588,7 @@ function getStudentTagType(member: { name: string, isInvalid: boolean, isDuplica
                 <el-option label="全部学生" value="" />
                 <el-option v-for="g in groupsOfActive" :key="g.id" :label="g.name" :value="g.id" />
             </el-select>
-            
+
             <div class="action-buttons-row">
                 <el-button size="large" type="primary" :disabled="!activeClassId"
                     @click="addStudentDialogVisible = true" class="action-btn">
@@ -730,7 +730,7 @@ function getStudentTagType(member: { name: string, isInvalid: boolean, isDuplica
                 <div class="el-upload__tip">支持 .xls/.xlsx，表头包含"分组名称"和"学生姓名"。</div>
             </template>
         </el-upload>
-        
+
         <div class="excel-guide">
             <div class="guide-title">Excel 表头示例：</div>
             <ul class="guide-list">
@@ -752,8 +752,10 @@ function getStudentTagType(member: { name: string, isInvalid: boolean, isDuplica
                 <el-space class="preview-meta" wrap size="small">
                     <el-tag v-if="groupExcelFileName" type="info" effect="light">文件：{{ groupExcelFileName }}</el-tag>
                     <el-tag type="primary" effect="light">{{ groupExcelParsedData.length }} 个分组</el-tag>
-                    <el-tag type="success" effect="light">共 {{ groupExcelParsedData.reduce((sum, g) => sum + g.members.length, 0) }} 个成员</el-tag>
-                    <el-tag v-if="groupExcelSkippedCount" type="warning" effect="light">跳过 {{ groupExcelSkippedCount }} 条</el-tag>
+                    <el-tag type="success" effect="light">共 {{groupExcelParsedData.reduce((sum, g) => sum +
+                        g.members.length, 0) }} 个成员</el-tag>
+                    <el-tag v-if="groupExcelSkippedCount" type="warning" effect="light">跳过 {{ groupExcelSkippedCount }}
+                        条</el-tag>
                 </el-space>
             </div>
             <el-table :data="groupExcelParsedData" border size="small" class="preview-table" max-height="300">
@@ -770,19 +772,12 @@ function getStudentTagType(member: { name: string, isInvalid: boolean, isDuplica
                 <el-table-column label="成员" min-width="200">
                     <template #default="{ row }">
                         <el-space wrap :size="4">
-                            <el-tag 
-                                v-for="member in row.members" 
-                                :key="member.name" 
-                                size="small" 
+                            <el-tag v-for="member in row.members" :key="member.name" size="small"
                                 :type="getStudentTagType(member)"
-                                :effect="(member.isInvalid || member.isDuplicateInImport) ? 'dark' : 'light'"
-                            >
+                                :effect="(member.isInvalid || member.isDuplicateInImport) ? 'dark' : 'light'">
                                 {{ member.name }}
-                                <el-tooltip 
-                                    v-if="member.isInvalid || member.isDuplicateInImport" 
-                                    :content="getStudentWarningText(member)" 
-                                    placement="top"
-                                >
+                                <el-tooltip v-if="member.isInvalid || member.isDuplicateInImport"
+                                    :content="getStudentWarningText(member)" placement="top">
                                     <i-ep-warning-filled style="margin-left: 2px;" />
                                 </el-tooltip>
                             </el-tag>
@@ -821,11 +816,8 @@ function getStudentTagType(member: { name: string, isInvalid: boolean, isDuplica
         </template>
     </el-dialog>
 
-    <StudentStatsDialog 
-        v-model="statsDialogVisible"
-        :class-id="activeClassId"
-        :student-name="currentStatsStudentName"
-    />
+    <StudentStatsDialog v-model="statsDialogVisible" :class-id="activeClassId"
+        :student-name="currentStatsStudentName" />
 
 </template>
 

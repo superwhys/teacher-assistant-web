@@ -6,6 +6,7 @@ const emit = defineEmits<{
     (e: 'remove', name: string): void
     (e: 'edit', student: Student): void
     (e: 'view-stats', student: Student): void
+    (e: 'view-report', student: Student): void
 }>()
 
 function onRemove() {
@@ -18,6 +19,10 @@ function onEdit() {
 
 function onViewStats() {
     emit('view-stats', props.student)
+}
+
+function onViewReport() {
+    emit('view-report', props.student)
 }
 </script>
 
@@ -41,8 +46,12 @@ function onViewStats() {
         </div>
         
         <div class="card-footer">
-            <el-button text class="action-btn primary" @click.stop="onViewStats">
+            <el-button text class="action-btn primary" @click.stop="onViewStats" title="积分统计">
                 <i-ep-trend-charts />
+            </el-button>
+            <div class="footer-divider"></div>
+            <el-button text class="action-btn primary" @click.stop="onViewReport" title="生成报表">
+                <i-ep-picture />
             </el-button>
         </div>
     </div>
@@ -154,8 +163,15 @@ function onViewStats() {
     width: 100%;
 }
 
+.footer-divider {
+    width: 1px;
+    background: #f0f0f0;
+    height: 60%;
+    align-self: center;
+}
+
 .action-btn {
-    width: 100%;
+    flex: 1;
     height: 100%;
     border-radius: 0;
     margin: 0 !important;

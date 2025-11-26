@@ -28,6 +28,7 @@
 
 ## 技术框架与规范
 - 采用 Vue3 + Vue-Router 开发
+- 包管理工具使用 pnpm
 - 使用 [Element Plus](https://element-plus.org/en-US/component/overview) 组件库
 - 使用 [Element Plus Icon](https://cn.element-plus.org/zh-CN/component/icon) 图标库。配置了自动导入和加载。使用 `i-ep-` 前缀来使用图标。
 - 使用 [Pinia](https://pinia.vuejs.org/) 管理状态

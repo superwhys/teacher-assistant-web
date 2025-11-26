@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { UploadRawFile, UploadFile, UploadInstance } from 'element-plus'
 import * as XLSX from 'xlsx'
+import { pinyin } from 'pinyin-pro'
 import { useClassStore } from '@/stores/classStore'
 import { useStudentStore } from '@/stores/studentStore'
+import { usePointsStore } from '@/stores/pointsStore'
 import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import StudentCard from '@/components/StudentCard.vue'
 import StudentStatsDialog from '@/components/StudentStatsDialog.vue'
+import StudentReportCard from '@/components/StudentReportCard.vue'
 import type { Student } from '@/types/student'
 
 defineOptions({
@@ -22,6 +25,7 @@ const activeClassId = computed({
     set: (val: string | null) => { if (val) classStore.setActiveClass(val) }
 })
 const studentStore = useStudentStore()
+const pointsStore = usePointsStore()
 const groupStore = useStudentGroupStore()
 const studentsOfActive = computed(() => {
     const id = activeClassId.value
@@ -205,6 +209,16 @@ function onViewStats(student: Student) {
     statsDialogVisible.value = true
 }
 
+// 学生表现报告
+const reportDialogVisible = ref(false)
+const currentReportStudent = ref<Student | null>(null)
+
+function onViewReport(student: Student) {
+    if (!activeClassId.value) return
+    currentReportStudent.value = student
+    reportDialogVisible.value = true
+}
+
 // 分组管理
 const groupDialogVisible = ref(false)
 const newGroupName = ref('')
@@ -218,13 +232,166 @@ const targetKeys = ref<string[]>([])
 
 // 学生名单分组筛选
 const selectedGroupFilter = ref<string>('') // 空代表全部
+// 学生搜索
+const studentKeyword = ref('')
+// 学生排序
+type SortOption = 'default' | 'name-asc' | 'name-desc' | 'points-desc' | 'points-asc'
+const sortBy = ref<SortOption>('default')
+
+// 布局模式
+type LayoutMode = 'card' | 'list'
+const layoutMode = ref<LayoutMode>('card')
+
+onMounted(() => {
+    const savedLayout = localStorage.getItem('class-layout') as LayoutMode | null
+    if (savedLayout === 'card' || savedLayout === 'list') {
+        layoutMode.value = savedLayout
+    }
+
+    const savedSort = localStorage.getItem('class-students-sort')
+    if (savedSort) {
+        const validSortOptions: SortOption[] = ['default', 'name-asc', 'name-desc', 'points-desc', 'points-asc']
+        if ((validSortOptions as string[]).includes(savedSort)) {
+            sortBy.value = savedSort as SortOption
+        }
+    }
+})
+
+watch(layoutMode, (val) => {
+    localStorage.setItem('class-layout', val)
+})
+
+function setLayoutMode(mode: LayoutMode) {
+    layoutMode.value = mode
+}
+
+// 获取学生姓名首字母
+function getFirstLetter(name: string): string {
+    if (!name || name.length === 0) {
+        return '#'
+    }
+
+    const firstChar = name.charAt(0)
+    // 判断是否为英文字母
+    if (/[a-zA-Z]/.test(firstChar)) {
+        return firstChar.toUpperCase()
+    }
+
+    // 对于中文字符，使用 pinyin-pro 获取拼音首字母
+    try {
+        const py = pinyin(firstChar, { toneType: 'none', type: 'array' })
+        if (Array.isArray(py) && py.length > 0) {
+            const firstPinyin = py[0]
+            if (typeof firstPinyin === 'string' && firstPinyin.length > 0) {
+                return firstPinyin.charAt(0).toUpperCase()
+            }
+        }
+    } catch (error) {
+        console.warn('Failed to get pinyin for character:', firstChar, error)
+    }
+
+    // 对于其他字符，统一归为'#'
+    return '#'
+}
+
+// 按首字母分组学生
+const studentsGroupedByLetter = computed(() => {
+    if (layoutMode.value !== 'list') {
+        return []
+    }
+
+    const groups: Record<string, typeof studentsOfActive.value> = {}
+    const lettersInOrder: string[] = []
+    const students = filteredStudents.value
+
+    students.forEach(student => {
+        const letter = getFirstLetter(student.studentName)
+        if (!groups[letter]) {
+            groups[letter] = []
+            lettersInOrder.push(letter)
+        }
+        groups[letter]!.push(student)
+    })
+
+    return lettersInOrder.map(letter => ({
+        letter,
+        students: groups[letter]!
+    }))
+})
+
+// 所有可用的字母索引
+const availableLetters = computed(() => {
+    const letters = studentsGroupedByLetter.value.map(group => group.letter)
+    return letters.slice().sort((a, b) => {
+        if (a === b) return 0
+        if (a === '#') return 1
+        if (b === '#') return -1
+        return a.localeCompare(b)
+    })
+})
+
+// 滚动到指定字母分组
+function scrollToLetter(letter: string) {
+    const element = document.getElementById(`letter-group-${letter}`)
+    if (element) {
+        // 获取list-card的滚动容器
+        const scrollContainer = element.closest('.list-card')?.querySelector('.el-card__body') as HTMLElement | null
+        if (scrollContainer) {
+            // 计算相对于滚动容器的位置
+            const containerRect = scrollContainer.getBoundingClientRect()
+            const elementRect = element.getBoundingClientRect()
+            const scrollTop = scrollContainer.scrollTop + (elementRect.top - containerRect.top) - 20 // 减去一些偏移量
+            scrollContainer.scrollTo({
+                top: scrollTop,
+                behavior: 'smooth'
+            })
+        }
+    }
+}
+
+
+watch(sortBy, (val) => {
+    localStorage.setItem('class-students-sort', val)
+})
+
 const filteredStudents = computed(() => {
     if (!activeClassId.value) return []
-    if (!selectedGroupFilter.value) return studentsOfActive.value
-    const g = groupsOfActive.value.find(x => x.id === selectedGroupFilter.value)
-    if (!g) return studentsOfActive.value
-    const memberSet = new Set(g.members)
-    return studentsOfActive.value.filter(s => memberSet.has(s.studentName))
+    let list = studentsOfActive.value
+    
+    if (selectedGroupFilter.value) {
+        const g = groupsOfActive.value.find(x => x.id === selectedGroupFilter.value)
+        if (g) {
+            const memberSet = new Set(g.members)
+            list = list.filter(s => memberSet.has(s.studentName))
+        } else {
+            // 如果选了分组但没找到，可能是被删了，默认全显或者显空，这里按之前逻辑是显全，但逻辑上也可以显空
+            // 保持之前逻辑：如果找不到分组对象，就返回全部
+        }
+    }
+
+    const keyword = studentKeyword.value.trim().toLowerCase()
+    if (keyword) {
+        list = list.filter(s => s.studentName.toLowerCase().includes(keyword))
+    }
+
+    const sort = sortBy.value
+    if (sort === 'default') return list
+
+    const sorted = [...list]
+    if (sort === 'name-asc') {
+        sorted.sort((a, b) => a.studentName.localeCompare(b.studentName, 'zh-CN'))
+    } else if (sort === 'name-desc') {
+        sorted.sort((a, b) => b.studentName.localeCompare(a.studentName, 'zh-CN'))
+    } else if (sort === 'points-desc' || sort === 'points-asc') {
+        const classId = activeClassId.value
+        sorted.sort((a, b) => {
+            const pointsA = pointsStore.getTotalPoints(classId, a.studentName)
+            const pointsB = pointsStore.getTotalPoints(classId, b.studentName)
+            return sort === 'points-desc' ? pointsB - pointsA : pointsA - pointsB
+        })
+    }
+    
+    return sorted
 })
 
 watch(selectedGroupId, (gid) => {
@@ -549,45 +716,154 @@ function getStudentTagType(member: { name: string, isInvalid: boolean, isDuplica
 <template>
     <div class="class-page">
         <div class="content-area">
-            <el-card shadow="never" class="list-card">
-                <template #header>
-                    <div class="list-header">
-                        <span v-if="activeClass" class="class-name">{{ activeClass.name }}</span>
-                        <span v-else>学生名单</span>
-                        <span v-if="activeClass" class="student-count">
-                            共 {{ totalCount }} 人
-                            <span class="count-detail">(男 {{ maleCount }} / 女 {{ femaleCount }})</span>
-                        </span>
-                    </div>
-                </template>
-
-                <div v-if="activeClass">
-                    <div v-if="filteredStudents.length > 0" class="student-grid">
-                        <StudentCard v-for="s in filteredStudents" :key="s.studentName" :student="s"
-                            @remove="onRemoveStudent" @edit="onEditStudent" @view-stats="onViewStats" />
-                    </div>
-                    <div v-else class="empty empty-students">
-                        <i-ep-user class="empty-icon" />
-                        <div class="empty-title">{{ selectedGroupFilter ? '该分组暂无成员' : '还没有学生' }}</div>
-                        <div class="empty-sub">
-                            {{ selectedGroupFilter ? '可在分组管理中添加成员，或清除筛选查看全部学生' : '点击下方"添加学生"按钮开始添加学生' }}
+            <div class="list-column">
+                <div v-if="layoutMode === 'list' && studentsGroupedByLetter.length > 0" class="index-container">
+                    <div class="letter-index">
+                        <div v-for="letter in availableLetters" :key="letter" class="index-item"
+                            @click="scrollToLetter(letter)">
+                            {{ letter }}
                         </div>
                     </div>
                 </div>
-                <div v-else class="empty">
-                    <i-ep-school class="empty-icon" />
-                    <div class="empty-title">还没有班级</div>
-                    <div class="empty-sub">请先创建或选择一个班级</div>
-                </div>
-            </el-card>
+                <el-card shadow="never" :class="['list-card', 'list-content', { 'is-list-mode': layoutMode === 'list' }]">
+                    <template #header>
+                        <div class="list-header">
+                            <div class="header-left">
+                                <span v-if="activeClass" class="class-name">{{ activeClass.name }}</span>
+                                <span v-else>学生名单</span>
+                                <span v-if="activeClass" class="student-count">
+                                    共 {{ totalCount }} 人
+                                    <span class="count-detail">(男 {{ maleCount }} / 女 {{ femaleCount }})</span>
+                                </span>
+                            </div>
+                            <div class="header-actions">
+                                <div class="layout-toggle">
+                                    <el-button-group>
+                                        <el-button :class="['layout-btn', { 'is-active': layoutMode === 'card' }]"
+                                            size="small" :type="layoutMode === 'card' ? 'primary' : undefined"
+                                            :plain="layoutMode !== 'card'" @click="setLayoutMode('card')">
+                                            <i-ep-grid />
+                                        </el-button>
+                                        <el-button :class="['layout-btn', { 'is-active': layoutMode === 'list' }]"
+                                            size="small" :type="layoutMode === 'list' ? 'primary' : undefined"
+                                            :plain="layoutMode !== 'list'" @click="setLayoutMode('list')">
+                                            <i-ep-list />
+                                        </el-button>
+                                    </el-button-group>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <div v-if="activeClass">
+                        <div v-if="filteredStudents.length > 0">
+                            <template v-if="layoutMode === 'list'">
+                                <div v-for="group in studentsGroupedByLetter" :key="group.letter"
+                                    :id="`letter-group-${group.letter}`" class="letter-group">
+                                    <div class="letter-header">{{ group.letter }}</div>
+                                    <div class="student-list">
+                                        <div v-for="s in group.students" :key="s.studentName" class="student-row list-mode">
+                                            <div :class="['avatar', s.gender]">
+                                                <i-ep-male v-if="s.gender === 'male'" />
+                                                <i-ep-female v-else />
+                                            </div>
+                                            <div class="info">
+                                                <div class="name">
+                                                    {{ s.studentName }}
+                                                    <span v-if="layoutMode === 'list'" class="points-badge">
+                                                        {{ pointsStore.getTotalPoints(activeClassId!, s.studentName) }} 分
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="ops">
+                                                <el-button class="op" type="primary" plain size="small" title="积分统计"
+                                                    @click="onViewStats(s)">
+                                                    <i-ep-trend-charts />
+                                                </el-button>
+                                                <el-button class="op" type="primary" plain size="small" title="生成报表"
+                                                    @click="onViewReport(s)">
+                                                    <i-ep-picture />
+                                                </el-button>
+                                                <el-button class="op" type="default" plain size="small" title="编辑"
+                                                    @click="onEditStudent(s)">
+                                                    <i-ep-edit />
+                                                </el-button>
+                                                <el-button class="op" type="danger" plain size="small" title="删除"
+                                                    @click="onRemoveStudent(s.studentName)">
+                                                    <i-ep-delete />
+                                                </el-button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                            <template v-else>
+                                <div class="student-grid">
+                                    <StudentCard v-for="s in filteredStudents" :key="s.studentName" :student="s"
+                                        @remove="onRemoveStudent" @edit="onEditStudent" @view-stats="onViewStats"
+                                        @view-report="onViewReport" />
+                                </div>
+                            </template>
+                        </div>
+                        <div v-else class="empty empty-students">
+                            <i-ep-user class="empty-icon" />
+                            <div class="empty-title">{{ selectedGroupFilter ? '该分组暂无成员' : '还没有学生' }}</div>
+                            <div class="empty-sub">
+                                {{ selectedGroupFilter ? '可在分组管理中添加成员，或清除筛选查看全部学生' : '点击下方"添加学生"按钮开始添加学生' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else class="empty">
+                        <i-ep-school class="empty-icon" />
+                        <div class="empty-title">还没有班级</div>
+                        <div class="empty-sub">请先创建或选择一个班级</div>
+                    </div>
+                </el-card>
+            </div>
         </div>
 
         <div class="bottom-actions">
-            <el-select v-if="activeClass" v-model="selectedGroupFilter" size="large" placeholder="全部学生"
-                class="group-filter">
-                <el-option label="全部学生" value="" />
-                <el-option v-for="g in groupsOfActive" :key="g.id" :label="g.name" :value="g.id" />
-            </el-select>
+            <div class="filter-row">
+                <el-select v-if="activeClass" v-model="selectedGroupFilter" size="large" placeholder="全部学生"
+                    class="group-filter" clearable>
+                    <el-option label="全部学生" value="" />
+                    <el-option v-for="g in groupsOfActive" :key="g.id" :label="g.name" :value="g.id" />
+                </el-select>
+                
+                <el-select v-if="activeClass" v-model="sortBy" placeholder="排序方式" class="sort-filter" size="large">
+                    <el-option label="默认排序" value="default" />
+                    <el-option label="姓名 A-Z" value="name-asc">
+                        <div class="sort-option">
+                            <i-ep-sort-up />
+                            <span>姓名 A-Z</span>
+                        </div>
+                    </el-option>
+                    <el-option label="姓名 Z-A" value="name-desc">
+                        <div class="sort-option">
+                            <i-ep-sort-down />
+                            <span>姓名 Z-A</span>
+                        </div>
+                    </el-option>
+                    <el-option label="积分从高到低" value="points-desc">
+                        <div class="sort-option">
+                            <i-ep-bottom />
+                            <span>积分从高到低</span>
+                        </div>
+                    </el-option>
+                    <el-option label="积分从低到高" value="points-asc">
+                        <div class="sort-option">
+                            <i-ep-top />
+                            <span>积分从低到高</span>
+                        </div>
+                    </el-option>
+                </el-select>
+
+                <el-input v-if="activeClass" v-model="studentKeyword" class="search-input" placeholder="搜索学生" clearable size="large">
+                    <template #prefix>
+                        <i-ep-search />
+                    </template>
+                </el-input>
+            </div>
 
             <div class="action-buttons-row">
                 <el-button size="large" type="primary" :disabled="!activeClassId"
@@ -819,6 +1095,9 @@ function getStudentTagType(member: { name: string, isInvalid: boolean, isDuplica
     <StudentStatsDialog v-model="statsDialogVisible" :class-id="activeClassId"
         :student-name="currentStatsStudentName" />
 
+    <StudentReportCard v-model:visible="reportDialogVisible" :class-id="activeClassId || ''"
+        :class-name="activeClass?.name || ''" :student="currentReportStudent" />
+
 </template>
 
 <style scoped>
@@ -851,8 +1130,205 @@ function getStudentTagType(member: { name: string, isInvalid: boolean, isDuplica
 
 .list-header {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 40px;
+}
+
+.header-left {
+    display: flex;
     flex-direction: column;
     gap: 6px;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+}
+
+.layout-toggle {
+    display: flex;
+    align-items: center;
+}
+
+.layout-btn {
+    font-weight: 600;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 32px;
+    padding: 0;
+}
+
+.layout-btn.is-active {
+    box-shadow: 0 0 0 1px rgba(102, 126, 234, 0.35);
+}
+
+.layout-btn :deep(.el-icon) {
+    margin-right: 0;
+    font-size: 18px;
+}
+
+.list-column {
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
+    min-width: 0;
+    width: 100%;
+}
+
+.list-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.index-container {
+    width: 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.letter-index {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 0;
+}
+
+.index-item {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.index-item:hover {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.letter-group {
+    margin-bottom: 20px;
+}
+
+.letter-header {
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e6e8f0;
+}
+
+.student-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.student-row {
+    padding: 12px;
+    border: 2px solid #eee;
+    border-radius: 12px;
+    background: #fff;
+    transition: all 0.2s ease;
+}
+
+.student-row:hover {
+    border-color: #d0d0d0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.student-row.list-mode {
+    display: grid;
+    grid-template-columns: 48px 1fr auto;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+}
+
+.avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 20px;
+    box-shadow: var(--shadow-light);
+}
+
+.avatar.male {
+    background: linear-gradient(135deg, #4f8df9, #6aa2ff);
+}
+
+.avatar.female {
+    background: linear-gradient(135deg, #f975a8, #f9948a);
+}
+
+.info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.name {
+    font-size: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.points-badge {
+    font-size: 13px;
+    color: #409eff;
+    background: #ecf5ff;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.ops {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.op {
+    width: 40px;
+    height: 32px;
+    padding: 0;
+    border-radius: 999px;
+}
+
+.op :deep(.el-icon) {
+    margin-right: 0;
+    font-size: 16px;
+}
+
+.is-list-mode :deep(.el-card__body) {
+    overflow-x: auto;
 }
 
 .class-name {
@@ -884,8 +1360,28 @@ function getStudentTagType(member: { name: string, isInvalid: boolean, isDuplica
     box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
 }
 
-.group-filter {
+.filter-row {
+    display: flex;
+    gap: 12px;
     width: 100%;
+}
+
+.group-filter {
+    flex: 1;
+}
+
+.sort-filter {
+    flex: 1;
+}
+
+.search-input {
+    flex: 1;
+}
+
+.sort-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .action-buttons-row {
@@ -1128,67 +1624,120 @@ function getStudentTagType(member: { name: string, isInvalid: boolean, isDuplica
     gap: 8px;
 }
 
-@media (max-width: 768px) {
-    .class-name {
-        font-size: 20px;
+    @media (max-width: 768px) {
+        .list-header {
+            height: auto;
+            align-items: flex-start;
+        }
+
+        .header-actions {
+            margin-top: 4px;
+        }
+
+        .class-name {
+            font-size: 20px;
+        }
+
+        .student-count {
+            font-size: 14px;
+        }
+
+        .list-column {
+            margin-left: 0;
+        }
+
+        .index-container {
+            width: 28px;
+            margin-right: 8px;
+        }
+
+        .student-row.list-mode {
+            grid-template-columns: 44px 1fr auto;
+            gap: 12px;
+            padding: 12px;
+        }
+
+        .op {
+            width: 36px;
+            height: 30px;
+        }
+
+        .bottom-actions {
+            padding: 16px;
+            gap: 10px;
+        }
+
+        .filter-row {
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .action-buttons-row {
+            gap: 12px;
+        }
+
+        .action-btn {
+            height: 48px;
+            font-size: 16px;
+        }
+
+        .student-grid {
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+        }
     }
 
-    .student-count {
-        font-size: 14px;
-    }
+    @media (max-width: 480px) {
+        .class-name {
+            font-size: 18px;
+        }
 
-    .bottom-actions {
-        padding: 16px;
-        gap: 10px;
-    }
+        .student-count {
+            font-size: 13px;
+        }
 
-    .action-buttons-row {
-        gap: 12px;
-    }
+        .count-detail {
+            font-size: 12px;
+        }
 
-    .action-btn {
-        height: 48px;
-        font-size: 16px;
-    }
+        .bottom-actions {
+            padding: 12px;
+            gap: 8px;
+        }
 
-    .student-grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 12px;
-    }
-}
+        .action-buttons-row {
+            gap: 10px;
+        }
 
-@media (max-width: 480px) {
-    .class-name {
-        font-size: 18px;
-    }
+        .action-btn {
+            height: 46px;
+            font-size: 15px;
+        }
 
-    .student-count {
-        font-size: 13px;
-    }
+        .student-grid {
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+        }
 
-    .count-detail {
-        font-size: 12px;
-    }
+        .student-row.list-mode {
+            grid-template-columns: 40px 1fr;
+            grid-template-rows: auto auto;
+            gap: 8px;
+            align-items: start;
+        }
 
-    .bottom-actions {
-        padding: 12px;
-        gap: 8px;
-    }
+        .ops {
+            grid-column: 1 / -1;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 4px;
+        }
 
-    .action-buttons-row {
-        gap: 10px;
+        .op {
+            flex: 1;
+            width: auto;
+        }
     }
-
-    .action-btn {
-        height: 46px;
-        font-size: 15px;
-    }
-
-    .student-grid {
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        gap: 10px;
-    }
-}
 
 .text-error {
     color: #f56c6c;

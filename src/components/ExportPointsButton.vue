@@ -123,20 +123,40 @@ const exportData = computed(() => {
             names = names.filter(n => nameSet.has(n))
         }
 
-        // 积分项过滤：只导出有该积分项记录的学生
+        // 积分项过滤：
+        // 1. 筛选出有过该积分项记录的学生
+        // 2. 计算每个学生该积分项的分数总和
+        let itemScoreMap: Record<string, number> = {}
+        
         if (filterItemId.value) {
             const history = pointsStore.getHistoryOf(classId)
             const studentSet = new Set<string>()
+            
             history.forEach(h => {
                 if (h.itemId === filterItemId.value) {
-                    h.studentNames.forEach(n => studentSet.add(n))
+                    // 累加分数
+                    h.studentNames.forEach(n => {
+                        studentSet.add(n)
+                        itemScoreMap[n] = (itemScoreMap[n] || 0) + h.delta
+                    })
                 }
             })
+            
+            // 仅保留有记录的学生
             names = names.filter(n => studentSet.has(n))
         }
 
         // 构建行数据
         let rows = names.map(n => {
+            // 如果有积分项过滤，则只显示"分数"列
+            if (filterItemId.value) {
+                return {
+                    '姓名': n,
+                    '分数': itemScoreMap[n] || 0
+                }
+            }
+            
+            // 否则显示原来的总积分/可用积分
             const p = points[n]
             return {
                 '姓名': n,
@@ -148,11 +168,23 @@ const exportData = computed(() => {
         // 排序
         if (sortBy.value !== 'default') {
             rows.sort((a, b) => {
-                if (sortBy.value === 'points-asc') {
-                    return a['总积分'] - b['总积分']
-                } else if (sortBy.value === 'points-desc') {
-                    return b['总积分'] - a['总积分']
-                } else if (sortBy.value === 'name-asc') {
+                if (filterItemId.value) {
+                    // 积分项模式下的排序
+                    if (sortBy.value === 'points-asc') {
+                        return (a['分数'] as number) - (b['分数'] as number)
+                    } else if (sortBy.value === 'points-desc') {
+                        return (b['分数'] as number) - (a['分数'] as number)
+                    }
+                } else {
+                    // 常规模式下的排序
+                    if (sortBy.value === 'points-asc') {
+                        return (a['总积分'] as number) - (b['总积分'] as number)
+                    } else if (sortBy.value === 'points-desc') {
+                        return (b['总积分'] as number) - (a['总积分'] as number)
+                    }
+                }
+                
+                if (sortBy.value === 'name-asc') {
                     return a['姓名'].localeCompare(b['姓名'], 'zh-CN')
                 } else if (sortBy.value === 'name-desc') {
                     return b['姓名'].localeCompare(a['姓名'], 'zh-CN')
@@ -161,14 +193,21 @@ const exportData = computed(() => {
             })
         }
 
-        return { 
-            rows, 
-            sheetName: '最终积分',
-            columns: [
+        const columns = filterItemId.value 
+            ? [
+                { prop: '姓名', label: '姓名' },
+                { prop: '分数', label: '分数' }
+            ]
+            : [
                 { prop: '姓名', label: '姓名' },
                 { prop: '总积分', label: '总积分' },
                 { prop: '可用积分', label: '可用积分' },
             ]
+
+        return { 
+            rows, 
+            sheetName: filterItemId.value ? '单项积分统计' : '最终积分',
+            columns
         }
     }
 })
@@ -277,7 +316,7 @@ function doExportExcel() {
                     <span>数据预览 ({{ previewRows.length }} 条)</span>
                 </div>
                 <div class="preview-table-wrapper">
-                    <el-table :data="previewRows" size="small" border stripe style="width: 100%" height="200">
+                    <el-table :data="previewRows" size="small" border stripe :style="{ width: '100%', height: '200px' }">
                         <el-table-column v-for="col in exportData.columns" :key="col.prop" :prop="col.prop" :label="col.label" />
                         <template #empty>
                             <div class="empty-preview">无数据</div>

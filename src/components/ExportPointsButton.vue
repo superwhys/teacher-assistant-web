@@ -37,7 +37,7 @@ const dateRange = ref<[Date, Date] | []>([])
 
 // 新增选项
 const sortBy = ref<'default' | 'points-asc' | 'points-desc' | 'name-asc' | 'name-desc'>('default')
-const filterItemId = ref<string | ''>('')
+const filterItemIds = ref<string[]>([])
 
 function openExportDialog() {
     if (!props.activeClassId) {
@@ -47,7 +47,7 @@ function openExportDialog() {
     // 重置
     dateRange.value = []
     sortBy.value = 'default'
-    filterItemId.value = ''
+    filterItemIds.value = []
     exportVisible.value = true
 }
 
@@ -81,8 +81,9 @@ const exportData = computed(() => {
         }
         
         // 应用积分项过滤
-        if (filterItemId.value) {
-            filtered = filtered.filter(a => a.itemId === filterItemId.value)
+        if (filterItemIds.value.length > 0) {
+            // 历史记录下，只要是选中的任意一个积分项即可
+            filtered = filtered.filter(a => a.itemId && filterItemIds.value.includes(a.itemId))
         }
         
         if (exportScope.value === 'group' && exportGroupId.value) {
@@ -126,18 +127,21 @@ const exportData = computed(() => {
         // 积分项过滤：
         // 1. 筛选出有过该积分项记录的学生
         // 2. 计算每个学生该积分项的分数总和
-        let itemScoreMap: Record<string, number> = {}
-        
-        if (filterItemId.value) {
+        let itemScoreMap: Record<string, Record<string, number>> = {} // student -> itemId -> score
+        let totalFilteredScoreMap: Record<string, number> = {} // student -> total score of filtered items
+
+        if (filterItemIds.value.length > 0) {
             const history = pointsStore.getHistoryOf(classId)
             const studentSet = new Set<string>()
             
             history.forEach(h => {
-                if (h.itemId === filterItemId.value) {
+                if (h.itemId && filterItemIds.value.includes(h.itemId)) {
                     // 累加分数
                     h.studentNames.forEach(n => {
                         studentSet.add(n)
-                        itemScoreMap[n] = (itemScoreMap[n] || 0) + h.delta
+                        if (!itemScoreMap[n]) itemScoreMap[n] = {}
+                        itemScoreMap[n][h.itemId!] = (itemScoreMap[n][h.itemId!] || 0) + h.delta
+                        totalFilteredScoreMap[n] = (totalFilteredScoreMap[n] || 0) + h.delta
                     })
                 }
             })
@@ -146,14 +150,53 @@ const exportData = computed(() => {
             names = names.filter(n => studentSet.has(n))
         }
 
+        // 准备表头列
+        const columns = [
+            { prop: '姓名', label: '姓名' }
+        ]
+        
+        if (filterItemIds.value.length > 0) {
+            // 添加选中的积分项列
+            filterItemIds.value.forEach(id => {
+                const item = allPointsItems.value.find(i => i.id === id)
+                if (item) {
+                    columns.push({ 
+                        prop: id, 
+                        label: `${item.name} ${item.sign === 'plus' ? '(加分)' : '(扣分)'}` 
+                    })
+                }
+            })
+            // 如果选了多个，可以加一个合计列
+            // if (filterItemIds.value.length > 1) {
+            //     columns.push({ prop: '合计', label: '合计' })
+            // }
+        } else {
+            columns.push(
+                { prop: '总积分', label: '总积分' },
+                { prop: '可用积分', label: '可用积分' }
+            )
+        }
+
         // 构建行数据
         let rows = names.map(n => {
-            // 如果有积分项过滤，则只显示"分数"列
-            if (filterItemId.value) {
-                return {
-                    '姓名': n,
-                    '分数': itemScoreMap[n] || 0
-                }
+            // 如果有积分项过滤
+            if (filterItemIds.value.length > 0) {
+                const row: any = { '姓名': n }
+                
+                // 填充每个选中积分项的分数
+                filterItemIds.value.forEach(id => {
+                    row[id] = itemScoreMap[n]?.[id] || 0
+                })
+                
+                // 填充合计
+                // if (filterItemIds.value.length > 1) {
+                //     row['合计'] = totalFilteredScoreMap[n] || 0
+                // }
+                
+                // 增加一个用于排序的隐藏字段
+                row._total = totalFilteredScoreMap[n] || 0
+                
+                return row
             }
             
             // 否则显示原来的总积分/可用积分
@@ -168,12 +211,17 @@ const exportData = computed(() => {
         // 排序
         if (sortBy.value !== 'default') {
             rows.sort((a, b) => {
-                if (filterItemId.value) {
+                if (filterItemIds.value.length > 0) {
                     // 积分项模式下的排序
+                    // 如果是单项，按该项分数排序
+                    // 如果是多项，按合计排序（虽然不显示合计列，但排序逻辑依然可以是合计）
+                    const firstId = filterItemIds.value[0] || ''
+                    const sortKey = filterItemIds.value.length > 1 ? '_total' : firstId
+                    
                     if (sortBy.value === 'points-asc') {
-                        return (a['分数'] as number) - (b['分数'] as number)
+                        return ((a[sortKey] as number) || 0) - ((b[sortKey] as number) || 0)
                     } else if (sortBy.value === 'points-desc') {
-                        return (b['分数'] as number) - (a['分数'] as number)
+                        return ((b[sortKey] as number) || 0) - ((a[sortKey] as number) || 0)
                     }
                 } else {
                     // 常规模式下的排序
@@ -193,20 +241,9 @@ const exportData = computed(() => {
             })
         }
 
-        const columns = filterItemId.value 
-            ? [
-                { prop: '姓名', label: '姓名' },
-                { prop: '分数', label: '分数' }
-            ]
-            : [
-                { prop: '姓名', label: '姓名' },
-                { prop: '总积分', label: '总积分' },
-                { prop: '可用积分', label: '可用积分' },
-            ]
-
         return { 
             rows, 
-            sheetName: filterItemId.value ? '单项积分统计' : '最终积分',
+            sheetName: filterItemIds.value.length > 0 ? '单项积分统计' : '最终积分',
             columns
         }
     }
@@ -232,9 +269,13 @@ function doExportExcel() {
     const typeSuffix = exportType.value === 'history' ? '积分历史' : '最终积分'
     
     let filterSuffix = ''
-    if (filterItemId.value) {
-        const item = allPointsItems.value.find(i => i.id === filterItemId.value)
-        if (item) filterSuffix = `_${item.name}`
+    if (filterItemIds.value.length > 0) {
+        if (filterItemIds.value.length === 1) {
+            const item = allPointsItems.value.find(i => i.id === filterItemIds.value[0])
+            if (item) filterSuffix = `_${item.name}`
+        } else {
+            filterSuffix = `_选定${filterItemIds.value.length}项`
+        }
     }
 
     const now = new Date()
@@ -291,7 +332,7 @@ function doExportExcel() {
                 </el-form-item>
                 
                 <el-form-item label="按积分项筛选" class="half-width">
-                    <el-select v-model="filterItemId" placeholder="全部积分项" clearable size="default">
+                    <el-select v-model="filterItemIds" placeholder="全部积分项" clearable multiple collapse-tags collapse-tags-tooltip size="default">
                         <el-option v-for="item in allPointsItems" :key="item.id" 
                             :label="item.name + (item.sign === 'plus' ? ' (加分)' : ' (扣分)')" 
                             :value="item.id" />

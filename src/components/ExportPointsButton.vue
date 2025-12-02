@@ -34,6 +34,10 @@ const exportType = ref<'history' | 'final'>('final')
 const exportScope = ref<'all' | 'group'>('all')
 const exportGroupId = ref<string | ''>('')
 const dateRange = ref<[Date, Date] | []>([])
+const defaultTime: [Date, Date] = [
+    new Date(2000, 1, 1, 0, 0, 0),
+    new Date(2000, 1, 1, 23, 59, 59),
+]
 
 // 新增选项
 const sortBy = ref<'default' | 'points-asc' | 'points-desc' | 'name-asc' | 'name-desc'>('default')
@@ -65,18 +69,17 @@ const exportData = computed(() => {
     const classId = props.activeClassId
     if (!classId) return { rows: [], sheetName: '', columns: [] as { prop: string, label: string }[] }
 
-    if (exportType.value === 'history') {
+        if (exportType.value === 'history') {
         const list = pointsStore.getHistoryOf(classId)
         let filtered = list
         
         // 应用时间范围过滤
         if (dateRange.value.length === 2) {
             const [startDate, endDate] = dateRange.value
-            const endOfDay = new Date(endDate)
-            endOfDay.setHours(23, 59, 59, 999)
+            const startTs = startDate.getTime()
+            const endTs = endDate.getTime()
             filtered = filtered.filter(a => {
-                const recordDate = new Date(a.at)
-                return recordDate >= startDate && recordDate <= endOfDay
+                return a.at >= startTs && a.at <= endTs
             })
         }
         
@@ -171,10 +174,14 @@ const exportData = computed(() => {
             //     columns.push({ prop: '合计', label: '合计' })
             // }
         } else {
-            columns.push(
-                { prop: '总积分', label: '总积分' },
-                { prop: '可用积分', label: '可用积分' }
-            )
+            if (dateRange.value.length === 2) {
+                columns.push({ prop: '时段积分', label: '时段积分' })
+            } else {
+                columns.push(
+                    { prop: '总积分', label: '总积分' },
+                    { prop: '可用积分', label: '可用积分' }
+                )
+            }
         }
 
         // 构建行数据
@@ -200,6 +207,28 @@ const exportData = computed(() => {
             }
             
             // 否则显示原来的总积分/可用积分
+            // 如果选择了时间范围，则显示该时间段内的总积分
+            if (dateRange.value.length === 2) {
+                const history = pointsStore.getHistoryOf(classId)
+                const [startDate, endDate] = dateRange.value
+                const startTs = startDate.getTime()
+                const endTs = endDate.getTime()
+                
+                const relevantHistory = history.filter(a => a.at >= startTs && a.at <= endTs)
+                
+                let total = 0
+                relevantHistory.forEach(h => {
+                    if (h.studentNames.includes(n)) {
+                        total += h.delta
+                    }
+                })
+                
+                return {
+                    '姓名': n,
+                    '时段积分': total,
+                }
+            }
+
             const p = points[n]
             return {
                 '姓名': n,
@@ -222,6 +251,13 @@ const exportData = computed(() => {
                         return ((a[sortKey] as number) || 0) - ((b[sortKey] as number) || 0)
                     } else if (sortBy.value === 'points-desc') {
                         return ((b[sortKey] as number) || 0) - ((a[sortKey] as number) || 0)
+                    }
+                } else if (dateRange.value.length === 2) {
+                    // 时段积分排序
+                    if (sortBy.value === 'points-asc') {
+                        return (a['时段积分'] as number) - (b['时段积分'] as number)
+                    } else if (sortBy.value === 'points-desc') {
+                        return (b['时段积分'] as number) - (a['时段积分'] as number)
                     }
                 } else {
                     // 常规模式下的排序
@@ -268,6 +304,13 @@ function doExportExcel() {
     const scopeSuffix = exportScope.value === 'group' ? `_${groupsOfActive.value.find(g => g.id === exportGroupId.value)?.name || '分组'}` : '_全部学生'
     const typeSuffix = exportType.value === 'history' ? '积分历史' : '最终积分'
     
+    let dateSuffix = ''
+    if (dateRange.value && dateRange.value.length === 2) {
+        const [start, end] = dateRange.value
+        const fmt = (d: Date) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`
+        dateSuffix = `_${fmt(start)}-${fmt(end)}`
+    }
+
     let filterSuffix = ''
     if (filterItemIds.value.length > 0) {
         if (filterItemIds.value.length === 1) {
@@ -281,7 +324,7 @@ function doExportExcel() {
     const now = new Date()
     const pad = (n: number) => String(n).padStart(2, '0')
     const ts = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`
-    const filename = `${cls}_${typeSuffix}${scopeSuffix}${filterSuffix}_${ts}.xlsx`
+    const filename = `${cls}_${typeSuffix}${scopeSuffix}${filterSuffix}${dateSuffix}_${ts}.xlsx`
     XLSX.writeFile(wb, filename)
     ElMessage.success('导出成功')
     exportVisible.value = false
@@ -340,13 +383,14 @@ function doExportExcel() {
                 </el-form-item>
             </div>
 
-            <el-form-item v-if="exportType === 'history'" label="时间范围" class="full-width">
+            <el-form-item label="时间范围 (可选)" class="full-width">
                 <el-date-picker
                     v-model="dateRange"
-                    type="daterange"
+                    type="datetimerange"
                     range-separator="至"
-                    start-placeholder="开始日期"
-                    end-placeholder="结束日期"
+                    start-placeholder="开始时间"
+                    end-placeholder="结束时间"
+                    :default-time="defaultTime"
                     size="default"
                     class="date-range-picker"
                 />

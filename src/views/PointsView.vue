@@ -5,12 +5,14 @@ import { useClassStore } from '@/stores/classStore'
 import { useStudentStore } from '@/stores/studentStore'
 import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import { usePointsStore } from '@/stores/pointsStore'
+import type { PointAction } from '@/stores/pointsStore'
 import type { PointsItem } from '@/types/pointsItem'
 import PointsItemSelectorDialog from '@/components/PointsItemSelectorDialog.vue'
 import PointsHeaderActions from '@/components/PointsHeaderActions.vue'
 import PointsRankingCard from '@/components/PointsRankingCard.vue'
 import PointsItemRankingCard from '@/components/PointsItemRankingCard.vue'
 import { pinyin } from 'pinyin-pro'
+import { getStartOfWeek, getStartOfMonth } from '@/utils/date'
 
 defineOptions({
     name: 'PointsView'
@@ -21,10 +23,12 @@ const studentStore = useStudentStore()
 const groupStore = useStudentGroupStore()
 const pointsStore = usePointsStore()
 
+// 榜单相关
 const isRankingCollapsed = ref(false)
 const isRankingAnimating = ref(false)
 const showRankingContent = ref(true)
 const activeRankingTab = ref('total')
+const rankingTimeRange = ref<'all' | 'weekly' | 'monthly'>('all')
 const windowWidth = ref(window.innerWidth)
 
 function handleResize() {
@@ -103,6 +107,42 @@ const totalPointsMap = computed(() => {
         }
     }
     return map
+})
+
+// 计算不同时间范围的积分Map
+const history = computed(() => pointsStore.getHistoryOf(activeClassId.value))
+
+function calculatePointsFromHistory(history: PointAction[], startTime: number) {
+    const map: Record<string, number> = {}
+    history.forEach(action => {
+        // 筛选时间且只统计 'points' 类型（排除 shop 消费）
+        if (action.at >= startTime && (action.type === 'points' || !action.type)) {
+             action.studentNames.forEach(name => {
+                if (!map[name]) map[name] = 0
+                map[name] += action.delta
+            })
+        }
+    })
+    return map
+}
+
+const rankingPointsMap = computed(() => {
+    const range = rankingTimeRange.value
+    if (range === 'weekly') {
+        const start = getStartOfWeek(new Date()).getTime()
+        return calculatePointsFromHistory(history.value, start)
+    } else if (range === 'monthly') {
+        const start = getStartOfMonth(new Date()).getTime()
+        return calculatePointsFromHistory(history.value, start)
+    } else {
+        // 总榜：使用 store 中的 total 数据（或者根据需求计算历史总和）
+        // store.total 是所有历史累积。
+        // 如果想要“总榜”显示当前所有累积积分，用 totalPointsMap 最准。
+        // 如果想按 history 算（可能与 total 有出入如果以前没有 history），
+        // 鉴于 pointsStore 逻辑是 total 字段为主，history 为辅。
+        // 但这里为了统一“增量”概念？通常总榜就是 Total Points。
+        return totalPointsMap.value
+    }
 })
 
 // 学生搜索
@@ -418,12 +458,24 @@ function scrollToLetter(letter: string) {
             <div class="ranking-column">
                 <Transition name="ranking-fade">
                     <div v-show="showRankingContent" class="ranking-container">
+                        <div class="ranking-filter">
+                            <el-radio-group v-model="rankingTimeRange" size="small">
+                                <el-radio-button label="all">全部</el-radio-button>
+                                <el-radio-button label="weekly">周榜</el-radio-button>
+                                <el-radio-button label="monthly">月榜</el-radio-button>
+                            </el-radio-group>
+                        </div>
                         <el-tabs v-model="activeRankingTab" class="ranking-tabs" stretch>
-                            <el-tab-pane label="总积分榜" name="total">
-                                <PointsRankingCard :students="studentsOfActive" :points-map="totalPointsMap" :max-display="10" />
+                            <el-tab-pane label="积分榜" name="total">
+                                <PointsRankingCard :students="studentsOfActive" :points-map="rankingPointsMap" :max-display="10" />
                             </el-tab-pane>
                             <el-tab-pane label="单项榜" name="item">
-                                <PointsItemRankingCard :students="studentsOfActive" :class-id="activeClassId" :max-display="10" />
+                                <PointsItemRankingCard 
+                                    :students="studentsOfActive" 
+                                    :class-id="activeClassId" 
+                                    :max-display="10" 
+                                    :time-range="rankingTimeRange"
+                                />
                             </el-tab-pane>
                         </el-tabs>
                     </div>
@@ -703,6 +755,13 @@ function scrollToLetter(letter: string) {
     height: 100%;
     display: flex;
     flex-direction: column;
+    gap: 8px;
+}
+
+.ranking-filter {
+    display: flex;
+    justify-content: center;
+    padding: 0 4px;
 }
 
 .ranking-tabs {

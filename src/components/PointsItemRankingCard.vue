@@ -4,14 +4,18 @@ import { usePointsItemStore } from '@/stores/pointsItemStore'
 import { usePointsStore } from '@/stores/pointsStore'
 import type { Student } from '@/types/student'
 
+import { getStartOfWeek, getStartOfMonth } from '@/utils/date'
+
 interface Props {
     students: Student[]
     classId: string | null
     maxDisplay?: number
+    timeRange?: 'all' | 'weekly' | 'monthly'
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    maxDisplay: 10
+    maxDisplay: 10,
+    timeRange: 'all'
 })
 
 const pointsItemStore = usePointsItemStore()
@@ -38,9 +42,17 @@ const rankedStudents = computed(() => {
         studentPointsMap[s.studentName] = 0
     })
 
+    // 计算时间范围起始点
+    let startTime = 0
+    if (props.timeRange === 'weekly') {
+        startTime = getStartOfWeek(new Date()).getTime()
+    } else if (props.timeRange === 'monthly') {
+        startTime = getStartOfMonth(new Date()).getTime()
+    }
+
     // 遍历历史记录累加分数
     history.forEach(action => {
-        if (action.itemId === selectedItemId.value) {
+        if (action.itemId === selectedItemId.value && action.at >= startTime) {
             const score = action.delta
             action.studentNames.forEach(name => {
                 if (studentPointsMap[name] !== undefined) {

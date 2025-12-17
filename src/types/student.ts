@@ -8,13 +8,13 @@ export type Student = {
 }
 
 /**
- * 后端接口性别枚举（对应 swagger: class.Gender）
+ * 后端接口性别枚举
  * 0: unknown, 1: male, 2: female
  */
 export type ApiGender = 0 | 1 | 2
 
 /**
- * 后端接口返回的学生结构（对应 swagger: dto.Student）
+ * 后端接口返回的学生结构
  */
 export type StudentDTO = {
     class_id?: number
@@ -25,7 +25,7 @@ export type StudentDTO = {
 }
 
 /**
- * 创建学生请求体（对应 swagger: dto.CreateStudentReq）
+ * 创建学生请求体
  */
 export type CreateStudentReq = {
     class_id?: number
@@ -34,7 +34,7 @@ export type CreateStudentReq = {
 }
 
 /**
- * 更新学生请求体（对应 swagger: dto.UpdateStudentReq）
+ * 更新学生请求体
  */
 export type UpdateStudentReq = {
     gender?: ApiGender
@@ -43,14 +43,14 @@ export type UpdateStudentReq = {
 }
 
 /**
- * 学生列表响应 data（对应 swagger: dto.ListStudentsResp）
+ * 学生列表响应 data
  */
 export type ListStudentsResp = {
     students?: StudentDTO[]
 }
 
 /**
- * 创建学生组请求体（对应 swagger: dto.CreateStudentGroupReq）
+ * 创建学生组请求体
  */
 export type CreateStudentGroupReq = {
     class_id: number
@@ -58,7 +58,7 @@ export type CreateStudentGroupReq = {
 }
 
 /**
- * 学生组结构（对应 swagger: dto.StudentGroup）
+ * 学生组结构
  */
 export type StudentGroupDTO = {
     class_id?: number
@@ -69,14 +69,14 @@ export type StudentGroupDTO = {
 }
 
 /**
- * 学生组列表响应 data（对应 swagger: dto.ListStudentGroupsResp）
+ * 学生组列表响应 data
  */
 export type ListStudentGroupsResp = {
     groups?: StudentGroupDTO[]
 }
 
 /**
- * 获取学生组信息响应 data（对应 swagger: dto.StudentGroupInfoResp）
+ * 获取学生组信息响应 data
  */
 export type StudentGroupInfoResp = {
     group?: StudentGroupDTO
@@ -84,7 +84,7 @@ export type StudentGroupInfoResp = {
 }
 
 /**
- * 将多个学生加入某个组请求体（对应 swagger: dto.AddStudentsToGroupReq）
+ * 将多个学生加入某个组请求体
  */
 export type AddStudentsToGroupReq = {
     group_id: number
@@ -92,7 +92,7 @@ export type AddStudentsToGroupReq = {
 }
 
 /**
- * 将多个学生移除某个组请求体（对应 swagger: dto.RemoveStudentsFromGroupReq）
+ * 将多个学生移除某个组请求体
  */
 export type RemoveStudentsFromGroupReq = {
     group_id: number

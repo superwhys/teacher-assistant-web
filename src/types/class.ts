@@ -8,7 +8,7 @@ export type ClassInfo = {
 }
 
 /**
- * 后端接口返回的班级结构（对应 swagger: dto.Class）
+ * 后端接口返回的班级结构
  */
 export type ClassDTO = {
     id?: number
@@ -17,14 +17,14 @@ export type ClassDTO = {
 }
 
 /**
- * 创建班级请求体（对应 swagger: dto.CreateClassReq）
+ * 创建班级请求体
  */
 export type CreateClassReq = {
     name?: string
 }
 
 /**
- * 更新班级请求体（对应 swagger: dto.UpdateClassReq）
+ * 更新班级请求体
  */
 export type UpdateClassReq = {
     id?: number
@@ -32,7 +32,7 @@ export type UpdateClassReq = {
 }
 
 /**
- * 班级列表响应 data（对应 swagger: dto.ListClassesResp）
+ * 班级列表响应 data
  */
 export type ListClassesResp = {
     classes?: ClassDTO[]

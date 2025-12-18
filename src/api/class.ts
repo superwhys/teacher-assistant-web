@@ -10,9 +10,9 @@ export const classApi = {
         return get<ListClassesResp>('/class/list')
     },
     update(classId: number, data: UpdateClassReq): Promise<ApiResponse<null>> {
-        return put<null>(`/class/update/${classId}`, data)
+        return put<null>(`/class/${classId}`, data)
     },
     delete(classId: number): Promise<ApiResponse<null>> {
-        return del<null>(`/class/delete/${classId}`)
+        return del<null>(`/class/${classId}`)
     },
 }

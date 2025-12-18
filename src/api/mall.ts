@@ -15,10 +15,10 @@ export const mallApi = {
         return post<null>('/mall/prizes/create', data)
     },
     deletePrize(prizeId: number): Promise<ApiResponse<null>> {
-        return del<null>(`/mall/prizes/delete/${prizeId}`)
+        return del<null>(`/mall/prizes/${prizeId}`)
     },
     updatePrize(prizeId: number, data: UpdatePrizeReq): Promise<ApiResponse<null>> {
-        return put<null>(`/mall/prizes/update/${prizeId}`, data)
+        return put<null>(`/mall/prizes/${prizeId}`, data)
     },
     listPrizes(): Promise<ApiResponse<PaginatedPrizeResp>> {
         return get<PaginatedPrizeResp>('/mall/prizes/list')

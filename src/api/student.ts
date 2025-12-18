@@ -26,7 +26,7 @@ export const studentApi = {
         return del<null>(`/student/${studentId}`)
     },
     update(studentId: number, data: UpdateStudentReq): Promise<ApiResponse<null>> {
-        return put<null>(`/student/update/${studentId}`, data)
+        return put<null>(`/student/${studentId}`, data)
     },
 
     list(query: ListStudentsQuery): Promise<ApiResponse<ListStudentsResp>> {

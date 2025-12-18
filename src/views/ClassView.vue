@@ -2,9 +2,6 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
-import StudentStatsDialog from '@/components/StudentStatsDialog.vue'
-import StudentReportCard from '@/components/StudentReportCard.vue'
-
 import AddStudentDialog from '@/components/class/AddStudentDialog.vue'
 import ClassStudentList, { type UiStudent, type UiGender } from '@/components/class/ClassStudentList.vue'
 import ClassBottomActions from '@/components/class/ClassBottomActions.vue'
@@ -12,7 +9,7 @@ import GroupManageDialog, { type UiGroup } from '@/components/class/GroupManageD
 import GroupImportDialog from '@/components/class/GroupImportDialog.vue'
 import EditStudentDialog from '@/components/class/EditStudentDialog.vue'
 
-import type { ApiGender, CreateStudentReq, StudentDTO, StudentGroupDTO, StudentsSortOption, Student } from '@/types/student'
+import type { ApiGender, CreateStudentReq, StudentDTO, StudentGroupDTO, StudentsSortOption } from '@/types/student'
 import type { ClassDTO } from '@/types/class'
 import { classManager } from '@/managers/class'
 import { studentManager } from '@/managers/student'
@@ -106,16 +103,9 @@ const filteredStudents = computed<UiStudent[]>(() => {
         sorted.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
     } else if (sort === 'name-desc') {
         sorted.sort((a, b) => b.name.localeCompare(a.name, 'zh-CN'))
-    } else if (sort === 'points-desc' || sort === 'points-asc') {
-        // TODO: 后续接入后端积分接口后，在此处按积分排序
     }
     return sorted
 })
-
-function getStudentPoints(_student: UiStudent): number | null {
-    // TODO: 后续接入后端积分接口后，这里返回该学生的总积分
-    return null
-}
 
 async function loadClasses() {
     try {
@@ -160,27 +150,6 @@ const groupImportVisible = ref(false)
 const editStudentVisible = ref(false)
 
 const editingStudent = ref<UiStudent | null>(null)
-
-const statsDialogVisible = ref(false)
-const currentStatsStudentName = ref('')
-
-const reportDialogVisible = ref(false)
-const reportStudent = ref<Student | null>(null)
-
-function openStats(student: UiStudent) {
-    if (!activeClassId.value) return
-    currentStatsStudentName.value = student.name
-    statsDialogVisible.value = true
-}
-
-function openReport(student: UiStudent) {
-    if (!activeClassId.value) return
-    reportStudent.value = {
-        studentName: student.name,
-        gender: student.gender === 'female' ? 'female' : 'male'
-    }
-    reportDialogVisible.value = true
-}
 
 function openEdit(student: UiStudent) {
     editingStudent.value = student
@@ -334,10 +303,7 @@ async function handleConfirmGroupImport(payload: { groups: Array<{ groupName: st
                 :students="filteredStudents"
                 :layout-mode="layoutMode"
                 :loading="loading"
-                :get-student-points="getStudentPoints"
                 @update:layout-mode="layoutMode = $event"
-                @view-stats="openStats"
-                @view-report="openReport"
                 @edit="openEdit"
                 @remove="removeStudent"
             />
@@ -385,19 +351,6 @@ async function handleConfirmGroupImport(payload: { groups: Array<{ groupName: st
     />
 
     <EditStudentDialog v-model="editStudentVisible" :student="editingStudent" @save="handleSaveStudentEdit" />
-
-    <StudentStatsDialog
-        v-model="statsDialogVisible"
-        :class-id="activeClassId ? String(activeClassId) : null"
-        :student-name="currentStatsStudentName"
-    />
-
-    <StudentReportCard
-        v-model:visible="reportDialogVisible"
-        :class-id="activeClassId ? String(activeClassId) : ''"
-        :class-name="activeClass?.name || ''"
-        :student="reportStudent"
-    />
 </template>
 
 <style scoped>

@@ -16,15 +16,12 @@ const props = defineProps<{
     students: UiStudent[]
     layoutMode: LayoutMode
     loading?: boolean
-    getStudentPoints?: (student: UiStudent) => number | null | undefined
 }>()
 
 const emit = defineEmits<{
     (e: 'update:layoutMode', mode: LayoutMode): void
     (e: 'edit', student: UiStudent): void
     (e: 'remove', student: UiStudent): void
-    (e: 'view-stats', student: UiStudent): void
-    (e: 'view-report', student: UiStudent): void
 }>()
 
 const totalCount = computed(() => props.students.length)
@@ -100,12 +97,6 @@ function scrollToLetter(letter: string) {
     scrollContainer.scrollTo({ top: scrollTop, behavior: 'smooth' })
 }
 
-function getPointsText(student: UiStudent): string | null {
-    if (!props.getStudentPoints) return null
-    const val = props.getStudentPoints(student)
-    if (val === null || val === undefined) return null
-    return `${val} 分`
-}
 </script>
 
 <template>
@@ -181,19 +172,10 @@ function getPointsText(student: UiStudent): string | null {
                                     <div class="info">
                                         <div class="name">
                                             {{ s.name }}
-                                            <span v-if="getPointsText(s)" class="points-badge">
-                                                {{ getPointsText(s) }}
-                                            </span>
                                         </div>
                                     </div>
 
                                     <div class="ops">
-                                        <el-button class="op" type="primary" plain size="small" title="积分统计" @click="emit('view-stats', s)">
-                                            <i-ep-trend-charts />
-                                        </el-button>
-                                        <el-button class="op" type="primary" plain size="small" title="生成报表" @click="emit('view-report', s)">
-                                            <i-ep-picture />
-                                        </el-button>
                                         <el-button class="op" type="default" plain size="small" title="编辑" @click="emit('edit', s)">
                                             <i-ep-edit />
                                         </el-button>
@@ -209,9 +191,14 @@ function getPointsText(student: UiStudent): string | null {
                     <template v-else>
                         <div class="student-grid">
                             <div v-for="s in students" :key="s.id" class="student-card">
-                                <el-button text class="delete-btn" @click="emit('remove', s)">
-                                    <i-ep-delete />
-                                </el-button>
+                                <div class="card-overlay-actions">
+                                    <el-button text class="overlay-btn" title="编辑" @click.stop="emit('edit', s)">
+                                        <i-ep-edit />
+                                    </el-button>
+                                    <el-button text class="overlay-btn danger" title="删除" @click.stop="emit('remove', s)">
+                                        <i-ep-delete />
+                                    </el-button>
+                                </div>
 
                                 <div :class="['student-avatar', s.gender]">
                                     <i-ep-male v-if="s.gender === 'male'" />
@@ -221,18 +208,6 @@ function getPointsText(student: UiStudent): string | null {
                                 <div class="student-info">
                                     <div class="student-name">{{ s.name }}</div>
                                 </div>
-
-                                <el-space size="small" class="card-ops">
-                                    <el-button type="primary" plain size="small" @click="emit('view-stats', s)">
-                                        <i-ep-trend-charts />
-                                    </el-button>
-                                    <el-button type="primary" plain size="small" @click="emit('view-report', s)">
-                                        <i-ep-picture />
-                                    </el-button>
-                                    <el-button plain size="small" @click="emit('edit', s)">
-                                        <i-ep-edit />
-                                    </el-button>
-                                </el-space>
                             </div>
                         </div>
                     </template>
@@ -460,15 +435,6 @@ function getPointsText(student: UiStudent): string | null {
     gap: 8px;
 }
 
-.points-badge {
-    font-size: 13px;
-    color: #409eff;
-    background: #ecf5ff;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-weight: 600;
-}
-
 .ops {
     display: flex;
     gap: 12px;
@@ -490,31 +456,83 @@ function getPointsText(student: UiStudent): string | null {
 
 .student-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 18px;
 }
 
 .student-card {
     position: relative;
-    padding: 16px 12px;
-    border: 1px solid #eee;
-    border-radius: 14px;
-    background: #ffffff;
+    padding: 22px 16px;
+    border: 1px solid #e8e8e8;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #ffffff, #fbfbfb);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 14px;
+    min-height: 170px;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.student-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(64, 158, 255, 0.28);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+}
+
+.card-overlay-actions {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.88);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+    z-index: 2;
+    backdrop-filter: blur(2px);
+}
+
+.student-card:hover .card-overlay-actions,
+.student-card:focus-within .card-overlay-actions,
+.student-card:active .card-overlay-actions {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.overlay-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.04);
+    color: #606266;
+    font-size: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.overlay-btn:hover {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.overlay-btn.danger {
+    color: #e24a4a;
 }
 
 .student-avatar {
-    width: 34px;
-    height: 34px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #ffffff;
-    font-size: 22px;
+    font-size: 26px;
     box-shadow: var(--shadow-light);
 }
 
@@ -538,37 +556,13 @@ function getPointsText(student: UiStudent): string | null {
 }
 
 .student-name {
-    font-size: 18px;
-    font-weight: 600;
+    font-size: 20px;
+    font-weight: 700;
     text-align: center;
     width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.card-ops {
-    margin-top: 2px;
-}
-
-.delete-btn {
-    color: #999;
-    font-size: 18px;
-    position: absolute;
-    right: 8px;
-    top: 8px;
-    padding: 0;
-    width: 28px;
-    height: 28px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    background: transparent;
-}
-
-.delete-btn:hover {
-    background: rgba(0, 0, 0, 0.06);
 }
 
 .empty {
@@ -634,8 +628,8 @@ function getPointsText(student: UiStudent): string | null {
     }
 
     .student-grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 12px;
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+        gap: 14px;
     }
 }
 
@@ -653,8 +647,8 @@ function getPointsText(student: UiStudent): string | null {
     }
 
     .student-grid {
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
     }
 
     .student-row.list-mode {

@@ -60,18 +60,6 @@ const emit = defineEmits<{
                         <span>姓名 Z-A</span>
                     </div>
                 </el-option>
-                <el-option label="积分从高到低" value="points-desc">
-                    <div class="sort-option">
-                        <i-ep-bottom />
-                        <span>积分从高到低</span>
-                    </div>
-                </el-option>
-                <el-option label="积分从低到高" value="points-asc">
-                    <div class="sort-option">
-                        <i-ep-top />
-                        <span>积分从低到高</span>
-                    </div>
-                </el-option>
             </el-select>
 
             <el-input

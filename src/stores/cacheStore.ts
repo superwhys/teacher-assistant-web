@@ -4,6 +4,7 @@ import type { StudentsSortOption } from '@/types/student'
 
 export const useCacheStore = defineStore('cache', () => {
     let activeClassId = ref<number | null>(null)
+    let activeClassName = ref<string | null>(null)
     let studentsSort = ref<StudentsSortOption | null>(null)
     let classLayout = ref<'card' | 'list' | null>(null)
 
@@ -18,6 +19,18 @@ export const useCacheStore = defineStore('cache', () => {
 
     function clearActiveClassId() {
         activeClassId.value = null
+    }
+
+    function setActiveClassName(name: string) {
+        activeClassName.value = name
+    }
+
+    function getActiveClassName() {
+        return activeClassName.value
+    }
+
+    function clearActiveClassName() {
+        activeClassName.value = null
     }
 
     function setStudentsSort(sort: StudentsSortOption) {
@@ -49,6 +62,10 @@ export const useCacheStore = defineStore('cache', () => {
         setActiveClassId,
         getActiveClassId,
         clearActiveClassId,
+        activeClassName,
+        setActiveClassName,
+        getActiveClassName,
+        clearActiveClassName,
         studentsSort,
         setStudentsSort,
         getStudentsSort,

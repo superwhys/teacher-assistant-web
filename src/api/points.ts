@@ -4,6 +4,10 @@ import type {
     ApplyPointsReq,
     CreateRuleGroupReq,
     CreateRuleReq,
+    GetClassRankingQuery,
+    GetClassRankingResp,
+    GetRuleRankingQuery,
+    GetRuleRankingResp,
     ListApplyRecordsQuery,
     ListRuleGroupsResp,
     PaginatedRecordResp,
@@ -44,5 +48,13 @@ export const pointsApi = {
     },
     listGroups(): Promise<ApiResponse<ListRuleGroupsResp>> {
         return get<ListRuleGroupsResp>('/points/rule/group/list')
+    },
+
+    // 排行榜（后端待补齐）
+    getClassRanking(query: GetClassRankingQuery): Promise<ApiResponse<GetClassRankingResp>> {
+        return get<GetClassRankingResp>('/points/ranking/class', query)
+    },
+    getRuleRanking(query: GetRuleRankingQuery): Promise<ApiResponse<GetRuleRankingResp>> {
+        return get<GetRuleRankingResp>('/points/ranking/rule', query)
     },
 }

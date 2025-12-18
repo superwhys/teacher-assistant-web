@@ -7,12 +7,12 @@ export const studentManager = {
         await studentApi.delete(studentId)
     },
     // create 创建学生
-    async create(classId: number,name: string, gender: ApiGender): Promise<void> {
-        await studentApi.create({ 
-            class_id: classId, 
-            name: name, 
+    async create(classId: number, name: string, gender: ApiGender): Promise<void> {
+        await studentApi.create({
+            class_id: classId,
+            name: name,
             gender: gender,
-         })
+        })
     },
     // update 更新学生
     async update(studentId: number, name: string, gender: ApiGender): Promise<void> {

@@ -92,3 +92,35 @@ export type RuleGroup = {
 export type ListRuleGroupsResp = {
     groups?: RuleGroup[]
 }
+
+/**
+ * 排行榜时间范围
+ */
+export type RankingTimeRange = 'all' | 'weekly' | 'monthly'
+
+export type StudentRankingItem = {
+    student_id?: number
+    score?: number
+    rank?: number
+}
+
+export type GetClassRankingQuery = {
+    class_id: number
+    time_range?: RankingTimeRange
+    limit?: number
+}
+
+export type GetClassRankingResp = {
+    items?: StudentRankingItem[]
+}
+
+export type GetRuleRankingQuery = {
+    class_id: number
+    rule_id: number
+    time_range?: RankingTimeRange
+    limit?: number
+}
+
+export type GetRuleRankingResp = {
+    items?: StudentRankingItem[]
+}

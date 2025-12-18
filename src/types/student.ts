@@ -9,10 +9,13 @@ export type ApiGender = 0 | 1 | 2
  */
 export type StudentDTO = {
     class_id?: number
+    // 预留：后端可直接返回积分字段，供积分页一次性渲染（后续由后端补齐）
+    available_points?: number
     gender?: ApiGender
     group_id?: number
     id?: number
     name?: string
+    total_points?: number
 }
 
 /**

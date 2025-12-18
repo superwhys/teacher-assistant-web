@@ -1,52 +1,146 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRoute } from 'vue-router'
-import { useClassStore } from '@/stores/classStore'
-import { useStudentGroupStore } from '@/stores/studentGroupStore'
-import { usePointsStore } from '@/stores/pointsStore'
 import { formatChineseDateTime } from '@/utils/date'
+
+import { useCacheStore } from '@/stores/cacheStore'
+import { classManager } from '@/managers/class'
+import { studentManager } from '@/managers/student'
+import { pointsManager } from '@/managers/points'
+
+import type { ClassDTO } from '@/types/class'
+import type { StudentDTO, StudentGroupDTO } from '@/types/student'
+import type { Record as PointsApplyRecord, RuleGroup } from '@/types/points'
 
 defineOptions({
     name: 'PointsHistoryView'
 })
 
-const classStore = useClassStore()
-const groupStore = useStudentGroupStore()
-const pointsStore = usePointsStore()
 const route = useRoute()
+const cacheStore = useCacheStore()
 
-const activeClass = computed(() => classStore.activeClass)
-const activeClassId = computed(() => classStore.activeClassId)
+const classes = ref<ClassDTO[]>([])
+const students = ref<StudentDTO[]>([])
+const groups = ref<StudentGroupDTO[]>([])
+const ruleGroups = ref<RuleGroup[]>([])
+const records = ref<PointsApplyRecord[]>([])
 
-const groupsOfActive = computed(() => {
-    const id = activeClassId.value
-    return id ? groupStore.listByClassId(id) : []
+const activeClassId = computed<number | null>(() => cacheStore.getActiveClassId())
+
+const activeClass = computed(() => {
+    if (!activeClassId.value) return null
+    return classes.value.find(c => c.id === activeClassId.value) ?? null
 })
 
-const selectedGroupId = ref<string | ''>('')
+const groupsOfActive = computed(() => {
+    return (groups.value ?? [])
+        .map(g => ({
+            id: g.id ?? 0,
+            name: g.name ?? '',
+            memberIds: (g.students ?? []).map(s => s.id ?? 0).filter(id => id > 0),
+        }))
+        .filter(g => g.id > 0 && !!g.name)
+})
+
+const selectedGroupId = ref<number>(0)
 watch(activeClassId, () => {
-    selectedGroupId.value = ''
+    selectedGroupId.value = 0
 })
 
 const historyKeyword = ref('')
 const historySign = ref<'all' | 'plus' | 'minus'>('all')
-const historyOfActive = computed(() => pointsStore.getHistoryOf(activeClassId.value))
-const historyDesc = computed(() => [...historyOfActive.value].reverse())
+
+function toNumber(v: unknown, fallback = 0): number {
+    const n = typeof v === 'number' ? v : Number(v)
+    return Number.isFinite(n) ? n : fallback
+}
+
+const studentIdNameMap = computed<Record<number, string>>(() => {
+    const map: Record<number, string> = {}
+    for (const s of students.value ?? []) {
+        const id = s.id ?? 0
+        const name = s.name ?? ''
+        if (id > 0 && name) map[id] = name
+    }
+    return map
+})
+
+const groupIdToMemberSet = computed(() => {
+    const map = new Map<number, Set<number>>()
+    for (const g of groupsOfActive.value) {
+        map.set(g.id, new Set(g.memberIds))
+    }
+    return map
+})
+
+const ruleMetaMap = computed(() => {
+    const map = new Map<number, { name: string; sign: 'plus' | 'minus'; points: number }>()
+    for (const g of ruleGroups.value ?? []) {
+        for (const r of g.rules ?? []) {
+            const id = toNumber(r.id, 0)
+            const name = (r.name ?? '').trim()
+            if (!id || !name) continue
+            const points = toNumber(r.points, 0)
+            const t = toNumber(r.points_type, 0)
+            const sign = t === 2 ? 'minus' : (t === 1 ? 'plus' : (points < 0 ? 'minus' : 'plus'))
+            map.set(id, { name, sign, points })
+        }
+    }
+    return map
+})
+
+function inferDelta(rec: PointsApplyRecord): number {
+    const amount = toNumber(rec.amount, 0)
+    if (amount !== 0 && amount !== Math.abs(amount)) return amount
+    const meta = ruleMetaMap.value.get(toNumber(rec.rule_id, 0)) ?? null
+    if (!meta) return amount
+    const base = Math.abs(amount || meta.points || 0)
+    return meta.sign === 'minus' ? -base : base
+}
+
+function getRecordTs(r: PointsApplyRecord): number {
+    const raw = (r as any)?.created_at ?? (r as any)?.createdAt ?? (r as any)?.at ?? (r as any)?.time ?? (r as any)?.timestamp
+    if (!raw) return 0
+    if (typeof raw === 'number') return raw
+    const t = Date.parse(String(raw))
+    return Number.isFinite(t) ? t : 0
+}
+
+const historyDesc = computed(() => {
+    const list = [...(records.value ?? [])]
+    list.sort((a, b) => {
+        const at = getRecordTs(a) || toNumber(a.id, 0)
+        const bt = getRecordTs(b) || toNumber(b.id, 0)
+        return bt - at
+    })
+    return list
+})
+
 const filteredHistory = computed(() => {
-    const keyword = historyKeyword.value.trim().toLowerCase()
-    const gid = selectedGroupId.value
+    const kw = historyKeyword.value.trim().toLowerCase()
     let list = historyDesc.value
-    if (gid) {
-        const g = groupsOfActive.value.find(x => x.id === gid)
-        const nameSet = new Set(g?.members ?? [])
-        list = list.filter(a => a.studentNames.some(n => nameSet.has(n)))
+
+    if (selectedGroupId.value > 0) {
+        const set = groupIdToMemberSet.value.get(selectedGroupId.value)
+        if (set) {
+            list = list.filter(r => set.has(toNumber(r.student_id, 0)))
+        }
     }
+
     if (historySign.value !== 'all') {
-        list = list.filter(a => historySign.value === 'plus' ? a.delta > 0 : a.delta < 0)
+        list = list.filter(r => {
+            const delta = inferDelta(r)
+            return historySign.value === 'plus' ? delta > 0 : delta < 0
+        })
     }
-    if (!keyword) return list
-    return list.filter(a => a.studentNames.some(n => n.toLowerCase().includes(keyword)))
+
+    if (!kw) return list
+    return list.filter(r => {
+        const sid = toNumber(r.student_id, 0)
+        const name = studentIdNameMap.value[sid] ?? ''
+        return name.toLowerCase().includes(kw)
+    })
 })
 
 watch(() => route.query.q, (q) => {
@@ -54,29 +148,59 @@ watch(() => route.query.q, (q) => {
 }, { immediate: true })
 
 function clearHistory() {
-    if (!activeClassId.value) return
-    ElMessageBox.confirm('确定清空该班级的所有积分记录吗？', '清空确认', { type: 'warning' })
-        .then(() => {
-            pointsStore.clearHistory(activeClassId.value)
-            ElMessage.success('已清空积分记录')
-        })
-        .catch(() => { })
+    ElMessage.info('后端暂不支持清空积分记录')
 }
 
-function undoAction(actionId: string) {
+async function undoAction(actionId: number) {
     if (!activeClassId.value) return
-    ElMessageBox.confirm('确定撤回该条积分记录吗？', '撤回确认', { type: 'warning' })
-        .then(() => {
-            const action = pointsStore.undoById(activeClassId.value, actionId)
-            if (action) {
-                const target = action.studentNames.length > 3
-                    ? `${action.studentNames.slice(0, 3).join('、')} 等${action.studentNames.length}人`
-                    : action.studentNames.join('、')
-                ElMessage.success(`已撤回对「${target}」${action.delta > 0 ? '加' : '减'}${Math.abs(action.delta)} 分${action.itemName ? `（${action.itemName}）` : ''}`)
-            }
-        })
-        .catch(() => { })
+    try {
+        await ElMessageBox.confirm('确定撤回该条积分记录吗？', '撤回确认', { type: 'warning' })
+        await pointsManager.undoApply(actionId)
+        ElMessage.success('已撤回')
+        await refresh()
+    } catch (err) {
+        if (err) ElMessage.error('撤回失败')
+    }
 }
+
+async function loadClasses() {
+    try {
+        classes.value = await classManager.list()
+    } catch (err) {
+        console.error(err)
+    }
+}
+
+async function refresh() {
+    if (!activeClassId.value) {
+        students.value = []
+        groups.value = []
+        ruleGroups.value = []
+        records.value = []
+        return
+    }
+
+    try {
+        const clsId = activeClassId.value
+        const [stu, grp, rg, rec] = await Promise.all([
+            studentManager.list(clsId),
+            studentManager.listGroups(clsId),
+            pointsManager.listRuleGroups(),
+            pointsManager.listAllApplyRecordsByClass(clsId),
+        ])
+        students.value = stu
+        groups.value = grp
+        ruleGroups.value = rg
+        records.value = rec
+    } catch (err) {
+        console.error(err)
+    }
+}
+
+onMounted(async () => {
+    await loadClasses()
+    await refresh()
+})
 </script>
 
 <template>
@@ -98,8 +222,8 @@ function undoAction(actionId: string) {
                         <div class="row-actions">
                             <el-select v-model="selectedGroupId" placeholder="全部学生" class="group-filter"
                                 :disabled="!activeClassId" clearable>
-                                <el-option label="全部学生" value="" />
-                                <el-option v-for="g in groupsOfActive" :key="g.id" :label="`${g.name}（${g.members.length}）`"
+                                <el-option label="全部学生" :value="0" />
+                                <el-option v-for="g in groupsOfActive" :key="g.id" :label="`${g.name}（${g.memberIds.length}）`"
                                     :value="g.id" />
                             </el-select>
                             <el-select v-model="historySign" placeholder="全部类型" class="history-sign-filter" :disabled="!activeClassId">
@@ -117,7 +241,7 @@ function undoAction(actionId: string) {
                                     <i-ep-search />
                                 </template>
                             </el-input>
-                            <el-button type="danger" plain :disabled="!activeClassId || historyOfActive.length === 0" @click="clearHistory">
+                            <el-button type="danger" plain :disabled="true" @click="clearHistory">
                                 <i-ep-delete /> 清空记录
                             </el-button>
                         </div>
@@ -125,31 +249,36 @@ function undoAction(actionId: string) {
                 </template>
 
                 <div v-if="activeClass">
-                    <div v-if="historyOfActive.length > 0">
+                    <div v-if="records.length > 0">
                         <el-table :data="filteredHistory" border size="large" height="60vh">
                             <el-table-column type="index" label="#" width="60" />
                             <el-table-column label="时间" width="180" align="center">
                                 <template #default="{ row }">
-                                    {{ formatChineseDateTime(new Date(row.at)) }}
+                                    <span v-if="getRecordTs(row)">{{ formatChineseDateTime(new Date(getRecordTs(row))) }}</span>
+                                    <span v-else>-</span>
                                 </template>
                             </el-table-column>
                             <el-table-column label="积分项" min-width="220">
                                 <template #default="{ row }">
-                                    <span>{{ row.itemName || '未知' }}</span>
-                                    <span v-if="row.itemValue" :class="['badge', row.itemSign === 'plus' ? 'plus' : 'minus']" style="margin-left:8px;">
-                                        {{ row.itemSign === 'plus' ? '+' : '-' }}{{ row.itemValue }}
+                                    <span>{{ ruleMetaMap.get(row.rule_id)?.name || row.rule_desc || '未知' }}</span>
+                                    <span
+                                        v-if="ruleMetaMap.get(row.rule_id)"
+                                        :class="['badge', ruleMetaMap.get(row.rule_id)?.sign === 'plus' ? 'plus' : 'minus']"
+                                        style="margin-left:8px;"
+                                    >
+                                        {{ ruleMetaMap.get(row.rule_id)?.sign === 'plus' ? '+' : '-' }}{{ Math.abs(ruleMetaMap.get(row.rule_id)?.points || 0) }}
                                     </span>
                                 </template>
                             </el-table-column>
                             <el-table-column label="学生" min-width="260">
                                 <template #default="{ row }">
-                                    {{ row.studentNames.join('、') }}
+                                    {{ studentIdNameMap[row.student_id] || row.student_id || '-' }}
                                 </template>
                             </el-table-column>
                             <el-table-column label="分值" width="120" align="center">
                                 <template #default="{ row }">
-                                    <span :class="['badge', row.delta > 0 ? 'plus' : 'minus']">
-                                        {{ row.delta > 0 ? '+' : '-' }}{{ Math.abs(row.delta) }}
+                                    <span :class="['badge', inferDelta(row) > 0 ? 'plus' : 'minus']">
+                                        {{ inferDelta(row) > 0 ? '+' : '-' }}{{ Math.abs(inferDelta(row)) }}
                                     </span>
                                 </template>
                             </el-table-column>

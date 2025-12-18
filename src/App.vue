@@ -15,6 +15,7 @@ import { importUserData } from '@/utils/storage'
 import { classManager } from '@/managers/class'
 import type { ClassDTO } from '@/types/class'
 import { useUserCacheStore } from '@/stores/userCacheStore'
+import { useCacheStore } from '@/stores/cacheStore'
 
 const settingsStore = useSettingsStore()
 const userStore = useUserStore()
@@ -24,6 +25,7 @@ const pointsItemStore = usePointsItemStore()
 const studentGroupStore = useStudentGroupStore()
 const shopStore = useShopStore()
 const userCacheStore = useUserCacheStore()
+const cacheStore = useCacheStore()
 
 function clearAllStores() {
     studentStore.clear()
@@ -32,6 +34,7 @@ function clearAllStores() {
     studentGroupStore.clear()
     shopStore.clear()
     userCacheStore.clearActiveClassId()
+    userCacheStore.clearActiveClassName()
 }
 
 async function loadAllStores() {
@@ -97,6 +100,32 @@ const activeClassId = computed<number | null>({
         }
     }
 })
+
+// 同步积分页面使用的 cacheStore.activeClassId（避免重复做班级选择 UI）
+watch(activeClassId, (val) => {
+    if (typeof val === 'number') {
+        cacheStore.setActiveClassId(val)
+    } else {
+        cacheStore.clearActiveClassId()
+    }
+}, { immediate: true })
+
+// 同步当前班级名称到 userCacheStore/cacheStore，供各页面展示
+watch([activeClassId, classes], ([cid]) => {
+    if (!cid) {
+        userCacheStore.clearActiveClassName()
+        cacheStore.clearActiveClassName()
+        return
+    }
+    const name = classes.value.find(c => c.id === cid)?.name ?? null
+    if (name && name.trim()) {
+        userCacheStore.setActiveClassName(name)
+        cacheStore.setActiveClassName(name)
+    } else {
+        userCacheStore.clearActiveClassName()
+        cacheStore.clearActiveClassName()
+    }
+}, { immediate: true })
 
 async function loadClassesFromApi() {
     if (classesLoading.value) return

@@ -33,17 +33,17 @@ const routes = [
   },
   {
     path: '/tools/timer',
-    component: () => import('@/views/TimerView.vue'),
+    component: () => import('@/components/tools/TimerView.vue'),
     meta: { keepAlive: true },
   },
   {
     path: '/tools/rollcall',
-    component: () => import('@/views/RollCallView.vue'),
+    component: () => import('@/components/tools/RollCallView.vue'),
     meta: { keepAlive: true },
   },
   {
     path: '/tools/lottery',
-    component: () => import('@/views/LotteryView.vue'),
+    component: () => import('@/components/tools/LotteryView.vue'),
     meta: { keepAlive: true },
   },
   {

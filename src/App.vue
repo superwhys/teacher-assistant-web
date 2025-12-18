@@ -3,7 +3,6 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { formatTimeHHmm, formatChineseDateWithWeek } from '@/utils/date'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { useClassStore } from '@/stores/classStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUserStore } from '@/stores/userStore'
 import { useStudentStore } from '@/stores/studentStore'
@@ -13,8 +12,10 @@ import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import { useShopStore } from '@/stores/shopStore'
 import { cloudApi } from '@/api/cloud'
 import { importUserData } from '@/utils/storage'
+import { classManager } from '@/managers/class'
+import type { ClassDTO } from '@/types/class'
+import { useUserCacheStore } from '@/stores/userCacheStore'
 
-const classStore = useClassStore()
 const settingsStore = useSettingsStore()
 const userStore = useUserStore()
 const studentStore = useStudentStore()
@@ -22,19 +23,19 @@ const pointsStore = usePointsStore()
 const pointsItemStore = usePointsItemStore()
 const studentGroupStore = useStudentGroupStore()
 const shopStore = useShopStore()
+const userCacheStore = useUserCacheStore()
 
 function clearAllStores() {
-    classStore.clear()
     studentStore.clear()
     pointsStore.clear()
     pointsItemStore.clear()
     studentGroupStore.clear()
     shopStore.clear()
+    userCacheStore.clearActiveClassId()
 }
 
 async function loadAllStores() {
     await Promise.all([
-        classStore.hydrate(),
         studentStore.hydrate(),
         pointsStore.hydrate(),
         pointsItemStore.hydrate(),
@@ -54,6 +55,7 @@ onMounted(async () => {
     await settingsStore.hydrate()
     if (userStore.profile?.id) {
         await loadAllStores()
+        await loadClassesFromApi()
     }
     // setup auto sync checker
     if (autoSyncTimer !== undefined) {
@@ -78,11 +80,40 @@ onBeforeUnmount(() => {
 
 const timeString = computed(() => formatTimeHHmm(now.value))
 const dateString = computed(() => formatChineseDateWithWeek(now.value))
-const classes = computed(() => classStore.classes)
-const activeClassId = computed({
-    get: () => classStore.activeClassId,
-    set: (val: string | null) => { if (val) classStore.setActiveClass(val) }
+const classes = ref<ClassDTO[]>([])
+const classesLoading = ref(false)
+const classOptions = computed(() => {
+    return classes.value.filter((c): c is { id: number, name: string } => {
+        return typeof c.id === 'number' && typeof c.name === 'string' && c.name.trim().length > 0
+    })
 })
+const activeClassId = computed<number | null>({
+    get: () => userCacheStore.getActiveClassId(),
+    set: (val) => {
+        if (typeof val === 'number') {
+            userCacheStore.setActiveClassId(val)
+        } else {
+            userCacheStore.clearActiveClassId()
+        }
+    }
+})
+
+async function loadClassesFromApi() {
+    if (classesLoading.value) return
+    classesLoading.value = true
+    try {
+        classes.value = await classManager.list()
+        const validIds = new Set(classOptions.value.map(c => c.id))
+        if (activeClassId.value && !validIds.has(activeClassId.value)) {
+            activeClassId.value = null
+        }
+        if (!activeClassId.value) {
+            activeClassId.value = classOptions.value[0]?.id ?? null
+        }
+    } finally {
+        classesLoading.value = false
+    }
+}
 const isAuthenticated = computed(() => userStore.isAuthenticated)
 const userName = computed(() => userStore.displayName || '已登录')
 const userEmail = computed(() => userStore.profile?.email ?? '')
@@ -120,7 +151,7 @@ const createDialogVisible = ref(false)
 const createClassName = ref('')
 const editDialogVisible = ref(false)
 const editClassName = ref('')
-const editingClassId = ref<string | null>(null)
+const editingClassId = ref<number | null>(null)
 
 function openCreateDialog() {
     createDialogVisible.value = true
@@ -130,12 +161,12 @@ function openEditDialog() {
     if (!activeClassId.value) return
     const currentClass = classes.value.find(c => c.id === activeClassId.value)
     if (!currentClass) return
-    editingClassId.value = currentClass.id
-    editClassName.value = currentClass.name
+    editingClassId.value = currentClass.id ?? null
+    editClassName.value = currentClass.name ?? ''
     editDialogVisible.value = true
 }
 
-function confirmCreateClass() {
+async function confirmCreateClass() {
     const name = createClassName.value.trim()
     if (!name) {
         ElMessage.error('请输入班级名称')
@@ -145,17 +176,25 @@ function confirmCreateClass() {
         ElMessage.error('班级名称已存在')
         return
     }
-    classStore.addClass(name)
-    createDialogVisible.value = false
-    createClassName.value = ''
-    ElMessage.success('已创建班级')
+    try {
+        const created = await classManager.create(name)
+        createDialogVisible.value = false
+        createClassName.value = ''
+        ElMessage.success('已创建班级')
+        await loadClassesFromApi()
+        if (typeof created?.id === 'number') {
+            activeClassId.value = created.id
+        }
+    } catch (e) {
+        ElMessage.error('创建班级失败')
+    }
 }
 
 function onCreateDialogClosed() {
     createClassName.value = ''
 }
 
-function confirmEditClass() {
+async function confirmEditClass() {
     const name = editClassName.value.trim()
     if (!name) {
         ElMessage.error('请输入班级名称')
@@ -166,11 +205,16 @@ function confirmEditClass() {
         ElMessage.error('班级名称已存在')
         return
     }
-    classStore.updateClassName(editingClassId.value, name)
-    editDialogVisible.value = false
-    editClassName.value = ''
-    editingClassId.value = null
-    ElMessage.success('已修改班级名称')
+    try {
+        await classManager.update(editingClassId.value, name)
+        editDialogVisible.value = false
+        editClassName.value = ''
+        editingClassId.value = null
+        ElMessage.success('已修改班级名称')
+        await loadClassesFromApi()
+    } catch {
+        ElMessage.error('修改班级失败')
+    }
 }
 
 function onEditDialogClosed() {
@@ -188,8 +232,9 @@ async function removeCurrentClass() {
             confirmButtonText: '删除',
             cancelButtonText: '取消',
         })
-        classStore.removeClass(activeClassId.value)
+        await classManager.delete(activeClassId.value)
         ElMessage.success('已删除班级')
+        await loadClassesFromApi()
     } catch (e) {
         // 用户取消
     }
@@ -212,6 +257,7 @@ watch(() => userStore.profile?.id, (newUserId, oldUserId) => {
     if (newUserId && newUserId !== oldUserId) {
         void loadAllStores()
         void settingsStore.hydrate()
+        void loadClassesFromApi()
     }
 }, { immediate: false })
 
@@ -409,12 +455,12 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
         const userId = userStore.profile?.id || null
         await importUserData(payload, userId)
         await Promise.all([
-            classStore.hydrate(),
             studentStore.hydrate(),
             pointsStore.hydrate(),
             pointsItemStore.hydrate(),
             studentGroupStore.hydrate(),
             shopStore.hydrate(),
+            loadClassesFromApi(),
         ])
         settingsStore.bumpVersion()
         updateDialogVisible.value = false
@@ -529,7 +575,7 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
                         <div class="sidebar-section class-section">
                             <div class="section-title">班级选择</div>
                             <el-select v-model="activeClassId" placeholder="选择班级" class="class-select" size="large">
-                                <el-option v-for="c in classes" :key="c.id" :label="c.name" :value="c.id" />
+                                <el-option v-for="c in classOptions" :key="c.id" :label="c.name" :value="c.id" />
                             </el-select>
                             <div class="class-actions">
                                 <el-button type="primary" size="default" @click="openCreateDialog">

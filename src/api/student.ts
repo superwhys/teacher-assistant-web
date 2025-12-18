@@ -12,14 +12,18 @@ import type {
     StudentGroupInfoResp,
     StudentGroupDTO,
     UpdateStudentReq,
+    CreateStudentBatchReq,
 } from '@/types/student'
 
 export const studentApi = {
     create(data: CreateStudentReq): Promise<ApiResponse<null>> {
         return post<null>('/student/create', data)
     },
+    createBatch(data: CreateStudentBatchReq): Promise<ApiResponse<null>> {
+        return post<null>('/student/create/batch', data)
+    },
     delete(studentId: number): Promise<ApiResponse<null>> {
-        return del<null>(`/student/delete/${studentId}`)
+        return del<null>(`/student/${studentId}`)
     },
     update(studentId: number, data: UpdateStudentReq): Promise<ApiResponse<null>> {
         return put<null>(`/student/update/${studentId}`, data)
@@ -36,7 +40,7 @@ export const studentApi = {
         return post<StudentGroupDTO>('/student/group/create', data)
     },
     deleteGroup(groupId: number): Promise<ApiResponse<null>> {
-        return del<null>(`/student/group/delete/${groupId}`)
+        return del<null>(`/student/group/${groupId}`)
     },
     listGroups(classId: number): Promise<ApiResponse<ListStudentGroupsResp>> {
         return get<ListStudentGroupsResp>('/student/group/list', { class_id: classId })

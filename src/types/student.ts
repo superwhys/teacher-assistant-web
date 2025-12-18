@@ -1,12 +1,3 @@
-export type Gender = 'male' | 'female'
-
-export type Student = {
-    /** 姓名 */
-    studentName: string
-    /** 性别 */
-    gender: Gender
-}
-
 /**
  * 后端接口性别枚举
  * 0: unknown, 1: male, 2: female
@@ -31,6 +22,14 @@ export type CreateStudentReq = {
     class_id?: number
     gender?: ApiGender
     name?: string
+}
+
+/**
+ * 创建学生批量请求体
+ */
+export type CreateStudentBatchReq = {
+    class_id?: number
+    students?: CreateStudentReq[]
 }
 
 /**
@@ -101,10 +100,26 @@ export type RemoveStudentsFromGroupReq = {
 
 export type ListStudentsQuery = {
     class_id: number
+    group_id?: number
 }
 
 export type GetStudentGroupQuery = {
     group_id: number
+}
+
+export type StudentsSortOption = 'default' | 'name-asc' | 'name-desc' | 'points-desc' | 'points-asc'
+
+/**
+ * 兼容旧版本地存储结构（stores / 旧组件仍在使用）
+ */
+export type Gender = 'male' | 'female'
+
+/**
+ * 兼容旧版本地存储结构（stores / 旧组件仍在使用）
+ */
+export type Student = {
+    studentName: string
+    gender: Gender
 }
 
 

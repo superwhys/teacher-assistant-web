@@ -19,7 +19,7 @@ const routes = [
   {
     path: '/points/history',
     component: () => import('@/views/PointsHistoryView.vue'),
-    meta: { keepAlive: true },
+    meta: { keepAlive: false },
   },
   {
     path: '/points/shop',

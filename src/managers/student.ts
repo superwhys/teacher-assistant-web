@@ -1,5 +1,5 @@
 import { studentApi } from "@/api/student"
-import type { ApiGender, CreateStudentReq, StudentDTO, StudentGroupDTO, StudentGroupInfoResp } from "@/types/student"
+import type { ApiGender, CreateStudentReq, StudentDTO, StudentGroupDTO } from "@/types/student"
 
 export const studentManager = {
     // delete 删除学生

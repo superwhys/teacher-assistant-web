@@ -19,10 +19,12 @@ export type Record = {
     amount?: number
     before_balance?: number
     class_id?: number
+    created_at?: string | number
     from?: number
     id?: number
     rule_desc?: string
     rule_id?: number
+    student_name?: string
     student_id?: number
     type?: number
     user_id?: number
@@ -35,10 +37,14 @@ export type PaginatedRecordResp = {
 
 export type ListApplyRecordsQuery = {
     class_id?: number
-    limit?: number
-    offset?: number
-    rule_id?: number
     student_id?: number
+    rule_id?: number
+    name?: string
+    type?: number
+    from?: string
+    to?: string
+    offset?: number
+    limit?: number
 }
 
 export type CreateRuleReq = {

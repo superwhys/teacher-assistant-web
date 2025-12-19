@@ -191,6 +191,33 @@ const keyword = ref('')
 const sortBy = ref<SortOption>('default')
 const layoutMode = ref<'card' | 'list'>('card')
 
+const listLoading = ref(false)
+const minListLoadingMs = 200
+let listLoadingSeq = 0
+
+function cancelListLoading() {
+    listLoadingSeq += 1
+    listLoading.value = false
+}
+
+async function withListLoading<T>(fn: () => Promise<T>): Promise<T> {
+    const seq = ++listLoadingSeq
+    const startedAt = Date.now()
+    listLoading.value = true
+    try {
+        return await fn()
+    } finally {
+        if (seq === listLoadingSeq) {
+            const elapsed = Date.now() - startedAt
+            const remain = minListLoadingMs - elapsed
+            if (remain > 0) {
+                await new Promise<void>(resolve => window.setTimeout(resolve, remain))
+            }
+            if (seq === listLoadingSeq) listLoading.value = false
+        }
+    }
+}
+
 function getSelectedGroupStorageKey(classId: number) {
     return `points-selected-group-id:${classId}`
 }
@@ -231,6 +258,7 @@ watch(layoutMode, (val) => {
 })
 
 watch(activeClassId, async () => {
+    cancelListLoading()
     keyword.value = ''
     selectedIds.value = []
     ruleGroups.value = []
@@ -281,39 +309,44 @@ async function onSelectedGroupChange(groupId: number | null) {
         return
     }
     selectedGroupId.value = groupId
-    persistSelectedGroupId(activeClassId.value, groupId)
+    persistSelectedGroupId(activeClassId.value!, groupId)
     selectedIds.value = []
-    await loadStudentsForCurrentGroup()
+    await withListLoading(async () => {
+        await loadStudentsForCurrentGroup()
+    })
 }
 
 async function refreshBase() {
     if (!activeClassId.value) {
+        cancelListLoading()
         students.value = []
         groups.value = []
         classRankingItems.value = []
         return
     }
 
-    try {
-        const clsId = activeClassId.value
-        groups.value = await studentManager.listGroups(clsId)
+    await withListLoading(async () => {
+        try {
+            const clsId = activeClassId.value!
+            groups.value = await studentManager.listGroups(clsId)
 
-        const saved = loadSavedSelectedGroupId(clsId)
-        const availableGroupIds = new Set(groupOptions.value.map(g => g.id))
-        const nextGroupId = saved.exists
-            ? (saved.groupId ? (availableGroupIds.has(saved.groupId) ? saved.groupId : (groupOptions.value[0]?.id ?? null)) : null)
-            : (groupOptions.value[0]?.id ?? null)
+            const saved = loadSavedSelectedGroupId(clsId)
+            const availableGroupIds = new Set(groupOptions.value.map(g => g.id))
+            const nextGroupId = saved.exists
+                ? (saved.groupId ? (availableGroupIds.has(saved.groupId) ? saved.groupId : (groupOptions.value[0]?.id ?? null)) : null)
+                : (groupOptions.value[0]?.id ?? null)
 
-        selectedGroupId.value = nextGroupId
-        persistSelectedGroupId(clsId, nextGroupId)
+            selectedGroupId.value = nextGroupId
+            persistSelectedGroupId(clsId, nextGroupId)
 
-        await Promise.all([
-            loadStudentsForCurrentGroup(),
-            loadRanking(),
-        ])
-    } catch (err) {
-        console.error(err)
-    }
+            await Promise.all([
+                loadStudentsForCurrentGroup(),
+                loadRanking(),
+            ])
+        } catch (err) {
+            console.error(err)
+        }
+    })
 }
 
 async function loadRanking() {
@@ -406,8 +439,10 @@ async function openSelectorForAll(tab: SelectorTab) {
 
 async function refreshStudentsAndRanking() {
     if (!activeClassId.value) return
-    await loadStudentsForCurrentGroup()
-    await loadRanking()
+    await withListLoading(async () => {
+        await loadStudentsForCurrentGroup()
+        await loadRanking()
+    })
 }
 
 async function onSelectRule(rule: { id: number; name: string; sign: 'plus' | 'minus'; points: number }) {
@@ -431,7 +466,11 @@ async function onSelectRule(rule: { id: number; name: string; sign: 'plus' | 'mi
 
 async function undoOnce() {
     if (!activeClassId.value) return
-    const resp = await pointsManager.listApplyRecords({ class_id: activeClassId.value, limit: 1, offset: 0 })
+    const resp = await pointsManager.listApplyRecords({
+        class_id: activeClassId.value,
+        limit: 1,
+        offset: 0,
+    })
     const latestId = toNumber(resp.items?.[0]?.id, 0)
     if (!latestId) {
         ElMessage.info('没有可撤回的操作')
@@ -462,19 +501,26 @@ function openHistory(studentName: string) {
             v-model:time-range="rankingTimeRange"
             v-model:active-tab="activeRankingTab"
         >
-            <PointsStudentList
-                :active="!!activeClassId"
-                :class-name="activeClassName"
-                :students="filteredStudents"
-                :layout-mode="layoutMode"
-                :selected-ids="selectedIds"
-                :available-points-map="availablePointsById"
-                :total-points-map="totalPointsById"
-                @update:layout-mode="layoutMode = $event"
-                @update:selected-ids="selectedIds = $event"
-                @open-apply="openSelectorForStudents($event.studentIds, $event.tab)"
-                @open-history="openHistory($event.studentName)"
-            />
+            <div
+                class="students-list-wrap"
+                v-loading="listLoading"
+                element-loading-text="加载中..."
+                element-loading-background="rgba(255, 255, 255, 0.65)"
+            >
+                <PointsStudentList
+                    :active="!!activeClassId"
+                    :class-name="activeClassName"
+                    :students="filteredStudents"
+                    :layout-mode="layoutMode"
+                    :selected-ids="selectedIds"
+                    :available-points-map="availablePointsById"
+                    :total-points-map="totalPointsById"
+                    @update:layout-mode="layoutMode = $event"
+                    @update:selected-ids="selectedIds = $event"
+                    @open-apply="openSelectorForStudents($event.studentIds, $event.tab)"
+                    @open-history="openHistory($event.studentName)"
+                />
+            </div>
         </PointsRankingPanel>
 
         <PointsBottomActions
@@ -510,5 +556,11 @@ function openHistory(studentName: string) {
     display: flex;
     flex-direction: column;
     padding: 0;
+}
+
+.students-list-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 40vh;
 }
 </style>

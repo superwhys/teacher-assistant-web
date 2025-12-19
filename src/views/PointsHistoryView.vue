@@ -1,17 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRoute } from 'vue-router'
 import { formatChineseDateTime } from '@/utils/date'
 
 import { useCacheStore } from '@/stores/cacheStore'
-import { classManager } from '@/managers/class'
-import { studentManager } from '@/managers/student'
 import { pointsManager } from '@/managers/points'
 
-import type { ClassDTO } from '@/types/class'
-import type { StudentDTO, StudentGroupDTO } from '@/types/student'
-import type { Record as PointsApplyRecord, RuleGroup } from '@/types/points'
+import type { ListApplyRecordsQuery, Record as PointsApplyRecord } from '@/types/points'
 
 defineOptions({
     name: 'PointsHistoryView'
@@ -20,83 +16,34 @@ defineOptions({
 const route = useRoute()
 const cacheStore = useCacheStore()
 
-const classes = ref<ClassDTO[]>([])
-const students = ref<StudentDTO[]>([])
-const groups = ref<StudentGroupDTO[]>([])
-const ruleGroups = ref<RuleGroup[]>([])
 const records = ref<PointsApplyRecord[]>([])
 
 const activeClassId = computed<number | null>(() => cacheStore.getActiveClassId())
-
-const activeClass = computed(() => {
-    if (!activeClassId.value) return null
-    return classes.value.find(c => c.id === activeClassId.value) ?? null
-})
-
-const groupsOfActive = computed(() => {
-    return (groups.value ?? [])
-        .map(g => ({
-            id: g.id ?? 0,
-            name: g.name ?? '',
-            memberIds: (g.students ?? []).map(s => s.id ?? 0).filter(id => id > 0),
-        }))
-        .filter(g => g.id > 0 && !!g.name)
-})
-
-const selectedGroupId = ref<number>(0)
-watch(activeClassId, () => {
-    selectedGroupId.value = 0
-})
+const activeClassName = computed<string>(() => cacheStore.getActiveClassName() ?? '')
 
 const historyKeyword = ref('')
 const historySign = ref<'all' | 'plus' | 'minus'>('all')
+
+const pageSize = ref(10)
+const currentPage = ref(1)
+const total = ref(0)
+const loading = ref(false)
+const minLoadingMs = 200
+let fetchSeq = 0
 
 function toNumber(v: unknown, fallback = 0): number {
     const n = typeof v === 'number' ? v : Number(v)
     return Number.isFinite(n) ? n : fallback
 }
 
-const studentIdNameMap = computed<Record<number, string>>(() => {
-    const map: Record<number, string> = {}
-    for (const s of students.value ?? []) {
-        const id = s.id ?? 0
-        const name = s.name ?? ''
-        if (id > 0 && name) map[id] = name
-    }
-    return map
-})
-
-const groupIdToMemberSet = computed(() => {
-    const map = new Map<number, Set<number>>()
-    for (const g of groupsOfActive.value) {
-        map.set(g.id, new Set(g.memberIds))
-    }
-    return map
-})
-
-const ruleMetaMap = computed(() => {
-    const map = new Map<number, { name: string; sign: 'plus' | 'minus'; points: number }>()
-    for (const g of ruleGroups.value ?? []) {
-        for (const r of g.rules ?? []) {
-            const id = toNumber(r.id, 0)
-            const name = (r.name ?? '').trim()
-            if (!id || !name) continue
-            const points = toNumber(r.points, 0)
-            const t = toNumber(r.points_type, 0)
-            const sign = t === 2 ? 'minus' : (t === 1 ? 'plus' : (points < 0 ? 'minus' : 'plus'))
-            map.set(id, { name, sign, points })
-        }
-    }
-    return map
-})
-
 function inferDelta(rec: PointsApplyRecord): number {
     const amount = toNumber(rec.amount, 0)
     if (amount !== 0 && amount !== Math.abs(amount)) return amount
-    const meta = ruleMetaMap.value.get(toNumber(rec.rule_id, 0)) ?? null
-    if (!meta) return amount
-    const base = Math.abs(amount || meta.points || 0)
-    return meta.sign === 'minus' ? -base : base
+    // 后端已返回 type（加分/扣分）时优先使用，否则兜底按 amount 正负
+    const t = toNumber((rec as any)?.type, 0)
+    if (t === 2) return -Math.abs(amount)
+    if (t === 1) return Math.abs(amount)
+    return amount
 }
 
 function getRecordTs(r: PointsApplyRecord): number {
@@ -107,7 +54,7 @@ function getRecordTs(r: PointsApplyRecord): number {
     return Number.isFinite(t) ? t : 0
 }
 
-const historyDesc = computed(() => {
+const historyPageDesc = computed(() => {
     const list = [...(records.value ?? [])]
     list.sort((a, b) => {
         const at = getRecordTs(a) || toNumber(a.id, 0)
@@ -117,34 +64,14 @@ const historyDesc = computed(() => {
     return list
 })
 
-const filteredHistory = computed(() => {
-    const kw = historyKeyword.value.trim().toLowerCase()
-    let list = historyDesc.value
-
-    if (selectedGroupId.value > 0) {
-        const set = groupIdToMemberSet.value.get(selectedGroupId.value)
-        if (set) {
-            list = list.filter(r => set.has(toNumber(r.student_id, 0)))
-        }
-    }
-
-    if (historySign.value !== 'all') {
-        list = list.filter(r => {
-            const delta = inferDelta(r)
-            return historySign.value === 'plus' ? delta > 0 : delta < 0
-        })
-    }
-
-    if (!kw) return list
-    return list.filter(r => {
-        const sid = toNumber(r.student_id, 0)
-        const name = studentIdNameMap.value[sid] ?? ''
-        return name.toLowerCase().includes(kw)
-    })
-})
-
+let suppressKeywordFetch = false
 watch(() => route.query.q, (q) => {
+    suppressKeywordFetch = true
     historyKeyword.value = typeof q === 'string' ? q : ''
+    window.setTimeout(() => {
+        suppressKeywordFetch = false
+    }, 0)
+    resetToFirstPageAndFetch(true)
 }, { immediate: true })
 
 function clearHistory() {
@@ -157,56 +84,115 @@ async function undoAction(actionId: number) {
         await ElMessageBox.confirm('确定撤回该条积分记录吗？', '撤回确认', { type: 'warning' })
         await pointsManager.undoApply(actionId)
         ElMessage.success('已撤回')
-        await refresh()
+        await fetchRecords()
     } catch (err) {
         if (err) ElMessage.error('撤回失败')
     }
 }
 
-async function loadClasses() {
-    try {
-        classes.value = await classManager.list()
-    } catch (err) {
-        console.error(err)
+function buildRecordsQuery(): ListApplyRecordsQuery {
+    const clsId = toNumber(activeClassId.value, 0)
+    const kw = historyKeyword.value.trim()
+    const sign = historySign.value
+
+    const query: ListApplyRecordsQuery = {
+        class_id: clsId || undefined,
+        limit: pageSize.value,
+        offset: (currentPage.value - 1) * pageSize.value,
     }
+
+    if (kw) {
+        query.name = kw
+    }
+
+    if (sign === 'plus') {
+        query.type = 1
+    } else if (sign === 'minus') {
+        query.type = 2
+    }
+
+    return query
 }
 
-async function refresh() {
+async function fetchRecords() {
     if (!activeClassId.value) {
-        students.value = []
-        groups.value = []
-        ruleGroups.value = []
         records.value = []
+        total.value = 0
         return
     }
 
+    const seq = ++fetchSeq
+    const startedAt = Date.now()
+    loading.value = true
     try {
-        const clsId = activeClassId.value
-        const [stu, grp, rg, rec] = await Promise.all([
-            studentManager.list(clsId),
-            studentManager.listGroups(clsId),
-            pointsManager.listRuleGroups(),
-            pointsManager.listAllApplyRecordsByClass(clsId),
-        ])
-        students.value = stu
-        groups.value = grp
-        ruleGroups.value = rg
-        records.value = rec
+        const resp = await pointsManager.listApplyRecords(buildRecordsQuery())
+        if (seq !== fetchSeq) return
+        records.value = resp.items ?? []
+        total.value = toNumber(resp.total, 0)
+
+        if (records.value.length === 0 && total.value > 0 && currentPage.value > 1) {
+            const last = Math.max(1, Math.ceil(total.value / pageSize.value))
+            if (last !== currentPage.value) {
+                currentPage.value = last
+                await fetchRecords()
+            }
+        }
     } catch (err) {
         console.error(err)
+    } finally {
+        if (seq !== fetchSeq) return
+        const elapsed = Date.now() - startedAt
+        const remain = minLoadingMs - elapsed
+        if (remain > 0) {
+            await new Promise<void>(resolve => window.setTimeout(resolve, remain))
+        }
+        if (seq === fetchSeq) loading.value = false
     }
 }
 
-onMounted(async () => {
-    await loadClasses()
-    await refresh()
+function resetToFirstPageAndFetch(immediate = true) {
+    currentPage.value = 1
+    if (immediate) fetchRecords()
+}
+
+let keywordTimer: number | null = null
+watch(historyKeyword, () => {
+    if (suppressKeywordFetch) return
+    if (keywordTimer) window.clearTimeout(keywordTimer)
+    keywordTimer = window.setTimeout(() => {
+        resetToFirstPageAndFetch(true)
+    }, 350)
 })
+
+watch([historySign], () => {
+    if (keywordTimer) {
+        window.clearTimeout(keywordTimer)
+        keywordTimer = null
+    }
+    resetToFirstPageAndFetch(true)
+})
+
+watch(activeClassId, async () => {
+    currentPage.value = 1
+    total.value = 0
+    records.value = []
+    await fetchRecords()
+})
+
+function onPageChange(page: number) {
+    currentPage.value = page
+    fetchRecords()
+}
+
 </script>
 
 <template>
     <div class="points-history-page">
         <div class="header-row">
-            <div class="title">积分记录 <span v-if="activeClass">（{{ activeClass.name }}）</span></div>
+            <div class="title">
+                积分记录
+                <span v-if="activeClassId && activeClassName">（{{ activeClassName }}）</span>
+            </div>
             <div class="header-actions">
                 <el-button type="default" plain :disabled="!activeClassId" @click="$router.push('/points')">
                     <i-ep-arrow-left /> 返回积分管理
@@ -220,12 +206,6 @@ onMounted(async () => {
                     <div class="list-header-row">
                         <div class="list-header">记录列表</div>
                         <div class="row-actions">
-                            <el-select v-model="selectedGroupId" placeholder="全部学生" class="group-filter"
-                                :disabled="!activeClassId" clearable>
-                                <el-option label="全部学生" :value="0" />
-                                <el-option v-for="g in groupsOfActive" :key="g.id" :label="`${g.name}（${g.memberIds.length}）`"
-                                    :value="g.id" />
-                            </el-select>
                             <el-select v-model="historySign" placeholder="全部类型" class="history-sign-filter" :disabled="!activeClassId">
                                 <el-option label="全部" value="all" />
                                 <el-option label="加分" value="plus" />
@@ -248,9 +228,14 @@ onMounted(async () => {
                     </div>
                 </template>
 
-                <div v-if="activeClass">
-                    <div v-if="records.length > 0">
-                        <el-table :data="filteredHistory" border size="large" height="60vh">
+                <div v-if="activeClassId">
+                    <div
+                        class="table-block"
+                        v-loading="loading"
+                        element-loading-text="加载中..."
+                        element-loading-background="rgba(255, 255, 255, 0.65)"
+                    >
+                        <el-table v-if="records.length > 0" :data="historyPageDesc" border size="large" height="60vh">
                             <el-table-column type="index" label="#" width="60" />
                             <el-table-column label="时间" width="180" align="center">
                                 <template #default="{ row }">
@@ -260,19 +245,12 @@ onMounted(async () => {
                             </el-table-column>
                             <el-table-column label="积分项" min-width="220">
                                 <template #default="{ row }">
-                                    <span>{{ ruleMetaMap.get(row.rule_id)?.name || row.rule_desc || '未知' }}</span>
-                                    <span
-                                        v-if="ruleMetaMap.get(row.rule_id)"
-                                        :class="['badge', ruleMetaMap.get(row.rule_id)?.sign === 'plus' ? 'plus' : 'minus']"
-                                        style="margin-left:8px;"
-                                    >
-                                        {{ ruleMetaMap.get(row.rule_id)?.sign === 'plus' ? '+' : '-' }}{{ Math.abs(ruleMetaMap.get(row.rule_id)?.points || 0) }}
-                                    </span>
+                                    <span>{{ row.rule_desc || '未知' }}</span>
                                 </template>
                             </el-table-column>
                             <el-table-column label="学生" min-width="260">
                                 <template #default="{ row }">
-                                    {{ studentIdNameMap[row.student_id] || row.student_id || '-' }}
+                                    {{ row.student_name || row.student_id || '-' }}
                                 </template>
                             </el-table-column>
                             <el-table-column label="分值" width="120" align="center">
@@ -288,11 +266,24 @@ onMounted(async () => {
                                 </template>
                             </el-table-column>
                         </el-table>
-                    </div>
-                    <div v-else class="empty empty-students">
-                        <i-ep-document-remove class="empty-icon" />
-                        <div class="empty-title">暂无积分记录</div>
-                        <div class="empty-sub">去给学生加分/扣分后会在此显示</div>
+                        <div v-else-if="!loading" class="empty empty-students">
+                            <i-ep-document-remove class="empty-icon" />
+                            <div class="empty-title">暂无积分记录</div>
+                            <div class="empty-sub">去给学生加分/扣分后会在此显示</div>
+                        </div>
+                        <div v-else class="loading-placeholder"></div>
+
+                        <div v-if="total > 0" class="pager-row">
+                            <el-pagination
+                                background
+                                :disabled="loading"
+                                :current-page="currentPage"
+                                :page-size="pageSize"
+                                layout="total, prev, pager, next"
+                                :total="total"
+                                @current-change="onPageChange"
+                            />
+                        </div>
                     </div>
                 </div>
                 <div v-else class="empty">
@@ -363,10 +354,6 @@ onMounted(async () => {
     width: 260px;
 }
 
-.group-filter {
-    width: 220px;
-}
-
 .history-sign-filter {
     width: 140px;
 }
@@ -385,6 +372,21 @@ onMounted(async () => {
 .badge.minus {
     background: #fff2f2;
     color: #ef4444;
+}
+
+.table-block {
+    min-height: 60vh;
+    position: relative;
+}
+
+.loading-placeholder {
+    height: 60vh;
+}
+
+.pager-row {
+    margin-top: 12px;
+    display: flex;
+    justify-content: flex-end;
 }
 
 .empty {
@@ -431,9 +433,11 @@ onMounted(async () => {
         width: 100%;
     }
     .search-input,
-    .group-filter,
     .history-sign-filter {
         width: 100%;
+    }
+    .pager-row {
+        justify-content: center;
     }
 }
 
@@ -462,11 +466,11 @@ onMounted(async () => {
     .search-input {
         width: 100%;
     }
-    .group-filter {
-        width: 100%;
-    }
     .history-sign-filter {
         width: 100%;
+    }
+    .pager-row {
+        justify-content: center;
     }
 }
 </style>

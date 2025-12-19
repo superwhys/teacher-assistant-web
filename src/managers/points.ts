@@ -115,7 +115,11 @@ export const pointsManager = {
         let offset = 0
 
         while (items.length < maxItems) {
-            const resp = await this.listApplyRecords({ class_id: classId, limit: chunkSize, offset })
+            const resp = await this.listApplyRecords({
+                class_id: classId,
+                limit: chunkSize,
+                offset,
+            })
             const batch = resp.items ?? []
             items.push(...batch)
             if (batch.length < chunkSize) break

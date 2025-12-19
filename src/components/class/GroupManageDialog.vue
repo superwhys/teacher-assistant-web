@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import type { UiStudent } from './ClassStudentList.vue'
+import { studentManager } from '@/managers/student'
+import type { StudentDTO } from '@/types/student'
 
 export type UiGroup = {
     id: number
@@ -12,7 +13,7 @@ export type UiGroup = {
 const props = defineProps<{
     modelValue: boolean
     active: boolean
-    students: UiStudent[]
+    classId: number | null
     groups: UiGroup[]
 }>()
 
@@ -35,26 +36,94 @@ const targetKeys = ref<number[]>([])
 
 const groupOptions = computed(() => props.groups.map(g => ({
     id: g.id,
-    label: `${g.name}（${g.memberIds.length}）`
+    label: g.name
 })))
 
-const transferData = computed(() => props.students.map(s => ({
-    key: s.id,
-    label: s.name
-})))
+function toNumber(v: unknown, fallback = 0): number {
+    const n = typeof v === 'number' ? v : Number(v)
+    return Number.isFinite(n) ? n : fallback
+}
 
-watch(visible, (val) => {
-    if (!val) return
-    selectedGroupId.value = props.groups[0]?.id ?? null
-}, { immediate: false })
+function toUiItems(list: StudentDTO[]): Array<{ id: number; name: string }> {
+    return (list ?? [])
+        .map(s => ({
+            id: toNumber(s.id, 0),
+            name: (s.name ?? '').trim(),
+        }))
+        .filter(s => s.id > 0 && !!s.name)
+}
 
-watch(selectedGroupId, (gid) => {
-    if (!gid) {
+const loading = ref(false)
+const groupStudents = ref<Array<{ id: number; name: string }>>([])
+const ungroupedStudents = ref<Array<{ id: number; name: string }>>([])
+
+const transferData = computed(() => {
+    const byId = new Map<number, string>()
+    for (const s of ungroupedStudents.value) byId.set(s.id, s.name)
+    for (const s of groupStudents.value) byId.set(s.id, s.name)
+    return Array.from(byId.entries()).map(([id, name]) => ({ key: id, label: name }))
+})
+
+let lastLoadReqId = 0
+async function loadStudentsForGroup() {
+    if (!props.active || !props.classId || !selectedGroupId.value) {
+        groupStudents.value = []
+        ungroupedStudents.value = []
         targetKeys.value = []
         return
     }
-    const g = props.groups.find(x => x.id === gid)
-    targetKeys.value = g ? [...g.memberIds] : []
+
+    const reqId = ++lastLoadReqId
+    loading.value = true
+    try {
+        const gid = selectedGroupId.value
+        const clsId = props.classId
+        const [groupInfo, ungrouped] = await Promise.all([
+            studentManager.list(clsId, gid),
+            studentManager.listUngrouped(clsId),
+        ])
+
+        if (reqId !== lastLoadReqId) return
+
+        const members = toUiItems(groupInfo)
+        const left = toUiItems(ungrouped)
+
+        groupStudents.value = members
+        ungroupedStudents.value = left
+        targetKeys.value = members.map(s => s.id)
+    } catch (err) {
+        console.error(err)
+        if (reqId !== lastLoadReqId) return
+        groupStudents.value = []
+        ungroupedStudents.value = []
+        targetKeys.value = []
+    } finally {
+        if (reqId === lastLoadReqId) loading.value = false
+    }
+}
+
+watch(visible, (val) => {
+    if (!val) return
+    const current = selectedGroupId.value
+    const exists = current ? props.groups.some(g => g.id === current) : false
+    selectedGroupId.value = exists ? current : (props.groups[0]?.id ?? null)
+}, { immediate: false })
+
+watch(() => props.groups, (next) => {
+    if (!visible.value) return
+    const list = next ?? []
+    if (list.length === 0) {
+        selectedGroupId.value = null
+        return
+    }
+    const gid = selectedGroupId.value
+    if (!gid || !list.some(g => g.id === gid)) {
+        selectedGroupId.value = list[0]!.id
+    }
+})
+
+watch([selectedGroupId, () => props.classId], async () => {
+    await loadStudentsForGroup()
 })
 
 function onAddGroup() {
@@ -107,7 +176,7 @@ function onSaveMembers() {
             </div>
 
             <div v-if="selectedGroupId" class="transfer-wrap">
-                <el-transfer v-model="targetKeys" :data="transferData" :titles="['未分配', '本组成员']" filterable />
+                <el-transfer v-model="targetKeys" :data="transferData" :titles="['未分组', '本组成员']" filterable v-loading="loading" />
                 <div class="transfer-actions">
                     <el-button type="primary" :disabled="!active" @click="onSaveMembers"><i-ep-check /> 保存成员</el-button>
                 </div>

@@ -27,6 +27,7 @@ const userCacheStore = useUserCacheStore()
 const activeClassId = computed<number | null>(() => userCacheStore.getActiveClassId())
 
 const students = ref<StudentDTO[]>([])
+const allStudents = ref<StudentDTO[]>([])
 const groups = ref<StudentGroupDTO[]>([])
 
 const layoutMode = computed<LayoutMode>({
@@ -63,6 +64,16 @@ const uiStudents = computed<UiStudent[]>(() => {
         .filter(s => s.id > 0 && !!s.name)
 })
 
+const uiAllStudents = computed<UiStudent[]>(() => {
+    return (allStudents.value ?? [])
+        .map((s) => ({
+            id: s.id ?? 0,
+            name: s.name ?? '',
+            gender: toUiGender(s.gender),
+        }))
+        .filter(s => s.id > 0 && !!s.name)
+})
+
 const uiGroups = computed<UiGroup[]>(() => {
     return (groups.value ?? [])
         .map((g) => ({
@@ -76,19 +87,10 @@ const uiGroups = computed<UiGroup[]>(() => {
 const groupOptions = computed(() => uiGroups.value.map(g => ({
     id: g.id,
     name: g.name,
-    memberCount: g.memberIds.length
 })))
 
 const filteredStudents = computed<UiStudent[]>(() => {
     let list = uiStudents.value
-
-    if (selectedGroupId.value) {
-        const g = uiGroups.value.find(x => x.id === selectedGroupId.value)
-        if (g) {
-            const memberSet = new Set(g.memberIds)
-            list = list.filter(s => memberSet.has(s.id))
-        }
-    }
 
     const kw = keyword.value.trim().toLowerCase()
     if (kw) {
@@ -118,14 +120,21 @@ async function loadClasses() {
 async function refresh() {
     if (!activeClassId.value) {
         students.value = []
+        allStudents.value = []
         groups.value = []
         return
     }
 
     loading.value = true
     try {
-        students.value = await studentManager.list(activeClassId.value)
-        groups.value = await studentManager.listGroups(activeClassId.value)
+        const clsId = activeClassId.value
+        const [all, grp] = await Promise.all([
+            studentManager.list(clsId),
+            studentManager.listGroups(clsId),
+        ])
+        allStudents.value = all
+        groups.value = grp
+        await refreshStudentsList()
     } catch (err) {
         console.error(err)
     } finally {
@@ -133,10 +142,35 @@ async function refresh() {
     }
 }
 
+let lastStudentsReqId = 0
+async function refreshStudentsList() {
+    if (!activeClassId.value) {
+        students.value = []
+        return
+    }
+    const reqId = ++lastStudentsReqId
+    try {
+        const clsId = activeClassId.value
+        const groupId = selectedGroupId.value ?? undefined
+        const list = await studentManager.list(clsId, groupId)
+        if (reqId !== lastStudentsReqId) return
+        students.value = list
+    } catch (err) {
+        console.error(err)
+        if (reqId !== lastStudentsReqId) return
+        students.value = []
+    }
+}
+
 watch(activeClassId, async () => {
     selectedGroupId.value = null
     keyword.value = ''
     await refresh()
+})
+
+watch(selectedGroupId, async () => {
+    keyword.value = ''
+    await refreshStudentsList()
 })
 
 onMounted(async () => {
@@ -239,11 +273,11 @@ async function handleDeleteGroup(payload: { groupId: number }) {
 }
 
 async function applyGroupMembers(groupId: number, targetMemberIds: number[]) {
-    const g = uiGroups.value.find(x => x.id === groupId)
-    if (!g) return
-
-    const current = new Set(g.memberIds)
-    const target = new Set(targetMemberIds)
+    if (!activeClassId.value) return
+    const currentStudents = await studentManager.list(activeClassId.value, groupId)
+    const currentIds = (currentStudents ?? []).map(s => s.id ?? 0).filter(id => id > 0)
+    const current = new Set(currentIds)
+    const target = new Set(targetMemberIds.filter(id => id > 0))
 
     const toAdd: number[] = []
     const toRemove: number[] = []
@@ -269,7 +303,7 @@ async function handleConfirmGroupImport(payload: { groups: Array<{ groupName: st
     if (!activeClassId.value) return
 
     const nameToId = new Map<string, number>()
-    uiStudents.value.forEach(s => nameToId.set(s.name, s.id))
+    uiAllStudents.value.forEach(s => nameToId.set(s.name, s.id))
 
     try {
         for (const g of payload.groups) {
@@ -334,7 +368,7 @@ async function handleConfirmGroupImport(payload: { groups: Array<{ groupName: st
     <GroupManageDialog
         v-model="groupManageVisible"
         :active="!!activeClassId"
-        :students="uiStudents"
+        :class-id="activeClassId"
         :groups="uiGroups"
         @create-group="handleCreateGroup"
         @delete-group="handleDeleteGroup"
@@ -345,7 +379,7 @@ async function handleConfirmGroupImport(payload: { groups: Array<{ groupName: st
     <GroupImportDialog
         v-model="groupImportVisible"
         :active="!!activeClassId"
-        :students="uiStudents"
+        :students="uiAllStudents"
         :groups="uiGroups"
         @confirm="handleConfirmGroupImport"
     />

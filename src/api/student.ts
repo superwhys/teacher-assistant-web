@@ -45,10 +45,6 @@ export const studentApi = {
     listGroups(classId: number): Promise<ApiResponse<ListStudentGroupsResp>> {
         return get<ListStudentGroupsResp>('/student/group/list', { class_id: classId })
     },
-    getGroup(query: GetStudentGroupQuery): Promise<ApiResponse<StudentGroupInfoResp>> {
-        return get<StudentGroupInfoResp>('/student/group/get', query)
-    },
-
     addStudentsToGroup(data: AddStudentsToGroupReq): Promise<ApiResponse<null>> {
         return post<null>('/student/group/add_students', data)
     },

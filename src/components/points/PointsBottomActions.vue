@@ -49,7 +49,7 @@ const emit = defineEmits<{
                 @update:model-value="emit('update:selectedGroupId', ($event || 0) === 0 ? null : $event)"
             >
                 <el-option label="全部学生" :value="0" />
-                <el-option v-for="g in groups" :key="g.id" :label="`${g.name}（${g.memberCount}）`" :value="g.id" />
+                <el-option v-for="g in groups" :key="g.id" :label="g.name" :value="g.id" />
             </el-select>
 
             <el-select

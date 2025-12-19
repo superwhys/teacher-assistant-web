@@ -7,7 +7,7 @@ import { useCacheStore } from '@/stores/cacheStore'
 import { studentManager } from '@/managers/student'
 import { pointsManager } from '@/managers/points'
 
-import type { ApiGender, StudentDTO, StudentGroupDTO } from '@/types/student'
+import type { ApiGender, Student, StudentDTO, StudentGroupDTO } from '@/types/student'
 import type { RankingTimeRange, StudentRankingItem, RuleGroup } from '@/types/points'
 
 import PointsRankingPanel from '@/components/points/PointsRankingPanel.vue'
@@ -34,6 +34,11 @@ function toUiGender(gender?: ApiGender): UiPointsStudent['gender'] {
     return 'unknown'
 }
 
+function toRankingGender(gender?: ApiGender): Student['gender'] {
+    const g = toUiGender(gender)
+    return g === 'female' ? 'female' : 'male'
+}
+
 const uiStudents = computed<UiPointsStudent[]>(() => {
     return (students.value ?? [])
         .map(s => ({
@@ -44,10 +49,38 @@ const uiStudents = computed<UiPointsStudent[]>(() => {
         .filter(s => s.id > 0 && !!s.name)
 })
 
+const classStudentsForRanking = computed<StudentDTO[]>(() => {
+    const byId = new Map<number, StudentDTO>()
+
+    function addStudent(dto: StudentDTO) {
+        const id = dto.id ?? 0
+        const name = (dto.name ?? '').trim()
+        if (!id || !name) return
+        if (!byId.has(id)) byId.set(id, dto)
+    }
+
+    for (const g of groups.value ?? []) {
+        for (const s of g.students ?? []) addStudent(s)
+    }
+    for (const s of students.value ?? []) addStudent(s)
+
+    return Array.from(byId.values())
+})
+
+const rankingPanelStudents = computed<Student[]>(() => {
+    return classStudentsForRanking.value.map(s => ({
+        studentName: s.name ?? '',
+        gender: toRankingGender(s.gender),
+    })).filter(s => !!s.studentName)
+})
+
 const studentIdNameMap = computed<Record<number, string>>(() => {
     const map: Record<number, string> = {}
-    for (const s of uiStudents.value) {
-        map[s.id] = s.name
+    for (const s of classStudentsForRanking.value) {
+        const id = s.id ?? 0
+        const name = (s.name ?? '').trim()
+        if (!id || !name) continue
+        map[id] = name
     }
     return map
 })
@@ -61,14 +94,6 @@ const groupOptions = computed(() => {
             memberIds: (g.students ?? []).map(s => s.id ?? 0).filter(id => id > 0),
         }))
         .filter(g => g.id > 0 && !!g.name)
-})
-
-const groupIdToMemberSet = computed(() => {
-    const map = new Map<number, Set<number>>()
-    for (const g of groupOptions.value) {
-        map.set(g.id, new Set(g.memberIds))
-    }
-    return map
 })
 
 function toNumber(v: unknown, fallback = 0): number {
@@ -129,6 +154,16 @@ const availablePointsById = computed<Record<number, number>>(() => {
     return map
 })
 
+const classTotalPointsById = computed<Record<number, number>>(() => {
+    const map: Record<number, number> = {}
+    for (const s of classStudentsForRanking.value ?? []) {
+        const id = s.id ?? 0
+        if (!id) continue
+        map[id] = toNumber(s.total_points, 0)
+    }
+    return map
+})
+
 const rankingPointsMapByName = computed<Record<string, number>>(() => {
     const map: Record<string, number> = {}
     if ((classRankingItems.value ?? []).length > 0) {
@@ -142,8 +177,11 @@ const rankingPointsMapByName = computed<Record<string, number>>(() => {
     }
 
     // 后端排行榜未接入前兜底：使用学生列表返回的 total_points
-    for (const s of uiStudents.value) {
-        map[s.name] = totalPointsById.value[s.id] ?? 0
+    for (const s of classStudentsForRanking.value) {
+        const name = (s.name ?? '').trim()
+        const id = s.id ?? 0
+        if (!id || !name) continue
+        map[name] = classTotalPointsById.value[id] ?? 0
     }
     return map
 })
@@ -152,6 +190,21 @@ const selectedGroupId = ref<number | null>(null)
 const keyword = ref('')
 const sortBy = ref<SortOption>('default')
 const layoutMode = ref<'card' | 'list'>('card')
+
+function getSelectedGroupStorageKey(classId: number) {
+    return `points-selected-group-id:${classId}`
+}
+
+function loadSavedSelectedGroupId(classId: number): { exists: boolean; groupId: number | null } {
+    const raw = localStorage.getItem(getSelectedGroupStorageKey(classId))
+    if (raw === null) return { exists: false, groupId: null }
+    const n = toNumber(raw, 0)
+    return { exists: true, groupId: n > 0 ? n : null }
+}
+
+function persistSelectedGroupId(classId: number, groupId: number | null) {
+    localStorage.setItem(getSelectedGroupStorageKey(classId), String(groupId ?? 0))
+}
 
 onMounted(async () => {
     const savedSort = localStorage.getItem('students-sort')
@@ -178,7 +231,6 @@ watch(layoutMode, (val) => {
 })
 
 watch(activeClassId, async () => {
-    selectedGroupId.value = null
     keyword.value = ''
     selectedIds.value = []
     ruleGroups.value = []
@@ -189,10 +241,6 @@ watch(activeClassId, async () => {
     }
 })
 
-watch(selectedGroupId, () => {
-    selectedIds.value = []
-})
-
 watch(rankingTimeRange, async () => {
     await loadRanking()
 })
@@ -200,8 +248,43 @@ watch(rankingTimeRange, async () => {
 watch(activeRankingTab, async (tab) => {
     if (tab === 'item') {
         await ensureRuleGroupsLoaded()
+        return
     }
+    await loadRanking()
 })
+
+let lastStudentsReqId = 0
+async function loadStudentsForCurrentGroup() {
+    if (!activeClassId.value) {
+        students.value = []
+        return
+    }
+    const reqId = ++lastStudentsReqId
+    try {
+        const clsId = activeClassId.value
+        const groupId = selectedGroupId.value ?? undefined
+        const list = await studentManager.list(clsId, groupId)
+        if (reqId !== lastStudentsReqId) return
+        students.value = list
+    } catch (err) {
+        console.error(err)
+        if (reqId !== lastStudentsReqId) return
+        students.value = []
+    }
+}
+
+async function onSelectedGroupChange(groupId: number | null) {
+    if (!activeClassId.value) {
+        selectedGroupId.value = groupId
+        selectedIds.value = []
+        students.value = []
+        return
+    }
+    selectedGroupId.value = groupId
+    persistSelectedGroupId(activeClassId.value, groupId)
+    selectedIds.value = []
+    await loadStudentsForCurrentGroup()
+}
 
 async function refreshBase() {
     if (!activeClassId.value) {
@@ -213,13 +296,21 @@ async function refreshBase() {
 
     try {
         const clsId = activeClassId.value
-        const [stu, grp] = await Promise.all([
-            studentManager.list(clsId),
-            studentManager.listGroups(clsId),
+        groups.value = await studentManager.listGroups(clsId)
+
+        const saved = loadSavedSelectedGroupId(clsId)
+        const availableGroupIds = new Set(groupOptions.value.map(g => g.id))
+        const nextGroupId = saved.exists
+            ? (saved.groupId ? (availableGroupIds.has(saved.groupId) ? saved.groupId : (groupOptions.value[0]?.id ?? null)) : null)
+            : (groupOptions.value[0]?.id ?? null)
+
+        selectedGroupId.value = nextGroupId
+        persistSelectedGroupId(clsId, nextGroupId)
+
+        await Promise.all([
+            loadStudentsForCurrentGroup(),
+            loadRanking(),
         ])
-        students.value = stu
-        groups.value = grp
-        await loadRanking()
     } catch (err) {
         console.error(err)
     }
@@ -234,7 +325,7 @@ async function loadRanking() {
         const resp = await pointsManager.getClassRanking({
             class_id: activeClassId.value,
             time_range: rankingTimeRange.value,
-            limit: 50,
+            limit: 10,
         })
         classRankingItems.value = resp.items ?? []
     } catch (err) {
@@ -260,11 +351,6 @@ async function ensureRuleGroupsLoaded() {
 
 const filteredStudents = computed<UiPointsStudent[]>(() => {
     let list = uiStudents.value
-
-    if (selectedGroupId.value) {
-        const set = groupIdToMemberSet.value.get(selectedGroupId.value)
-        if (set) list = list.filter(s => set.has(s.id))
-    }
 
     const kw = keyword.value.trim().toLowerCase()
     if (kw) {
@@ -320,11 +406,7 @@ async function openSelectorForAll(tab: SelectorTab) {
 
 async function refreshStudentsAndRanking() {
     if (!activeClassId.value) return
-    try {
-        students.value = await studentManager.list(activeClassId.value)
-    } catch (err) {
-        console.error(err)
-    }
+    await loadStudentsForCurrentGroup()
     await loadRanking()
 }
 
@@ -372,7 +454,7 @@ function openHistory(studentName: string) {
 <template>
     <div class="points-page">
         <PointsRankingPanel
-            :students="uiStudents.map(s => ({ studentName: s.name, gender: (s.gender === 'unknown' ? 'male' : s.gender) }))"
+            :students="rankingPanelStudents"
             :class-id="activeClassId"
             :total-points-map="rankingPointsMapByName"
             :rules="rulesFlat"
@@ -404,7 +486,7 @@ function openHistory(studentName: string) {
             :selected-count="selectedIds.length"
             :can-undo="!!activeClassId"
             :has-students="filteredStudents.length > 0"
-            @update:selected-group-id="selectedGroupId = $event"
+            @update:selected-group-id="onSelectedGroupChange($event)"
             @update:sort-by="sortBy = $event"
             @update:keyword="keyword = $event"
             @open-apply-all="openSelectorForAll($event.tab)"

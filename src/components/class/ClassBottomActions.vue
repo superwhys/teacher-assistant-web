@@ -4,7 +4,6 @@ import type { StudentsSortOption } from '@/types/student'
 export type UiGroupOption = {
     id: number
     name: string
-    memberCount: number
 }
 
 defineProps<{

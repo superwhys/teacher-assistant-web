@@ -4,27 +4,21 @@ import { useRouter, useRoute } from 'vue-router'
 import { formatTimeHHmm, formatChineseDateWithWeek } from '@/utils/date'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { useUserStore } from '@/stores/userStore'
 import { useStudentStore } from '@/stores/studentStore'
 import { usePointsStore } from '@/stores/pointsStore'
 import { usePointsItemStore } from '@/stores/pointsItemStore'
 import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import { useShopStore } from '@/stores/shopStore'
-import { cloudApi } from '@/api/cloud'
-import { importUserData } from '@/utils/storage'
 import { classManager } from '@/managers/class'
 import type { ClassDTO } from '@/types/class'
-import { useUserCacheStore } from '@/stores/userCacheStore'
 import { useCacheStore } from '@/stores/cacheStore'
 
 const settingsStore = useSettingsStore()
-const userStore = useUserStore()
 const studentStore = useStudentStore()
 const pointsStore = usePointsStore()
 const pointsItemStore = usePointsItemStore()
 const studentGroupStore = useStudentGroupStore()
 const shopStore = useShopStore()
-const userCacheStore = useUserCacheStore()
 const cacheStore = useCacheStore()
 
 function clearAllStores() {
@@ -33,8 +27,8 @@ function clearAllStores() {
     pointsItemStore.clear()
     studentGroupStore.clear()
     shopStore.clear()
-    userCacheStore.clearActiveClassId()
-    userCacheStore.clearActiveClassName()
+    cacheStore.clearActiveClassId()
+    cacheStore.clearActiveClassName()
 }
 
 async function loadAllStores() {
@@ -49,34 +43,21 @@ async function loadAllStores() {
 
 const now = ref(new Date())
 let timer: number | undefined
-let autoSyncTimer: number | undefined
 
 onMounted(async () => {
     timer = window.setInterval(() => {
         now.value = new Date()
     }, 1000)
     await settingsStore.hydrate()
-    if (userStore.profile?.id) {
+    if (cacheStore.profile?.id) {
         await loadAllStores()
         await loadClassesFromApi()
     }
-    // setup auto sync checker
-    if (autoSyncTimer !== undefined) {
-        window.clearInterval(autoSyncTimer)
-        autoSyncTimer = undefined
-    }
-    autoSyncTimer = window.setInterval(() => {
-        tryAutoSync()
-    }, 60 * 1000)
 })
 
 onBeforeUnmount(() => {
     if (timer !== undefined) {
         window.clearInterval(timer)
-    }
-    if (autoSyncTimer !== undefined) {
-        window.clearInterval(autoSyncTimer)
-        autoSyncTimer = undefined
     }
     clearTrialReminder()
 })
@@ -91,12 +72,12 @@ const classOptions = computed(() => {
     })
 })
 const activeClassId = computed<number | null>({
-    get: () => userCacheStore.getActiveClassId(),
+    get: () => cacheStore.getActiveClassId(),
     set: (val) => {
         if (typeof val === 'number') {
-            userCacheStore.setActiveClassId(val)
+            cacheStore.setActiveClassId(val)
         } else {
-            userCacheStore.clearActiveClassId()
+            cacheStore.clearActiveClassId()
         }
     }
 })
@@ -113,16 +94,16 @@ watch(activeClassId, (val) => {
 // 同步当前班级名称到 userCacheStore/cacheStore，供各页面展示
 watch([activeClassId, classes], ([cid]) => {
     if (!cid) {
-        userCacheStore.clearActiveClassName()
+        cacheStore.clearActiveClassName()
         cacheStore.clearActiveClassName()
         return
     }
     const name = classes.value.find(c => c.id === cid)?.name ?? null
     if (name && name.trim()) {
-        userCacheStore.setActiveClassName(name)
+        cacheStore.setActiveClassName(name)
         cacheStore.setActiveClassName(name)
     } else {
-        userCacheStore.clearActiveClassName()
+        cacheStore.clearActiveClassName()
         cacheStore.clearActiveClassName()
     }
 }, { immediate: true })
@@ -143,22 +124,23 @@ async function loadClassesFromApi() {
         classesLoading.value = false
     }
 }
-const isAuthenticated = computed(() => userStore.isAuthenticated)
-const userName = computed(() => userStore.displayName || '已登录')
-const userEmail = computed(() => userStore.profile?.email ?? '')
-const userAvatar = computed(() => userStore.profile?.avatar ?? null)
+const isAuthenticated = computed(() => cacheStore.isAuthenticated)
+const userName = computed(() => cacheStore.displayName || '已登录')
+const userEmail = computed(() => cacheStore.profile?.email ?? '')
+const userAvatar = computed(() => cacheStore.profile?.avatar ?? null)
 const userInitial = computed(() => {
     const name = userName.value.trim()
     if (!name) return '用'
     return name.charAt(0).toUpperCase()
 })
+
 const trialSecondsLeft = computed(() => {
-    if (!isAuthenticated.value || !userStore.isTrial || userStore.trialExpiresAt === null) return null
-    return userStore.trialExpiresAt - Math.floor(now.value.getTime() / 1000)
+    if (!isAuthenticated.value || !cacheStore.isTrial || cacheStore.trialExpiresAt === null) return null
+    return cacheStore.trialExpiresAt - Math.floor(now.value.getTime() / 1000)
 })
 const trialExpired = computed(() => trialSecondsLeft.value !== null && trialSecondsLeft.value <= 0)
-const showTrialBadge = computed(() => isAuthenticated.value && userStore.isTrial)
-const isLoginExpired = computed(() => userStore.isExpired)
+const showTrialBadge = computed(() => isAuthenticated.value && cacheStore.isTrial)
+const isLoginExpired = computed(() => cacheStore.isExpired)
 const trialBadgeText = computed(() => {
     if (trialSecondsLeft.value === null) return ''
     if (trialSecondsLeft.value <= 0) return '试用已过期'
@@ -276,37 +258,19 @@ const showFooter = computed(() => isAuthenticated.value && !route.meta?.hideFoot
 function onUserCommand(command: string) {
     if (command === 'logout') {
         clearAllStores()
-        userStore.logout()
+        cacheStore.logout()
         ElMessage.success('已退出登录')
         router.replace('/auth')
     }
 }
 
-watch(() => userStore.profile?.id, (newUserId, oldUserId) => {
+watch(() => cacheStore.profile?.id, (newUserId, oldUserId) => {
     if (newUserId && newUserId !== oldUserId) {
         void loadAllStores()
         void settingsStore.hydrate()
         void loadClassesFromApi()
     }
 }, { immediate: false })
-
-function tryAutoSync() {
-    if (!userStore.isAuthenticated) return
-    if (userStore.isTrial) return
-    if (!settingsStore.cloudAutoSyncEnabled) return
-    const hours = settingsStore.cloudAutoSyncIntervalHours
-    if (![0.5, 1, 3, 6, 12].includes(hours)) return
-    const intervalMs = hours * 60 * 60 * 1000
-    const last = settingsStore.lastAutoCloudSyncAt
-    const nowTs = Date.now()
-    if (last == null) {
-        void settingsStore.syncToCloud('auto')
-        return
-    }
-    if (nowTs - last >= intervalMs) {
-        void settingsStore.syncToCloud('auto')
-    }
-}
 
 function clearTrialReminder() {
     if (trialReminderTimer !== null) {
@@ -371,136 +335,6 @@ async function confirmUnlock() {
     }
 }
 
-const isSavingData = ref(false)
-const updateDialogVisible = ref(false)
-const loadingBackups = ref(false)
-const latestManualTs = ref<number | null>(null)
-const latestAutoTs = ref<number | null>(null)
-const activeBackupTab = ref<'manual' | 'auto'>('manual')
-const activeBackupTs = computed<number | null>(() => {
-    return activeBackupTab.value === 'manual' ? latestManualTs.value : latestAutoTs.value
-})
-const activeBackupTitle = computed(() => {
-    return activeBackupTab.value === 'manual' ? '最新手动备份' : '最新自动备份'
-})
-const activeBackupTypeText = computed(() => {
-    return activeBackupTab.value === 'manual' ? '手动' : '自动'
-})
-const restoring = ref<{ ts: number | null; type: 'manual' | 'auto' | null }>({ ts: null, type: null })
-
-async function onSaveDataToCloud() {
-    if (userStore.isTrial) {
-        ElMessage.warning('试用版不支持云端同步')
-        return
-    }
-    try {
-        await ElMessageBox.confirm('保存数据会将当前数据同步到云端，是否继续？', '保存数据', {
-            type: 'info',
-            confirmButtonText: '保存',
-            cancelButtonText: '取消',
-        })
-    } catch {
-        return
-    }
-    if (isSavingData.value) return
-    isSavingData.value = true
-    try {
-        await settingsStore.syncToCloud('manual')
-        ElMessage.success('数据已保存到云端')
-    } catch (err) {
-        ElMessage.error('保存失败：' + (err as Error).message)
-    } finally {
-        isSavingData.value = false
-    }
-}
-
-function onOpenUpdateDialog() {
-    if (userStore.isTrial) {
-        ElMessage.warning('试用版不支持云端同步')
-        return
-    }
-    updateDialogVisible.value = true
-    latestManualTs.value = null
-    latestAutoTs.value = null
-    activeBackupTab.value = 'manual'
-    loadingBackups.value = true
-    void loadBackupsList()
-}
-
-async function loadBackupsList() {
-    try {
-        const res = await cloudApi.getBackups()
-        const raw: any = res.data as any
-        const listManual: number[] = Array.isArray(raw?.manual) ? (raw.manual as number[]) : []
-        const listAuto: number[] = Array.isArray(raw?.auto) ? (raw.auto as number[]) : []
-        const sortedManual = listManual
-            .map((n: number) => Number(n))
-            .filter((n: number) => Number.isFinite(n) && n > 0)
-            .sort((a: number, b: number) => b - a)
-        const sortedAuto = listAuto
-            .map((n: number) => Number(n))
-            .filter((n: number) => Number.isFinite(n) && n > 0)
-            .sort((a: number, b: number) => b - a)
-        latestManualTs.value = sortedManual[0] ?? null
-        latestAutoTs.value = sortedAuto[0] ?? null
-        if (!latestManualTs.value && latestAutoTs.value) {
-            activeBackupTab.value = 'auto'
-        } else if (latestManualTs.value) {
-            activeBackupTab.value = 'manual'
-        }
-        if (latestManualTs.value === null && latestAutoTs.value === null) {
-            ElMessage.warning('云端暂无备份数据')
-            updateDialogVisible.value = false
-        }
-    } catch (err) {
-        ElMessage.error('获取备份列表失败：' + (err as Error).message)
-        updateDialogVisible.value = false
-    } finally {
-        loadingBackups.value = false
-    }
-}
-
-function onSwitchBackupTab(type: 'manual' | 'auto') {
-    if (activeBackupTab.value === type) return
-    if (type === 'manual' && !latestManualTs.value) return
-    if (type === 'auto' && !latestAutoTs.value) return
-    activeBackupTab.value = type
-}
-
-function formatBackupTime(ts: number): string {
-    try {
-        return new Date(ts).toLocaleString('zh-CN', { hour12: false })
-    } catch {
-        return String(ts)
-    }
-}
-
-async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
-    if (restoring.value.ts !== null) return
-    restoring.value = { ts, type }
-    try {
-        const res = await cloudApi.getBackup(ts, type)
-        const payload = res?.data || {}
-        const userId = userStore.profile?.id || null
-        await importUserData(payload, userId)
-        await Promise.all([
-            studentStore.hydrate(),
-            pointsStore.hydrate(),
-            pointsItemStore.hydrate(),
-            studentGroupStore.hydrate(),
-            shopStore.hydrate(),
-            loadClassesFromApi(),
-        ])
-        settingsStore.bumpVersion()
-        updateDialogVisible.value = false
-        ElMessage.success('已从云端恢复数据')
-    } catch (err) {
-        ElMessage.error('恢复失败：' + (err as Error).message)
-    } finally {
-        restoring.value = { ts: null, type: null }
-    }
-}
-
 </script>
 
 <template>
@@ -521,7 +355,7 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
                     </div>
                     <div class="header-right">
                         <div v-if="isLoginExpired" class="expired-indicator">
-                            <el-tooltip content="登录已过期，请重新登录以恢复云端功能" placement="bottom" effect="dark">
+                            <el-tooltip content="登录已过期，请重新登录以恢复功能" placement="bottom" effect="dark">
                                 <el-tag type="danger" effect="dark" class="expired-tag">
                                     <i-ep-warning-filled class="indicator-icon" />
                                     <span class="indicator-text">登录已过期</span>
@@ -590,17 +424,6 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
                                 </ActionItem>
                             </div>
                         </div>
-                        <div class="sidebar-section sync-section">
-                            <div class="section-title">数据同步</div>
-                            <div class="sync-actions">
-                                <el-button type="success" size="default" :loading="isSavingData" :disabled="isSavingData" @click="onSaveDataToCloud">
-                                    <i-ep-upload-filled class="btn-icon" /><span>保存数据</span>
-                                </el-button>
-                                <el-button type="primary" plain size="default" @click="onOpenUpdateDialog">
-                                    <i-ep-download class="btn-icon" /><span>更新数据</span>
-                                </el-button>
-                            </div>
-                        </div>
                         <div class="sidebar-section class-section">
                             <div class="section-title">班级选择</div>
                             <el-select v-model="activeClassId" placeholder="选择班级" class="class-select" size="large">
@@ -663,54 +486,6 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
                         <el-button @click="editDialogVisible = false">取 消</el-button>
                         <el-button type="primary" @click="confirmEditClass">确 定</el-button>
                     </span>
-                </template>
-            </el-dialog>
-            <el-dialog v-model="updateDialogVisible" width="560px" :close-on-click-modal="true">
-                <template #header>
-                    <div class="update-dlg-header">
-                        <div class="title">更新数据</div>
-                        <div class="subtitle">该操作会将云端最新的数据应用到本地</div>
-                    </div>
-                </template>
-                <div v-loading="loadingBackups" element-loading-text="正在获取云端备份数据..." class="update-content">
-                    <div v-if="!loadingBackups" class="update-content-inner">
-                        <div v-if="!latestManualTs && !latestAutoTs" class="latest-backup-card">
-                            <el-empty description="暂无云端备份" />
-                        </div>
-                        <div v-else class="latest-panel">
-                            <div class="backup-tab-bar">
-                                <el-button size="large" :type="activeBackupTab === 'manual' ? 'primary' : 'default'" :plain="activeBackupTab !== 'manual'" :disabled="!latestManualTs" @click="onSwitchBackupTab('manual')">
-                                    手动备份
-                                </el-button>
-                                <el-button size="large" :type="activeBackupTab === 'auto' ? 'primary' : 'default'" :plain="activeBackupTab !== 'auto'" :disabled="!latestAutoTs" @click="onSwitchBackupTab('auto')">
-                                    自动备份
-                                </el-button>
-                            </div>
-                            <div v-if="activeBackupTs" class="latest-backup-card single">
-                                <div class="latest-icon-wrapper">
-                                    <i-ep-cloudy class="cloud-icon" />
-                                </div>
-                                <div class="latest-info">
-                                    <div class="latest-title">{{ activeBackupTitle }}</div>
-                                    <div class="latest-time">{{ formatBackupTime(activeBackupTs!) }}</div>
-                                    <div class="latest-desc">应用此{{ activeBackupTypeText }}备份会覆盖当前本地数据。</div>
-                                </div>
-                                <div class="latest-actions">
-                                    <el-button type="primary" size="large" :loading="restoring.ts === activeBackupTs && restoring.type === activeBackupTab" :disabled="!!restoring.type" @click="onRestoreFromBackup(activeBackupTs!, activeBackupTab)">
-                                        <i-ep-refresh-left class="btn-icon" /> 应用此备份
-                                    </el-button>
-                                </div>
-                            </div>
-                            <div v-else class="latest-empty-tip">
-                                <el-empty :description="`暂无${activeBackupTypeText}备份`" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <template #footer>
-                    <div class="update-dlg-footer">
-                        <el-button size="large" @click="updateDialogVisible = false">取消</el-button>
-                    </div>
                 </template>
             </el-dialog>
         </el-container>
@@ -1078,43 +853,6 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
     display: flex;
     flex-direction: column;
     gap: 12px;
-}
-
-.sync-section {
-    margin-top: auto;
-}
-
-.sync-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 8px;
-    align-items: center;
-}
-
-.sync-actions :deep(.el-button) {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: 0 !important;
-}
-
-.sync-actions :deep(.el-button span) {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-}
-
-.sync-actions .btn-icon {
-    font-size: 16px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    vertical-align: middle;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
 }
 
 .class-section {
@@ -1577,15 +1315,6 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
         font-size: 16px;
     }
 
-    .sync-actions :deep(.el-button) {
-        width: 38px;
-        height: 38px;
-    }
-
-    .sync-actions .btn-icon {
-        font-size: 16px;
-    }
-
     .logout-btn {
         width: 38px;
         height: 38px;
@@ -1600,139 +1329,6 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
         align-items: center;
     }
 
-    .sync-actions :deep(.el-button span) {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .sync-actions :deep(.el-button span span) {
-        display: none;
-    }
 }
 
-.update-dlg-header {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.update-dlg-header .title {
-    font-size: 18px;
-    font-weight: 700;
-}
-
-.update-dlg-header .subtitle {
-    color: #909399;
-    font-size: 12px;
-}
-
-.update-content {
-    min-height: 280px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.update-content-inner {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.latest-backup-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 32px 24px;
-    gap: 20px;
-    width: 100%;
-}
-
-.latest-icon-wrapper {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
-    color: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 8px 20px rgba(64, 158, 255, 0.3);
-}
-
-.cloud-icon {
-    font-size: 40px;
-}
-
-.latest-info {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.latest-title {
-    font-size: 20px;
-    font-weight: 700;
-    color: #303133;
-}
-
-.latest-time {
-    font-size: 16px;
-    color: #409eff;
-    font-weight: 600;
-}
-
-.latest-desc {
-    font-size: 14px;
-    color: #909399;
-    margin-top: 4px;
-    line-height: 1.6;
-}
-
-.latest-actions {
-    display: flex;
-    gap: 12px;
-    margin-top: 8px;
-}
-
-.latest-actions :deep(.el-button) {
-    min-width: 140px;
-}
-
-.latest-panel {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 24px;
-}
-
-.backup-tab-bar {
-    display: flex;
-    gap: 12px;
-}
-
-.backup-tab-bar :deep(.el-button) {
-    min-width: 140px;
-}
-
-.latest-backup-card.single {
-    max-width: 360px;
-}
-
-.latest-empty-tip {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-}
-
-.update-dlg-footer {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
 </style>

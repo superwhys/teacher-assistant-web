@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { asyncStorage, getUserStorageKey } from '@/utils/storage'
 import type { Student } from '@/types/student'
-import { useUserStore } from './userStore'
+import { useCacheStore } from './cacheStore'
 
 type StudentRecords = Record<string, Student[]> // key: classId
 
@@ -13,11 +13,11 @@ function loadInitial(): StudentRecords {
 }
 
 export const useStudentStore = defineStore('student', () => {
-    const userStore = useUserStore()
+    const cacheStore = useCacheStore()
     const records = ref<StudentRecords>(loadInitial())
 
     function getStorageKey(): string {
-        const userId = userStore.profile?.id || null
+        const userId = cacheStore.profile?.id || null
         return getUserStorageKey(STORAGE_KEY_BASE, userId)
     }
 

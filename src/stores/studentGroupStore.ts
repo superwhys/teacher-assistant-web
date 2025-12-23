@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { asyncStorage, getUserStorageKey } from '@/utils/storage'
 import type { Student } from '@/types/student'
 import type { StudentGroup } from '@/types/studentGroup'
-import { useUserStore } from './userStore'
+import { useCacheStore } from './cacheStore'
 
 type GroupRecords = Record<string, StudentGroup[]> // key: classId
 
@@ -18,11 +18,11 @@ function loadInitial(): GroupRecords {
 }
 
 export const useStudentGroupStore = defineStore('studentGroup', () => {
-    const userStore = useUserStore()
+    const cacheStore = useCacheStore()
     const records = ref<GroupRecords>(loadInitial())
 
     function getStorageKey(): string {
-        const userId = userStore.profile?.id || null
+        const userId = cacheStore.profile?.id || null
         return getUserStorageKey(STORAGE_KEY_BASE, userId)
     }
 

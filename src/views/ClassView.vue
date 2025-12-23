@@ -13,7 +13,7 @@ import type { ApiGender, CreateStudentReq, StudentDTO, StudentGroupDTO, Students
 import type { ClassDTO } from '@/types/class'
 import { classManager } from '@/managers/class'
 import { studentManager } from '@/managers/student'
-import { useUserCacheStore } from '@/stores/userCacheStore'
+import { useCacheStore } from '@/stores/cacheStore'
 
 defineOptions({ name: 'ClassView' })
 
@@ -22,22 +22,22 @@ type LayoutMode = 'card' | 'list'
 const loading = ref(false)
 
 const classes = ref<ClassDTO[]>([])
-const userCacheStore = useUserCacheStore()
+const cacheStore = useCacheStore()
 
-const activeClassId = computed<number | null>(() => userCacheStore.getActiveClassId())
+const activeClassId = computed<number | null>(() => cacheStore.getActiveClassId())
 
 const students = ref<StudentDTO[]>([])
 const allStudents = ref<StudentDTO[]>([])
 const groups = ref<StudentGroupDTO[]>([])
 
 const layoutMode = computed<LayoutMode>({
-    get: () => userCacheStore.getClassLayout() ?? 'card',
-    set: (val) => userCacheStore.setClassLayout(val)
+    get: () => cacheStore.getClassLayout() ?? 'card',
+    set: (val) => cacheStore.setClassLayout(val)
 })
 
 const sortBy = computed<StudentsSortOption>({
-    get: () => userCacheStore.getStudentsSort() ?? 'default',
-    set: (val) => userCacheStore.setStudentsSort(val)
+    get: () => cacheStore.getStudentsSort() ?? 'default',
+    set: (val) => cacheStore.setStudentsSort(val)
 })
 
 const keyword = ref('')

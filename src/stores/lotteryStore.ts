@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import type { Prize, DrawRecord, PrizePool } from '@/types/lottery'
 import type { ShopItem } from '@/types/shopItem'
 import { asyncStorage, getUserStorageKey } from '@/utils/storage'
-import { useUserStore } from './userStore'
+import { useCacheStore } from './cacheStore'
 
 const STORAGE_KEY_BASE = 'ta_lottery_store_v2'
 
@@ -29,16 +29,16 @@ function generateId(prefix: string = 'LT'): string {
 }
 
 export const useLotteryStore = defineStore('lottery', () => {
-    const userStore = useUserStore()
+    const cacheStore = useCacheStore()
     const data = ref<LotteryStoreData>(loadInitial())
 
     function getStorageKey(): string {
-        const userId = userStore.profile?.id || null
+        const userId = cacheStore.profile?.id || null
         return getUserStorageKey(STORAGE_KEY_BASE, userId)
     }
 
     function getLegacyStorageKey(): string {
-        const userId = userStore.profile?.id || null
+        const userId = cacheStore.profile?.id || null
         return getUserStorageKey('ta_lottery_store_v1', userId)
     }
 

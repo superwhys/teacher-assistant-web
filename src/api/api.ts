@@ -1,6 +1,6 @@
 import type { ApiResponse } from "@/types/api";
 import { ElMessage } from "element-plus";
-import { useUserStore } from "@/stores/userStore";
+import { useCacheStore } from "@/stores/cacheStore";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
@@ -51,8 +51,8 @@ async function request<T>(
   url: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
-  const userStore = useUserStore();
-  const authToken = userStore.token;
+  const cacheStore = useCacheStore();
+  const authToken = cacheStore.token;
   let response = await fetch(`${API_BASE_URL}${url}`, {
     headers: buildHeaders(authToken, options.headers),
     ...options,
@@ -62,7 +62,7 @@ async function request<T>(
     // await safeParseJson<unknown>(response);
     // const errorMessage = errResp?.message || `HTTP error! status: ${response.status}`;
     
-    userStore.setExpired(true);
+    cacheStore.setExpired(true);
     const errorMessage = '登录已过期, 请退出并重新登录, 否则会影响云端功能的正常使用！';
     showMessage(errorMessage, "error");
     showMessage(errorMessage, "error");

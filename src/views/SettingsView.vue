@@ -9,11 +9,7 @@ import { usePointsStore } from '@/stores/pointsStore'
 import { usePointsItemStore } from '@/stores/pointsItemStore'
 import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import { useShopStore } from '@/stores/shopStore'
-import CloudSyncSettings from '@/components/CloudSyncSettings.vue'
-import { useUserStore } from '@/stores/userStore'
-import { authApi } from '@/api/auth'
-import { decodeJwtPayload } from '@/utils/jwt'
-import type { JwtPayload } from '@/types/auth'
+import { useCacheStore } from '@/stores/cacheStore'
 
 const settingsStore = useSettingsStore()
 const classStore = useClassStore()
@@ -22,7 +18,7 @@ const pointsStore = usePointsStore()
 const pointsItemStore = usePointsItemStore()
 const studentGroupStore = useStudentGroupStore()
 const shopStore = useShopStore()
-const userStore = useUserStore()
+const cacheStore = useCacheStore()
 
 onMounted(() => {
     void settingsStore.hydrate()
@@ -37,8 +33,6 @@ const confirmPwd = ref<string>('')
 const oldPwd = ref<string>('')
 const savingPwd = ref<boolean>(false)
 const hasPwd = computed(() => settingsStore.hasLockPassword())
-const secretInput = ref<string>('')
-const verifyingSecret = ref<boolean>(false)
 
 function formatNowStr(): string {
     const d = new Date()
@@ -56,7 +50,7 @@ async function onExportBackup() {
     if (exporting.value) return
     exporting.value = true
     try {
-        const userId = userStore.profile?.id || null
+        const userId = cacheStore.profile?.id || null
         if (!userId) {
             ElMessage.error('无法获取用户信息，请重新登录后再试')
             return
@@ -104,7 +98,7 @@ async function onImportFileChange(e: Event) {
             throw new Error('文件非合法 JSON')
         }
         const payload = parsed && typeof parsed === 'object' && parsed.data && typeof parsed.data === 'object' ? parsed.data : parsed
-        const userId = userStore.profile?.id || null
+        const userId = cacheStore.profile?.id || null
         if (!userId) {
             throw new Error('无法获取用户信息，请重新登录后再试')
         }
@@ -193,48 +187,6 @@ async function onClearLockPassword() {
     ElMessage.success('已清除锁屏密码')
 }
 
-async function onVerifySecret() {
-    if (verifyingSecret.value) return
-    const secret = secretInput.value.trim()
-    if (!secret) {
-        ElMessage.error('请输入授权码')
-        return
-    }
-    verifyingSecret.value = true
-    try {
-        const res = await authApi.verifySecret({ secret })
-        const token = res.data
-        if (!token) {
-            ElMessage.error('授权码验证失败：未返回令牌')
-            return
-        }
-        const decoded = decodeJwtPayload<JwtPayload>(token)
-        const info = decoded?.user ?? {
-            id: userStore.profile?.id ?? secret,
-            email: userStore.profile?.email ?? '',
-        }
-        const profile = {
-            id: info.id !== undefined ? String(info.id) : (userStore.profile?.id ?? secret),
-            email: info.email ?? userStore.profile?.email ?? '',
-            name: info.name ?? info.email ?? userStore.profile?.name ?? '',
-            avatar: info.avatar ?? userStore.profile?.avatar ?? null,
-        }
-        const trial = decoded?.secret == null
-        const expiresAt = typeof decoded?.exp === 'number' ? decoded.exp : null
-        userStore.setAuth(token, profile, trial, expiresAt)
-        ElMessage.success(trial ? '已更新授权码，当前仍为试用状态' : '授权码验证成功，已开启云端功能')
-        if (!trial) {
-            await settingsStore.hydrate()
-        }
-        secretInput.value = ''
-    } catch (err) {
-        const message = (err as Error).message || '授权码验证失败'
-        ElMessage.error(message)
-    } finally {
-        verifyingSecret.value = false
-    }
-}
-
 function onLockNow() {
     if (!hasPwd.value) {
         ElMessage.error('请先设置锁屏密码')
@@ -248,32 +200,6 @@ function onLockNow() {
 <template>
     <div class="settings-page">
         <div class="cards">
-            <BaseCard title="授权码" shadow="never">
-                <el-form label-position="top" class="settings-form">
-                    <el-form-item>
-                        <el-input v-model="secretInput" placeholder="输入授权码" :disabled="verifyingSecret" />
-                    </el-form-item>
-                    <div class="secret-actions">
-                        <el-button type="primary" :loading="verifyingSecret" :disabled="verifyingSecret"
-                            @click="onVerifySecret">
-                            <i-ep-check class="btn-icon" /> 验证授权码
-                        </el-button>
-                    </div>
-                    <div class="tips">
-                        {{ userStore.isTrial ? '试用状态下请输入正式授权码以解锁所有功能。' : '如需更新授权码，请重新验证。' }}
-                    </div>
-                </el-form>
-            </BaseCard>
-
-            <template v-if="userStore.isTrial">
-                <BaseCard title="同步设置" shadow="never">
-                    <el-alert type="warning" title="试用版不可使用云端同步功能" show-icon :closable="false" />
-                </BaseCard>
-            </template>
-            <template v-else>
-                <CloudSyncSettings />
-            </template>
-
             <BaseCard title="锁屏设置" shadow="never">
                 <div class="lock-vertical">
                     <div class="lock-top">
@@ -314,42 +240,35 @@ function onLockNow() {
                 </div>
             </BaseCard>
 
-            <template v-if="userStore.isTrial">
-                <BaseCard title="备份与恢复" shadow="never">
-                    <el-alert type="warning" title="试用版不支持备份与恢复功能" show-icon :closable="false" />
-                </BaseCard>
-            </template>
-            <template v-else>
-                <BaseCard title="备份与恢复" shadow="never">
-                    <div class="backup-grid">
-                        <div class="backup-item">
-                            <div class="icon-wrap success"><i-ep-download /></div>
-                            <div class="content">
-                                <div class="title">导出备份数据</div>
-                                <div class="desc">将本地全部数据导出为 JSON 文件，建议定期备份。</div>
-                                <div class="actions">
-                                    <el-button type="primary" size="large" :loading="exporting" :disabled="exporting" @click="onExportBackup">
-                                        <i-ep-download class="btn-icon" /> 导出备份数据
-                                    </el-button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="backup-item">
-                            <div class="icon-wrap info"><i-ep-upload /></div>
-                            <div class="content">
-                                <div class="title">导入备份数据</div>
-                                <div class="desc">从 JSON 文件恢复数据，可能覆盖同名数据，操作前请确认。</div>
-                                <div class="actions">
-                                    <el-button size="large" :loading="importing" :disabled="importing" @click="triggerImport">
-                                        <i-ep-upload class="btn-icon" /> 导入备份数据
-                                    </el-button>
-                                    <input ref="fileInputRef" type="file" accept="application/json" class="hidden-file" @change="onImportFileChange" />
-                                </div>
+            <BaseCard title="备份与恢复" shadow="never">
+                <div class="backup-grid">
+                    <div class="backup-item">
+                        <div class="icon-wrap success"><i-ep-download /></div>
+                        <div class="content">
+                            <div class="title">导出备份数据</div>
+                            <div class="desc">将本地全部数据导出为 JSON 文件，建议定期备份。</div>
+                            <div class="actions">
+                                <el-button type="primary" size="large" :loading="exporting" :disabled="exporting" @click="onExportBackup">
+                                    <i-ep-download class="btn-icon" /> 导出备份数据
+                                </el-button>
                             </div>
                         </div>
                     </div>
-                </BaseCard>
-            </template>
+                    <div class="backup-item">
+                        <div class="icon-wrap info"><i-ep-upload /></div>
+                        <div class="content">
+                            <div class="title">导入备份数据</div>
+                            <div class="desc">从 JSON 文件恢复数据，可能覆盖同名数据，操作前请确认。</div>
+                            <div class="actions">
+                                <el-button size="large" :loading="importing" :disabled="importing" @click="triggerImport">
+                                    <i-ep-upload class="btn-icon" /> 导入备份数据
+                                </el-button>
+                                <input ref="fileInputRef" type="file" accept="application/json" class="hidden-file" @change="onImportFileChange" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </BaseCard>
         </div>
     </div>
 

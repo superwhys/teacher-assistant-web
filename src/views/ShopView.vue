@@ -1,60 +1,95 @@
 <script setup lang="ts">
-import { ref, computed, reactive, type Component } from 'vue'
+import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import type { UploadInstance } from 'element-plus'
-import { useClassStore } from '@/stores/classStore'
-import { useStudentStore } from '@/stores/studentStore'
-import { useShopStore } from '@/stores/shopStore'
-import { usePointsStore } from '@/stores/pointsStore'
-import type { ShopItem, ExchangeRecord } from '@/types/shopItem'
-import { formatTimeHHmm } from '@/utils/date'
+import { useCacheStore } from '@/stores/cacheStore'
+import { studentManager } from '@/managers/student'
+import { shopManager } from '@/managers/shop'
+import type { StudentDTO } from '@/types/student'
+import type { CreatePrizeReq, Prize, PrizeRecord } from '@/types/mall'
+import { getShopIconComponent } from '@/components/shop/shopIcons'
 import * as XLSX from 'xlsx'
-import {
-    GoodsFilled as IEpGoodsFilled,
-    Trophy as IEpTrophy,
-    StarFilled as IEpStarFilled,
-    Coin as IEpCoin,
-    Reading as IEpReading,
-    EditPen as IEpEditPen,
-    Coffee as IEpCoffee,
-    Basketball as IEpBasketball
-} from '@element-plus/icons-vue'
+
+import ShopHeaderRow from '@/components/shop/ShopHeaderRow.vue'
+import ShopToolbar from '@/components/shop/ShopToolbar.vue'
+import ShopPrizeGrid from '@/components/shop/ShopPrizeGrid.vue'
+import ShopRecordsTable from '@/components/shop/ShopRecordsTable.vue'
+import ShopPrizeEditorDialog from '@/components/shop/ShopPrizeEditorDialog.vue'
+import ShopExchangeDialog from '@/components/shop/ShopExchangeDialog.vue'
+import ShopImportDialog from '@/components/shop/ShopImportDialog.vue'
 
 defineOptions({
     name: 'ShopView'
 })
 
-const classStore = useClassStore()
-const studentStore = useStudentStore()
-const shopStore = useShopStore()
-const pointsStore = usePointsStore()
+const cacheStore = useCacheStore()
 
 const activeTab = ref<'shop' | 'records'>('shop')
 
-const activeClassId = computed(() => classStore.activeClassId)
+const activeClassId = computed<number | null>(() => cacheStore.getActiveClassId())
+
+function toNumber(v: unknown, fallback = 0): number {
+    const n = typeof v === 'number' ? v : Number(v)
+    return Number.isFinite(n) ? n : fallback
+}
+
+const students = ref<StudentDTO[]>([])
+const prizes = ref<Prize[]>([])
+const records = ref<PrizeRecord[]>([])
+const recordsTotal = ref(0)
+const recordsLoading = ref(false)
+const recordsPageSize = ref(20)
+const recordsCurrentPage = ref(1)
+
+const shopItems = computed<Prize[]>(() => prizes.value ?? [])
+
+const studentIdNameMap = computed<Record<number, string>>(() => {
+    const map: Record<number, string> = {}
+    for (const s of students.value ?? []) {
+        const id = toNumber(s.id, 0)
+        const name = (s.name ?? '').trim()
+        if (!id || !name) continue
+        map[id] = name
+    }
+    return map
+})
+
+const availablePointsByStudentId = computed<Record<number, number>>(() => {
+    const map: Record<number, number> = {}
+    for (const s of students.value ?? []) {
+        const id = toNumber(s.id, 0)
+        if (!id) continue
+        map[id] = toNumber(s.available_points, 0)
+    }
+    return map
+})
 
 const studentsForExchange = computed(() => {
-    const id = activeClassId.value
-    if (!id) return []
-    
-    const students = studentStore.listByClassId(id)
-    return [...students].sort((a, b) => {
-        const pointsA = pointsStore.getAvailablePoints(id, a.studentName)
-        const pointsB = pointsStore.getAvailablePoints(id, b.studentName)
-        return pointsB - pointsA
-    })
+    const list = (students.value ?? [])
+        .map(s => ({
+            id: toNumber(s.id, 0),
+            name: (s.name ?? '').trim(),
+            availablePoints: toNumber(s.available_points, 0),
+        }))
+        .filter(s => s.id > 0 && !!s.name)
+    return list.sort((a, b) => b.availablePoints - a.availablePoints)
 })
 
-const shopItems = computed(() => shopStore.getAllItems())
-const exchangeRecords = computed(() => {
-    const classId = activeClassId.value
-    return classId ? shopStore.getRecordsByClass(classId) : []
+const prizeIdMap = computed<Record<number, Prize>>(() => {
+    const map: Record<number, Prize> = {}
+    for (const p of prizes.value ?? []) {
+        const id = toNumber(p.id, 0)
+        if (!id) continue
+        map[id] = p
+    }
+    return map
 })
+
+const exchangeRecords = computed(() => records.value ?? [])
 
 const itemDialogVisible = ref(false)
 const itemDialogMode = ref<'add' | 'edit'>('add')
 const itemForm = reactive({
-    id: '',
+    id: 0,
     name: '',
     points: 0,
     stock: 0,
@@ -62,42 +97,9 @@ const itemForm = reactive({
     icon: 'goods-filled'
 })
 
-interface IconOption {
-    label: string
-    value: string
-    icon: Component
-}
-
-const iconOptions: IconOption[] = [
-    { label: '礼物', value: 'goods-filled', icon: IEpGoodsFilled },
-    { label: '奖杯', value: 'trophy', icon: IEpTrophy },
-    { label: '星星', value: 'star-filled', icon: IEpStarFilled },
-    { label: '钻石', value: 'coin', icon: IEpCoin },
-    { label: '书本', value: 'reading', icon: IEpReading },
-    { label: '铅笔', value: 'edit-pen', icon: IEpEditPen },
-    { label: '杯子', value: 'coffee', icon: IEpCoffee },
-    { label: '足球', value: 'basketball', icon: IEpBasketball }
-]
-
-const iconComponentMap: Record<string, Component> = {
-    'goods-filled': IEpGoodsFilled,
-    'trophy': IEpTrophy,
-    'star-filled': IEpStarFilled,
-    'coin': IEpCoin,
-    'reading': IEpReading,
-    'edit-pen': IEpEditPen,
-    'coffee': IEpCoffee,
-    'basketball': IEpBasketball
-}
-
-function getIconComponent(iconName?: string): Component {
-    if (!iconName) return IEpGoodsFilled
-    return iconComponentMap[iconName] || IEpGoodsFilled
-}
-
 function openAddItemDialog() {
     itemDialogMode.value = 'add'
-    itemForm.id = ''
+    itemForm.id = 0
     itemForm.name = ''
     itemForm.points = 0
     itemForm.stock = 0
@@ -106,18 +108,18 @@ function openAddItemDialog() {
     itemDialogVisible.value = true
 }
 
-function openEditItemDialog(item: ShopItem) {
+function openEditItemDialog(item: Prize) {
     itemDialogMode.value = 'edit'
-    itemForm.id = item.id
-    itemForm.name = item.name
-    itemForm.points = item.points
-    itemForm.stock = item.stock
-    itemForm.description = item.description || ''
-    itemForm.icon = item.icon || 'goods-filled'
+    itemForm.id = toNumber(item.id, 0)
+    itemForm.name = (item.name ?? '').trim()
+    itemForm.points = toNumber(item.points, 0)
+    itemForm.stock = toNumber(item.stock, 0)
+    itemForm.description = (item.description ?? '').trim()
+    itemForm.icon = (item.icon ?? 'goods-filled').trim() || 'goods-filled'
     itemDialogVisible.value = true
 }
 
-function saveItem() {
+async function saveItem() {
     if (!itemForm.name.trim()) {
         ElMessage.warning('请输入商品名称')
         return
@@ -131,245 +133,175 @@ function saveItem() {
         return
     }
 
+    try {
     if (itemDialogMode.value === 'add') {
-        shopStore.addItem({
-            name: itemForm.name,
+            const payload: CreatePrizeReq = {
+                name: itemForm.name.trim(),
             points: itemForm.points,
             stock: itemForm.stock,
             description: itemForm.description,
-            icon: itemForm.icon
-        })
+                icon: itemForm.icon,
+            }
+            await shopManager.createPrize(payload)
         ElMessage.success('商品添加成功')
     } else {
-        shopStore.updateItem(itemForm.id, {
-            name: itemForm.name,
+            if (!itemForm.id) {
+                ElMessage.error('商品 ID 异常')
+                return
+            }
+            await shopManager.updatePrize(itemForm.id, {
+                name: itemForm.name.trim(),
             points: itemForm.points,
             stock: itemForm.stock,
             description: itemForm.description,
-            icon: itemForm.icon
+                icon: itemForm.icon,
         })
         ElMessage.success('商品更新成功')
     }
-
     itemDialogVisible.value = false
+        await refreshPrizes()
+    } catch (err: any) {
+        ElMessage.error(err?.message || '保存失败')
+    }
 }
 
-function deleteItem(item: ShopItem) {
-    ElMessageBox.confirm(`确定删除商品「${item.name}」吗？`, '删除确认', {
+function deleteItem(item: Prize) {
+    ElMessageBox.confirm(`确定删除商品「${item.name ?? ''}」吗？`, '删除确认', {
         type: 'warning'
     }).then(() => {
-        shopStore.deleteItem(item.id)
+        const id = toNumber(item.id, 0)
+        if (!id) {
+            ElMessage.error('商品 ID 异常')
+            return
+        }
+        shopManager.deletePrize(id).then(async () => {
         ElMessage.success('商品已删除')
+            await refreshPrizes()
+        }).catch((err: any) => {
+            ElMessage.error(err?.message || '删除失败')
+        })
     }).catch(() => {})
 }
 
 const exchangeDialogVisible = ref(false)
 const exchangeForm = reactive({
-    itemId: '',
-    studentName: '',
-    quantity: 1
+    prizeId: 0,
+    studentId: 0,
+    count: 1
 })
 
-function openExchangeDialog(item: ShopItem) {
+const selectedPrize = computed<Prize | null>(() => {
+    const id = exchangeForm.prizeId
+    if (!id) return null
+    return prizeIdMap.value[id] ?? null
+})
+
+const requiredPoints = computed<number>(() => {
+    const prize = selectedPrize.value
+    if (!prize) return 0
+    return toNumber(prize.points, 0) * toNumber(exchangeForm.count, 0)
+})
+
+async function openExchangeDialog(item: Prize) {
     if (!activeClassId.value) {
         ElMessage.error('请先选择班级')
         return
     }
-    if (item.stock <= 0) {
+    if (toNumber(item.stock, 0) <= 0) {
         ElMessage.warning('商品库存不足')
         return
     }
-    exchangeForm.itemId = item.id
-    exchangeForm.studentName = ''
-    exchangeForm.quantity = 1
+    await ensureStudentsLoaded()
+    if (students.value.length === 0) {
+        ElMessage.warning('当前班级暂无学生')
+    }
+    exchangeForm.prizeId = toNumber(item.id, 0)
+    exchangeForm.studentId = 0
+    exchangeForm.count = 1
     exchangeDialogVisible.value = true
 }
 
-function confirmExchange() {
+async function confirmExchange() {
     if (!activeClassId.value) return
-    if (!exchangeForm.studentName) {
+    if (!exchangeForm.studentId) {
         ElMessage.warning('请选择学生')
         return
     }
-    if (exchangeForm.quantity <= 0) {
+    if (exchangeForm.count <= 0) {
         ElMessage.warning('兑换数量必须大于0')
         return
     }
 
-    const item = shopStore.getItemById(exchangeForm.itemId)
-    if (!item) {
+    const prize = selectedPrize.value
+    if (!prize) {
         ElMessage.error('商品不存在')
         return
     }
 
-    if (item.stock < exchangeForm.quantity) {
+    const stock = toNumber(prize.stock, 0)
+    if (stock < exchangeForm.count) {
         ElMessage.warning('商品库存不足')
         return
     }
 
-    const totalPoints = exchangeForm.quantity * item.points
-    const availablePoints = pointsStore.getAvailablePoints(activeClassId.value, exchangeForm.studentName)
-
+    const totalPoints = requiredPoints.value
+    const availablePoints = availablePointsByStudentId.value[exchangeForm.studentId] ?? 0
     if (availablePoints < totalPoints) {
         ElMessage.warning(`学生可用积分不足（当前：${availablePoints}，需要：${totalPoints}）`)
         return
     }
 
     try {
-        pointsStore.consumePoints(
-            activeClassId.value,
-            [exchangeForm.studentName],
-            totalPoints,
-            {
-                itemId: item.id,
-                itemName: item.name
-            }
-        )
-
-        shopStore.addExchangeRecord({
-            shopItemId: item.id,
-            shopItemName: item.name,
-            studentName: exchangeForm.studentName,
-            classId: activeClassId.value,
-            points: totalPoints,
-            quantity: exchangeForm.quantity
-        })
-
-        ElMessage.success(`兑换成功！${exchangeForm.studentName} 兑换了 ${exchangeForm.quantity} 个${item.name}`)
+        await shopManager.exchangePrize(toNumber(prize.id, 0), exchangeForm.studentId, exchangeForm.count)
+        const studentName = studentIdNameMap.value[exchangeForm.studentId] ?? ''
+        ElMessage.success(`兑换成功！${studentName || '学生'} 兑换了 ${exchangeForm.count} 个${prize.name}`)
         exchangeDialogVisible.value = false
+        await refreshPrizes()
+        if (activeTab.value === 'records') {
+            await loadRecordsPage(recordsCurrentPage.value)
+        }
     } catch (err: any) {
         ElMessage.error(err.message || '兑换失败')
     }
 }
 
-function undoExchange(record: ExchangeRecord) {
-    ElMessageBox.confirm(`确定撤销「${record.studentName}」的兑换记录吗？`, '撤销确认', {
+function undoExchange(record: PrizeRecord) {
+    const studentName = (record.student_name ?? '').trim() || (studentIdNameMap.value[toNumber(record.student_id, 0)] ?? '')
+    ElMessageBox.confirm(`确定撤销「${studentName || '该学生'}」的兑换记录吗？`, '撤销确认', {
         type: 'warning'
     }).then(() => {
-        const undoneRecord = shopStore.undoExchange(record.id)
-        if (undoneRecord) {
-            pointsStore.consumePoints(
-                record.classId,
-                [record.studentName],
-                -record.points,
-                {
-                    itemId: record.shopItemId,
-                    itemName: `撤销兑换-${record.shopItemName}`
-                }
-            )
-            ElMessage.success('兑换记录已撤销')
+        const orderId = toNumber(record.id, 0)
+        if (!orderId) {
+            ElMessage.error('记录 ID 异常')
+            return
         }
+        shopManager.undoExchangePrize(orderId).then(async () => {
+            ElMessage.success('兑换记录已撤销')
+            await refreshPrizes()
+            await loadRecordsPage(recordsCurrentPage.value)
+        }).catch((err: any) => {
+            ElMessage.error(err?.message || '撤销失败')
+        })
     }).catch(() => {})
 }
-
-function getStudentOptionClass(studentName: string): string {
-    if (!activeClassId.value || !exchangeForm.itemId) return ''
-    
-    const item = shopStore.getItemById(exchangeForm.itemId)
-    if (!item) return ''
-    
-    const totalPoints = exchangeForm.quantity * item.points
-    const availablePoints = pointsStore.getAvailablePoints(activeClassId.value, studentName)
-    
-    if (availablePoints >= totalPoints) {
-        return 'student-option-enough'
-    } else {
-        return 'student-option-insufficient'
-    }
-}
-
-function getSelectedStudentClass(): string {
-    if (!exchangeForm.studentName) return ''
-    
-    const studentClass = getStudentOptionClass(exchangeForm.studentName)
-    if (studentClass === 'student-option-insufficient') {
-        return 'select-insufficient'
-    } else if (studentClass === 'student-option-enough') {
-        return 'select-enough'
-    }
-    return ''
-}
-
 const importDialogVisible = ref(false)
-const importFileName = ref('')
-const importParsedItems = ref<Omit<ShopItem, 'id' | 'createdAt'>[]>([])
-const uploadRef = ref<UploadInstance>()
 
-async function handleImportFile(file: File) {
-    try {
-        const data = await file.arrayBuffer()
-        const workbook = XLSX.read(data)
-        const firstSheetName = workbook.SheetNames[0]
-        if (!firstSheetName) {
-            ElMessage.warning('Excel 文件中没有工作表')
-            return
-        }
-        const firstSheet = workbook.Sheets[firstSheetName]
-        if (!firstSheet) {
-            ElMessage.warning('无法读取工作表内容')
-            return
-        }
-        const rows = XLSX.utils.sheet_to_json<any>(firstSheet)
-
-        const items: Omit<ShopItem, 'id' | 'createdAt'>[] = []
-        for (const row of rows) {
-            const name = row['商品名称'] || row['名称'] || row['name']
-            const points = Number(row['积分'] || row['points'] || 0)
-            const stock = Number(row['库存'] || row['数量'] || row['stock'] || 0)
-            const description = row['描述'] || row['description'] || ''
-
-            if (name && points > 0) {
-                items.push({
-                    name,
-                    points,
-                    stock,
-                    description,
-                    icon: 'goods-filled'
-                })
-            }
-        }
-
-        if (items.length === 0) {
-            ElMessage.warning('未解析到有效的商品数据，请检查表头是否包含"商品名称/积分/库存"')
-            return
-        }
-
-        importParsedItems.value = items
-        importFileName.value = file.name
-        ElMessage.success(`解析成功：${items.length} 个商品`)
-    } catch (err: any) {
-        ElMessage.error(`导入失败：${err?.message || '未知错误'}`)
-    }
-}
-
-async function beforeImportUpload(file: any) {
-    await handleImportFile(file as File)
-    return false
-}
-
-async function handleImportChange(file: any) {
-    if (!file || !file.raw) return
-    await handleImportFile(file.raw)
-    importFileName.value = file.name || ''
-}
-
-function confirmImport() {
-    if (importParsedItems.value.length === 0) {
+async function confirmImport(items: CreatePrizeReq[]) {
+    if (items.length === 0) {
         ElMessage.warning('没有可导入的商品')
-        return
+            return
+        }
+    let successCount = 0
+    for (const it of items) {
+        try {
+            await shopManager.createPrize(it)
+            successCount += 1
+        } catch (err) {
+            console.error(err)
+        }
     }
-
-    const count = shopStore.importItems(importParsedItems.value)
-    ElMessage.success(`成功导入 ${count} 个商品`)
-    importDialogVisible.value = false
-    importParsedItems.value = []
-    importFileName.value = ''
-}
-
-function clearImport() {
-    importParsedItems.value = []
-    importFileName.value = ''
-    uploadRef.value?.clearFiles()
+    ElMessage.success(`成功导入 ${successCount} 个商品`)
+    await refreshPrizes()
 }
 
 function exportTemplate() {
@@ -383,272 +315,149 @@ function exportTemplate() {
     XLSX.writeFile(wb, '积分商城商品模板.xlsx')
     ElMessage.success('模板下载成功')
 }
+
+let studentsLoadedForClassId: number | null = null
+let lastStudentsReqId = 0
+async function ensureStudentsLoaded(): Promise<void> {
+    const clsId = activeClassId.value
+    if (!clsId) {
+        students.value = []
+        studentsLoadedForClassId = null
+            return
+        }
+    if (studentsLoadedForClassId === clsId && students.value.length > 0) return
+    const reqId = ++lastStudentsReqId
+    try {
+        const list = await studentManager.list(clsId)
+        if (reqId !== lastStudentsReqId) return
+        students.value = list
+        studentsLoadedForClassId = clsId
+    } catch (err) {
+        console.error(err)
+        if (reqId !== lastStudentsReqId) return
+        students.value = []
+        studentsLoadedForClassId = null
+    }
+}
+
+async function refreshPrizes(): Promise<void> {
+    try {
+        prizes.value = await shopManager.listPrizes()
+    } catch (err) {
+        console.error(err)
+        prizes.value = []
+    }
+}
+
+async function loadRecordsPage(page: number): Promise<void> {
+    if (recordsLoading.value) return
+    if (!activeClassId.value) {
+        records.value = []
+        recordsTotal.value = 0
+            return
+        }
+    recordsLoading.value = true
+    try {
+        const nextPage = Math.max(1, toNumber(page, 1))
+        recordsCurrentPage.value = nextPage
+        const resp = await shopManager.listPrizeRecords({
+            class_id: activeClassId.value,
+            limit: recordsPageSize.value,
+            offset: (nextPage - 1) * recordsPageSize.value,
+        })
+        records.value = (resp.items ?? []).sort((a, b) => toNumber(b.id, 0) - toNumber(a.id, 0))
+        recordsTotal.value = toNumber(resp.total, 0)
+    } catch (err) {
+        console.error(err)
+        records.value = []
+        recordsTotal.value = 0
+    } finally {
+        recordsLoading.value = false
+    }
+}
+
+onMounted(async () => {
+    await refreshPrizes()
+})
+
+watch(activeClassId, async () => {
+    students.value = []
+    studentsLoadedForClassId = null
+    await loadRecordsPage(1)
+})
+
+watch(activeTab, async (tab) => {
+    if (tab !== 'records') return
+    await loadRecordsPage(1)
+})
+
+async function onRecordsPageChange(page: number) {
+    await loadRecordsPage(page)
+}
 </script>
 
 <template>
     <div class="shop-page">
-        <div class="header-row">
-            <div class="title">
-                <i-ep-shop class="title-icon" />
-                积分商城
-            </div>
-        </div>
+        <ShopHeaderRow />
 
         <el-tabs v-model="activeTab" class="shop-tabs">
             <el-tab-pane label="商品列表" name="shop">
-                <div class="shop-toolbar">
-                    <el-button type="primary" @click="openAddItemDialog">
-                        <i-ep-plus /> 添加商品
-                    </el-button>
-                    <el-button type="success" plain @click="importDialogVisible = true">
-                        <i-ep-upload-filled /> 导入商品
-                    </el-button>
-                    <el-button type="info" plain @click="exportTemplate">
-                        <i-ep-download /> 下载模板
-                    </el-button>
-                </div>
+                <ShopToolbar
+                    @add="openAddItemDialog"
+                    @open-import="importDialogVisible = true"
+                    @download-template="exportTemplate"
+                />
 
-                <div v-if="shopItems.length > 0" class="shop-grid">
-                    <div v-for="item in shopItems" :key="item.id" class="shop-item-card">
-                        <div class="card-actions">
-                            <el-button type="primary" text @click="openEditItemDialog(item)">
-                                <i-ep-edit />
-                            </el-button>
-                            <el-button type="danger" text @click="deleteItem(item)">
-                                <i-ep-delete />
-                            </el-button>
-                        </div>
-                        
-                        <div class="card-content">
-                            <div class="item-icon">
-                                <component :is="getIconComponent(item.icon)" />
-                            </div>
-                            
-                            <div class="item-name">{{ item.name }}</div>
-                            
-                            <div class="item-desc">
-                                {{ item.description || '' }}
-                            </div>
-                            
-                            <div class="item-price-info">
-                                <div class="price-row">
-                                    <i-ep-coin class="coin-icon" />
-                                    <span class="points-number">{{ item.points }}</span>
-                                    <span class="points-text">积分</span>
-                                </div>
-                                <div class="stock-info" :class="{ 'out-of-stock': item.stock === 0 }">
-                                    库存: {{ item.stock }}
-                                </div>
-                            </div>
-                            
-                            <el-button
-                                type="primary"
-                                class="exchange-btn"
-                                size="large"
-                                :disabled="item.stock === 0 || !activeClassId"
-                                @click="openExchangeDialog(item)"
-                            >
-                                <i-ep-shopping-cart /> 兑换
-                            </el-button>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-else class="empty-shop">
-                    <i-ep-shopping-bag class="empty-icon" />
-                    <div class="empty-title">还没有商品</div>
-                    <div class="empty-sub">点击"添加商品"或"导入商品"开始添加</div>
-                </div>
+                <ShopPrizeGrid
+                    :items="shopItems"
+                    :active="!!activeClassId"
+                    :resolve-icon="getShopIconComponent"
+                    @edit="openEditItemDialog"
+                    @delete="deleteItem"
+                    @exchange="openExchangeDialog"
+                />
             </el-tab-pane>
 
             <el-tab-pane label="兑换记录" name="records">
-                <div v-if="exchangeRecords.length > 0" class="records-wrapper">
-                    <el-table :data="exchangeRecords" border size="large">
-                        <el-table-column type="index" label="#" width="60" />
-                        <el-table-column label="时间" width="120" align="center">
-                            <template #default="{ row }">
-                                {{ formatTimeHHmm(new Date(row.exchangedAt)) }}
-                            </template>
-                        </el-table-column>
-                        <el-table-column label="学生" prop="studentName" min-width="100" />
-                        <el-table-column label="商品" prop="shopItemName" min-width="150" />
-                        <el-table-column label="数量" prop="quantity" width="80" align="center" />
-                        <el-table-column label="消耗积分" width="120" align="center">
-                            <template #default="{ row }">
-                                <span class="points-badge">{{ row.points }}</span>
-                            </template>
-                        </el-table-column>
-                        <el-table-column label="操作" width="100" align="center" fixed="right">
-                            <template #default="{ row }">
-                                <el-button type="warning" plain size="small" @click="undoExchange(row)">
-                                    撤销
-                                </el-button>
-                            </template>
-                        </el-table-column>
-                    </el-table>
-                </div>
-
-                <div v-else class="empty-records">
-                    <i-ep-document class="empty-icon" />
-                    <div class="empty-title">还没有兑换记录</div>
-                    <div class="empty-sub">学生兑换商品后，记录会显示在这里</div>
-                </div>
+                <ShopRecordsTable
+                    :records="exchangeRecords"
+                    :loading="recordsLoading"
+                    :total="recordsTotal"
+                    :page-size="recordsPageSize"
+                    :current-page="recordsCurrentPage"
+                    :student-id-name-map="studentIdNameMap"
+                    :prize-id-map="prizeIdMap"
+                    @undo="undoExchange"
+                    @page-change="onRecordsPageChange"
+                />
             </el-tab-pane>
         </el-tabs>
 
-        <el-dialog
+        <ShopPrizeEditorDialog
             v-model="itemDialogVisible"
-            :title="itemDialogMode === 'add' ? '添加商品' : '编辑商品'"
-            width="500px"
-        >
-            <el-form :model="itemForm" label-position="top" class="item-form">
-                <el-form-item label="商品名称" required>
-                    <el-input v-model="itemForm.name" placeholder="请输入商品名称" />
-                </el-form-item>
-                <el-form-item label="消耗积分" required>
-                    <el-input-number v-model="itemForm.points" :min="1" :step="10" style="width: 100%;" />
-                </el-form-item>
-                <el-form-item label="库存数量" required>
-                    <el-input-number v-model="itemForm.stock" :min="0" style="width: 100%;" />
-                </el-form-item>
-                <el-form-item label="图标">
-                    <el-select v-model="itemForm.icon" placeholder="选择图标" style="width: 100%;">
-                        <el-option
-                            v-for="opt in iconOptions"
-                            :key="opt.value"
-                            :label="opt.label"
-                            :value="opt.value"
-                        >
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <component :is="opt.icon" />
-                                <span>{{ opt.label }}</span>
-                            </div>
-                        </el-option>
-                    </el-select>
-                </el-form-item>
-                <el-form-item label="商品描述">
-                    <el-input
-                        v-model="itemForm.description"
-                        type="textarea"
-                        :rows="3"
-                        placeholder="请输入商品描述（可选）"
-                    />
-                </el-form-item>
-            </el-form>
-            <template #footer>
-                <div class="dialog-footer">
-                    <el-button @click="itemDialogVisible = false">取消</el-button>
-                    <el-button type="primary" @click="saveItem">保存</el-button>
+            :mode="itemDialogMode"
+            :form="itemForm"
+            @save="saveItem"
+        />
+
+        <ShopExchangeDialog
+            v-model="exchangeDialogVisible"
+            :form="exchangeForm"
+            :students="studentsForExchange"
+            :required-points="requiredPoints"
+            :available-points-by-student-id="availablePointsByStudentId"
+            :max-count="selectedPrize?.stock || 1"
+            @confirm="confirmExchange"
+        />
+
+        <ShopImportDialog
+            v-model="importDialogVisible"
+            @confirm="confirmImport"
+        />
                 </div>
             </template>
-        </el-dialog>
 
-        <el-dialog v-model="exchangeDialogVisible" title="兑换商品" width="500px">
-            <el-form :model="exchangeForm" label-position="top" class="exchange-form">
-                <el-form-item label="选择学生" required>
-                    <el-select
-                        v-model="exchangeForm.studentName"
-                        placeholder="请选择学生"
-                        size="large"
-                        filterable
-                        style="width: 100%;"
-                        :class="getSelectedStudentClass()"
-                    >
-                        <el-option
-                            v-for="s in studentsForExchange"
-                            :key="s.studentName"
-                            :label="`${s.studentName}（可用积分：${pointsStore.getAvailablePoints(activeClassId, s.studentName)}）`"
-                            :value="s.studentName"
-                            :class="getStudentOptionClass(s.studentName)"
-                        >
-                            <div :class="getStudentOptionClass(s.studentName)">
-                                {{ s.studentName }}（可用积分：{{ pointsStore.getAvailablePoints(activeClassId, s.studentName) }}）
-                            </div>
-                        </el-option>
-                    </el-select>
-                </el-form-item>
-                <el-form-item label="兑换数量" required>
-                    <el-input-number
-                        v-model="exchangeForm.quantity"
-                        :min="1"
-                        :max="shopStore.getItemById(exchangeForm.itemId)?.stock || 1"
-                        style="width: 100%;"
-                    />
-                </el-form-item>
-                <el-alert
-                    v-if="exchangeForm.studentName && exchangeForm.itemId"
-                    :title="`需要消耗：${(shopStore.getItemById(exchangeForm.itemId)?.points || 0) * exchangeForm.quantity} 积分`"
-                    type="info"
-                    :closable="false"
-                    style="margin-top: 12px;"
-                />
-            </el-form>
-            <template #footer>
-                <div class="dialog-footer">
-                    <el-button @click="exchangeDialogVisible = false">取消</el-button>
-                    <el-button type="primary" @click="confirmExchange">确认兑换</el-button>
-                </div>
-            </template>
-        </el-dialog>
-
-        <el-dialog v-model="importDialogVisible" title="导入商品（Excel）" width="720px">
-            <el-upload
-                ref="uploadRef"
-                class="upload-area"
-                drag
-                accept=".xls,.xlsx"
-                :auto-upload="false"
-                :show-file-list="false"
-                :before-upload="beforeImportUpload"
-                :on-change="handleImportChange"
-            >
-                <i-ep-upload-filled class="upload-icon" />
-                <div v-if="!importFileName" class="el-upload__text">将文件拖到此处，或点击上传</div>
-                <div v-else class="upload-file-name">
-                    <i-ep-document class="file-icon" /> {{ importFileName }}
-                    <span class="change-hint">（点击重新选择）</span>
-                </div>
-                <template #tip>
-                    <div class="el-upload__tip">支持 .xls/.xlsx，表头包含"商品名称、积分、库存、描述（可选）"。</div>
-                </template>
-            </el-upload>
-
-            <div class="excel-guide">
-                <div class="guide-title">可用的 Excel 表头示例：</div>
-                <ul class="guide-list">
-                    <li>必填：商品名称（或 名称/name）</li>
-                    <li>必填：积分（或 消耗积分/points）</li>
-                    <li>必填：库存（或 数量/stock）</li>
-                    <li>可选：描述（或 商品描述/description）</li>
-                </ul>
-            </div>
-
-            <div v-if="importParsedItems.length > 0" class="excel-preview">
-                <div class="preview-header">
-                    <div class="preview-title">解析结果</div>
-                    <el-space class="preview-meta" wrap size="small">
-                        <el-tag v-if="importFileName" type="info" effect="light">文件：{{ importFileName }}</el-tag>
-                        <el-tag type="primary" effect="light">共 {{ importParsedItems.length }} 个商品</el-tag>
-                    </el-space>
-                </div>
-                <el-table :data="importParsedItems" border size="small" class="preview-table" max-height="300px">
-                    <el-table-column label="商品名称" prop="name" min-width="140" />
-                    <el-table-column label="积分" prop="points" width="100" align="center" />
-                    <el-table-column label="库存" prop="stock" width="100" align="center" />
-                    <el-table-column label="描述" prop="description" min-width="180" show-overflow-tooltip />
-                </el-table>
-                <div class="preview-actions">
-                    <el-button type="primary" :disabled="importParsedItems.length === 0" @click="confirmImport">
-                        <i-ep-upload-filled /> 确认导入
-                    </el-button>
-                    <el-button @click="clearImport">清空</el-button>
-                </div>
-            </div>
-        </el-dialog>
-    </div>
-</template>
-
-<style scoped>
+<style>
 .shop-page {
     width: 100%;
     height: 100%;
@@ -856,6 +665,12 @@ function exportTemplate() {
 
 .records-wrapper {
     padding-bottom: 20px;
+}
+
+.records-pagination {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 14px;
 }
 
 .empty-shop,
@@ -1211,5 +1026,6 @@ function exportTemplate() {
     }
 }
 </style>
+
 
 

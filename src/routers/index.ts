@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
-import { useUserStore } from '@/stores/userStore'
+import { useCacheStore } from '@/stores/cacheStore'
 
 const routes = [
   {
@@ -69,11 +69,11 @@ const router = createRouter({
 });
 
 router.beforeEach((to) => {
-  const user = useUserStore()
-  if (!user.isAuthenticated && to.path !== '/auth') {
+  const cache = useCacheStore()
+  if (!cache.isAuthenticated && to.path !== '/auth') {
     return { path: '/auth', query: { redirect: to.fullPath } }
   }
-  if (user.isAuthenticated && to.path === '/auth') {
+  if (cache.isAuthenticated && to.path === '/auth') {
     return { path: '/points' }
   }
   return true

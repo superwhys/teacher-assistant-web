@@ -18,6 +18,7 @@ export type PrizeRecord = {
     points?: number
     prize_id?: number
     student_id?: number
+    student_name?: string
 }
 
 export type CreatePrizeReq = {
@@ -58,6 +59,7 @@ export type PaginatedPrizeRecordResp = {
 }
 
 export type ListPrizeRecordsQuery = {
+    class_id?: number
     limit?: number
     offset?: number
     student_id?: number

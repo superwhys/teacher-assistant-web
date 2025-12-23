@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { asyncStorage, getUserStorageKey } from '@/utils/storage'
 import type { ClassInfo } from '@/types/class'
-import { useUserStore } from './userStore'
+import { useCacheStore } from './cacheStore'
 
 const STORAGE_KEY_BASE = 'ta_class_store_v1'
 
@@ -17,7 +17,7 @@ const defaultInitial: { classes: ClassInfo[]; activeClassId: string | null } = {
 
 export const useClassStore = defineStore('class', () => {
     const initial = defaultInitial
-    const userStore = useUserStore()
+    const cacheStore = useCacheStore()
 
     const classes = ref<ClassInfo[]>(initial.classes)
     const activeClassId = ref<string | null>(initial.activeClassId)
@@ -25,7 +25,7 @@ export const useClassStore = defineStore('class', () => {
     const activeClass = computed<ClassInfo | null>(() => classes.value.find(c => c.id === activeClassId.value) ?? null)
 
     function getStorageKey(): string {
-        const userId = userStore.profile?.id || null
+        const userId = cacheStore.profile?.id || null
         return getUserStorageKey(STORAGE_KEY_BASE, userId)
     }
 

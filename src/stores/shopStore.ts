@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { asyncStorage, getUserStorageKey } from '@/utils/storage'
 import type { ShopItem, ExchangeRecord } from '@/types/shopItem'
-import { useUserStore } from './userStore'
+import { useCacheStore } from './cacheStore'
 
 const STORAGE_KEY_BASE = 'ta_shop_store_v1'
 
@@ -23,11 +23,11 @@ function generateId(prefix: string = 'SI'): string {
 }
 
 export const useShopStore = defineStore('shop', () => {
-    const userStore = useUserStore()
+    const cacheStore = useCacheStore()
     const data = ref<ShopStoreData>(loadInitial())
 
     function getStorageKey(): string {
-        const userId = userStore.profile?.id || null
+        const userId = cacheStore.profile?.id || null
         return getUserStorageKey(STORAGE_KEY_BASE, userId)
     }
 

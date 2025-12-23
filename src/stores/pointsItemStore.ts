@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { asyncStorage, getUserStorageKey } from '@/utils/storage'
 import type { PointsGroup, PointsItem, PointsSign } from '@/types/pointsItem'
-import { useUserStore } from './userStore'
+import { useCacheStore } from './cacheStore'
 
 type PointsConfig = {
     groups: PointsGroup[]
@@ -40,16 +40,16 @@ function defaultConfig(): PointsConfig {
 }
 
 export const usePointsItemStore = defineStore('pointsItem', () => {
-    const userStore = useUserStore()
+    const cacheStore = useCacheStore()
     const config = ref<PointsConfig>(loadInitial())
 
     function getStorageKey(): string {
-        const userId = userStore.profile?.id || null
+        const userId = cacheStore.profile?.id || null
         return getUserStorageKey(STORAGE_KEY_BASE, userId)
     }
 
     function getOldStorageKey(): string {
-        const userId = userStore.profile?.id || null
+        const userId = cacheStore.profile?.id || null
         return getUserStorageKey(OLD_STORAGE_KEY_BASE, userId)
     }
 

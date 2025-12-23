@@ -3,14 +3,14 @@ import { onBeforeUnmount, onMounted, reactive, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { authApi } from '@/api/auth'
-import { useUserStore } from '@/stores/userStore'
+import { useCacheStore } from '@/stores/cacheStore'
 import { sha256Hex } from '@/utils/crypto'
 import { decodeJwtPayload } from '@/utils/jwt'
 import type { JwtPayload } from '@/types/auth'
 
 const router = useRouter()
 const route = useRoute()
-const userStore = useUserStore()
+const cacheStore = useCacheStore()
 
 const activeTab = ref<'login' | 'register'>('login')
 const loginLoading = ref(false)
@@ -59,7 +59,7 @@ function startCountdown(): void {
 }
 
 async function maybeRedirect(): Promise<void> {
-    if (userStore.isAuthenticated) {
+    if (cacheStore.isAuthenticated) {
         clearCountdown()
         await router.replace(redirectPath.value)
     }
@@ -120,11 +120,10 @@ async function handleLogin(): Promise<void> {
             id: info.id !== undefined ? String(info.id) : email,
             email: info.email ?? email,
             name: info.name ?? info.email ?? email,
-            avatar: info.avatar ?? null,
         }
-        const trial = decoded?.secret == null
+        const trial = decoded?.is_trial ?? false
         const expiresAt = typeof decoded?.exp === 'number' ? decoded.exp : null
-        userStore.setAuth(token, profile, trial, expiresAt)
+        cacheStore.setAuth(token, profile, trial, expiresAt)
         ElMessage.success('登录成功')
         await maybeRedirect()
     } catch (err) {

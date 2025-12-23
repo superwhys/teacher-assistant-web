@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { asyncStorage, getUserStorageKey } from '@/utils/storage'
 import type { PointsSign } from '@/types/pointsItem'
-import { useUserStore } from './userStore'
+import { useCacheStore } from './cacheStore'
 
 type ClassId = string
 type StudentName = string
@@ -61,11 +61,11 @@ function generateId(prefix: string = 'PA'): string {
 }
 
 export const usePointsStore = defineStore('points', () => {
-    const userStore = useUserStore()
+    const cacheStore = useCacheStore()
     const records = ref<PointsRecords>(loadInitial())
 
     function getStorageKey(): string {
-        const userId = userStore.profile?.id || null
+        const userId = cacheStore.profile?.id || null
         return getUserStorageKey(STORAGE_KEY_BASE, userId)
     }
 

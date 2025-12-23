@@ -54,6 +54,13 @@ function getRecordTs(r: PointsApplyRecord): number {
     return Number.isFinite(t) ? t : 0
 }
 
+function getRecordSourceLabel(r: PointsApplyRecord): string {
+    const from = toNumber((r as any)?.from, 0)
+    if (from === 1) return '商城'
+    if (from === 2) return '积分规则'
+    return '-'
+}
+
 const historyPageDesc = computed(() => {
     const list = [...(records.value ?? [])]
     list.sort((a, b) => {
@@ -246,6 +253,11 @@ function onPageChange(page: number) {
                             <el-table-column label="积分项" min-width="220">
                                 <template #default="{ row }">
                                     <span>{{ row.rule_desc || '未知' }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="来源" width="110" align="center">
+                                <template #default="{ row }">
+                                    <span>{{ getRecordSourceLabel(row) }}</span>
                                 </template>
                             </el-table-column>
                             <el-table-column label="学生" min-width="260">

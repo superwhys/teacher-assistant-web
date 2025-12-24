@@ -182,16 +182,16 @@ function downloadTemplate() {
                     <el-tag v-if="importFileName" type="info" effect="light">文件：{{ importFileName }}</el-tag>
                     <el-tag type="primary" effect="light">共 {{ importParsed.length }} 条</el-tag>
                     <el-tag :type="importSkipped ? 'warning' : 'success'" effect="light">跳过 {{ importSkipped }} 条</el-tag>
-                    <el-tag 
-                        v-if="importParsed.filter(r => r.isInvalid).length > 0" 
-                        type="danger" 
+                    <el-tag
+                        v-if="importParsed.filter(r => r.isInvalid).length > 0"
+                        type="danger"
                         effect="light"
                     >
                         {{ importParsed.filter(r => r.isInvalid).length }} 个学生不存在
                     </el-tag>
-                    <el-tag 
-                        v-if="importParsed.filter(r => r.itemIsInvalid).length > 0" 
-                        type="warning" 
+                    <el-tag
+                        v-if="importParsed.filter(r => r.itemIsInvalid).length > 0"
+                        type="warning"
                         effect="light"
                     >
                         {{ importParsed.filter(r => r.itemIsInvalid).length }} 个项目不存在
@@ -343,4 +343,5 @@ function downloadTemplate() {
     color: #e6a23c;
 }
 </style>
+
 

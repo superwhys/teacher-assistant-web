@@ -3,10 +3,51 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { UploadRawFile, UploadFile, UploadInstance } from 'element-plus'
 import { parseItemsExcelToRows, type ImportItemRow } from '@/utils/pointsImport'
-import { usePointsItemStore } from '@/stores/pointsItemStore'
+import { pointsManager } from '@/managers/points'
 import * as XLSX from 'xlsx'
 
-const pointsItemStore = usePointsItemStore()
+defineOptions({ name: 'PointsImportItemsButton' })
+
+const emit = defineEmits<{
+    (e: 'changed'): void
+}>()
+
+type NameToId = Map<string, number>
+
+function toNumber(v: unknown, fallback = 0): number {
+    const n = typeof v === 'number' ? v : Number(v)
+    return Number.isFinite(n) ? n : fallback
+}
+
+function normalizeName(v: unknown): string {
+    return String(v ?? '').trim()
+}
+
+function buildGroupNameToId(groups: any[]): NameToId {
+    const map: NameToId = new Map()
+    for (const g of groups ?? []) {
+        const id = toNumber(g?.id, 0)
+        const name = normalizeName(g?.name)
+        if (!id || !name) continue
+        if (!map.has(name)) map.set(name, id)
+    }
+    return map
+}
+
+function buildRuleNameSetByGroupId(groups: any[]): Map<number, Set<string>> {
+    const map = new Map<number, Set<string>>()
+    for (const g of groups ?? []) {
+        const gid = toNumber(g?.id, 0)
+        if (!gid) continue
+        const set = new Set<string>()
+        for (const r of g?.rules ?? []) {
+            const rn = normalizeName(r?.name)
+            if (rn) set.add(rn)
+        }
+        map.set(gid, set)
+    }
+    return map
+}
 
 const importVisible = ref(false)
 const importLoading = ref(false)
@@ -56,34 +97,73 @@ function clearImportPreview() {
     uploadRef.value?.clearFiles()
 }
 
-function confirmImport() {
+async function confirmImport() {
     if (!importParsed.value.length) {
         ElMessage.warning('暂无可导入的数据')
         return
     }
 
-    const existingGroups = pointsItemStore.listGroups()
-    const groupNameToId = new Map<string, string>()
-    for (const g of existingGroups) groupNameToId.set(g.name, g.id)
+    importLoading.value = true
+    try {
+        let groups = await pointsManager.listRuleGroups()
+        let groupNameToId = buildGroupNameToId(groups)
 
-    let createdGroups = 0
-    let createdItems = 0
-
-    for (const row of importParsed.value) {
-        let gid = groupNameToId.get(row.groupName)
-        if (!gid) {
-            const g = pointsItemStore.addGroup(row.groupName)
-            gid = g.id
-            groupNameToId.set(row.groupName, gid)
+        const groupNames = Array.from(new Set(importParsed.value.map(r => normalizeName(r.groupName)).filter(Boolean)))
+        let createdGroups = 0
+        for (const gn of groupNames) {
+            if (groupNameToId.has(gn)) continue
+            await pointsManager.createRuleGroup({ name: gn })
             createdGroups += 1
         }
-        pointsItemStore.addItem(gid, row.itemName, row.value, row.sign)
-        createdItems += 1
-    }
 
-    ElMessage.success(`导入成功：新增分组 ${createdGroups} 个，新增项目 ${createdItems} 个，跳过 ${importSkipped.value} 条`)
-    clearImportPreview()
-    importVisible.value = false
+        if (createdGroups > 0) {
+            groups = await pointsManager.listRuleGroups()
+            groupNameToId = buildGroupNameToId(groups)
+        }
+
+        const ruleNameSetByGroupId = buildRuleNameSetByGroupId(groups)
+        let createdItems = 0
+        let duplicateSkipped = 0
+        let missingGroupSkipped = 0
+
+        for (const row of importParsed.value) {
+            const gn = normalizeName(row.groupName)
+            const rn = normalizeName(row.itemName)
+            if (!gn || !rn) continue
+            const gid = groupNameToId.get(gn) ?? 0
+            if (!gid) {
+                missingGroupSkipped += 1
+                continue
+            }
+
+            const set = ruleNameSetByGroupId.get(gid) ?? new Set<string>()
+            if (set.has(rn)) {
+                duplicateSkipped += 1
+                continue
+            }
+
+            await pointsManager.createRule({
+                name: rn,
+                points: Math.abs(toNumber(row.value, 0)),
+                rule_group_id: gid,
+                type: row.sign === 'minus' ? 2 : 1,
+            })
+            set.add(rn)
+            ruleNameSetByGroupId.set(gid, set)
+            createdItems += 1
+        }
+
+        ElMessage.success(
+            `导入成功：新增分组 ${createdGroups} 个，新增项目 ${createdItems} 个，重复跳过 ${duplicateSkipped} 条，缺少分组跳过 ${missingGroupSkipped} 条，解析跳过 ${importSkipped.value} 条`
+        )
+        emit('changed')
+        clearImportPreview()
+        importVisible.value = false
+    } catch (err: any) {
+        ElMessage.error(`导入失败：${err?.message || '未知错误'}`)
+    } finally {
+        importLoading.value = false
+    }
 }
 
 function downloadTemplate() {
@@ -147,7 +227,7 @@ function downloadTemplate() {
                 <el-space class="preview-meta" wrap size="small">
                     <el-tag v-if="importFileName" type="info" effect="light">文件：{{ importFileName }}</el-tag>
                     <el-tag type="primary" effect="light">共 {{ importParsed.length }} 条</el-tag>
-                    <el-tag :type="importSkipped ? 'warning' : 'success'" effect="light">跳过 {{ importSkipped }} 条</el-tag>
+                    <el-tag :type="importSkipped ? 'warning' : 'success'" effect="light">解析跳过 {{ importSkipped }} 条</el-tag>
                 </el-space>
             </div>
             <el-table :data="importParsed" border size="small" class="preview-table" max-height="300">
@@ -156,14 +236,16 @@ function downloadTemplate() {
                 <el-table-column prop="value" label="分值" width="80" align="center">
                     <template #default="{ row }">
                         <span :style="{ color: row.sign === 'plus' ? '#67c23a' : '#f56c6c' }">
-                            {{ row.sign === 'plus' ? '+' : '' }}{{ row.value }}
+                            {{ row.sign === 'plus' ? '+' : '-' }}{{ row.value }}
                         </span>
                     </template>
                 </el-table-column>
             </el-table>
             <div class="preview-actions">
-                <el-button type="primary" :disabled="!importParsed.length" @click="confirmImport">确认导入</el-button>
-                <el-button @click="clearImportPreview">清空</el-button>
+                <el-button type="primary" :disabled="!importParsed.length || importLoading" :loading="importLoading" @click="confirmImport">
+                    确认导入
+                </el-button>
+                <el-button :disabled="importLoading" @click="clearImportPreview">清空</el-button>
             </div>
         </div>
     </el-dialog>
@@ -255,4 +337,5 @@ function downloadTemplate() {
     gap: 8px;
 }
 </style>
+
 

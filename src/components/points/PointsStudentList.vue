@@ -174,9 +174,11 @@ function scrollToLetter(letter: string) {
                                 </el-button>
                             </el-button-group>
                         </div>
-                        <el-button type="default" plain size="small" :disabled="!active" @click="$router.push('/points/history')">
-                            <i-ep-document /> 记录
-                        </el-button>
+                        <slot name="header-actions">
+                            <el-button type="default" plain size="small" :disabled="!active" @click="$router.push('/points/history')">
+                                <i-ep-document /> 记录
+                            </el-button>
+                        </slot>
                     </div>
                 </div>
             </template>

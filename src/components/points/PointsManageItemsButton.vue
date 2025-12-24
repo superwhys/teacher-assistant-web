@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import PointsItemManageDialog from './PointsItemManageDialog.vue'
+import PointsRuleManageDialog from '@/components/points/PointsRuleManageDialog.vue'
+
+defineOptions({ name: 'PointsManageItemsButton' })
+
+const emit = defineEmits<{
+    (e: 'changed'): void
+}>()
 
 const manageVisible = ref(false)
 
@@ -14,6 +20,7 @@ function openManageDialog() {
         <i-ep-setting /> 管理分值项
     </el-button>
 
-    <PointsItemManageDialog v-model="manageVisible" />
+    <PointsRuleManageDialog v-model="manageVisible" @changed="emit('changed')" />
 </template>
+
 

@@ -4,7 +4,6 @@ import type {
     ExchangePrizeReq,
     ListPrizeRecordsQuery,
     PaginatedPrizeRecordResp,
-    PaginatedPrizeResp,
     Prize,
     PrizeRecord,
     UndoExchangePrizeReq,
@@ -54,8 +53,9 @@ export const shopManager = {
         return items
     },
 
-    async exchangePrize(prizeId: number, studentId: number, count: number): Promise<void> {
+    async exchangePrize(classId: number, prizeId: number, studentId: number, count: number): Promise<void> {
         const payload: ExchangePrizeReq = {
+            class_id: classId,
             prize_id: prizeId,
             student_id: studentId,
             count,

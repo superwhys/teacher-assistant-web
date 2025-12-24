@@ -252,7 +252,7 @@ async function confirmExchange() {
     }
 
     try {
-        await shopManager.exchangePrize(toNumber(prize.id, 0), exchangeForm.studentId, exchangeForm.count)
+        await shopManager.exchangePrize(activeClassId.value, toNumber(prize.id, 0), exchangeForm.studentId, exchangeForm.count)
         const studentName = studentIdNameMap.value[exchangeForm.studentId] ?? ''
         ElMessage.success(`兑换成功！${studentName || '学生'} 兑换了 ${exchangeForm.count} 个${prize.name}`)
         exchangeDialogVisible.value = false

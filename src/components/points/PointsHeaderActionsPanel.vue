@@ -1,14 +1,20 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import ManagePointsItemsButton from './ManagePointsItemsButton.vue'
-import ImportPointsItemsButton from './ImportPointsItemsButton.vue'
-import PointsHistoryButton from './PointsHistoryButton.vue'
-import ImportPointsButton from './ImportPointsButton.vue'
-import ExportPointsButton from './ExportPointsButton.vue'
+import PointsManageItemsButton from '@/components/points/PointsManageItemsButton.vue'
+import PointsImportItemsButton from '@/components/points/PointsImportItemsButton.vue'
+import PointsHistoryButton from '@/components/points/PointsHistoryButton.vue'
+import ImportPointsButton from '@/components/points/ImportPointsButton.vue'
+import ExportPointsButton from '@/components/points/ExportPointsButton.vue'
+
+defineOptions({ name: 'PointsHeaderActionsPanel' })
 
 defineProps<{
     activeClassId: string | null
     activeClassName: string
+}>()
+
+const emit = defineEmits<{
+    (e: 'changed'): void
 }>()
 
 const mobileMenuVisible = ref(false)
@@ -17,8 +23,8 @@ const mobileMenuVisible = ref(false)
 <template>
     <div class="points-header-actions">
         <div class="desktop-actions">
-            <ManagePointsItemsButton />
-            <ImportPointsItemsButton />
+            <PointsManageItemsButton @changed="emit('changed')" />
+            <PointsImportItemsButton @changed="emit('changed')" />
             <PointsHistoryButton :active-class-id="activeClassId" />
             <ImportPointsButton :active-class-id="activeClassId" :active-class-name="activeClassName" />
             <ExportPointsButton :active-class-id="activeClassId" :active-class-name="activeClassName" />
@@ -30,8 +36,14 @@ const mobileMenuVisible = ref(false)
 
         <el-dialog v-model="mobileMenuVisible" title="功能菜单" width="400px" :close-on-click-modal="true">
             <div class="mobile-menu-list">
-                <ManagePointsItemsButton @click="mobileMenuVisible = false" />
-                <ImportPointsItemsButton />
+                <PointsManageItemsButton
+                    @changed="emit('changed')"
+                    @click="mobileMenuVisible = false"
+                />
+                <PointsImportItemsButton
+                    @changed="emit('changed')"
+                    @click="mobileMenuVisible = false"
+                />
                 <PointsHistoryButton :active-class-id="activeClassId" @click="mobileMenuVisible = false" />
                 <ImportPointsButton :active-class-id="activeClassId" :active-class-name="activeClassName" />
                 <ExportPointsButton :active-class-id="activeClassId" :active-class-name="activeClassName" />
@@ -92,4 +104,5 @@ const mobileMenuVisible = ref(false)
     }
 }
 </style>
+
 

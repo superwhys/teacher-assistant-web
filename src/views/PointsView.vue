@@ -14,6 +14,7 @@ import PointsRankingPanel from '@/components/points/PointsRankingPanel.vue'
 import PointsStudentList, { type UiPointsStudent } from '@/components/points/PointsStudentList.vue'
 import PointsBottomActions, { type SortOption } from '@/components/points/PointsBottomActions.vue'
 import PointsRuleSelectorDialog from '@/components/points/PointsRuleSelectorDialog.vue'
+import PointsHeaderActionsPanel from '@/components/points/PointsHeaderActionsPanel.vue'
 
 defineOptions({ name: 'PointsView' })
 
@@ -27,6 +28,7 @@ const classRankingItems = ref<StudentRankingItem[]>([])
 
 const activeClassId = computed<number | null>(() => cacheStore.getActiveClassId())
 const activeClassName = computed(() => cacheStore.getActiveClassName() ?? '')
+const activeClassIdStr = computed<string | null>(() => activeClassId.value ? String(activeClassId.value) : null)
 
 function toUiGender(gender?: ApiGender): UiPointsStudent['gender'] {
     if (gender === 2) return 'female'
@@ -382,6 +384,11 @@ async function ensureRuleGroupsLoaded() {
     }
 }
 
+async function refreshRuleGroups() {
+    ruleGroups.value = []
+    await ensureRuleGroupsLoaded()
+}
+
 const filteredStudents = computed<UiPointsStudent[]>(() => {
     let list = uiStudents.value
 
@@ -519,7 +526,15 @@ function openHistory(studentName: string) {
                     @update:selected-ids="selectedIds = $event"
                     @open-apply="openSelectorForStudents($event.studentIds, $event.tab)"
                     @open-history="openHistory($event.studentName)"
-                />
+                >
+                    <template #header-actions>
+                        <PointsHeaderActionsPanel
+                            :active-class-id="activeClassIdStr"
+                            :active-class-name="activeClassName"
+                            @changed="refreshRuleGroups"
+                        />
+                    </template>
+                </PointsStudentList>
             </div>
         </PointsRankingPanel>
 

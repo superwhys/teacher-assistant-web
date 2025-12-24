@@ -7,6 +7,10 @@ import type {
     ListApplyRecordsQuery,
     PaginatedRecordResp,
     Record,
+    CreateRuleGroupReq,
+    UpdateRuleGroupReq,
+    CreateRuleReq,
+    UpdateRuleReq,
     Rule,
     RuleGroup,
     Wallet
@@ -43,6 +47,45 @@ export const pointsManager = {
     async listRuleGroups(): Promise<RuleGroup[]> {
         const resp = await pointsApi.listGroups()
         return resp.data?.groups ?? []
+    },
+
+    async createRuleGroup(payload: CreateRuleGroupReq): Promise<void> {
+        await pointsApi.createGroup(payload)
+    },
+
+    async createRuleGroupAndGetId(payload: CreateRuleGroupReq): Promise<number> {
+        const name = (payload?.name ?? '').trim()
+        if (!name) return 0
+
+        const before = await this.listRuleGroups()
+        const existed = before.find(g => (g.name ?? '').trim() === name)
+        if (existed) return toNumber(existed.id, 0)
+
+        await this.createRuleGroup(payload)
+
+        const after = await this.listRuleGroups()
+        const created = after.find(g => (g.name ?? '').trim() === name)
+        return created ? toNumber(created.id, 0) : 0
+    },
+
+    async updateRuleGroup(groupId: number, payload: UpdateRuleGroupReq): Promise<void> {
+        await pointsApi.updateGroup(groupId, payload)
+    },
+
+    async deleteRuleGroup(groupId: number): Promise<void> {
+        await pointsApi.deleteGroup(groupId)
+    },
+
+    async createRule(payload: CreateRuleReq): Promise<void> {
+        await pointsApi.createRule(payload)
+    },
+
+    async updateRule(ruleId: number, payload: UpdateRuleReq): Promise<void> {
+        await pointsApi.updateRule(ruleId, payload)
+    },
+
+    async deleteRule(ruleId: number): Promise<void> {
+        await pointsApi.deleteRule(ruleId)
     },
 
     async listRulesFlat(): Promise<UiPointsRule[]> {

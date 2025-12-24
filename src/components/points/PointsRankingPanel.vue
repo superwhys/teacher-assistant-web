@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import type { Student } from '@/types/student'
-import PointsRankingCard from '@/components/PointsRankingCard.vue'
+import PointsRankingCard from '@/components/points/PointsRankingCard.vue'
 import PointsRuleRankingCard, { type UiRuleOption } from '@/components/points/PointsRuleRankingCard.vue'
 import type { RankingTimeRange } from '@/types/points'
 

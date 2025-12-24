@@ -39,6 +39,7 @@ export type UpdatePrizeReq = {
 }
 
 export type ExchangePrizeReq = {
+    class_id?: number
     count?: number
     prize_id?: number
     student_id?: number

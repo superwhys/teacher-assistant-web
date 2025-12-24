@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import type { RuleGroup, Rule } from '@/types/points'
 
 type SelectorTab = 'all' | 'plus' | 'minus'
@@ -56,6 +56,26 @@ const innerTab = computed<SelectorTab>({
     set: (v: SelectorTab) => emit('update:tab', v),
 })
 
+const windowWidth = ref(window.innerWidth)
+
+function handleResize() {
+    windowWidth.value = window.innerWidth
+}
+
+onMounted(() => {
+    window.addEventListener('resize', handleResize)
+})
+
+onBeforeUnmount(() => {
+    window.removeEventListener('resize', handleResize)
+})
+
+const dialogWidth = computed(() => {
+    if (windowWidth.value <= 480) return '96vw'
+    if (windowWidth.value <= 768) return '92vw'
+    return '720px'
+})
+
 const keyword = ref('')
 
 const uiGroups = computed<UiGroup[]>(() => {
@@ -108,7 +128,12 @@ function onSelect(rule: UiRule) {
 </script>
 
 <template>
-    <el-dialog v-model="innerVisible" title="选择积分规则" width="720px">
+    <el-dialog
+        v-model="innerVisible"
+        title="选择积分规则"
+        :width="dialogWidth"
+        class="points-rule-selector-dialog"
+    >
         <div class="selector-content">
             <el-tabs v-model="innerTab" class="selector-tabs">
                 <el-tab-pane label="全部" name="all" />
@@ -158,6 +183,11 @@ function onSelect(rule: UiRule) {
 </template>
 
 <style scoped>
+:deep(.points-rule-selector-dialog) {
+    max-width: calc(100vw - 24px);
+    margin: 0 auto;
+}
+
 .selector-content {
     max-height: 50vh;
     overflow: auto;

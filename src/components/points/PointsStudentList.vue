@@ -627,6 +627,44 @@ function scrollToLetter(letter: string) {
     .list-column {
         margin-left: 0;
     }
+
+    /* 小屏下列表模式改为自适应换行，避免 min-width 导致横向溢出 */
+    .is-list-mode :deep(.el-card__body) {
+        overflow-x: hidden;
+    }
+
+    .is-list-mode .student-row.list-mode {
+        min-width: 0;
+        grid-template-columns: 40px 1fr;
+        grid-template-rows: auto auto;
+        align-items: start;
+        gap: 10px 12px;
+    }
+
+    .student-row.list-mode .info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    .student-row.list-mode .name {
+        max-width: 100%;
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    .points-info.list {
+        white-space: normal;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .student-row.list-mode .ops {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+        gap: 10px;
+    }
 }
 
 @media (max-width: 480px) {

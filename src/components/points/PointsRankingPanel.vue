@@ -134,13 +134,13 @@ const innerActiveTab = computed<'total' | 'item'>({
     overflow: hidden;
     padding-bottom: 16px;
     display: grid;
-    grid-template-columns: 360px auto 1fr;
+    grid-template-columns: 360px auto minmax(0, 1fr);
     gap: 0;
     transition: grid-template-columns 0.3s ease;
 }
 
 .content-area.ranking-collapsed {
-    grid-template-columns: 0px auto 1fr;
+    grid-template-columns: 0px auto minmax(0, 1fr);
 }
 
 .ranking-column {
@@ -263,11 +263,11 @@ const innerActiveTab = computed<'total' | 'item'>({
 
 @media (max-width: 1024px) {
     .content-area {
-        grid-template-columns: 300px auto 1fr;
+        grid-template-columns: 300px auto minmax(0, 1fr);
     }
 
     .content-area.ranking-collapsed {
-        grid-template-columns: 0px auto 1fr;
+        grid-template-columns: 0px auto minmax(0, 1fr);
     }
 
     .ranking-toggle-btn {

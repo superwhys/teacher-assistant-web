@@ -562,5 +562,6 @@ function openHistory(studentName: string) {
     position: relative;
     flex: 1;
     min-height: 40vh;
+    min-width: 0;
 }
 </style>

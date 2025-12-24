@@ -491,13 +491,13 @@ async function onRecordsPageChange(page: number) {
     min-height: 0;
 }
 
-.shop-tabs :deep(.el-tabs__content) {
+.shop-tabs .el-tabs__content {
     flex: 1;
     overflow: auto;
     min-height: 0;
 }
 
-.shop-tabs :deep(.el-tab-pane) {
+.shop-tabs .el-tab-pane {
     display: flex;
     flex-direction: column;
 }
@@ -545,17 +545,17 @@ async function onRecordsPageChange(page: number) {
     transition: opacity 0.3s;
 }
 
-.card-actions :deep(.el-button) {
+.card-actions .el-button {
     padding: 4px;
     background: transparent !important;
     border: none;
 }
 
-.card-actions :deep(.el-button:hover) {
+.card-actions .el-button:hover {
     background: rgba(0, 0, 0, 0.05) !important;
 }
 
-.card-actions :deep(.el-button.is-text) {
+.card-actions .el-button.is-text {
     background: transparent !important;
 }
 
@@ -729,67 +729,67 @@ async function onRecordsPageChange(page: number) {
     font-weight: 500;
 }
 
-.select-insufficient :deep(.el-input__wrapper) {
+.select-insufficient .el-input__wrapper {
     border-color: #ef4444 !important;
     box-shadow: 0 0 0 1px #ef4444 inset !important;
 }
 
-.select-insufficient :deep(.el-input__wrapper:hover) {
+.select-insufficient .el-input__wrapper:hover {
     border-color: #ef4444 !important;
     box-shadow: 0 0 0 1px #ef4444 inset !important;
 }
 
-.select-insufficient :deep(.el-input__wrapper.is-focus) {
+.select-insufficient .el-input__wrapper.is-focus {
     border-color: #ef4444 !important;
     box-shadow: 0 0 0 1px #ef4444 inset !important;
 }
 
-.select-insufficient :deep(.el-input__inner) {
+.select-insufficient .el-input__inner {
     color: #ef4444 !important;
     font-weight: 500 !important;
 }
 
-.select-insufficient :deep(.el-select__placeholder) {
+.select-insufficient .el-select__placeholder {
     color: #ef4444 !important;
 }
 
-.select-insufficient :deep(.el-select__selected-item) {
+.select-insufficient .el-select__selected-item {
     color: #ef4444 !important;
 }
 
-.select-insufficient :deep(input) {
+.select-insufficient input {
     color: #ef4444 !important;
 }
 
-.select-enough :deep(.el-input__wrapper) {
+.select-enough .el-input__wrapper {
     border-color: #10b981 !important;
     box-shadow: 0 0 0 1px #10b981 inset !important;
 }
 
-.select-enough :deep(.el-input__wrapper:hover) {
+.select-enough .el-input__wrapper:hover {
     border-color: #10b981 !important;
     box-shadow: 0 0 0 1px #10b981 inset !important;
 }
 
-.select-enough :deep(.el-input__wrapper.is-focus) {
+.select-enough .el-input__wrapper.is-focus {
     border-color: #10b981 !important;
     box-shadow: 0 0 0 1px #10b981 inset !important;
 }
 
-.select-enough :deep(.el-input__inner) {
+.select-enough .el-input__inner {
     color: #10b981 !important;
     font-weight: 500 !important;
 }
 
-.select-enough :deep(.el-select__placeholder) {
+.select-enough .el-select__placeholder {
     color: #10b981 !important;
 }
 
-.select-enough :deep(.el-select__selected-item) {
+.select-enough .el-select__selected-item {
     color: #10b981 !important;
 }
 
-.select-enough :deep(input) {
+.select-enough input {
     color: #10b981 !important;
 }
 
@@ -900,7 +900,7 @@ async function onRecordsPageChange(page: number) {
         margin-bottom: 16px;
     }
 
-    .shop-toolbar :deep(.el-button) {
+    .shop-toolbar .el-button {
         flex: 1;
         min-width: 0;
     }
@@ -965,7 +965,7 @@ async function onRecordsPageChange(page: number) {
         margin-bottom: 12px;
     }
 
-    .shop-toolbar :deep(.el-button) {
+    .shop-toolbar .el-button {
         flex: 1;
         min-width: 0;
         font-size: 13px;
@@ -1014,12 +1014,12 @@ async function onRecordsPageChange(page: number) {
         gap: 6px;
     }
 
-    .shop-toolbar :deep(.el-button) {
+    .shop-toolbar .el-button {
         font-size: 12px;
         padding: 8px 8px;
     }
 
-    .shop-toolbar :deep(.el-button span) {
+    .shop-toolbar .el-button span {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;

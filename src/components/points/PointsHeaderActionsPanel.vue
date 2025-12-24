@@ -22,10 +22,13 @@ const mobileMenuVisible = ref(false)
 
 <template>
     <div class="points-header-actions">
+        <div class="always-actions">
+            <PointsHistoryButton :active-class-id="activeClassId" />
+        </div>
+
         <div class="desktop-actions">
             <PointsManageItemsButton @changed="emit('changed')" />
             <PointsImportItemsButton @changed="emit('changed')" />
-            <PointsHistoryButton :active-class-id="activeClassId" />
             <ImportPointsButton :active-class-id="activeClassId" :active-class-name="activeClassName" />
             <ExportPointsButton :active-class-id="activeClassId" :active-class-name="activeClassName" />
         </div>
@@ -44,9 +47,16 @@ const mobileMenuVisible = ref(false)
                     @changed="emit('changed')"
                     @click="mobileMenuVisible = false"
                 />
-                <PointsHistoryButton :active-class-id="activeClassId" @click="mobileMenuVisible = false" />
-                <ImportPointsButton :active-class-id="activeClassId" :active-class-name="activeClassName" />
-                <ExportPointsButton :active-class-id="activeClassId" :active-class-name="activeClassName" />
+                <ImportPointsButton
+                    :active-class-id="activeClassId"
+                    :active-class-name="activeClassName"
+                    @click="mobileMenuVisible = false"
+                />
+                <ExportPointsButton
+                    :active-class-id="activeClassId"
+                    :active-class-name="activeClassName"
+                    @click="mobileMenuVisible = false"
+                />
             </div>
         </el-dialog>
     </div>
@@ -56,6 +66,13 @@ const mobileMenuVisible = ref(false)
 .points-header-actions {
     display: flex;
     align-items: center;
+    gap: 8px;
+}
+
+.always-actions {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
 }
 
 .desktop-actions {
@@ -67,6 +84,7 @@ const mobileMenuVisible = ref(false)
 
 .mobile-menu-btn {
     display: none;
+    flex-shrink: 0;
 }
 
 .mobile-menu-list {
@@ -94,7 +112,6 @@ const mobileMenuVisible = ref(false)
         display: flex;
         align-items: center;
         gap: 6px;
-        flex-shrink: 0;
     }
 }
 

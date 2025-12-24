@@ -178,6 +178,8 @@ async function onSaveItem() {
                 points: value,
                 type,
                 rule_group_id: selectedGroupId.value,
+                icon: '',
+                description: '',
             })
             ElMessage.success('已新增积分项')
         } else {
@@ -198,103 +200,137 @@ async function onSaveItem() {
 </script>
 
 <template>
-    <el-dialog v-model="innerVisible" title="分值项管理" width="1000px">
+    <el-dialog
+        v-model="innerVisible"
+        title="分值项管理"
+        width="1000px"
+        class="points-rule-manage-dialog"
+        modal-class="points-rule-manage-modal"
+        align-center
+    >
         <div class="manage-grid" v-loading="loading" element-loading-text="加载中...">
             <div class="manage-left">
                 <div class="manage-block">
                     <div class="manage-toolbar">
                         <el-input v-model="newGroupName" placeholder="分组名称" class="group-name-input" />
                         <el-input v-model="newGroupIcon" placeholder="emoji" class="icon-input" />
-                        <el-button type="primary" :disabled="!newGroupName.trim()" @click="onAddGroup">
+                        <el-button type="primary" size="large" :disabled="!newGroupName.trim()" @click="onAddGroup">
                             <i-ep-plus /> 新建分组
                         </el-button>
                     </div>
                     <div class="group-list">
-                        <div class="group-list-header">分组</div>
-                        <div
-                            v-for="g in groups"
-                            :key="g.id"
-                            :class="['group-item', selectedGroupId === toNumber(g.id, 0) ? 'is-active' : '']"
-                            @click="selectedGroupId = toNumber(g.id, 0)"
-                        >
-                            <div class="group-item-main">
-                                <span class="group-icon">{{ g.icon || '📁' }}</span>
-                                <span class="group-name">{{ g.name }}</span>
-                            </div>
-                            <div class="group-item-ops">
-                                <el-button
-                                    type="danger"
-                                    link
-                                    size="small"
-                                    @click.stop="onRemoveGroupManage(toNumber(g.id, 0))"
-                                >
-                                    删除
-                                </el-button>
+                        <div class="group-list-header">
+                            <div class="group-list-title">分组</div>
+                            <el-tag size="small" type="info" effect="light">{{ groups?.length ?? 0 }}</el-tag>
+                        </div>
+
+                        <div v-if="(groups?.length ?? 0) === 0" class="group-empty">
+                            <el-empty description="暂无分组，请先新增" :image-size="92" />
+                        </div>
+
+                        <div v-else class="group-items">
+                            <div
+                                v-for="g in groups"
+                                :key="g.id"
+                                :class="['group-item', selectedGroupId === toNumber(g.id, 0) ? 'is-active' : '']"
+                                @click="selectedGroupId = toNumber(g.id, 0)"
+                            >
+                                <div class="group-item-main">
+                                    <span class="group-icon">{{ g.icon || '📁' }}</span>
+                                    <span class="group-name" :title="g.name">{{ g.name }}</span>
+                                </div>
+                                <div class="group-item-ops">
+                                    <el-button
+                                        type="danger"
+                                        link
+                                        size="small"
+                                        @click.stop="onRemoveGroupManage(toNumber(g.id, 0))"
+                                    >
+                                        删除
+                                    </el-button>
+                                </div>
                             </div>
                         </div>
-                        <div v-if="(groups?.length ?? 0) === 0" class="item-empty">暂无分组，请先新增</div>
                     </div>
                 </div>
             </div>
             <div class="manage-right">
                 <div class="manage-block">
                     <div class="manage-title-row">
-                        <div class="manage-title">{{ selectedGroup?.name || '未选择' }}</div>
-                        <el-button type="primary" :disabled="!selectedGroupId" @click="openCreateItem">
+                        <div class="manage-title">
+                            <span class="manage-title-icon">{{ selectedGroup?.icon || '📁' }}</span>
+                            <span class="manage-title-text">{{ selectedGroup?.name || '未选择' }}</span>
+                            <el-tag v-if="selectedGroupId" size="small" effect="light" class="manage-title-tag">
+                                {{ selectedGroupRules.length }} 项
+                            </el-tag>
+                        </div>
+                        <el-button type="primary" size="large" :disabled="!selectedGroupId" @click="openCreateItem">
                             <i-ep-plus />
                             新增分值项
                         </el-button>
                     </div>
 
-                    <el-table
-                        v-if="selectedGroupId"
-                        :data="selectedGroupRules"
-                        border
-                        size="large"
-                        height="52vh"
-                    >
-                        <el-table-column type="index" label="#" width="60" />
-                        <el-table-column label="名称" min-width="240">
-                            <template #default="{ row }">
-                                {{ row.name }}
-                            </template>
-                        </el-table-column>
-                        <el-table-column label="分值" width="120" align="center">
-                            <template #default="{ row }">
-                                <span :class="['badge', inferRuleSign(row) === 'plus' ? 'plus' : 'minus']">
-                                    {{ inferRuleSign(row) === 'plus' ? '+' : '-' }}{{ Math.abs(toNumber(row.points, 0)) }}
-                                </span>
-                            </template>
-                        </el-table-column>
-                        <el-table-column label="操作" width="160" align="center">
-                            <template #default="{ row }">
-                                <el-button type="primary" link @click="openEditItem(row)">编辑</el-button>
-                                <el-button type="danger" link @click="onRemoveItem(row)">删除</el-button>
-                            </template>
-                        </el-table-column>
-                    </el-table>
-                    <div v-else class="item-empty">请先从左侧选择一个分组</div>
+                    <div class="rule-content">
+                        <el-table
+                            v-if="selectedGroupId"
+                            :data="selectedGroupRules"
+                            border
+                            stripe
+                            size="large"
+                            height="100%"
+                            class="rule-table"
+                        >
+                            <el-table-column type="index" label="#" width="60" />
+                            <el-table-column label="名称" min-width="240">
+                                <template #default="{ row }">
+                                    {{ row.name }}
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="分值" width="120" align="center">
+                                <template #default="{ row }">
+                                    <span :class="['badge', inferRuleSign(row) === 'plus' ? 'plus' : 'minus']">
+                                        {{ inferRuleSign(row) === 'plus' ? '+' : '-' }}{{ Math.abs(toNumber(row.points, 0)) }}
+                                    </span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作" width="160" align="center">
+                                <template #default="{ row }">
+                                    <el-button type="primary" link @click="openEditItem(row)">编辑</el-button>
+                                    <el-button type="danger" link @click="onRemoveItem(row)">删除</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                        <div v-else class="right-empty">
+                            <el-empty description="请先从左侧选择一个分组" :image-size="96" />
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
         <template #footer>
             <span class="dialog-footer">
-                <el-button @click="innerVisible = false">关闭</el-button>
+                <el-button type="primary" class="footer-close-btn" @click="innerVisible = false">关闭</el-button>
             </span>
         </template>
     </el-dialog>
 
     <el-dialog v-model="itemEditVisible" :title="itemEditMode === 'create' ? '新增分值项' : '编辑分值项'" width="520px">
-        <div class="row">
-            <el-input v-model="newItemName" placeholder="积分项名称" />
-        </div>
-        <div class="row" style="margin-top:10px;">
-            <el-input-number v-model="newItemValue" :min="0.5" :max="99" :step="0.5" />
-            <el-radio-group v-model="newItemSign">
-                <el-radio-button label="plus">加分</el-radio-button>
-                <el-radio-button label="minus">扣分</el-radio-button>
-            </el-radio-group>
-        </div>
+        <el-form label-position="top" class="item-form">
+            <el-form-item label="积分项名称">
+                <el-input v-model="newItemName" placeholder="例如：作业完成" />
+            </el-form-item>
+            <div class="item-form-row">
+                <el-form-item label="分值" class="item-form-col">
+                    <el-input-number v-model="newItemValue" :min="0.5" :max="99" :step="0.5" />
+                </el-form-item>
+                <el-form-item label="类型" class="item-form-col">
+                    <el-radio-group v-model="newItemSign">
+                        <el-radio-button label="plus">加分</el-radio-button>
+                        <el-radio-button label="minus">扣分</el-radio-button>
+                    </el-radio-group>
+                </el-form-item>
+            </div>
+        </el-form>
         <template #footer>
             <span class="dialog-footer">
                 <el-button :disabled="loading" @click="itemEditVisible = false">取消</el-button>
@@ -305,9 +341,58 @@ async function onSaveItem() {
 </template>
 
 <style scoped>
+:global(.points-rule-manage-modal .el-dialog__footer) {
+    padding-top: 12px;
+    text-align: initial !important;
+}
+
+.dialog-footer {
+    display: flex;
+    width: 100%;
+}
+
+.footer-close-btn {
+    width: 100%;
+    height: 48px;
+    font-size: 16px;
+    justify-content: center;
+}
+
+:global(.points-rule-manage-modal .el-overlay-dialog) {
+    width: 100%;
+    height: 100vh;
+    padding: 24px !important;
+    box-sizing: border-box;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+:global(.points-rule-manage-modal .el-dialog) {
+    width: min(1000px, calc(100vw - 48px)) !important;
+    margin: 0 !important;
+    height: min(760px, calc(100vh - 48px)) !important;
+    max-height: calc(100vh - 48px) !important;
+    display: flex !important;
+    flex-direction: column;
+}
+
+:global(.points-rule-manage-modal .el-dialog.is-align-center) {
+    margin: 0 !important;
+}
+
+:global(.points-rule-manage-modal .el-dialog__body) {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
 .manage-grid {
     display: grid;
     grid-template-columns: 360px 1fr;
+    gap: 14px;
+    height: 100%;
+    min-height: 0;
 }
 
 .manage-left,
@@ -315,17 +400,28 @@ async function onSaveItem() {
     display: flex;
     flex-direction: column;
     gap: 14px;
+    min-height: 0;
 }
 
 .manage-block {
     border-radius: 12px;
     padding: 12px;
-    background: #fff;
+    background: var(--el-bg-color);
+    border: 1px solid var(--el-border-color-light);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .manage-title {
-    font-weight: 700;
-    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    min-height: 40px;
+    max-width: 100%;
 }
 
 .manage-title-row {
@@ -333,12 +429,31 @@ async function onSaveItem() {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 10px;
+    gap: 12px;
+    flex: 0 0 auto;
 }
 
-.row {
-    display: flex;
+.manage-title-icon {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
+    justify-content: center;
+    border-radius: 10px;
+    background: #f3f6ff;
+    border: 1px solid #e6ecff;
+    flex: 0 0 auto;
+}
+
+.manage-title-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.manage-title-tag {
+    flex: 0 0 auto;
 }
 
 .icon-input {
@@ -356,21 +471,46 @@ async function onSaveItem() {
     gap: 10px;
     margin-bottom: 10px;
     flex-wrap: wrap;
+    padding: 10px;
+    border-radius: 12px;
+    background: #fafbff;
+    border: 1px solid #eef0f6;
+    flex: 0 0 auto;
 }
 
 .group-list {
     border: 1px solid #e6e8f0;
     border-radius: 12px;
     overflow: hidden;
-    max-height: 52vh;
     overflow-y: auto;
+    background: #fff;
+    flex: 1;
+    min-height: 0;
 }
 
 .group-list-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
     padding: 10px 14px;
-    font-weight: 700;
+    font-weight: 800;
     background: #fafbff;
     border-bottom: 1px solid #eef0f6;
+}
+
+.group-list-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.group-items {
+    display: flex;
+    flex-direction: column;
 }
 
 .group-item {
@@ -380,20 +520,25 @@ async function onSaveItem() {
     gap: 10px;
     padding: 12px 14px;
     cursor: pointer;
+    min-height: 54px;
+    border-left: 4px solid transparent;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .group-item-main {
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
 }
 
 .group-item:hover {
-    background: #fafafa;
+    background: #f7f9ff;
 }
 
 .group-item.is-active {
     background: #edf5ff;
+    border-left-color: #2d5cf6;
 }
 
 .group-item + .group-item {
@@ -402,6 +547,10 @@ async function onSaveItem() {
 
 .group-name {
     font-size: 15px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 .badge {
@@ -426,8 +575,67 @@ async function onSaveItem() {
     padding: 6px;
 }
 
+.group-empty,
+.right-empty {
+    padding: 12px 6px;
+}
+
+.rule-content {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.rule-table {
+    flex: 1;
+    min-height: 0;
+}
+
+.right-empty {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rule-table :deep(.el-table__inner-wrapper) {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.item-form {
+    padding-top: 6px;
+}
+
+.item-form-row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 12px;
+    align-items: end;
+}
+
+.item-form-col :deep(.el-form-item__content) {
+    justify-content: flex-start;
+}
+
 @media (max-width: 900px) {
+    :global(.points-rule-manage-modal .el-overlay-dialog) {
+        padding: 12px !important;
+    }
+
+    :global(.points-rule-manage-modal .el-dialog) {
+        width: calc(100vw - 24px) !important;
+        height: calc(100vh - 24px) !important;
+        max-height: calc(100vh - 24px) !important;
+    }
+
     .manage-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: 0.95fr 1.05fr;
+    }
+
+    .item-form-row {
         grid-template-columns: 1fr;
     }
 }

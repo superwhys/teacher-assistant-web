@@ -109,11 +109,10 @@ async function confirmImport() {
         let groupNameToId = buildGroupNameToId(groups)
 
         const groupNames = Array.from(new Set(importParsed.value.map(r => normalizeName(r.groupName)).filter(Boolean)))
-        let createdGroups = 0
-        for (const gn of groupNames) {
-            if (groupNameToId.has(gn)) continue
-            await pointsManager.createRuleGroup({ name: gn })
-            createdGroups += 1
+        const missingGroupNames = groupNames.filter(gn => !groupNameToId.has(gn))
+        const createdGroups = missingGroupNames.length
+        if (createdGroups > 0) {
+            await pointsManager.createRuleGroups(missingGroupNames.map(name => ({ name, icon: '', description: '' })))
         }
 
         if (createdGroups > 0) {
@@ -122,6 +121,7 @@ async function confirmImport() {
         }
 
         const ruleNameSetByGroupId = buildRuleNameSetByGroupId(groups)
+        const createRulesPayload: any[] = []
         let createdItems = 0
         let duplicateSkipped = 0
         let missingGroupSkipped = 0
@@ -142,15 +142,21 @@ async function confirmImport() {
                 continue
             }
 
-            await pointsManager.createRule({
+            set.add(rn)
+            ruleNameSetByGroupId.set(gid, set)
+            createRulesPayload.push({
                 name: rn,
                 points: Math.abs(toNumber(row.value, 0)),
                 rule_group_id: gid,
                 type: row.sign === 'minus' ? 2 : 1,
+                icon: '',
+                description: '',
             })
-            set.add(rn)
-            ruleNameSetByGroupId.set(gid, set)
-            createdItems += 1
+        }
+
+        if (createRulesPayload.length > 0) {
+            await pointsManager.createRules(createRulesPayload)
+            createdItems = createRulesPayload.length
         }
 
         ElMessage.success(

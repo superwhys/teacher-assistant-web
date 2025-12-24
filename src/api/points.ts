@@ -8,6 +8,7 @@ import type {
     GetClassRankingResp,
     GetRuleRankingQuery,
     GetRuleRankingResp,
+    ImportPointsRecordsReq,
     ListApplyRecordsQuery,
     ListRuleGroupsResp,
     PaginatedRecordResp,
@@ -25,6 +26,10 @@ export const pointsApi = {
     },
     listApplyRecords(query?: ListApplyRecordsQuery): Promise<ApiResponse<PaginatedRecordResp>> {
         return get<PaginatedRecordResp>('/points/rule/apply/list', query)
+    },
+
+    importRuleRecords(data: ImportPointsRecordsReq): Promise<ApiResponse<string[]>> {
+        return post<string[]>('/points/rule/record/import', data)
     },
 
     createRule(data: CreateRuleReq): Promise<ApiResponse<null>> {

@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { UploadRawFile, UploadFile, UploadInstance } from 'element-plus'
-import { parseExcelToImportRows, type ImportRow } from '@/utils/pointsImport'
-import { useStudentStore } from '@/stores/studentStore'
-import { usePointsStore } from '@/stores/pointsStore'
-import { usePointsItemStore } from '@/stores/pointsItemStore'
+import { parseExcelToImportRowsSimple, type ImportRow } from '@/utils/pointsImport'
+import { pointsManager } from '@/managers/points'
 import * as XLSX from 'xlsx'
 
 const props = defineProps<{
@@ -13,18 +11,10 @@ const props = defineProps<{
     activeClassName: string
 }>()
 
-const studentStore = useStudentStore()
-const pointsStore = usePointsStore()
-const pointsItemStore = usePointsItemStore()
-
-const studentsOfActive = computed(() => {
-    const id = props.activeClassId
-    return id ? studentStore.listByClassId(id) : []
-})
-
-const pointsItemsOfActive = computed(() => {
-    return pointsItemStore.listItems()
-})
+function toNumber(v: unknown, fallback = 0): number {
+    const n = typeof v === 'number' ? v : Number(v)
+    return Number.isFinite(n) ? n : fallback
+}
 
 const importVisible = ref(false)
 const importLoading = ref(false)
@@ -49,24 +39,14 @@ async function handleExcelFile(file: File) {
     if (importLoading.value) return false
     importLoading.value = true
     try {
-        const names = new Set(studentsOfActive.value.map(s => s.studentName))
-        const itemNames = new Set(pointsItemsOfActive.value.map(i => i.name))
-        const { rows, skipped } = await parseExcelToImportRows(file, names, itemNames)
+        const { rows, skipped } = await parseExcelToImportRowsSimple(file)
         if (!rows.length) {
             ElMessage.warning('未解析到有效的记录，请检查表头是否包含"姓名/分值"')
             return false
         }
         importParsed.value = rows
         importSkipped.value = skipped
-        const invalidCount = rows.filter(r => r.isInvalid).length
-        const itemInvalidCount = rows.filter(r => r.itemIsInvalid).length
         let msg = `解析成功：${rows.length} 条，跳过 ${skipped} 条`
-        if (invalidCount > 0) {
-            msg += `，${invalidCount} 个学生不存在`
-        }
-        if (itemInvalidCount > 0) {
-            msg += `，${itemInvalidCount} 个项目不存在`
-        }
         ElMessage.success(msg)
     } catch (err: any) {
         ElMessage.error(`导入失败：${err?.message || '未知错误'}`)
@@ -93,39 +73,65 @@ function clearImportPreview() {
     uploadRef.value?.clearFiles()
 }
 
-function confirmImportPoints() {
+async function confirmImportPoints() {
     if (!props.activeClassId) return
     if (importParsed.value.length === 0) {
         ElMessage.warning('暂无可导入的数据')
         return
     }
-    const validRows = importParsed.value.filter(r => !r.isInvalid && !r.itemIsInvalid)
-    if (validRows.length === 0) {
-        ElMessage.warning('没有有效的记录可以导入')
+
+    const classId = toNumber(props.activeClassId, 0)
+    if (!classId) {
+        ElMessage.error('班级 ID 无效')
         return
     }
-    for (const r of validRows) {
-        pointsStore.addPoints(props.activeClassId, [r.studentName], r.delta, {
-            itemName: r.itemName || '导入',
-            itemSign: r.itemSign,
-            itemValue: Math.abs(r.delta),
+
+    if (importLoading.value) return
+    importLoading.value = true
+    try {
+        const records = importParsed.value
+            .map(r => ({
+                name: String(r.studentName ?? '').trim(),
+                points: toNumber(r.delta, 0),
+            }))
+            .filter(r => !!r.name && !!r.points)
+
+        if (records.length === 0) {
+            ElMessage.warning('没有有效的记录可以导入')
+            return
+        }
+
+        const missingStudents = await pointsManager.importRuleRecords({
+            class_id: classId,
+            records,
         })
-    }
-    const invalidCount = importParsed.value.length - validRows.length
-    let msg = `已导入 ${validRows.length} 条积分变动`
-    if (invalidCount > 0) {
-        msg += `，已忽略 ${invalidCount} 条无效记录`
-    }
-    ElMessage.success(msg)
+
+        const uniqueMissing = Array.from(new Set((missingStudents ?? []).map(s => String(s ?? '').trim()).filter(Boolean)))
+        if (uniqueMissing.length > 0) {
+            const head = uniqueMissing.slice(0, 8).join('、')
+            const more = uniqueMissing.length > 8 ? ` 等 ${uniqueMissing.length} 人` : ''
+            ElMessage.warning(`学生不存在，已跳过：${head}${more}`)
+        }
+
+        const imported = Math.max(0, records.length - uniqueMissing.length)
+        let msg = `导入完成：提交 ${records.length} 条，成功 ${imported} 条`
+        if (importSkipped.value > 0) msg += `，解析跳过 ${importSkipped.value} 条`
+        ElMessage.success(msg)
+
     clearImportPreview()
     importVisible.value = false
+    } catch (err: any) {
+        ElMessage.error(`导入失败：${err?.message || '未知错误'}`)
+    } finally {
+        importLoading.value = false
+    }
 }
 
 function downloadTemplate() {
     const templateData = [
-        { 姓名: '张三', 分值: 5, 项目: '作业完成' },
-        { 姓名: '李四', 分值: -3, 项目: '迟到' },
-        { 姓名: '王五', 分值: 3, 项目: '主动发言' }
+        { 姓名: '张三', 分值: 5 },
+        { 姓名: '李四', 分值: -3 },
+        { 姓名: '王五', 分值: 3 }
     ]
 
     const worksheet = XLSX.utils.json_to_sheet(templateData)
@@ -166,10 +172,16 @@ function downloadTemplate() {
         <div class="excel-guide">
             <div class="guide-title">Excel 表头示例：</div>
             <ul class="guide-list">
-                <li>姓名（必填）：学生姓名，必须在当前班级中存在</li>
+                <li>姓名（必填）：学生姓名</li>
                 <li>分值（必填）：正数加分、负数扣分（例如：5、-3）</li>
-                <li>项目（可选）：积分项名称（例如：作业完成、课堂表现）</li>
             </ul>
+            <el-alert
+                class="import-notice"
+                type="warning"
+                :closable="false"
+                show-icon
+                title="说明：导入会在学生积分基础上进行计算(包括总积分和可用积分)；如果学生不存在则会自动跳过。"
+            />
             <el-button type="primary" link @click="downloadTemplate" class="download-template-btn">
                 <i-ep-download /> 下载模板
             </el-button>
@@ -182,41 +194,12 @@ function downloadTemplate() {
                     <el-tag v-if="importFileName" type="info" effect="light">文件：{{ importFileName }}</el-tag>
                     <el-tag type="primary" effect="light">共 {{ importParsed.length }} 条</el-tag>
                     <el-tag :type="importSkipped ? 'warning' : 'success'" effect="light">跳过 {{ importSkipped }} 条</el-tag>
-                    <el-tag
-                        v-if="importParsed.filter(r => r.isInvalid).length > 0"
-                        type="danger"
-                        effect="light"
-                    >
-                        {{ importParsed.filter(r => r.isInvalid).length }} 个学生不存在
-                    </el-tag>
-                    <el-tag
-                        v-if="importParsed.filter(r => r.itemIsInvalid).length > 0"
-                        type="warning"
-                        effect="light"
-                    >
-                        {{ importParsed.filter(r => r.itemIsInvalid).length }} 个项目不存在
-                    </el-tag>
                 </el-space>
             </div>
             <el-table :data="importParsed" border size="small" class="preview-table" max-height="300">
                 <el-table-column label="姓名" width="140">
                     <template #default="{ row }">
-                        <span :class="{ 'text-error': row.isInvalid }">
-                            {{ row.studentName }}
-                            <el-tooltip v-if="row.isInvalid" content="学生不存在，将被忽略" placement="top">
-                                <i-ep-warning-filled class="warning-icon" />
-                            </el-tooltip>
-                        </span>
-                    </template>
-                </el-table-column>
-                <el-table-column label="项目" min-width="120">
-                    <template #default="{ row }">
-                        <span :class="{ 'text-warning': row.itemIsInvalid }">
-                            {{ row.itemName || '-' }}
-                            <el-tooltip v-if="row.itemIsInvalid" content="项目不存在，将被忽略" placement="top">
-                                <i-ep-warning-filled class="warning-icon-item" />
-                            </el-tooltip>
-                        </span>
+                        {{ row.studentName }}
                     </template>
                 </el-table-column>
                 <el-table-column prop="delta" label="分值" width="80" align="center">
@@ -288,6 +271,10 @@ function downloadTemplate() {
     gap: 4px;
 }
 
+.import-notice {
+    margin-top: 8px;
+}
+
 .excel-preview {
     margin-top: 16px;
     padding: 12px;
@@ -321,27 +308,6 @@ function downloadTemplate() {
     gap: 8px;
 }
 
-.text-error {
-    color: #f56c6c;
-    font-weight: 600;
-}
-
-.text-warning {
-    color: #e6a23c;
-    font-weight: 600;
-}
-
-.warning-icon {
-    margin-left: 4px;
-    font-size: 14px;
-    color: #f56c6c;
-}
-
-.warning-icon-item {
-    margin-left: 4px;
-    font-size: 14px;
-    color: #e6a23c;
-}
 </style>
 
 

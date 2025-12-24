@@ -102,6 +102,48 @@ export async function parseExcelToImportRows(
     return { rows: parsed, skipped }
 }
 
+export async function parseExcelToImportRowsSimple(
+    file: File,
+): Promise<{ rows: ImportRow[]; skipped: number }> {
+    const arrayBuffer = await readArrayBuffer(file)
+    const workbook = XLSX.read(arrayBuffer, { type: 'array' })
+    const firstSheetName = workbook.SheetNames[0]
+    if (!firstSheetName) throw new Error('Excel 文件没有工作表')
+    const worksheet = workbook.Sheets[firstSheetName]!
+    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' })
+
+    const nameKeys = ['姓名', 'name', 'Name', '学生姓名', 'studentname', 'StudentName']
+    const deltaKeys = ['分值', 'delta', 'Delta', '积分', 'points', 'Points', '变动', 'change']
+
+    let skipped = 0
+    const parsed: ImportRow[] = []
+    for (const row of rows) {
+        const nameVal = getByHeaderCandidates(row, nameKeys)
+        if (!nameVal) { skipped += 1; continue }
+        const rawDelta = getByHeaderCandidates(row, deltaKeys)
+
+        const n = parseNumber(rawDelta)
+        if (n === null) { skipped += 1; continue }
+        const sign: 'plus' | 'minus' = n >= 0 ? 'plus' : 'minus'
+        const abs = Math.abs(n)
+        const delta = sign === 'minus' ? -abs : abs
+
+        const studentName = String(nameVal).trim()
+        if (!studentName) { skipped += 1; continue }
+
+        parsed.push({
+            studentName,
+            delta,
+            itemName: undefined,
+            itemSign: sign,
+            isInvalid: false,
+            itemIsInvalid: false,
+        })
+    }
+
+    return { rows: parsed, skipped }
+}
+
 export type ImportItemRow = {
     groupName: string
     itemName: string

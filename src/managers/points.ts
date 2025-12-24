@@ -4,12 +4,13 @@ import type {
     GetClassRankingResp,
     GetRuleRankingQuery,
     GetRuleRankingResp,
+    ImportPointsRecordsReq,
     ListApplyRecordsQuery,
     PaginatedRecordResp,
     Record,
-    CreateRuleGroupReq,
+    CreateRuleGroupItem,
     UpdateRuleGroupReq,
-    CreateRuleReq,
+    CreateRuleItem,
     UpdateRuleReq,
     Rule,
     RuleGroup,
@@ -49,11 +50,29 @@ export const pointsManager = {
         return resp.data?.groups ?? []
     },
 
-    async createRuleGroup(payload: CreateRuleGroupReq): Promise<void> {
-        await pointsApi.createGroup(payload)
+    async importRuleRecords(payload: ImportPointsRecordsReq): Promise<string[]> {
+        const resp = await pointsApi.importRuleRecords(payload)
+        return resp.data ?? []
     },
 
-    async createRuleGroupAndGetId(payload: CreateRuleGroupReq): Promise<number> {
+    async createRuleGroups(groups: CreateRuleGroupItem[]): Promise<void> {
+        const items = (groups ?? [])
+            .map(g => ({
+                name: (g?.name ?? '').trim(),
+                icon: (g?.icon ?? '').trim(),
+                description: (g?.description ?? '').trim(),
+            }))
+            .filter(g => !!g.name)
+
+        if (items.length === 0) return
+        await pointsApi.createGroup({ groups: items })
+    },
+
+    async createRuleGroup(payload: CreateRuleGroupItem): Promise<void> {
+        await this.createRuleGroups([payload])
+    },
+
+    async createRuleGroupAndGetId(payload: CreateRuleGroupItem): Promise<number> {
         const name = (payload?.name ?? '').trim()
         if (!name) return 0
 
@@ -76,8 +95,24 @@ export const pointsManager = {
         await pointsApi.deleteGroup(groupId)
     },
 
-    async createRule(payload: CreateRuleReq): Promise<void> {
-        await pointsApi.createRule(payload)
+    async createRules(rules: CreateRuleItem[]): Promise<void> {
+        const items = (rules ?? [])
+            .map(r => ({
+                rule_group_id: toNumber((r as any)?.rule_group_id, 0),
+                points: Math.abs(toNumber((r as any)?.points, 0)),
+                type: toNumber((r as any)?.type, 0),
+                name: ((r as any)?.name ?? '').trim(),
+                icon: ((r as any)?.icon ?? '').trim(),
+                description: ((r as any)?.description ?? '').trim(),
+            }))
+            .filter(r => !!r.name && r.rule_group_id > 0 && r.points > 0 && (r.type === 1 || r.type === 2))
+
+        if (items.length === 0) return
+        await pointsApi.createRule({ rules: items })
+    },
+
+    async createRule(payload: CreateRuleItem): Promise<void> {
+        await this.createRules([payload])
     },
 
     async updateRule(ruleId: number, payload: UpdateRuleReq): Promise<void> {

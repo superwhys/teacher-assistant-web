@@ -14,6 +14,16 @@ export type ApplyPointsReq = {
     student_id?: number
 }
 
+export type ImportPointsRecordItem = {
+    name?: string
+    points?: number
+}
+
+export type ImportPointsRecordsReq = {
+    class_id?: number
+    records?: ImportPointsRecordItem[]
+}
+
 export type Record = {
     after_balance?: number
     amount?: number
@@ -47,13 +57,17 @@ export type ListApplyRecordsQuery = {
     limit?: number
 }
 
-export type CreateRuleReq = {
-    description?: string
-    icon?: string
-    name?: string
-    points?: number
+export type CreateRuleItem = {
     rule_group_id?: number
+    points?: number
     type?: number
+    name?: string
+    icon?: string
+    description?: string
+}
+
+export type CreateRuleReq = {
+    rules?: CreateRuleItem[]
 }
 
 export type UpdateRuleReq = {
@@ -74,10 +88,14 @@ export type Rule = {
     points_type?: number
 }
 
-export type CreateRuleGroupReq = {
-    description?: string
-    icon?: string
+export type CreateRuleGroupItem = {
     name?: string
+    icon?: string
+    description?: string
+}
+
+export type CreateRuleGroupReq = {
+    groups?: CreateRuleGroupItem[]
 }
 
 export type UpdateRuleGroupReq = {

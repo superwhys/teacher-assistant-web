@@ -99,7 +99,6 @@ async function onAddGroup() {
         await loadGroups()
         selectedGroupId.value = createdId || selectedGroupId.value
         ElMessage.success('已新增分组')
-        emit('changed')
     } catch (err: any) {
         ElMessage.error(err?.message || '新增分组失败')
     } finally {
@@ -135,7 +134,6 @@ async function onRemoveGroupManage(groupId: number) {
         await pointsManager.deleteRuleGroup(groupId)
         await loadGroups()
         ElMessage.success('已删除分组及其分值项')
-        emit('changed')
     } catch { } finally {
         loading.value = false
     }
@@ -150,7 +148,6 @@ async function onRemoveItem(rule: Rule) {
         await pointsManager.deleteRule(rid)
         await loadGroups()
         ElMessage.success('已删除')
-        emit('changed')
     } catch { } finally {
         loading.value = false
     }
@@ -190,7 +187,6 @@ async function onSaveItem() {
         }
         itemEditVisible.value = false
         await loadGroups()
-        emit('changed')
     } catch (err: any) {
         ElMessage.error(err?.message || '保存失败')
     } finally {
@@ -208,24 +204,41 @@ async function onSaveItem() {
         modal-class="points-rule-manage-modal"
         align-center
     >
-        <div class="manage-grid" v-loading="loading" element-loading-text="加载中...">
-            <div class="manage-left">
-                <div class="manage-block">
-                    <div class="manage-toolbar">
-                        <el-input v-model="newGroupName" placeholder="分组名称" class="group-name-input" />
-                        <el-input v-model="newGroupIcon" placeholder="emoji" class="icon-input" />
-                        <el-button type="primary" size="large" :disabled="!newGroupName.trim()" @click="onAddGroup">
+        <div class="manage-shell" v-loading="loading" element-loading-text="加载中...">
+            <aside class="sidebar">
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span>分组</span>
+                            <el-tag size="small" type="info" effect="light">{{ groups?.length ?? 0 }}</el-tag>
+                        </div>
+                    </div>
+
+                    <div class="group-create">
+                        <div class="group-create-inputs">
+                            <el-input
+                                v-model="newGroupName"
+                                size="default"
+                                clearable
+                                placeholder="分组名称"
+                                class="group-name-input"
+                            />
+                            <el-input v-model="newGroupIcon" size="default" clearable placeholder="emoji" class="icon-input" />
+                        </div>
+                        <el-button
+                            type="primary"
+                            size="small"
+                            class="group-add-btn"
+                            :disabled="!newGroupName.trim()"
+                            @click="onAddGroup"
+                        >
                             <i-ep-plus /> 新建分组
                         </el-button>
                     </div>
-                    <div class="group-list">
-                        <div class="group-list-header">
-                            <div class="group-list-title">分组</div>
-                            <el-tag size="small" type="info" effect="light">{{ groups?.length ?? 0 }}</el-tag>
-                        </div>
 
+                    <div class="group-list">
                         <div v-if="(groups?.length ?? 0) === 0" class="group-empty">
-                            <el-empty description="暂无分组，请先新增" :image-size="92" />
+                            <el-empty description="暂无分组" :image-size="92" />
                         </div>
 
                         <div v-else class="group-items">
@@ -239,44 +252,52 @@ async function onSaveItem() {
                                     <span class="group-icon">{{ g.icon || '📁' }}</span>
                                     <span class="group-name" :title="g.name">{{ g.name }}</span>
                                 </div>
-                                <div class="group-item-ops">
-                                    <el-button
-                                        type="danger"
-                                        link
-                                        size="small"
-                                        @click.stop="onRemoveGroupManage(toNumber(g.id, 0))"
-                                    >
-                                        删除
-                                    </el-button>
-                                </div>
+                                <el-button
+                                    type="danger"
+                                    link
+                                    size="small"
+                                    class="group-delete-btn"
+                                    @click.stop="onRemoveGroupManage(toNumber(g.id, 0))"
+                                >
+                                    删除
+                                </el-button>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="manage-right">
-                <div class="manage-block">
-                    <div class="manage-title-row">
-                        <div class="manage-title">
-                            <span class="manage-title-icon">{{ selectedGroup?.icon || '📁' }}</span>
-                            <span class="manage-title-text">{{ selectedGroup?.name || '未选择' }}</span>
-                            <el-tag v-if="selectedGroupId" size="small" effect="light" class="manage-title-tag">
+            </aside>
+
+            <main class="content">
+                <div class="panel">
+                    <div class="panel-header panel-header--content">
+                        <div class="panel-title panel-title--content">
+                            <span class="title-icon">{{ selectedGroup?.icon || '📁' }}</span>
+                            <span class="title-text">{{ selectedGroup?.name || '未选择分组' }}</span>
+                            <el-tag v-if="selectedGroupId" size="small" effect="light">
                                 {{ selectedGroupRules.length }} 项
                             </el-tag>
                         </div>
-                        <el-button type="primary" size="large" :disabled="!selectedGroupId" @click="openCreateItem">
-                            <i-ep-plus />
-                            新增分值项
-                        </el-button>
+                        <div class="panel-actions">
+                            <el-button
+                                type="primary"
+                                size="small"
+                                class="add-item-btn"
+                                :disabled="!selectedGroupId"
+                                @click="openCreateItem"
+                            >
+                                <i-ep-plus />
+                                新增分值项
+                            </el-button>
+                        </div>
                     </div>
 
-                    <div class="rule-content">
+                    <div class="panel-body">
                         <el-table
                             v-if="selectedGroupId"
                             :data="selectedGroupRules"
                             border
                             stripe
-                            size="large"
+                            size="default"
                             height="100%"
                             class="rule-table"
                         >
@@ -295,17 +316,19 @@ async function onSaveItem() {
                             </el-table-column>
                             <el-table-column label="操作" width="160" align="center">
                                 <template #default="{ row }">
-                                    <el-button type="primary" link @click="openEditItem(row)">编辑</el-button>
-                                    <el-button type="danger" link @click="onRemoveItem(row)">删除</el-button>
+                                    <div class="row-ops">
+                                        <el-button type="primary" link @click="openEditItem(row)">编辑</el-button>
+                                        <el-button type="danger" link @click="onRemoveItem(row)">删除</el-button>
+                                    </div>
                                 </template>
                             </el-table-column>
                         </el-table>
                         <div v-else class="right-empty">
-                            <el-empty description="请先从左侧选择一个分组" :image-size="96" />
+                            <el-empty description="请选择一个分组" :image-size="96" />
                         </div>
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
         <template #footer>
             <span class="dialog-footer">
@@ -341,6 +364,162 @@ async function onSaveItem() {
 </template>
 
 <style scoped>
+.manage-shell {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 12px;
+    height: 100%;
+    min-height: 0;
+}
+
+.sidebar,
+.content {
+    min-height: 0;
+    display: flex;
+    height: 100%;
+}
+
+.panel {
+    width: 100%;
+    border-radius: 14px;
+    background: var(--el-bg-color);
+    border: 1px solid var(--el-border-color-lighter);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1 1 auto;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+.panel-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    min-width: 0;
+}
+
+.panel-title--content {
+    flex: 1 1 auto;
+}
+
+.panel-actions {
+    flex: 0 0 auto;
+}
+
+.panel-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.title-icon {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #f3f6ff;
+    border: 1px solid #e6ecff;
+    flex: 0 0 auto;
+}
+
+.title-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.group-create {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+    min-width: 0;
+}
+
+.group-create-inputs {
+    display: grid;
+    grid-template-columns: 1fr 96px;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+}
+
+.group-name-input,
+.icon-input {
+    width: 100% !important;
+    min-width: 0;
+}
+
+.group-name-input :deep(.el-input__wrapper),
+.icon-input :deep(.el-input__wrapper) {
+    min-height: 40px;
+}
+
+.group-add-btn {
+    height: 36px;
+    padding: 0 10px;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    width: 100%;
+    --el-button-size: 36px;
+    --el-button-font-size: 14px;
+}
+
+.group-delete-btn {
+    flex: 0 0 auto;
+    width: auto !important;
+    white-space: nowrap;
+    padding: 0;
+    margin-left: 8px;
+}
+
+.add-item-btn {
+    flex: 0 0 auto;
+    width: auto !important;
+    height: 32px !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+    line-height: 1;
+    font-weight: 700;
+    --el-button-size: 32px;
+    --el-button-font-size: 12px;
+}
+
+.row-ops {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.row-ops :deep(.el-button) {
+    margin-left: 0;
+    padding: 0;
+}
+
 :global(.points-rule-manage-modal .el-dialog__footer) {
     padding-top: 12px;
     text-align: initial !important;
@@ -422,6 +601,8 @@ async function onSaveItem() {
     font-weight: 800;
     min-height: 40px;
     max-width: 100%;
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 .manage-title-row {
@@ -431,6 +612,7 @@ async function onSaveItem() {
     margin-bottom: 10px;
     gap: 12px;
     flex: 0 0 auto;
+    flex-wrap: wrap;
 }
 
 .manage-title-icon {
@@ -456,10 +638,6 @@ async function onSaveItem() {
     flex: 0 0 auto;
 }
 
-.icon-input {
-    width: 120px;
-}
-
 .group-name-input {
     flex: 1;
     flex-basis: 100%;
@@ -479,13 +657,12 @@ async function onSaveItem() {
 }
 
 .group-list {
-    border: 1px solid #e6e8f0;
-    border-radius: 12px;
-    overflow: hidden;
-    overflow-y: auto;
-    background: #fff;
     flex: 1;
     min-height: 0;
+    overflow: auto;
+    padding-right: 2px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 .group-list-header {
@@ -511,18 +688,22 @@ async function onSaveItem() {
 .group-items {
     display: flex;
     flex-direction: column;
+    gap: 8px;
 }
 
 .group-item {
-    display: grid;
-    grid-template-columns: 1fr auto;
+    display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
     cursor: pointer;
-    min-height: 54px;
-    border-left: 4px solid transparent;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
+    min-height: 44px;
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+    background: var(--el-bg-color);
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
 .group-item-main {
@@ -530,23 +711,20 @@ async function onSaveItem() {
     align-items: center;
     gap: 10px;
     min-width: 0;
+    flex: 1 1 auto;
 }
 
 .group-item:hover {
-    background: #f7f9ff;
+    background: var(--el-fill-color-light);
 }
 
 .group-item.is-active {
     background: #edf5ff;
-    border-left-color: #2d5cf6;
-}
-
-.group-item + .group-item {
-    border-top: 1px solid #f2f2f2;
+    border-color: rgba(45, 92, 246, 0.45);
 }
 
 .group-name {
-    font-size: 15px;
+    font-size: 14px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -617,27 +795,6 @@ async function onSaveItem() {
 
 .item-form-col :deep(.el-form-item__content) {
     justify-content: flex-start;
-}
-
-@media (max-width: 900px) {
-    :global(.points-rule-manage-modal .el-overlay-dialog) {
-        padding: 12px !important;
-    }
-
-    :global(.points-rule-manage-modal .el-dialog) {
-        width: calc(100vw - 24px) !important;
-        height: calc(100vh - 24px) !important;
-        max-height: calc(100vh - 24px) !important;
-    }
-
-    .manage-grid {
-        grid-template-columns: 1fr;
-        grid-template-rows: 0.95fr 1.05fr;
-    }
-
-    .item-form-row {
-        grid-template-columns: 1fr;
-    }
 }
 </style>
 

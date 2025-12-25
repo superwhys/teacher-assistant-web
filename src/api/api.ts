@@ -82,6 +82,36 @@ async function request<T>(
   return handleResponse<T>(jsonResponse);
 }
 
+async function requestBlob(
+  url: string,
+  options: RequestInit = {}
+): Promise<Blob> {
+  const cacheStore = useCacheStore();
+  const authToken = cacheStore.token;
+  const response = await fetch(`${API_BASE_URL}${url}`, {
+    headers: buildHeaders(authToken, options.headers),
+    ...options,
+  });
+
+  if (response.status === 401) {
+    cacheStore.setExpired(true);
+    const errorMessage = '登录已过期, 请退出并重新登录, 否则会影响云端功能的正常使用！';
+    showMessage(errorMessage, "error");
+    showMessage(errorMessage, "error");
+    showMessage(errorMessage, "error");
+    throw new Error(errorMessage);
+  }
+
+  if (!response.ok) {
+    const errResp = (await safeParseJson<unknown>(response)) as ApiResponse<unknown> | null;
+    const errorMessage = errResp?.message || `HTTP error! status: ${response.status}`;
+    showMessage(errorMessage, "error");
+    throw new Error(errorMessage);
+  }
+
+  return await response.blob();
+}
+
 // GET请求
 function get<T>(
   url: string,
@@ -109,6 +139,13 @@ function post<T>(url: string, data?: any): Promise<ApiResponse<T>> {
   });
 }
 
+function postBlob(url: string, data?: any): Promise<Blob> {
+  return requestBlob(url, {
+    method: "POST",
+    body: data ? JSON.stringify(data) : undefined,
+  });
+}
+
 // PUT请求
 function put<T>(url: string, data?: any): Promise<ApiResponse<T>> {
   return request<T>(url, {
@@ -122,4 +159,4 @@ function del<T>(url: string): Promise<ApiResponse<T>> {
   return request<T>(url, { method: "DELETE" });
 }
 
-export { get, post, put, del };
+export { get, post, postBlob, put, del };

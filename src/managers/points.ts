@@ -1,5 +1,7 @@
 import { pointsApi } from '@/api/points'
 import type {
+    ExportPointsRecordsPreviewReq,
+    ExportPointsRecordsPreviewResp,
     GetClassRankingQuery,
     GetClassRankingResp,
     GetRuleRankingQuery,
@@ -53,6 +55,17 @@ export const pointsManager = {
     async importRuleRecords(payload: ImportPointsRecordsReq): Promise<string[]> {
         const resp = await pointsApi.importRuleRecords(payload)
         return resp.data ?? []
+    },
+
+    async exportRuleRecordsPreview(payload: ExportPointsRecordsPreviewReq): Promise<ExportPointsRecordsPreviewResp> {
+        const resp = await pointsApi.exportRuleRecordsPreview(payload)
+        return resp.data ?? {}
+    },
+
+    async exportRuleRecords(key: string): Promise<Blob> {
+        const k = String(key ?? '').trim()
+        if (!k) throw new Error('导出 key 为空')
+        return await pointsApi.exportRuleRecords({ key: k })
     },
 
     async createRuleGroups(groups: CreateRuleGroupItem[]): Promise<void> {

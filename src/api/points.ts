@@ -1,9 +1,12 @@
-import { get, post, put, del } from '@/api/api'
+import { get, post, postBlob, put, del } from '@/api/api'
 import type { ApiResponse } from '@/types/api'
 import type {
     ApplyPointsReq,
     CreateRuleGroupReq,
     CreateRuleReq,
+    ExportPointsRecordsPreviewReq,
+    ExportPointsRecordsPreviewResp,
+    ExportPointsRecordsReq,
     GetClassRankingQuery,
     GetClassRankingResp,
     GetRuleRankingQuery,
@@ -30,6 +33,13 @@ export const pointsApi = {
 
     importRuleRecords(data: ImportPointsRecordsReq): Promise<ApiResponse<string[]>> {
         return post<string[]>('/points/rule/record/import', data)
+    },
+
+    exportRuleRecordsPreview(data: ExportPointsRecordsPreviewReq): Promise<ApiResponse<ExportPointsRecordsPreviewResp>> {
+        return post<ExportPointsRecordsPreviewResp>('/points/rule/record/export/preview', data)
+    },
+    exportRuleRecords(data: ExportPointsRecordsReq): Promise<Blob> {
+        return postBlob('/points/rule/record/export', data)
     },
 
     createRule(data: CreateRuleReq): Promise<ApiResponse<null>> {

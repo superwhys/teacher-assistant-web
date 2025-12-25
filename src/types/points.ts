@@ -24,6 +24,38 @@ export type ImportPointsRecordsReq = {
     records?: ImportPointsRecordItem[]
 }
 
+/**
+ * 导出类型
+ * - final: 最终积分
+ * - records: 积分记录
+ */
+export type ExportType = 'final' | 'records'
+
+/**
+ * 导出排序方式（仅部分导出类型需要）
+ */
+export type ExportSort = 'points_desc' | 'points_asc' | 'name_desc' | 'name_asc'
+
+export type ExportPointsRecordsPreviewReq = {
+    class_id?: number
+    export_type?: ExportType
+    from?: string
+    to?: string
+    rule_ids?: number[]
+    sort?: ExportSort
+    student_group_id?: number
+}
+
+export type ExportPointsRecordsPreviewResp = {
+    headers?: string[]
+    key?: string
+    values?: string[][]
+}
+
+export type ExportPointsRecordsReq = {
+    key?: string
+}
+
 export type Record = {
     after_balance?: number
     amount?: number

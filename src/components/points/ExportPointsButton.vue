@@ -1,47 +1,86 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import * as XLSX from 'xlsx'
-import { useStudentStore } from '@/stores/studentStore'
-import { useStudentGroupStore } from '@/stores/studentGroupStore'
-import { usePointsStore } from '@/stores/pointsStore'
-import { usePointsItemStore } from '@/stores/pointsItemStore'
+import { studentManager } from '@/managers/student'
+import { pointsManager, type UiPointsRule } from '@/managers/points'
+import type { StudentGroupDTO } from '@/types/student'
+import type { ExportPointsRecordsPreviewReq, ExportSort, ExportType } from '@/types/points'
 
 const props = defineProps<{
     activeClassId: string | null
     activeClassName: string
 }>()
 
-const studentStore = useStudentStore()
-const groupStore = useStudentGroupStore()
-const pointsStore = usePointsStore()
-const pointsItemStore = usePointsItemStore()
-
-const studentsOfActive = computed(() => {
-    const id = props.activeClassId
-    return id ? studentStore.listByClassId(id) : []
-})
-
-const groupsOfActive = computed(() => {
-    const id = props.activeClassId
-    return id ? groupStore.listByClassId(id) : []
-})
-
-const allPointsItems = computed(() => pointsItemStore.listItems('all'))
+function toNumber(v: unknown, fallback = 0): number {
+    const n = typeof v === 'number' ? v : Number(v)
+    return Number.isFinite(n) ? n : fallback
+}
 
 const exportVisible = ref(false)
-const exportType = ref<'history' | 'final'>('final')
+const exportType = ref<ExportType>('final')
 const exportScope = ref<'all' | 'group'>('all')
-const exportGroupId = ref<string | ''>('')
+const exportGroupId = ref<number | null>(null)
 const dateRange = ref<[Date, Date] | []>([])
 const defaultTime: [Date, Date] = [
     new Date(2000, 1, 1, 0, 0, 0),
     new Date(2000, 1, 1, 23, 59, 59),
 ]
 
-// 新增选项
-const sortBy = ref<'default' | 'points-asc' | 'points-desc' | 'name-asc' | 'name-desc'>('default')
-const filterItemIds = ref<string[]>([])
+// 排序（仅保留积分正序/倒序）
+const sortBy = ref<'points-asc' | 'points-desc'>('points-desc')
+const filterItemIds = ref<number[]>([])
+
+const groupsOfActive = ref<StudentGroupDTO[]>([])
+const rulesOfActive = ref<UiPointsRule[]>([])
+const baseLoading = ref(false)
+
+function addMonths(date: Date, months: number): Date {
+    const d = new Date(date)
+    d.setMonth(d.getMonth() + months)
+    return d
+}
+
+function buildDefaultRecent3MonthsRange(): [Date, Date] {
+    const end = new Date()
+    end.setHours(23, 59, 59, 0)
+    const start = new Date(end)
+    start.setMonth(start.getMonth() - 3)
+    start.setHours(23, 59, 59, 0)
+    return [start, end]
+}
+
+const MAX_RANGE_MONTHS = 3
+const rangeLimitWarned = ref(false)
+
+const groupOptions = computed(() => {
+    return (groupsOfActive.value ?? [])
+        .map(g => ({
+            id: toNumber(g.id, 0),
+            name: String(g.name ?? '').trim(),
+            count: (g.students || []).length,
+        }))
+        .filter(g => g.id > 0 && !!g.name)
+})
+
+async function ensureBaseLoaded(classId: number) {
+    if (!classId) return
+    if (baseLoading.value) return
+    baseLoading.value = true
+    try {
+        const [groups, rules] = await Promise.all([
+            studentManager.listGroups(classId),
+            pointsManager.listRulesFlat(),
+        ])
+        groupsOfActive.value = groups ?? []
+        rulesOfActive.value = rules ?? []
+    } catch (err: any) {
+        groupsOfActive.value = []
+        rulesOfActive.value = []
+        ElMessage.error(`加载导出选项失败：${err?.message || '未知错误'}`)
+    } finally {
+        baseLoading.value = false
+    }
+}
 
 function openExportDialog() {
     if (!props.activeClassId) {
@@ -49,263 +88,158 @@ function openExportDialog() {
         return
     }
     // 重置
-    dateRange.value = []
-    sortBy.value = 'default'
+    dateRange.value = buildDefaultRecent3MonthsRange()
+    sortBy.value = 'points-desc'
     filterItemIds.value = []
+    exportScope.value = 'all'
+    exportGroupId.value = null
+    rangeLimitWarned.value = false
     exportVisible.value = true
+    const classId = toNumber(props.activeClassId, 0)
+    void ensureBaseLoaded(classId)
+    schedulePreview()
 }
 
-function formatDateTime(date: Date): string {
-    const pad = (n: number) => String(n).padStart(2, '0')
-    const y = date.getFullYear()
-    const m = pad(date.getMonth() + 1)
-    const d = pad(date.getDate())
-    const hh = pad(date.getHours())
-    const mm = pad(date.getMinutes())
-    return `${y}-${m}-${d} ${hh}:${mm}`
+function mapSortToApi(sort: typeof sortBy.value): ExportSort {
+    return sort === 'points-asc' ? 'points_asc' : 'points_desc'
 }
 
-const exportData = computed(() => {
-    const classId = props.activeClassId
-    if (!classId) return { rows: [], sheetName: '', columns: [] as { prop: string, label: string }[] }
+const previewKey = ref('')
+const previewHeaders = ref<string[]>([])
+const previewValues = ref<string[][]>([])
+const previewLoading = ref(false)
+const exportLoading = ref(false)
 
-        if (exportType.value === 'history') {
-        const list = pointsStore.getHistoryOf(classId)
-        let filtered = list
-        
-        // 应用时间范围过滤
-        if (dateRange.value.length === 2) {
-            const [startDate, endDate] = dateRange.value
-            const startTs = startDate.getTime()
-            const endTs = endDate.getTime()
-            filtered = filtered.filter(a => {
-                return a.at >= startTs && a.at <= endTs
-            })
-        }
-        
-        // 应用积分项过滤
-        if (filterItemIds.value.length > 0) {
-            // 历史记录下，只要是选中的任意一个积分项即可
-            filtered = filtered.filter(a => a.itemId && filterItemIds.value.includes(a.itemId))
-        }
-        
-        if (exportScope.value === 'group' && exportGroupId.value) {
-            const g = groupsOfActive.value.find(x => x.id === exportGroupId.value)
-            const nameSet = new Set(g?.members ?? [])
-            filtered = filtered.filter(a => a.studentNames.some(n => nameSet.has(n)))
-        }
-        
-        // 历史记录通常按时间倒序，如果用户选择了排序方式，这里也可以支持
-        // 但通常历史记录主要看时间。这里暂时保持时间倒序作为默认。
-        // 如果需要支持按学生姓名排序，可以在这里加。
-        
-        const rows = filtered.map(a => ({
-            '时间': formatDateTime(new Date(a.at)),
-            '积分项': a.itemName || '未知',
-            '分值': a.delta,
-            '学生': a.studentNames.join('、'),
-        }))
+function buildPreviewReq(): ExportPointsRecordsPreviewReq | null {
+    if (!props.activeClassId) return null
+    const classId = toNumber(props.activeClassId, 0)
+    if (!classId) return null
 
-        return { 
-            rows, 
-            sheetName: '历史记录',
-            columns: [
-                { prop: '时间', label: '时间' },
-                { prop: '积分项', label: '积分项' },
-                { prop: '分值', label: '分值' },
-                { prop: '学生', label: '学生' },
-            ]
-        }
+    const req: ExportPointsRecordsPreviewReq = {
+        class_id: classId,
+        export_type: exportType.value,
+    }
+
+    if (exportScope.value === 'group') {
+        req.student_group_id = exportGroupId.value || 0
     } else {
-        const points = pointsStore.getPointsOf(classId)
-        let names = studentsOfActive.value.map(s => s.studentName)
-        
-        // 分组过滤
-        if (exportScope.value === 'group' && exportGroupId.value) {
-            const g = groupsOfActive.value.find(x => x.id === exportGroupId.value)
-            const nameSet = new Set(g?.members ?? [])
-            names = names.filter(n => nameSet.has(n))
-        }
+        req.student_group_id = 0
+    }
 
-        // 积分项过滤：
-        // 1. 筛选出有过该积分项记录的学生
-        // 2. 计算每个学生该积分项的分数总和
-        let itemScoreMap: Record<string, Record<string, number>> = {} // student -> itemId -> score
-        let totalFilteredScoreMap: Record<string, number> = {} // student -> total score of filtered items
+    if (filterItemIds.value.length > 0) {
+        req.rule_ids = filterItemIds.value
+    }
 
-        if (filterItemIds.value.length > 0) {
-            const history = pointsStore.getHistoryOf(classId)
-            const studentSet = new Set<string>()
-            
-            history.forEach(h => {
-                if (h.itemId && filterItemIds.value.includes(h.itemId)) {
-                    // 累加分数
-                    h.studentNames.forEach(n => {
-                        studentSet.add(n)
-                        if (!itemScoreMap[n]) itemScoreMap[n] = {}
-                        itemScoreMap[n][h.itemId!] = (itemScoreMap[n][h.itemId!] || 0) + h.delta
-                        totalFilteredScoreMap[n] = (totalFilteredScoreMap[n] || 0) + h.delta
-                    })
-                }
-            })
-            
-            // 仅保留有记录的学生
-            names = names.filter(n => studentSet.has(n))
-        }
+    req.sort = mapSortToApi(sortBy.value)
 
-        // 准备表头列
-        const columns = [
-            { prop: '姓名', label: '姓名' }
-        ]
-        
-        if (filterItemIds.value.length > 0) {
-            // 添加选中的积分项列
-            filterItemIds.value.forEach(id => {
-                const item = allPointsItems.value.find(i => i.id === id)
-                if (item) {
-                    columns.push({ 
-                        prop: id, 
-                        label: `${item.name} ${item.sign === 'plus' ? '(加分)' : '(扣分)'}` 
-                    })
-                }
-            })
-            // 如果选了多个，可以加一个合计列
-            // if (filterItemIds.value.length > 1) {
-            //     columns.push({ prop: '合计', label: '合计' })
-            // }
-        } else {
-            if (dateRange.value.length === 2) {
-                columns.push({ prop: '时段积分', label: '时段积分' })
-            } else {
-                columns.push(
-                    { prop: '总积分', label: '总积分' },
-                    { prop: '可用积分', label: '可用积分' }
-                )
-            }
-        }
+    if (dateRange.value.length === 2) {
+        const [start, end] = dateRange.value
+        req.from = start.toISOString()
+        req.to = end.toISOString()
+    }
 
-        // 构建行数据
-        let rows = names.map(n => {
-            // 如果有积分项过滤
-            if (filterItemIds.value.length > 0) {
-                const row: any = { '姓名': n }
-                
-                // 填充每个选中积分项的分数
-                filterItemIds.value.forEach(id => {
-                    row[id] = itemScoreMap[n]?.[id] || 0
-                })
-                
-                // 填充合计
-                // if (filterItemIds.value.length > 1) {
-                //     row['合计'] = totalFilteredScoreMap[n] || 0
-                // }
-                
-                // 增加一个用于排序的隐藏字段
-                row._total = totalFilteredScoreMap[n] || 0
-                
-                return row
-            }
-            
-            // 否则显示原来的总积分/可用积分
-            // 如果选择了时间范围，则显示该时间段内的总积分
-            if (dateRange.value.length === 2) {
-                const history = pointsStore.getHistoryOf(classId)
-                const [startDate, endDate] = dateRange.value
-                const startTs = startDate.getTime()
-                const endTs = endDate.getTime()
-                
-                const relevantHistory = history.filter(a => a.at >= startTs && a.at <= endTs)
-                
-                let total = 0
-                relevantHistory.forEach(h => {
-                    if (h.studentNames.includes(n)) {
-                        total += h.delta
-                    }
-                })
-                
-                return {
-                    '姓名': n,
-                    '时段积分': total,
-                }
-            }
+    return req
+}
 
-            const p = points[n]
-            return {
-                '姓名': n,
-                '总积分': p?.total ?? 0,
-                '可用积分': p?.available ?? 0
-            }
-        })
+async function refreshPreview() {
+    const req = buildPreviewReq()
+    if (!req) {
+        previewKey.value = ''
+        previewHeaders.value = []
+        previewValues.value = []
+        return
+    }
+    if (previewLoading.value) return
+    previewLoading.value = true
+    try {
+        const resp = await pointsManager.exportRuleRecordsPreview(req)
+        previewKey.value = String(resp.key ?? '')
+        previewHeaders.value = resp.headers ?? []
+        previewValues.value = resp.values ?? []
+    } catch (err: any) {
+        previewKey.value = ''
+        previewHeaders.value = []
+        previewValues.value = []
+        ElMessage.error(`预览失败：${err?.message || '未知错误'}`)
+    } finally {
+        previewLoading.value = false
+    }
+}
 
-        // 排序
-        if (sortBy.value !== 'default') {
-            rows.sort((a, b) => {
-                if (filterItemIds.value.length > 0) {
-                    // 积分项模式下的排序
-                    // 如果是单项，按该项分数排序
-                    // 如果是多项，按合计排序（虽然不显示合计列，但排序逻辑依然可以是合计）
-                    const firstId = filterItemIds.value[0] || ''
-                    const sortKey = filterItemIds.value.length > 1 ? '_total' : firstId
-                    
-                    if (sortBy.value === 'points-asc') {
-                        return ((a[sortKey] as number) || 0) - ((b[sortKey] as number) || 0)
-                    } else if (sortBy.value === 'points-desc') {
-                        return ((b[sortKey] as number) || 0) - ((a[sortKey] as number) || 0)
-                    }
-                } else if (dateRange.value.length === 2) {
-                    // 时段积分排序
-                    if (sortBy.value === 'points-asc') {
-                        return (a['时段积分'] as number) - (b['时段积分'] as number)
-                    } else if (sortBy.value === 'points-desc') {
-                        return (b['时段积分'] as number) - (a['时段积分'] as number)
-                    }
-                } else {
-                    // 常规模式下的排序
-                    if (sortBy.value === 'points-asc') {
-                        return (a['总积分'] as number) - (b['总积分'] as number)
-                    } else if (sortBy.value === 'points-desc') {
-                        return (b['总积分'] as number) - (a['总积分'] as number)
-                    }
-                }
-                
-                if (sortBy.value === 'name-asc') {
-                    return a['姓名'].localeCompare(b['姓名'], 'zh-CN')
-                } else if (sortBy.value === 'name-desc') {
-                    return b['姓名'].localeCompare(a['姓名'], 'zh-CN')
-                }
-                return 0
-            })
-        }
+let previewTimer: number | null = null
+function schedulePreview() {
+    if (!exportVisible.value) return
+    if (previewTimer) window.clearTimeout(previewTimer)
+    previewTimer = window.setTimeout(() => {
+        void refreshPreview()
+    }, 250)
+}
 
-        return { 
-            rows, 
-            sheetName: filterItemIds.value.length > 0 ? '单项积分统计' : '最终积分',
-            columns
+watch(() => exportScope.value, (v) => {
+    if (v !== 'group') exportGroupId.value = null
+    schedulePreview()
+})
+
+watch([exportType, exportGroupId, dateRange, sortBy, filterItemIds], () => {
+    schedulePreview()
+}, { deep: true })
+
+watch(() => dateRange.value, (v) => {
+    if (!Array.isArray(v) || v.length !== 2) return
+    const [start, end] = v
+    if (!(start instanceof Date) || !(end instanceof Date)) return
+    if (start.getTime() > end.getTime()) return
+
+    const limitEnd = addMonths(start, MAX_RANGE_MONTHS)
+    limitEnd.setHours(23, 59, 59, 0)
+    if (end.getTime() > limitEnd.getTime()) {
+        dateRange.value = [start, limitEnd]
+        if (!rangeLimitWarned.value) {
+            rangeLimitWarned.value = true
+            ElMessage.warning(`时间范围最多只能选择${MAX_RANGE_MONTHS}个月`)
         }
     }
+}, { deep: true })
+
+const allPointsItems = computed(() => {
+    return (rulesOfActive.value ?? []).map(r => ({
+        id: r.id,
+        name: r.name,
+        sign: r.sign,
+        groupName: r.groupName,
+    }))
+})
+
+const previewColumns = computed(() => {
+    return (previewHeaders.value ?? []).map((h, idx) => ({
+        prop: `c${idx}`,
+        label: h,
+    }))
 })
 
 const previewRows = computed(() => {
-    return exportData.value.rows // 预览显示所有，通过max-height控制滚动
+    const headers = previewHeaders.value ?? []
+    const values = previewValues.value ?? []
+    if (headers.length === 0 || values.length === 0) return []
+    return values.map(row => {
+        const obj: Record<string, string> = {}
+        headers.forEach((_, idx) => {
+            obj[`c${idx}`] = String(row?.[idx] ?? '')
+        })
+        return obj
+    })
 })
 
-function doExportExcel() {
-    if (!props.activeClassId) return
-    const { rows, sheetName } = exportData.value
-    if (!rows.length) {
-        ElMessage.info('没有可导出的数据')
-        return
-    }
-    const ws = XLSX.utils.json_to_sheet(rows)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, sheetName)
-
+function buildExportFileName(): string {
     const cls = props.activeClassName || '未命名班级'
-    const scopeSuffix = exportScope.value === 'group' ? `_${groupsOfActive.value.find(g => g.id === exportGroupId.value)?.name || '分组'}` : '_全部学生'
-    const typeSuffix = exportType.value === 'history' ? '积分历史' : '最终积分'
-    
+    const groupName = exportScope.value === 'group'
+        ? (groupOptions.value.find(g => g.id === (exportGroupId.value || 0))?.name || '分组')
+        : '全部学生'
+    const scopeSuffix = `_${groupName}`
+    const typeSuffix = exportType.value === 'records' ? '积分历史' : '最终积分'
+
     let dateSuffix = ''
-    if (dateRange.value && dateRange.value.length === 2) {
+    if (dateRange.value.length === 2) {
         const [start, end] = dateRange.value
         const fmt = (d: Date) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`
         dateSuffix = `_${fmt(start)}-${fmt(end)}`
@@ -324,10 +258,35 @@ function doExportExcel() {
     const now = new Date()
     const pad = (n: number) => String(n).padStart(2, '0')
     const ts = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`
-    const filename = `${cls}_${typeSuffix}${scopeSuffix}${filterSuffix}${dateSuffix}_${ts}.xlsx`
-    XLSX.writeFile(wb, filename)
-    ElMessage.success('导出成功')
-    exportVisible.value = false
+    return `${cls}_${typeSuffix}${scopeSuffix}${filterSuffix}${dateSuffix}_${ts}.xlsx`
+}
+
+async function doExportExcel() {
+    const key = String(previewKey.value ?? '').trim()
+    if (!key) {
+        ElMessage.info('请先获取预览数据')
+        return
+    }
+    if (exportLoading.value) return
+    exportLoading.value = true
+    try {
+        const blob = await pointsManager.exportRuleRecords(key)
+        const filename = buildExportFileName()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        window.URL.revokeObjectURL(url)
+        ElMessage.success('导出成功')
+        exportVisible.value = false
+    } catch (err: any) {
+        ElMessage.error(`导出失败：${err?.message || '未知错误'}`)
+    } finally {
+        exportLoading.value = false
+    }
 }
 </script>
 
@@ -342,7 +301,7 @@ function doExportExcel() {
                 <el-form-item label="导出类型" class="half-width">
                     <el-radio-group v-model="exportType" size="default">
                         <el-radio-button value="final">最终积分</el-radio-button>
-                        <el-radio-button value="history">历史记录</el-radio-button>
+                        <el-radio-button value="records">历史记录</el-radio-button>
                     </el-radio-group>
                 </el-form-item>
 
@@ -357,28 +316,32 @@ function doExportExcel() {
             <div class="form-row" v-if="exportScope === 'group'">
                 <el-form-item label="选择分组" class="full-width">
                     <el-select v-model="exportGroupId" placeholder="请选择分组" size="default" class="full-width-select">
-                        <el-option v-for="g in groupsOfActive" :key="g.id" :label="`${g.name}（${g.members.length}）`"
-                            :value="g.id" />
+                        <el-option
+                            v-for="g in groupOptions"
+                            :key="g.id"
+                            :label="`${g.name}（${g.count}）`"
+                            :value="g.id"
+                        />
                     </el-select>
                 </el-form-item>
             </div>
 
             <div class="form-row">
                 <el-form-item v-if="exportType === 'final'" label="排序方式" class="half-width">
-                    <el-select v-model="sortBy" placeholder="默认排序" size="default">
-                        <el-option label="默认排序" value="default" />
-                        <el-option label="总积分 正序" value="points-asc" />
-                        <el-option label="总积分 倒序" value="points-desc" />
-                        <el-option label="姓名 正序" value="name-asc" />
-                        <el-option label="姓名 倒序" value="name-desc" />
+                    <el-select v-model="sortBy" size="default">
+                        <el-option label="积分正序" value="points-asc" />
+                        <el-option label="积分倒序" value="points-desc" />
                     </el-select>
                 </el-form-item>
                 
                 <el-form-item label="按积分项筛选" class="half-width">
                     <el-select v-model="filterItemIds" placeholder="全部积分项" clearable multiple collapse-tags collapse-tags-tooltip size="default">
-                        <el-option v-for="item in allPointsItems" :key="item.id" 
-                            :label="item.name + (item.sign === 'plus' ? ' (加分)' : ' (扣分)')" 
-                            :value="item.id" />
+                        <el-option
+                            v-for="item in allPointsItems"
+                            :key="item.id"
+                            :label="`${item.groupName ? item.groupName + ' / ' : ''}${item.name}${item.sign === 'plus' ? ' (加分)' : ' (扣分)'}`"
+                            :value="item.id"
+                        />
                     </el-select>
                 </el-form-item>
             </div>
@@ -400,9 +363,14 @@ function doExportExcel() {
                 <div class="preview-header">
                     <span>数据预览 ({{ previewRows.length }} 条)</span>
                 </div>
-                <div class="preview-table-wrapper">
+                <div
+                    class="preview-table-wrapper"
+                    v-loading="previewLoading"
+                    element-loading-text="预览生成中..."
+                    element-loading-background="rgba(255, 255, 255, 0.65)"
+                >
                     <el-table :data="previewRows" size="small" border stripe :style="{ width: '100%', height: '200px' }">
-                        <el-table-column v-for="col in exportData.columns" :key="col.prop" :prop="col.prop" :label="col.label" />
+                        <el-table-column v-for="col in previewColumns" :key="col.prop" :prop="col.prop" :label="col.label" />
                         <template #empty>
                             <div class="empty-preview">无数据</div>
                         </template>
@@ -415,7 +383,7 @@ function doExportExcel() {
             <div class="dialog-footer">
                 <el-button @click="exportVisible = false">取消</el-button>
                 <el-button type="primary" @click="doExportExcel"
-                    :disabled="(exportScope === 'group' && !exportGroupId) || exportData.rows.length === 0">
+                    :disabled="(exportScope === 'group' && !exportGroupId) || previewRows.length === 0 || !previewKey || previewLoading || exportLoading">
                     <i-ep-download /> 导出
                 </el-button>
             </div>

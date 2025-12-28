@@ -10,7 +10,7 @@ const props = defineProps<{
     modelValue: boolean
     form: {
         prizeId: number
-        studentId: number
+        studentId: number | null
         count: number
     }
     students: Array<{ id: number; name: string; availablePoints: number }>
@@ -59,6 +59,7 @@ function getSelectedStudentClass(): string {
                     placeholder="请选择学生"
                     size="large"
                     filterable
+                    clearable
                     style="width: 100%;"
                     :class="getSelectedStudentClass()"
                 >

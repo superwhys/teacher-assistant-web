@@ -13,7 +13,7 @@ type Props = {
 const props = defineProps<Props>()
 const emit = defineEmits<{
     (e: 'update:modelValue', v: boolean): void
-    (e: 'changed'): void
+    (e: 'changed', groups: RuleGroup[]): void
 }>()
 
 function toNumber(v: unknown, fallback = 0): number {
@@ -99,6 +99,7 @@ async function onAddGroup() {
         await loadGroups()
         selectedGroupId.value = createdId || selectedGroupId.value
         ElMessage.success('已新增分组')
+        emit('changed', groups.value)
     } catch (err: any) {
         ElMessage.error(err?.message || '新增分组失败')
     } finally {
@@ -134,6 +135,7 @@ async function onRemoveGroupManage(groupId: number) {
         await pointsManager.deleteRuleGroup(groupId)
         await loadGroups()
         ElMessage.success('已删除分组及其分值项')
+        emit('changed', groups.value)
     } catch { } finally {
         loading.value = false
     }
@@ -148,6 +150,7 @@ async function onRemoveItem(rule: Rule) {
         await pointsManager.deleteRule(rid)
         await loadGroups()
         ElMessage.success('已删除')
+        emit('changed', groups.value)
     } catch { } finally {
         loading.value = false
     }
@@ -187,6 +190,7 @@ async function onSaveItem() {
         }
         itemEditVisible.value = false
         await loadGroups()
+        emit('changed', groups.value)
     } catch (err: any) {
         ElMessage.error(err?.message || '保存失败')
     } finally {

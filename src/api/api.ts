@@ -1,8 +1,11 @@
 import type { ApiResponse } from "@/types/api";
 import { ElMessage } from "element-plus";
 import { useCacheStore } from "@/stores/cacheStore";
+import router from "@/routers";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+
+let isRedirectingToAuth = false;
 
 function showMessage(
   message: string,
@@ -16,7 +19,33 @@ function showMessage(
   });
 }
 
+async function redirectToAuth(): Promise<void> {
+  if (isRedirectingToAuth) return;
+  isRedirectingToAuth = true;
+
+  try {
+    const current = router.currentRoute.value;
+    const redirect =
+      current?.path && current.path !== "/auth" ? current.fullPath : "/points";
+    await router.replace({ path: "/auth", query: { redirect } });
+  } catch {
+    window.location.href = "/auth";
+  } finally {
+    window.setTimeout(() => {
+      isRedirectingToAuth = false;
+    }, 500);
+  }
+}
+
 function handleResponse<T>(response: ApiResponse<T>): ApiResponse<T> {
+  if (response.code === 100401) {
+    const cacheStore = useCacheStore();
+    cacheStore.logout();
+    const errorMessage = response.message || "登录已过期，请重新登录";
+    showMessage(errorMessage, "error");
+    void redirectToAuth();
+    throw new Error(errorMessage);
+  }
   if (response.code === 0 || response.code === 200) {
     return response;
   } else {
@@ -59,13 +88,8 @@ async function request<T>(
   });
 
   if (response.status === 401) {
-    // await safeParseJson<unknown>(response);
-    // const errorMessage = errResp?.message || `HTTP error! status: ${response.status}`;
-    
     cacheStore.setExpired(true);
-    const errorMessage = '登录已过期, 请退出并重新登录, 否则会影响云端功能的正常使用！';
-    showMessage(errorMessage, "error");
-    showMessage(errorMessage, "error");
+    const errorMessage = '登录已过期, 请退出并重新登录';
     showMessage(errorMessage, "error");
     throw new Error(errorMessage);
   }
@@ -95,9 +119,7 @@ async function requestBlob(
 
   if (response.status === 401) {
     cacheStore.setExpired(true);
-    const errorMessage = '登录已过期, 请退出并重新登录, 否则会影响云端功能的正常使用！';
-    showMessage(errorMessage, "error");
-    showMessage(errorMessage, "error");
+    const errorMessage = '登录已过期, 请退出并重新登录';
     showMessage(errorMessage, "error");
     throw new Error(errorMessage);
   }

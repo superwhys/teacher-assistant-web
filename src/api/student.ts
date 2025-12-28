@@ -18,7 +18,7 @@ export const studentApi = {
         return post<null>('/student/create', data)
     },
     createBatch(data: CreateStudentBatchReq): Promise<ApiResponse<null>> {
-        return post<null>('/student/create/batch', data)
+        return post<null>('/student/create.batch', data)
     },
     delete(studentId: number): Promise<ApiResponse<null>> {
         return del<null>(`/student/${studentId}`)

@@ -5,6 +5,7 @@ import PointsImportItemsButton from '@/components/points/PointsImportItemsButton
 import PointsHistoryButton from '@/components/points/PointsHistoryButton.vue'
 import ImportPointsButton from '@/components/points/ImportPointsButton.vue'
 import ExportPointsButton from '@/components/points/ExportPointsButton.vue'
+import type { RuleGroup } from '@/types/points'
 
 defineOptions({ name: 'PointsHeaderActionsPanel' })
 
@@ -14,7 +15,7 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-    (e: 'changed'): void
+    (e: 'changed', groups?: RuleGroup[]): void
 }>()
 
 const mobileMenuVisible = ref(false)
@@ -27,7 +28,7 @@ const mobileMenuVisible = ref(false)
         </div>
 
         <div class="desktop-actions">
-            <PointsManageItemsButton @changed="emit('changed')" />
+            <PointsManageItemsButton @changed="emit('changed', $event)" />
             <PointsImportItemsButton @changed="emit('changed')" />
             <ImportPointsButton :active-class-id="activeClassId" :active-class-name="activeClassName" />
             <ExportPointsButton :active-class-id="activeClassId" :active-class-name="activeClassName" />
@@ -40,7 +41,7 @@ const mobileMenuVisible = ref(false)
         <el-dialog v-model="mobileMenuVisible" title="功能菜单" width="400px" :close-on-click-modal="true">
             <div class="mobile-menu-list">
                 <PointsManageItemsButton
-                    @changed="emit('changed')"
+                    @changed="emit('changed', $event)"
                     @click="mobileMenuVisible = false"
                 />
                 <PointsImportItemsButton

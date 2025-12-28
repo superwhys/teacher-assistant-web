@@ -29,6 +29,56 @@ const singleGender = ref<ApiGender>(1)
 const batchText = ref('')
 const batchGender = ref<ApiGender>(1)
 
+const batchParsedStudents = computed<CreateStudentReq[]>(() => {
+    const raw = batchText.value
+    const normalized = raw
+        .replace(/\s*[:：]\s*/g, ':')
+        .replace(/，/g, ',')
+    const tokens = normalized.split(/[\s,]+/).map(t => t.trim()).filter(Boolean)
+
+    const students: CreateStudentReq[] = []
+    for (const token of tokens) {
+        const idx = token.indexOf(':')
+        if (idx >= 0) {
+            const name = token.slice(0, idx).trim()
+            const genderPart = token.slice(idx + 1).trim()
+            if (!name) continue
+            students.push({
+                name,
+                gender: parseGender(genderPart, batchGender.value)
+            })
+        } else {
+            const name = token.trim()
+            if (!name) continue
+            students.push({
+                name,
+                gender: batchGender.value
+            })
+        }
+    }
+    return students
+})
+
+const batchParsedNames = computed(() => {
+    return batchParsedStudents.value
+        .map(s => s.name)
+        .filter((v): v is string => Boolean(v))
+})
+
+const batchPreviewRows = computed(() => batchParsedStudents.value)
+
+const batchDuplicateCount = computed(() => {
+    const map = new Map<string, number>()
+    for (const name of batchParsedNames.value) {
+        map.set(name, (map.get(name) ?? 0) + 1)
+    }
+    let dup = 0
+    for (const count of map.values()) {
+        if (count > 1) dup += (count - 1)
+    }
+    return dup
+})
+
 function addStudentSingle() {
     if (props.disabled) return
 
@@ -45,15 +95,14 @@ function addStudentSingle() {
 function addStudentBatch() {
     if (props.disabled) return
 
-    const raw = batchText.value
-    const tokens = raw.split(/[\s,]+/).map(t => t.trim()).filter(Boolean)
-    if (tokens.length === 0) {
+    const students = batchParsedStudents.value
+    if (students.length === 0) {
         ElMessage.error('请输入要批量添加的学生姓名，使用逗号/空格/换行分隔')
         return
     }
 
     emit('add-batch', {
-        students: tokens.map(name => ({ name, gender: batchGender.value }))
+        students
     })
     batchText.value = ''
 }
@@ -201,7 +250,6 @@ function genderText(gender?: ApiGender): string {
                         <el-radio-group v-model="singleGender" size="large" :disabled="disabled">
                             <el-radio-button :label="1">男</el-radio-button>
                             <el-radio-button :label="2">女</el-radio-button>
-                            <el-radio-button :label="0">未知</el-radio-button>
                         </el-radio-group>
                     </el-form-item>
                     <el-button class="add-btn" type="primary" size="large" :disabled="disabled" @click="addStudentSingle">
@@ -218,15 +266,32 @@ function genderText(gender?: ApiGender): string {
                             type="textarea"
                             :rows="4"
                             size="large"
-                            placeholder="例：张三, 李四&#10;王五 刘六"
+                            placeholder="例：张三:男, 李四:女&#10;王五 刘六"
                             :disabled="disabled"
                         />
                     </el-form-item>
+
+                    <div v-if="batchPreviewRows.length" class="batch-preview">
+                        <div class="preview-header">
+                            <div class="preview-title">预解析结果</div>
+                            <el-space class="preview-meta" wrap size="small">
+                                <el-tag type="primary" effect="light">共 {{ batchPreviewRows.length }} 条</el-tag>
+                                <el-tag v-if="batchDuplicateCount" type="warning" effect="light">重复 {{ batchDuplicateCount }} 条</el-tag>
+                            </el-space>
+                        </div>
+
+                        <el-table :data="batchPreviewRows" border size="small" class="preview-table" max-height="220">
+                            <el-table-column prop="name" label="姓名" min-width="140" />
+                            <el-table-column label="性别" min-width="100">
+                                <template #default="{ row }">{{ genderText(row.gender) }}</template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+
                     <el-form-item label="默认性别">
                         <el-radio-group v-model="batchGender" size="large" :disabled="disabled">
                             <el-radio-button :label="1">男</el-radio-button>
                             <el-radio-button :label="2">女</el-radio-button>
-                            <el-radio-button :label="0">未知</el-radio-button>
                         </el-radio-group>
                     </el-form-item>
                     <el-button class="add-btn" type="primary" size="large" :disabled="disabled" @click="addStudentBatch">
@@ -313,6 +378,14 @@ function genderText(gender?: ApiGender): string {
 
 .btn-icon {
     margin-right: 6px;
+}
+
+.batch-preview {
+    margin-top: -4px;
+    margin-bottom: 16px;
+    padding: 12px;
+    border: 1px dashed var(--el-border-color);
+    border-radius: 8px;
 }
 
 .upload-area {

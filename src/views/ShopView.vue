@@ -186,7 +186,7 @@ function deleteItem(item: Prize) {
 const exchangeDialogVisible = ref(false)
 const exchangeForm = reactive({
     prizeId: 0,
-    studentId: 0,
+    studentId: null as number | null,
     count: 1
 })
 
@@ -216,14 +216,15 @@ async function openExchangeDialog(item: Prize) {
         ElMessage.warning('当前班级暂无学生')
     }
     exchangeForm.prizeId = toNumber(item.id, 0)
-    exchangeForm.studentId = 0
+    exchangeForm.studentId = null
     exchangeForm.count = 1
     exchangeDialogVisible.value = true
 }
 
 async function confirmExchange() {
     if (!activeClassId.value) return
-    if (!exchangeForm.studentId) {
+    const studentId = exchangeForm.studentId
+    if (!studentId) {
         ElMessage.warning('请选择学生')
         return
     }
@@ -245,15 +246,15 @@ async function confirmExchange() {
     }
 
     const totalPoints = requiredPoints.value
-    const availablePoints = availablePointsByStudentId.value[exchangeForm.studentId] ?? 0
+    const availablePoints = availablePointsByStudentId.value[studentId] ?? 0
     if (availablePoints < totalPoints) {
         ElMessage.warning(`学生可用积分不足（当前：${availablePoints}，需要：${totalPoints}）`)
         return
     }
 
     try {
-        await shopManager.exchangePrize(activeClassId.value, toNumber(prize.id, 0), exchangeForm.studentId, exchangeForm.count)
-        const studentName = studentIdNameMap.value[exchangeForm.studentId] ?? ''
+        await shopManager.exchangePrize(activeClassId.value, toNumber(prize.id, 0), studentId, exchangeForm.count)
+        const studentName = studentIdNameMap.value[studentId] ?? ''
         ElMessage.success(`兑换成功！${studentName || '学生'} 兑换了 ${exchangeForm.count} 个${prize.name}`)
         exchangeDialogVisible.value = false
         await refreshPrizes()

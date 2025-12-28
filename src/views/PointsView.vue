@@ -389,6 +389,14 @@ async function refreshRuleGroups() {
     await ensureRuleGroupsLoaded()
 }
 
+async function onRuleGroupsChanged(groups?: RuleGroup[]) {
+    if (Array.isArray(groups) && groups.length > 0) {
+        ruleGroups.value = groups
+        return
+    }
+    await refreshRuleGroups()
+}
+
 const filteredStudents = computed<UiPointsStudent[]>(() => {
     let list = uiStudents.value
 
@@ -531,7 +539,7 @@ function openHistory(studentName: string) {
                         <PointsHeaderActionsPanel
                             :active-class-id="activeClassIdStr"
                             :active-class-name="activeClassName"
-                            @changed="refreshRuleGroups"
+                            @changed="onRuleGroupsChanged"
                         />
                     </template>
                 </PointsStudentList>

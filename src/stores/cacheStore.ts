@@ -130,47 +130,7 @@ export const useCacheStore = defineStore('cache', () => {
     }
 }, {
     persist: {
-        key: 'ta_user_cache_v1',
+        key: 'ta_cache_v1',
         storage: localStorage,
-        afterHydrate: (context) => {
-            const store = context.store as unknown as {
-                token: string | null
-                profile: UserProfile | null
-                isTrial: boolean
-                trialExpiresAt: number | null
-                isExpired: boolean
-                $persist: () => void
-            }
-            if (store.token) {
-                try {
-                    localStorage.removeItem('ta_user_store_v1')
-                } catch {
-                    // ignore
-                }
-                return
-            }
-            const raw = localStorage.getItem('ta_user_store_v1')
-            if (!raw) return
-            try {
-                const legacy = JSON.parse(raw) as Partial<{
-                    token: string | null
-                    profile: UserProfile | null
-                    isTrial: boolean
-                    trialExpiresAt: number | null
-                    isExpired: boolean
-                }>
-                if (legacy && legacy.token) {
-                    store.token = legacy.token
-                    store.profile = legacy.profile ?? null
-                    store.isTrial = legacy.isTrial ?? false
-                    store.trialExpiresAt = typeof legacy.trialExpiresAt === 'number' ? legacy.trialExpiresAt : null
-                    store.isExpired = legacy.isExpired ?? false
-                    store.$persist()
-                    localStorage.removeItem('ta_user_store_v1')
-                }
-            } catch {
-                // ignore
-            }
-        },
     }
 })

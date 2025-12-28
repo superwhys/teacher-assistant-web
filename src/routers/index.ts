@@ -9,12 +9,12 @@ const routes = [
   {
     path: '/students',
     component: () => import('@/views/ClassView.vue'),
-    meta: { keepAlive: true },
+    meta: { keepAlive: false },
   },
   {
     path: '/points',
     component: () => import('@/views/PointsView.vue'),
-    meta: { keepAlive: true },
+    meta: { keepAlive: false },
   },
   {
     path: '/points/history',
@@ -24,7 +24,7 @@ const routes = [
   {
     path: '/points/shop',
     component: () => import('@/views/ShopView.vue'),
-    meta: { keepAlive: true },
+    meta: { keepAlive: false },
   },
   {
     path: '/tools',

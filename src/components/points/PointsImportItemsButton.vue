@@ -51,6 +51,7 @@ function buildRuleNameSetByGroupId(groups: any[]): Map<number, Set<string>> {
 
 const importVisible = ref(false)
 const importLoading = ref(false)
+const importLoadingText = ref('正在处理中...')
 const uploadRef = ref<UploadInstance>()
 const importParsed = ref<ImportItemRow[]>([])
 const importSkipped = ref(0)
@@ -62,6 +63,7 @@ function openDialog() {
 
 async function handleExcelFile(file: File) {
     if (importLoading.value) return false
+    importLoadingText.value = '正在解析 Excel...'
     importLoading.value = true
     try {
         const { rows, skipped } = await parseItemsExcelToRows(file)
@@ -103,6 +105,7 @@ async function confirmImport() {
         return
     }
 
+    importLoadingText.value = '正在导入积分项...'
     importLoading.value = true
     try {
         let groups = await pointsManager.listRuleGroups()
@@ -193,71 +196,85 @@ function downloadTemplate() {
         <i-ep-upload-filled /> 导入积分项
     </el-button>
 
-    <el-dialog v-model="importVisible" title="导入积分项（Excel）" width="720px">
-        <el-upload
-            ref="uploadRef"
-            class="upload-area"
-            drag
-            accept=".xls,.xlsx"
-            :auto-upload="false"
-            :show-file-list="false"
-            :before-upload="beforeImportUpload"
-            :on-change="handleImportChange"
-        >
-            <i-ep-upload-filled class="upload-icon" />
-            <div v-if="!importFileName" class="el-upload__text">将文件拖到此处，或点击上传</div>
-            <div v-else class="upload-file-name">
-                <i-ep-document class="file-icon" /> {{ importFileName }}
-                <span class="change-hint">（点击重新选择）</span>
-            </div>
-            <template #tip>
-                <div class="el-upload__tip">支持 .xls/.xlsx，表头包含"组名/项目名/分值"</div>
-            </template>
-        </el-upload>
+    <el-dialog
+        v-model="importVisible"
+        title="导入积分项（Excel）"
+        width="720px"
+        :close-on-click-modal="!importLoading"
+        :close-on-press-escape="!importLoading"
+        :show-close="!importLoading"
+    >
+        <div v-loading="importLoading" :element-loading-text="importLoadingText" class="import-dialog-body">
+            <el-upload
+                ref="uploadRef"
+                class="upload-area"
+                drag
+                accept=".xls,.xlsx"
+                :auto-upload="false"
+                :show-file-list="false"
+                :before-upload="beforeImportUpload"
+                :on-change="handleImportChange"
+                :disabled="importLoading"
+            >
+                <i-ep-upload-filled class="upload-icon" />
+                <div v-if="!importFileName" class="el-upload__text">将文件拖到此处，或点击上传</div>
+                <div v-else class="upload-file-name">
+                    <i-ep-document class="file-icon" /> {{ importFileName }}
+                    <span class="change-hint">（点击重新选择）</span>
+                </div>
+                <template #tip>
+                    <div class="el-upload__tip">支持 .xls/.xlsx，表头包含"组名/项目名/分值"</div>
+                </template>
+            </el-upload>
 
-        <div class="excel-guide">
-            <div class="guide-title">Excel 表头示例：</div>
-            <ul class="guide-list">
-                <li>组名：分组名称（例如：常规操作、课堂表现）</li>
-                <li>项目名：积分项名称（例如：作业完成、主动发言）</li>
-                <li>分值：正数为加分，负数为扣分（例如：5、-3）</li>
-            </ul>
-            <el-button type="primary" link @click="downloadTemplate" class="download-template-btn">
-                <i-ep-download /> 下载模板
-            </el-button>
-        </div>
-
-        <div v-if="importParsed.length" class="excel-preview">
-            <div class="preview-header">
-                <div class="preview-title">解析结果</div>
-                <el-space class="preview-meta" wrap size="small">
-                    <el-tag v-if="importFileName" type="info" effect="light">文件：{{ importFileName }}</el-tag>
-                    <el-tag type="primary" effect="light">共 {{ importParsed.length }} 条</el-tag>
-                    <el-tag :type="importSkipped ? 'warning' : 'success'" effect="light">解析跳过 {{ importSkipped }} 条</el-tag>
-                </el-space>
-            </div>
-            <el-table :data="importParsed" border size="small" class="preview-table" max-height="300">
-                <el-table-column prop="groupName" label="分组" width="120" />
-                <el-table-column prop="itemName" label="项目名" min-width="140" />
-                <el-table-column prop="value" label="分值" width="80" align="center">
-                    <template #default="{ row }">
-                        <span :style="{ color: row.sign === 'plus' ? '#67c23a' : '#f56c6c' }">
-                            {{ row.sign === 'plus' ? '+' : '-' }}{{ row.value }}
-                        </span>
-                    </template>
-                </el-table-column>
-            </el-table>
-            <div class="preview-actions">
-                <el-button type="primary" :disabled="!importParsed.length || importLoading" :loading="importLoading" @click="confirmImport">
-                    确认导入
+            <div class="excel-guide">
+                <div class="guide-title">Excel 表头示例：</div>
+                <ul class="guide-list">
+                    <li>组名：分组名称（例如：常规操作、课堂表现）</li>
+                    <li>项目名：积分项名称（例如：作业完成、主动发言）</li>
+                    <li>分值：正数为加分，负数为扣分（例如：5、-3）</li>
+                </ul>
+                <el-button type="primary" link :disabled="importLoading" @click="downloadTemplate" class="download-template-btn">
+                    <i-ep-download /> 下载模板
                 </el-button>
-                <el-button :disabled="importLoading" @click="clearImportPreview">清空</el-button>
+            </div>
+
+            <div v-if="importParsed.length" class="excel-preview">
+                <div class="preview-header">
+                    <div class="preview-title">解析结果</div>
+                    <el-space class="preview-meta" wrap size="small">
+                        <el-tag v-if="importFileName" type="info" effect="light">文件：{{ importFileName }}</el-tag>
+                        <el-tag type="primary" effect="light">共 {{ importParsed.length }} 条</el-tag>
+                        <el-tag :type="importSkipped ? 'warning' : 'success'" effect="light">解析跳过 {{ importSkipped }} 条</el-tag>
+                    </el-space>
+                </div>
+                <el-table :data="importParsed" border size="small" class="preview-table" max-height="300">
+                    <el-table-column prop="groupName" label="分组" width="120" />
+                    <el-table-column prop="itemName" label="项目名" min-width="140" />
+                    <el-table-column prop="value" label="分值" width="80" align="center">
+                        <template #default="{ row }">
+                            <span :style="{ color: row.sign === 'plus' ? '#67c23a' : '#f56c6c' }">
+                                {{ row.sign === 'plus' ? '+' : '-' }}{{ row.value }}
+                            </span>
+                        </template>
+                    </el-table-column>
+                </el-table>
+                <div class="preview-actions">
+                    <el-button type="primary" :disabled="!importParsed.length || importLoading" :loading="importLoading" @click="confirmImport">
+                        确认导入
+                    </el-button>
+                    <el-button :disabled="importLoading" @click="clearImportPreview">清空</el-button>
+                </div>
             </div>
         </div>
     </el-dialog>
 </template>
 
 <style scoped>
+.import-dialog-body {
+    position: relative;
+}
+
 .upload-area {
     margin-bottom: 12px;
 }

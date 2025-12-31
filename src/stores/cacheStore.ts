@@ -64,7 +64,12 @@ export const useCacheStore = defineStore('cache', () => {
         classLayout.value = null
     }
 
-    function setAuth(tokenValue: string, user: UserProfile, trial: boolean, expiresAt?: number | null): void {
+    function setAuth(
+        tokenValue: string,
+        user: UserProfile,
+        trial: boolean,
+        expiresAt?: number | null,
+    ): void {
         token.value = tokenValue
         profile.value = user
         isTrial.value = trial

@@ -5,8 +5,7 @@ import { ElMessage } from 'element-plus'
 import { authApi } from '@/api/auth'
 import { useCacheStore } from '@/stores/cacheStore'
 import { sha256Hex } from '@/utils/crypto'
-import { decodeJwtPayload } from '@/utils/jwt'
-import type { JwtPayload } from '@/types/auth'
+import type { LoginUser } from '@/types/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -110,19 +109,25 @@ async function handleLogin(): Promise<void> {
         const hashedPassword = await sha256Hex(password)
         const res = await authApi.login({ email, login_type: 'password', password: hashedPassword, code: '' })
         const token = res.data?.token
-        if (!token) {
+        const user = res.data?.user as LoginUser | undefined
+        if (!token || !user) {
             ElMessage.error('登录返回数据异常')
             return
         }
-        const decoded = decodeJwtPayload<JwtPayload>(token)
-        const info = decoded?.user ?? { id: email, email }
+
+        const createdAtMs = user.created_at ? new Date(user.created_at).getTime() : NaN
+        const createdAtSeconds = Number.isFinite(createdAtMs) ? Math.floor(createdAtMs / 1000) : Math.floor(Date.now() / 1000)
+        const trial = !user.role_id
+        const expiresAt = trial ? (createdAtSeconds + 7 * 24 * 60 * 60) : null
+
         const profile = {
-            id: info.id !== undefined ? String(info.id) : email,
-            email: info.email ?? email,
-            name: info.name ?? info.email ?? email,
+            id: typeof user.id === 'number' ? String(user.id) : email,
+            email: user.email ?? email,
+            name: user.name ?? user.email ?? email,
+            status: typeof user.status === 'number' ? user.status : null,
+            roleId: typeof user.role_id === 'number' ? user.role_id : null,
+            createdAt: createdAtSeconds,
         }
-        const trial = decoded?.is_trial ?? false
-        const expiresAt = typeof decoded?.exp === 'number' ? decoded.exp : null
         cacheStore.setAuth(token, profile, trial, expiresAt)
         ElMessage.success('登录成功')
         await maybeRedirect()

@@ -5,8 +5,6 @@ import { ElMessage } from 'element-plus'
 import { authApi } from '@/api/auth'
 import { useUserStore } from '@/stores/userStore'
 import { sha256Hex } from '@/utils/crypto'
-import { decodeJwtPayload } from '@/utils/jwt'
-import type { JwtPayload } from '@/types/auth'
 
 const router = useRouter()
 const route = useRoute()
@@ -110,22 +108,40 @@ async function handleLogin(): Promise<void> {
         const hashedPassword = await sha256Hex(password)
         const res = await authApi.login({ email, login_type: 'password', password: hashedPassword, code: '' })
         const token = res.data?.token
-        if (!token) {
+        const user = res.data?.user
+        if (!token || !user) {
             ElMessage.error('登录返回数据异常')
             return
         }
-        const decoded = decodeJwtPayload<JwtPayload>(token)
-        const info = decoded?.user ?? { id: email, email }
         const profile = {
-            id: info.id !== undefined ? String(info.id) : email,
-            email: info.email ?? email,
-            name: info.name ?? info.email ?? email,
-            avatar: info.avatar ?? null,
+            id: user.id !== undefined ? String(user.id) : email,
+            email: user.email ?? email,
+            name: user.name ?? user.email ?? email,
+            avatar: null,
         }
-        const trial = decoded?.secret == null
-        const expiresAt = typeof decoded?.exp === 'number' ? decoded.exp : null
-        userStore.setAuth(token, profile, trial, expiresAt)
-        ElMessage.success('登录成功')
+        const trial = user.role_id === 0 || user.role_id === null
+        const createdAtMs = typeof user.created_at === 'string' ? new Date(user.created_at).getTime() : NaN
+        const startMs = Number.isFinite(createdAtMs) ? createdAtMs : Date.now()
+        const trialExpiresAt = trial ? Math.floor((startMs + 7 * 24 * 60 * 60 * 1000) / 1000) : null
+        userStore.setAuth(token, profile, trial, trialExpiresAt)
+        if (trial && trialExpiresAt !== null) {
+            const secondsLeft = trialExpiresAt - Math.floor(Date.now() / 1000)
+            if (secondsLeft > 0) {
+                const days = Math.floor(secondsLeft / 86400)
+                const hours = Math.floor((secondsLeft % 86400) / 3600)
+                const minutes = Math.floor((secondsLeft % 3600) / 60)
+                const parts: string[] = []
+                if (days > 0) parts.push(`${days}天`)
+                if (hours > 0) parts.push(`${hours}小时`)
+                if (days === 0 && minutes > 0) parts.push(`${minutes}分钟`)
+                if (parts.length === 0) parts.push('不到1分钟')
+                ElMessage.success(`登录成功，试用剩余 ${parts.join('')}`)
+            } else {
+                ElMessage.success('登录成功（试用已过期）')
+            }
+        } else {
+            ElMessage.success('登录成功')
+        }
         await maybeRedirect()
     } catch (err) {
         const message = (err as Error).message || '登录失败'

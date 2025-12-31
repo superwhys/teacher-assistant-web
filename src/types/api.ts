@@ -31,6 +31,14 @@ export interface SendEmailCodeRequest {
 
 export interface LoginResponse {
     token: string;
+    user: {
+        id: number | string;
+        email: string;
+        name: string;
+        status?: number;
+        role_id?: number | null;
+        created_at?: string;
+    };
 }
 
 export interface VerifySecretRequest {

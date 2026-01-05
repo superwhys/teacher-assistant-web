@@ -1,39 +1,68 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { useLotteryStore } from '@/stores/lotteryStore'
+import { lotteryManager } from '@/managers/lottery'
 import { useShopStore } from '@/stores/shopStore'
-import type { Prize, PrizePool } from '@/types/lottery'
+import { useLotteryHistoryStore } from '@/stores/lotteryHistoryStore'
+import type { DrawRecord } from '@/types/lottery'
+import type { UiLotteryPool, UiLotteryPrize } from '@/managers/lottery'
 import type { ShopItem } from '@/types/shopItem'
 
 defineOptions({
     name: 'LotteryView'
 })
 
-const lotteryStore = useLotteryStore()
 const shopStore = useShopStore()
+const historyStore = useLotteryHistoryStore()
+
+const isLoading = ref(false)
 
 onMounted(() => {
-    void Promise.all([lotteryStore.hydrate(), shopStore.hydrate?.()])
-        .then(() => {
-            pools.value = lotteryStore.getAllPools()
-            currentPoolId.value = lotteryStore.currentPool?.id || null
-            refreshPrizes()
-            records.value = lotteryStore.getAllRecords()
-        })
-        .catch(() => {})
+    void (async () => {
+        isLoading.value = true
+        try {
+            await Promise.all([historyStore.hydrate(), shopStore.hydrate?.()])
+            await reloadPools(true)
+            await refreshPrizes()
+        } catch {
+        } finally {
+            isLoading.value = false
+        }
+    })()
 })
 
-const prizes = ref<Prize[]>([])
-const records = ref(lotteryStore.getAllRecords())
-const pools = ref(lotteryStore.getAllPools())
-const currentPoolId = ref<string | null>(lotteryStore.currentPool?.id || null)
+const prizes = ref<UiLotteryPrize[]>([])
+const records = ref<DrawRecord[]>([])
+const pools = ref<UiLotteryPool[]>([])
+const currentPoolId = ref<string | null>(null)
+const currentPool = computed(() => pools.value.find(p => p.id === currentPoolId.value) || null)
 
-function refreshPrizes() {
-    prizes.value = lotteryStore.getAllPrizes()
-    records.value = lotteryStore.getAllRecords()
+async function reloadPools(ensureDefault = false) {
+    const list = await lotteryManager.listPools()
+    if (ensureDefault && list.length === 0) {
+        const created = await lotteryManager.createPool('默认奖池')
+        pools.value = [created]
+        currentPoolId.value = created.id
+        return
+    }
+
+    pools.value = list
+    if (!currentPoolId.value || !pools.value.some(p => p.id === currentPoolId.value)) {
+        currentPoolId.value = pools.value[0]?.id || null
+    }
 }
-refreshPrizes()
+
+async function refreshPrizes() {
+    if (!currentPoolId.value) {
+        prizes.value = []
+        records.value = []
+        return
+    }
+
+    const pool = await lotteryManager.getPool(currentPoolId.value)
+    prizes.value = pool?.prizes ?? []
+    records.value = historyStore.getRecords(currentPoolId.value)
+}
 
 const enabledPrizes = computed(() => prizes.value.filter(p => p.enabled && p.weight > 0))
 
@@ -48,7 +77,7 @@ const prizeForm = reactive({
 
 function handleDeleteCurrentPrize() {
     if (editMode.value !== 'edit' || !prizeForm.id) return
-    const target = prizes.value.find(p => p.id === prizeForm.id)
+    const target = prizes.value.find(p => p.name === prizeForm.id)
     if (!target) return
     deletePrize(target)
     addDialogVisible.value = false
@@ -63,16 +92,16 @@ function openAddDialog() {
     addDialogVisible.value = true
 }
 
-function openEditDialog(item: Prize) {
+function openEditDialog(item: UiLotteryPrize) {
     editMode.value = 'edit'
-    prizeForm.id = item.id
+    prizeForm.id = item.name
     prizeForm.name = item.name
     prizeForm.weight = item.weight
     prizeForm.enabled = item.enabled
     addDialogVisible.value = true
 }
 
-function savePrize() {
+async function savePrize() {
     if (!prizeForm.name.trim()) {
         ElMessage.warning('请输入奖品名称')
         return
@@ -81,39 +110,63 @@ function savePrize() {
         ElMessage.warning('权重必须大于 0')
         return
     }
-    if (editMode.value === 'add') {
-        lotteryStore.addPrize({
-            name: prizeForm.name.trim(),
-            weight: prizeForm.weight,
-            enabled: prizeForm.enabled,
-            source: 'custom',
-        })
-        ElMessage.success('已添加奖品')
-    } else {
-        lotteryStore.updatePrize(prizeForm.id, {
-            name: prizeForm.name.trim(),
-            weight: prizeForm.weight,
-            enabled: prizeForm.enabled,
-        })
-        ElMessage.success('已更新奖品')
+    if (!currentPoolId.value) return
+
+    isLoading.value = true
+    try {
+        const name = prizeForm.name.trim()
+        const weight = prizeForm.weight
+        const enabled = prizeForm.enabled
+
+        if (editMode.value === 'add') {
+            await lotteryManager.addPrize(currentPoolId.value, { name, weight, enabled, source: 'custom' })
+            ElMessage.success('已添加奖品')
+        } else {
+            const originalName = String(prizeForm.id ?? '').trim()
+            if (originalName && originalName !== name) {
+                await lotteryManager.renamePrize(currentPoolId.value, originalName, name, { weight, enabled })
+            } else {
+                await lotteryManager.updatePrize(currentPoolId.value, name, { weight, enabled })
+            }
+            ElMessage.success('已更新奖品')
+        }
+        addDialogVisible.value = false
+        await refreshPrizes()
+    } catch {
+    } finally {
+        isLoading.value = false
     }
-    addDialogVisible.value = false
-    refreshPrizes()
 }
 
-function deletePrize(item: Prize) {
+function deletePrize(item: UiLotteryPrize) {
     ElMessageBox.confirm(`确定删除奖品「${item.name}」吗？`, '删除确认', {
         type: 'warning'
-    }).then(() => {
-        lotteryStore.deletePrize(item.id)
-        refreshPrizes()
-        ElMessage.success('已删除')
+    }).then(async () => {
+        if (!currentPoolId.value) return
+        isLoading.value = true
+        try {
+            await lotteryManager.removePrize(currentPoolId.value, item.name)
+            await refreshPrizes()
+            ElMessage.success('已删除')
+        } catch {
+        } finally {
+            isLoading.value = false
+        }
     }).catch(() => {})
 }
 
-function toggleEnabled(item: Prize) {
-    lotteryStore.updatePrize(item.id, { enabled: !item.enabled })
-    refreshPrizes()
+function toggleEnabled(item: UiLotteryPrize) {
+    void (async () => {
+        if (!currentPoolId.value) return
+        isLoading.value = true
+        try {
+            await lotteryManager.updatePrize(currentPoolId.value, item.name, { enabled: !item.enabled })
+            await refreshPrizes()
+        } catch {
+        } finally {
+            isLoading.value = false
+        }
+    })()
 }
 
 const importDialogVisible = ref(false)
@@ -132,11 +185,20 @@ function confirmImport(overwrite = false) {
         ElMessage.warning('请选择要导入的商品')
         return
     }
+    if (!currentPoolId.value) return
     const selected = shopItems.value.filter(i => importSelection.value.includes(i.id))
-    const count = lotteryStore.importFromShop(selected, importWeightStrategy.value, overwrite)
-    ElMessage.success(`导入成功：${count} 个奖品`)
-    importDialogVisible.value = false
-    refreshPrizes()
+    void (async () => {
+        isLoading.value = true
+        try {
+            const count = await lotteryManager.importFromShop(currentPoolId.value!, selected, importWeightStrategy.value, overwrite)
+            ElMessage.success(`导入成功：${count} 个奖品`)
+            importDialogVisible.value = false
+            await refreshPrizes()
+        } catch {
+        } finally {
+            isLoading.value = false
+        }
+    })()
 }
 
 // rolling like RollCallView
@@ -146,7 +208,7 @@ const isSelected = ref(false)
 let rollingTimer: number | undefined
 let selectedTimer: number | undefined
 
-function weightedRandom(items: Prize[]): Prize | null {
+function weightedRandom(items: UiLotteryPrize[]): UiLotteryPrize | null {
     if (items.length === 0) return null
     const weights = items.map(i => i.weight)
     const sum = weights.reduce((a, b) => a + b, 0)
@@ -159,11 +221,11 @@ function weightedRandom(items: Prize[]): Prize | null {
     return items[items.length - 1] || null
 }
 
-function getCandidates(): Prize[] {
+function getCandidates(): UiLotteryPrize[] {
     return enabledPrizes.value
 }
 
-function pickRandomOne(): Prize | null {
+function pickRandomOne(): UiLotteryPrize | null {
     const list = getCandidates()
     if (list.length === 0) return null
     const idx = Math.floor(Math.random() * list.length)
@@ -205,8 +267,10 @@ function stopRolling() {
         return
     }
     currentName.value = picked.name
-    lotteryStore.addRecord(picked)
-    records.value = lotteryStore.getAllRecords()
+    if (currentPoolId.value) {
+        historyStore.addRecord(currentPoolId.value, picked.name)
+        records.value = historyStore.getRecords(currentPoolId.value)
+    }
     triggerSelectedEffect()
 }
 
@@ -222,18 +286,27 @@ function drawOnce() {
         return
     }
     currentName.value = picked.name
-    lotteryStore.addRecord(picked)
-    records.value = lotteryStore.getAllRecords()
+    if (currentPoolId.value) {
+        historyStore.addRecord(currentPoolId.value, picked.name)
+        records.value = historyStore.getRecords(currentPoolId.value)
+    }
     triggerSelectedEffect()
 }
 
 function clearAll() {
     ElMessageBox.confirm('确定清空所有奖品吗？此操作不可撤销', '清空确认', {
         type: 'warning'
-    }).then(() => {
-        lotteryStore.clearPrizes()
-        refreshPrizes()
-        ElMessage.success('已清空')
+    }).then(async () => {
+        if (!currentPoolId.value) return
+        isLoading.value = true
+        try {
+            await lotteryManager.clearPool(currentPoolId.value)
+            await refreshPrizes()
+            ElMessage.success('已清空')
+        } catch {
+        } finally {
+            isLoading.value = false
+        }
     }).catch(() => {})
 }
 
@@ -241,8 +314,9 @@ function clearRecords() {
     ElMessageBox.confirm('确定清空抽奖历史吗？', '清空确认', {
         type: 'warning'
     }).then(() => {
-        lotteryStore.clearRecords()
-        records.value = lotteryStore.getAllRecords()
+        if (!currentPoolId.value) return
+        historyStore.clearRecords(currentPoolId.value)
+        records.value = historyStore.getRecords(currentPoolId.value)
         ElMessage.success('已清空')
     }).catch(() => {})
 }
@@ -261,7 +335,7 @@ function openAddPoolDialog() {
     poolManageDialogVisible.value = true
 }
 
-function openEditPoolDialog(pool: PrizePool) {
+function openEditPoolDialog(pool: UiLotteryPool) {
     poolEditMode.value = 'edit'
     poolForm.id = pool.id
     poolForm.name = pool.name
@@ -273,49 +347,40 @@ function savePool() {
         ElMessage.warning('请输入奖池名称')
         return
     }
-    if (poolEditMode.value === 'add') {
-        const newPool = lotteryStore.createPool(poolForm.name.trim())
-        lotteryStore.setCurrentPool(newPool.id)
-        currentPoolId.value = newPool.id
-        pools.value = lotteryStore.getAllPools()
-        refreshPrizes()
-        ElMessage.success('已创建奖池')
-    } else {
-        lotteryStore.updatePool(poolForm.id, { name: poolForm.name.trim() })
-        pools.value = lotteryStore.getAllPools()
-        ElMessage.success('已更新奖池')
-    }
-    poolManageDialogVisible.value = false
+    void (async () => {
+        isLoading.value = true
+        try {
+            if (poolEditMode.value === 'add') {
+                const created = await lotteryManager.createPool(poolForm.name.trim())
+                await reloadPools()
+                currentPoolId.value = created.id
+                await refreshPrizes()
+                ElMessage.success('已创建奖池')
+            } else {
+                await lotteryManager.updatePool(poolForm.id, poolForm.name.trim())
+                await reloadPools()
+                ElMessage.success('已更新奖池')
+            }
+            poolManageDialogVisible.value = false
+        } catch {
+        } finally {
+            isLoading.value = false
+        }
+    })()
 }
 
-function deletePool(pool: PrizePool) {
-    if (lotteryStore.getAllPools().length <= 1) {
-        ElMessage.warning('至少需要保留一个奖池')
-        return
-    }
-    ElMessageBox.confirm(`确定删除奖池「${pool.name}」吗？此操作将删除该奖池下的所有奖品和记录，且不可撤销。`, '删除确认', {
-        type: 'warning'
-    }).then(() => {
-        lotteryStore.deletePool(pool.id)
-        pools.value = lotteryStore.getAllPools()
-        currentPoolId.value = lotteryStore.currentPool?.id || null
-        refreshPrizes()
-        ElMessage.success('已删除')
-    }).catch(() => {})
+function deletePool() {
+    ElMessage.warning('当前后端接口暂不支持删除奖池')
 }
 
 function handlePoolChange(poolId: string | null) {
     if (!poolId) return
-    lotteryStore.setCurrentPool(poolId)
     currentPoolId.value = poolId
-    refreshPrizes()
+    void refreshPrizes()
 }
 
-watch(() => lotteryStore.currentPool?.id, (newId) => {
-    if (newId !== currentPoolId.value) {
-        currentPoolId.value = newId || null
-    }
-    refreshPrizes()
+watch(() => currentPoolId.value, () => {
+    void refreshPrizes()
 })
 
 onBeforeUnmount(() => {
@@ -357,11 +422,11 @@ onBeforeUnmount(() => {
                                 </template>
                             </el-select>
                             <el-button
-                                v-if="lotteryStore.currentPool"
+                                v-if="currentPool"
                                 text
                                 type="primary"
                                 size="small"
-                                @click="openEditPoolDialog(lotteryStore.currentPool)"
+                                @click="openEditPoolDialog(currentPool)"
                                 class="pool-action-btn"
                                 title="编辑奖池"
                             >
@@ -396,7 +461,7 @@ onBeforeUnmount(() => {
                     <div v-if="prizes.length > 0" class="prize-list">
                         <div
                             v-for="p in prizes"
-                            :key="p.id"
+                            :key="p.name"
                             class="prize-item"
                             :class="{ disabled: !p.enabled }"
                         >
@@ -555,14 +620,8 @@ onBeforeUnmount(() => {
             <template #footer>
                 <div class="dialog-footer">
                     <el-button @click="poolManageDialogVisible=false">取消</el-button>
-                    <el-button v-if="poolEditMode==='edit'" type="danger" plain @click="() => {
-                        const pool = pools.find(p => p.id === poolForm.id)
-                        if (pool) {
-                            deletePool(pool)
-                            poolManageDialogVisible = false
-                        }
-                    }">
-                        删除
+                    <el-button v-if="poolEditMode==='edit'" type="danger" plain @click="deletePool">
+                        删除（暂不支持）
                     </el-button>
                     <el-button type="primary" @click="savePool">保存</el-button>
                 </div>
@@ -1157,6 +1216,3 @@ onBeforeUnmount(() => {
     }
 }
 </style>
-*** End Patch】}럼 4 (assistant to=functions.apply_patch.Code) invalid json: Expecting value: line 1 column 1 (char 0) ***!
-
-

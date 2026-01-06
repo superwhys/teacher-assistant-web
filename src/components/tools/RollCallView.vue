@@ -1,23 +1,65 @@
 <script setup lang="ts">
 import { ref, computed, onBeforeUnmount, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { useClassStore } from '@/stores/classStore'
-import { useStudentStore } from '@/stores/studentStore'
-import { useStudentGroupStore } from '@/stores/studentGroupStore'
-import type { Student } from '@/types/student'
+import { studentManager } from '@/managers/student'
+import { useCacheStore } from '@/stores/cacheStore'
+import type { Student, StudentDTO, StudentGroupDTO } from '@/types/student'
 
 defineOptions({
     name: 'RollCallView'
 })
 
-const classStore = useClassStore()
-const studentStore = useStudentStore()
-const groupStore = useStudentGroupStore()
+type UiGroup = {
+    id: string
+    name: string
+    members: string[]
+}
 
-const activeClassId = computed(() => classStore.activeClassId)
-const students = computed<Student[]>(() => activeClassId.value ? studentStore.listByClassId(activeClassId.value) : [])
-const groupsOfActive = computed(() => activeClassId.value ? groupStore.listByClassId(activeClassId.value) : [])
+const cacheStore = useCacheStore()
+const activeClassId = computed<number | null>(() => cacheStore.getActiveClassId())
+const activeClassName = computed<string>(() => cacheStore.getActiveClassName() ?? '')
+
+const students = ref<Student[]>([])
+const groupsOfActive = ref<UiGroup[]>([])
 const selectedGroupId = ref<string>('')
+
+function toLegacyGender(_dto: StudentDTO): Student['gender'] {
+    // 旧点名器仅展示姓名，不依赖性别；这里保持兼容结构
+    return 'male'
+}
+
+function normalizeStudents(list: StudentDTO[]): Student[] {
+    return (list ?? [])
+        .map((s) => {
+            const name = String(s?.name ?? '').trim()
+            if (!name) return null
+            return { studentName: name, gender: toLegacyGender(s) } as Student
+        })
+        .filter(Boolean) as Student[]
+}
+
+function normalizeGroups(list: StudentGroupDTO[]): UiGroup[] {
+    return (list ?? [])
+        .map((g) => {
+            const idNum = Number(g?.id ?? 0)
+            const name = String(g?.name ?? '').trim()
+            if (!idNum || !name) return null
+            const members = (g?.students ?? [])
+                .map((s) => String(s?.name ?? '').trim())
+                .filter(Boolean)
+            return { id: String(idNum), name, members } as UiGroup
+        })
+        .filter(Boolean) as UiGroup[]
+}
+
+async function reloadData(classId: number) {
+    const [stuList, groupList] = await Promise.all([
+        studentManager.list(classId),
+        studentManager.listGroups(classId),
+    ])
+    students.value = normalizeStudents(stuList)
+    groupsOfActive.value = normalizeGroups(groupList)
+}
 
 const isRolling = ref(false)
 const noRepeat = ref(true)
@@ -33,7 +75,7 @@ function getCandidates(): Student[] {
     const baseList = students.value
     let list = baseList
     if (selectedGroupId.value) {
-        const g = groupsOfActive.value.find(x => x.id === selectedGroupId.value)
+        const g = groupsOfActive.value.find((x) => x.id === selectedGroupId.value)
         if (g) {
             const memberSet = new Set(g.members)
             list = baseList.filter(s => memberSet.has(s.studentName))
@@ -129,10 +171,16 @@ watch(selectedGroupId, () => {
     resetHistory()
 })
 
-watch(activeClassId, () => {
+watch(activeClassId, (cid) => {
     selectedGroupId.value = ''
     resetHistory()
-})
+    if (typeof cid === 'number') {
+        void reloadData(cid)
+    } else {
+        students.value = []
+        groupsOfActive.value = []
+    }
+}, { immediate: true })
 
 onBeforeUnmount(() => {
     if (timer !== undefined) window.clearInterval(timer)
@@ -150,7 +198,7 @@ onBeforeUnmount(() => {
                     </div>
                     <div class="sub-info">
                         <el-text type="info">
-                            班级：{{ activeClassId ? (classStore.activeClass?.name || '未命名班级') : '未选择班级' }}
+                            班级：{{ activeClassId ? (activeClassName || '未命名班级') : '未选择班级' }}
                         </el-text>
                     </div>
                     <transition name="celebrate">

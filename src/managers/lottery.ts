@@ -94,17 +94,36 @@ export const lotteryManager = {
         await lotteryApi.clearPool({ pool_id: id })
     },
 
-    async addPrize(poolId: string | number, prize: UiLotteryPrize): Promise<void> {
+    async addPrizes(poolId: string | number, prizes: UiLotteryPrize[]): Promise<number> {
         const id = assertPoolId(poolId)
-        const name = String(prize?.name ?? '').trim()
-        if (!name) throw new Error('奖品名称不能为空')
-        const weight = Math.max(0, toNumber(prize?.weight, 0))
+        const list = prizes ?? []
+
+        const payload = list
+            .map((p) => {
+                const name = String(p?.name ?? '').trim()
+                if (!name) return null
+                const weight = Math.max(0, toNumber(p?.weight, 0))
+                return {
+                    name,
+                    weight,
+                    enabled: Boolean(p?.enabled),
+                }
+            })
+            .filter(Boolean) as { name: string; weight: number; enabled: boolean }[]
+
+        if (payload.length === 0) return 0
+
         await lotteryApi.addPrizeToPool({
             pool_id: id,
-            name,
-            weight,
-            enabled: Boolean(prize?.enabled),
+            prizes: payload,
         })
+        return payload.length
+    },
+
+    async addPrize(poolId: string | number, prize: UiLotteryPrize): Promise<void> {
+        const name = String(prize?.name ?? '').trim()
+        if (!name) throw new Error('奖品名称不能为空')
+        await this.addPrizes(poolId, [prize])
     },
 
     async updatePrize(poolId: string | number, prizeName: string, updates: Partial<UiLotteryPrize>): Promise<void> {
@@ -151,15 +170,16 @@ export const lotteryManager = {
             await this.clearPool(id)
         }
 
-        let count = 0
-        for (const it of list) {
-            const name = String(it?.name ?? '').trim()
-            if (!name) continue
-            const weight = weightStrategy === 'stock' ? Math.max(1, toNumber((it as any)?.stock, 0)) : 1
-            await this.addPrize(id, { name, weight, enabled: true, source: 'shop', shopItemId: String(it?.id ?? '') })
-            count += 1
-        }
-        return count
+        const prizes = list
+            .map((it) => {
+                const name = String(it?.name ?? '').trim()
+                if (!name) return null
+                const weight = weightStrategy === 'stock' ? Math.max(1, toNumber((it as any)?.stock, 0)) : 1
+                return { name, weight, enabled: true, source: 'shop', shopItemId: String(it?.id ?? '') } as UiLotteryPrize
+            })
+            .filter(Boolean) as UiLotteryPrize[]
+
+        return await this.addPrizes(id, prizes)
     },
 }
 

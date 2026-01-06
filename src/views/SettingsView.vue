@@ -1,126 +1,28 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
-import { useSettingsStore } from '@/stores/settingsStore'
+import { ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { exportUserData, importUserData } from '@/utils/storage'
-import { useClassStore } from '@/stores/classStore'
-import { useStudentStore } from '@/stores/studentStore'
-import { usePointsStore } from '@/stores/pointsStore'
-import { usePointsItemStore } from '@/stores/pointsItemStore'
-import { useStudentGroupStore } from '@/stores/studentGroupStore'
-import { useShopStore } from '@/stores/shopStore'
 import { useCacheStore } from '@/stores/cacheStore'
 
-const settingsStore = useSettingsStore()
-const classStore = useClassStore()
-const studentStore = useStudentStore()
-const pointsStore = usePointsStore()
-const pointsItemStore = usePointsItemStore()
-const studentGroupStore = useStudentGroupStore()
-const shopStore = useShopStore()
 const cacheStore = useCacheStore()
-
-onMounted(() => {
-    void settingsStore.hydrate()
+const profile = computed(() => cacheStore.profile)
+const displayName = computed(() => cacheStore.displayName || '未登录')
+const userEmail = computed(() => profile.value?.email ?? '')
+const userAvatar = computed(() => profile.value?.avatar ?? null)
+const userId = computed(() => profile.value?.id ?? '')
+const roleId = computed(() => profile.value?.roleId ?? null)
+const isTrial = computed(() => cacheStore.isTrial)
+const isLoginExpired = computed(() => cacheStore.isExpired)
+const userInitial = computed(() => {
+    const name = String(displayName.value ?? '').trim()
+    if (!name || name === '未登录') return '用'
+    return name.charAt(0).toUpperCase()
 })
-
-const exporting = ref<boolean>(false)
-const importing = ref<boolean>(false)
-const fileInputRef = ref<HTMLInputElement | null>(null)
 
 const newPwd = ref<string>('')
 const confirmPwd = ref<string>('')
 const oldPwd = ref<string>('')
 const savingPwd = ref<boolean>(false)
-const hasPwd = computed(() => settingsStore.hasLockPassword())
-
-function formatNowStr(): string {
-    const d = new Date()
-    const pad = (n: number) => n.toString().padStart(2, '0')
-    const yyyy = d.getFullYear()
-    const MM = pad(d.getMonth() + 1)
-    const dd = pad(d.getDate())
-    const HH = pad(d.getHours())
-    const mm = pad(d.getMinutes())
-    const ss = pad(d.getSeconds())
-    return `${yyyy}${MM}${dd}-${HH}${mm}${ss}`
-}
-
-async function onExportBackup() {
-    if (exporting.value) return
-    exporting.value = true
-    try {
-        const userId = cacheStore.profile?.id || null
-        if (!userId) {
-            ElMessage.error('无法获取用户信息，请重新登录后再试')
-            return
-        }
-        const data = await exportUserData(userId)
-        const json = JSON.stringify(data)
-        const blob = new Blob([json], { type: 'application/json;charset=utf-8' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `teacher-assistant-backup-${formatNowStr()}.json`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-        ElMessage.success('备份数据已导出')
-    } catch (e) {
-        ElMessage.error('导出失败')
-    } finally {
-        exporting.value = false
-    }
-}
-
-function triggerImport() {
-    fileInputRef.value?.click()
-}
-
-async function onImportFileChange(e: Event) {
-    const input = e.target as HTMLInputElement
-    const file = input.files && input.files[0]
-    if (!file) return
-    try {
-        await ElMessageBox.confirm('导入将覆盖本地同名数据，是否继续？', '确认导入', { type: 'warning' })
-    } catch {
-        input.value = ''
-        return
-    }
-    importing.value = true
-    try {
-        const text = await file.text()
-        let parsed: any
-        try {
-            parsed = JSON.parse(text)
-        } catch {
-            throw new Error('文件非合法 JSON')
-        }
-        const payload = parsed && typeof parsed === 'object' && parsed.data && typeof parsed.data === 'object' ? parsed.data : parsed
-        const userId = cacheStore.profile?.id || null
-        if (!userId) {
-            throw new Error('无法获取用户信息，请重新登录后再试')
-        }
-        await importUserData(payload, userId)
-        // 导入后刷新各 store
-        await Promise.all([
-            settingsStore.hydrate(),
-            classStore.hydrate(),
-            studentStore.hydrate(),
-            pointsStore.hydrate(),
-            pointsItemStore.hydrate(),
-            studentGroupStore.hydrate(),
-            shopStore.hydrate(),
-        ])
-        ElMessage.success('数据已导入并刷新')
-    } catch (err) {
-        ElMessage.error((err as Error).message || '导入失败')
-    } finally {
-        importing.value = false
-        input.value = ''
-    }
-}
+const hasPwd = computed(() => cacheStore.hasLockPassword())
 
 async function onSaveLockPassword() {
     if (savingPwd.value) return
@@ -140,7 +42,7 @@ async function onSaveLockPassword() {
             ElMessage.error('请输入原密码')
             return
         }
-        const okOld = await settingsStore.verifyLockPassword(origin)
+        const okOld = await cacheStore.verifyLockPassword(origin)
         if (!okOld) {
             ElMessage.error('原密码不正确')
             return
@@ -148,7 +50,7 @@ async function onSaveLockPassword() {
     }
     savingPwd.value = true
     try {
-        const ok = await settingsStore.setLockPassword(a)
+        const ok = await cacheStore.setLockPassword(a)
         if (ok) {
             newPwd.value = ''
             confirmPwd.value = ''
@@ -176,13 +78,13 @@ async function onClearLockPassword() {
         return
     }
 
-    const okOld = await settingsStore.verifyLockPassword(origin)
+    const okOld = await cacheStore.verifyLockPassword(origin)
     if (!okOld) {
         ElMessage.error('当前密码不正确')
         return
     }
 
-    settingsStore.clearLockPassword()
+    cacheStore.clearLockPassword()
     oldPwd.value = ''
     ElMessage.success('已清除锁屏密码')
 }
@@ -192,7 +94,7 @@ function onLockNow() {
         ElMessage.error('请先设置锁屏密码')
         return
     }
-    settingsStore.lock()
+    cacheStore.lock()
     ElMessage.success('已锁定')
 }
 </script>
@@ -200,6 +102,47 @@ function onLockNow() {
 <template>
     <div class="settings-page">
         <div class="cards">
+            <BaseCard title="我的" shadow="never">
+                <div v-if="profile" class="me-card">
+                    <div class="me-hero">
+                        <div class="me-hero-inner">
+                            <el-avatar class="me-avatar" :size="58" :src="userAvatar || undefined">
+                                {{ userInitial }}
+                            </el-avatar>
+                            <div class="me-meta">
+                                <div class="me-name-row">
+                                    <div class="me-name">{{ displayName }}</div>
+                                    <div class="me-tags">
+                                        <el-tag v-if="isLoginExpired" type="danger" effect="dark" size="small">登录已过期</el-tag>
+                                        <el-tag v-else type="success" effect="dark" size="small">已登录</el-tag>
+                                        <el-tag v-if="isTrial" type="warning" effect="dark" size="small">试用</el-tag>
+                                    </div>
+                                </div>
+                                <div v-if="userEmail" class="me-email">{{ userEmail }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="me-grid">
+                        <div class="me-item">
+                            <div class="me-k">用户 ID</div>
+                            <div class="me-v mono">{{ userId || '-' }}</div>
+                        </div>
+                        <div class="me-item">
+                            <div class="me-k">角色 ID</div>
+                            <div class="me-v mono">{{ roleId ?? '-' }}</div>
+                        </div>
+                        <div class="me-item wide">
+                            <div class="me-k">邮箱</div>
+                            <div class="me-v">{{ userEmail || '-' }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="me-empty">
+                    <el-empty description="当前未登录" />
+                </div>
+            </BaseCard>
+
             <BaseCard title="锁屏设置" shadow="never">
                 <div class="lock-vertical">
                     <div class="lock-top">
@@ -236,36 +179,6 @@ function onLockNow() {
                                 设置后可通过右上角锁图标或此处按钮立即锁定。
                             </div>
                         </el-form>
-                    </div>
-                </div>
-            </BaseCard>
-
-            <BaseCard title="备份与恢复" shadow="never">
-                <div class="backup-grid">
-                    <div class="backup-item">
-                        <div class="icon-wrap success"><i-ep-download /></div>
-                        <div class="content">
-                            <div class="title">导出备份数据</div>
-                            <div class="desc">将本地全部数据导出为 JSON 文件，建议定期备份。</div>
-                            <div class="actions">
-                                <el-button type="primary" size="large" :loading="exporting" :disabled="exporting" @click="onExportBackup">
-                                    <i-ep-download class="btn-icon" /> 导出备份数据
-                                </el-button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="backup-item">
-                        <div class="icon-wrap info"><i-ep-upload /></div>
-                        <div class="content">
-                            <div class="title">导入备份数据</div>
-                            <div class="desc">从 JSON 文件恢复数据，可能覆盖同名数据，操作前请确认。</div>
-                            <div class="actions">
-                                <el-button size="large" :loading="importing" :disabled="importing" @click="triggerImport">
-                                    <i-ep-upload class="btn-icon" /> 导入备份数据
-                                </el-button>
-                                <input ref="fileInputRef" type="file" accept="application/json" class="hidden-file" @change="onImportFileChange" />
-                            </div>
-                        </div>
                     </div>
                 </div>
             </BaseCard>
@@ -311,88 +224,142 @@ function onLockNow() {
     font-size: 12px;
 }
 
-.secret-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 4px;
-}
-
-.hidden-file {
-    display: none;
-}
-
-.backup-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-}
-
-.backup-item {
+.me-card {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 18px 16px 20px;
-    border: 1px solid #eef2f5;
-    border-radius: 14px;
-    background: #ffffff;
-    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    gap: 14px;
 }
 
-.backup-item:hover {
-    border-color: #e0e6ed;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+.me-hero {
+    position: relative;
+    border-radius: 16px;
+    padding: 16px;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.18) 0%, rgba(99, 102, 241, 0.10) 40%, rgba(16, 185, 129, 0.10) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.16);
 }
 
-.backup-item .icon-wrap {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
+.me-hero::before {
+    content: '';
+    position: absolute;
+    width: 180px;
+    height: 180px;
+    right: -60px;
+    top: -70px;
+    background: radial-gradient(circle at 30% 30%, rgba(99, 102, 241, 0.35), rgba(99, 102, 241, 0) 62%);
+}
+
+.me-hero::after {
+    content: '';
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    left: -90px;
+    bottom: -110px;
+    background: radial-gradient(circle at 70% 60%, rgba(59, 130, 246, 0.28), rgba(59, 130, 246, 0) 62%);
+}
+
+.me-hero-inner {
+    position: relative;
+    z-index: 1;
     display: flex;
     align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    margin-bottom: 12px;
-    background: #f5f7fa;
-    color: var(--el-color-primary);
+    gap: 14px;
 }
 
-.backup-item .icon-wrap.success {
-    background: #e8f5e9;
-    color: var(--el-color-success);
+.me-avatar {
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+    border: 2px solid rgba(255, 255, 255, 0.9);
 }
 
-.backup-item .icon-wrap.info {
-    background: #f0f5ff;
-    color: var(--el-color-primary);
+.me-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111111;
+    line-height: 1.2;
 }
 
-.backup-item .content {
-    width: 100%;
+.me-name-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.me-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.me-meta {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    min-width: 0;
+    flex: 1;
 }
 
-.backup-item .content .title {
-    font-size: 18px;
-    font-weight: 700;
-}
-
-.backup-item .content .desc {
-    color: #909399;
+.me-email {
     font-size: 13px;
+    color: #909399;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.backup-item .content .actions {
-    margin-top: 8px;
+.me-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.me-item {
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.92));
+    padding: 12px 14px;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.backup-item .content .actions :deep(.el-button) {
-    width: 240px;
+.me-item:hover {
+    border-color: rgba(59, 130, 246, 0.35);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    transform: translateY(-2px);
+}
+
+.me-item.wide {
+    grid-column: 1 / -1;
+}
+
+.me-k {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+
+.me-v {
+    font-size: 14px;
+    color: #111827;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mono {
+    font-variant-numeric: tabular-nums;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.me-empty {
+    padding: 10px 0;
 }
 
 .lock-vertical {
@@ -450,6 +417,19 @@ function onLockNow() {
 @media (max-width: 480px) {
     .cards {
         gap: 12px;
+    }
+
+    .me-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .me-name-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .me-tags {
+        justify-content: flex-start;
     }
 }
 </style>

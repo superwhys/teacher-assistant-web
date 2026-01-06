@@ -2,7 +2,7 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { lotteryManager } from '@/managers/lottery'
-import { useShopStore } from '@/stores/shopStore'
+import { mallApi } from '@/api/mall'
 import { useLotteryHistoryStore } from '@/stores/lotteryHistoryStore'
 import type { DrawRecord } from '@/types/lottery'
 import type { UiLotteryPool, UiLotteryPrize } from '@/managers/lottery'
@@ -12,7 +12,6 @@ defineOptions({
     name: 'LotteryView'
 })
 
-const shopStore = useShopStore()
 const historyStore = useLotteryHistoryStore()
 
 const isLoading = ref(false)
@@ -21,7 +20,7 @@ onMounted(() => {
     void (async () => {
         isLoading.value = true
         try {
-            await Promise.all([historyStore.hydrate(), shopStore.hydrate?.()])
+            await Promise.all([historyStore.hydrate()])
             await reloadPools(true)
             await refreshPrizes()
         } catch {
@@ -172,12 +171,45 @@ function toggleEnabled(item: UiLotteryPrize) {
 const importDialogVisible = ref(false)
 const importSelection = ref<string[]>([])
 const importWeightStrategy = ref<'fixed' | 'stock'>('fixed')
-const shopItems = computed<ShopItem[]>(() => shopStore.getAllItems())
+const shopItems = ref<ShopItem[]>([])
+const shopItemsLoading = ref(false)
+
+async function loadShopItems() {
+    const resp = await mallApi.listPrizes()
+    const items = resp.data?.items ?? []
+    shopItems.value = items
+        .map((p) => {
+            const id = String(p?.id ?? '').trim()
+            const name = String(p?.name ?? '').trim()
+            if (!id || !name) return null
+            return {
+                id,
+                name,
+                points: Number(p?.points ?? 0) || 0,
+                stock: Number(p?.stock ?? 0) || 0,
+                description: p?.description,
+                icon: p?.icon,
+                createdAt: Date.now(),
+            } as ShopItem
+        })
+        .filter(Boolean) as ShopItem[]
+}
 
 function openImportDialog() {
     importSelection.value = []
     importWeightStrategy.value = 'fixed'
     importDialogVisible.value = true
+    void (async () => {
+        shopItemsLoading.value = true
+        try {
+            await loadShopItems()
+        } catch {
+            shopItems.value = []
+            ElMessage.error('获取商品列表失败')
+        } finally {
+            shopItemsLoading.value = false
+        }
+    })()
 }
 
 function confirmImport(overwrite = false) {
@@ -373,12 +405,6 @@ function deletePool() {
     ElMessage.warning('当前后端接口暂不支持删除奖池')
 }
 
-function handlePoolChange(poolId: string | null) {
-    if (!poolId) return
-    currentPoolId.value = poolId
-    void refreshPrizes()
-}
-
 watch(() => currentPoolId.value, () => {
     void refreshPrizes()
 })
@@ -402,7 +428,6 @@ onBeforeUnmount(() => {
                         <div class="pool-selector-group">
                             <el-select
                                 v-model="currentPoolId"
-                                @change="handlePoolChange"
                                 size="small"
                                 class="pool-selector"
                                 placeholder="选择奖池"
@@ -601,6 +626,7 @@ onBeforeUnmount(() => {
                 :data="shopItems"
                 border
                 height="360px"
+                v-loading="shopItemsLoading"
                 @selection-change="(rows:any[])=>{importSelection = rows.map(r=>r.id)}"
             >
                 <el-table-column type="selection" width="60" />

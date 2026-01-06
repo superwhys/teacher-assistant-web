@@ -28,11 +28,15 @@ export type ClearLotteryPoolReq = {
     pool_id: number
 }
 
+export type AddLotteryPrizeItem = {
+    name: string
+    enabled?: boolean
+    weight?: number
+}
+
 export type AddPrizeToLotteryPoolReq = {
     pool_id: number
-    name: string
-    weight?: number
-    enabled?: boolean
+    prizes?: AddLotteryPrizeItem[]
 }
 
 export type UpdatePrizeInLotteryPoolReq = {

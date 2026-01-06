@@ -3,57 +3,15 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { formatTimeHHmm, formatChineseDateWithWeek } from '@/utils/date'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { useSettingsStore } from '@/stores/settingsStore'
-import { useStudentStore } from '@/stores/studentStore'
-import { usePointsStore } from '@/stores/pointsStore'
-import { usePointsItemStore } from '@/stores/pointsItemStore'
-import { useStudentGroupStore } from '@/stores/studentGroupStore'
-import { useShopStore } from '@/stores/shopStore'
 import { classManager } from '@/managers/class'
 import type { ClassDTO } from '@/types/class'
 import { useCacheStore } from '@/stores/cacheStore'
 
-const settingsStore = useSettingsStore()
-const studentStore = useStudentStore()
-const pointsStore = usePointsStore()
-const pointsItemStore = usePointsItemStore()
-const studentGroupStore = useStudentGroupStore()
-const shopStore = useShopStore()
 const cacheStore = useCacheStore()
-
-function clearAllStores() {
-    studentStore.clear()
-    pointsStore.clear()
-    pointsItemStore.clear()
-    studentGroupStore.clear()
-    shopStore.clear()
-    cacheStore.clearActiveClassId()
-    cacheStore.clearActiveClassName()
-}
-
-async function loadAllStores() {
-    await Promise.all([
-        studentStore.hydrate(),
-        pointsStore.hydrate(),
-        pointsItemStore.hydrate(),
-        studentGroupStore.hydrate(),
-        shopStore.hydrate(),
-    ])
-}
+const isAuthenticated = computed(() => cacheStore.isAuthenticated)
 
 const now = ref(new Date())
 let timer: number | undefined
-
-onMounted(async () => {
-    timer = window.setInterval(() => {
-        now.value = new Date()
-    }, 1000)
-    await settingsStore.hydrate()
-    if (cacheStore.profile?.id) {
-        await loadAllStores()
-        await loadClassesFromApi()
-    }
-})
 
 onBeforeUnmount(() => {
     if (timer !== undefined) {
@@ -62,10 +20,18 @@ onBeforeUnmount(() => {
     clearTrialReminder()
 })
 
+onMounted(() => {
+    timer = window.setInterval(() => {
+        now.value = new Date()
+    }, 1000)
+})
+
 const timeString = computed(() => formatTimeHHmm(now.value))
 const dateString = computed(() => formatChineseDateWithWeek(now.value))
 const classes = ref<ClassDTO[]>([])
 const classesLoading = ref(false)
+const isClassReady = ref(false)
+const classSelectId = ref<number | null>(null)
 const classOptions = computed(() => {
     return classes.value.filter((c): c is { id: number, name: string } => {
         return typeof c.id === 'number' && typeof c.name === 'string' && c.name.trim().length > 0
@@ -82,28 +48,16 @@ const activeClassId = computed<number | null>({
     }
 })
 
-// 同步积分页面使用的 cacheStore.activeClassId（避免重复做班级选择 UI）
-watch(activeClassId, (val) => {
-    if (typeof val === 'number') {
-        cacheStore.setActiveClassId(val)
-    } else {
-        cacheStore.clearActiveClassId()
-    }
-}, { immediate: true })
-
-// 同步当前班级名称到 userCacheStore/cacheStore，供各页面展示
+// 同步当前班级名称到 cacheStore，供各页面展示
 watch([activeClassId, classes], ([cid]) => {
     if (!cid) {
-        cacheStore.clearActiveClassName()
         cacheStore.clearActiveClassName()
         return
     }
     const name = classes.value.find(c => c.id === cid)?.name ?? null
     if (name && name.trim()) {
         cacheStore.setActiveClassName(name)
-        cacheStore.setActiveClassName(name)
     } else {
-        cacheStore.clearActiveClassName()
         cacheStore.clearActiveClassName()
     }
 }, { immediate: true })
@@ -124,7 +78,46 @@ async function loadClassesFromApi() {
         classesLoading.value = false
     }
 }
-const isAuthenticated = computed(() => cacheStore.isAuthenticated)
+
+async function initClassesForSelect() {
+    if (!isAuthenticated.value) {
+        isClassReady.value = false
+        classes.value = []
+        classSelectId.value = null
+        return
+    }
+    isClassReady.value = false
+    await loadClassesFromApi()
+    // 注意：必须等 options 有了再给 select 赋值，否则 element-plus 会显示 value（id）
+    classSelectId.value = activeClassId.value
+    isClassReady.value = true
+}
+
+watch([isAuthenticated, () => cacheStore.profile?.id], ([authed]) => {
+    if (authed) {
+        void initClassesForSelect()
+    } else {
+        void initClassesForSelect()
+    }
+}, { immediate: true })
+
+watch(classSelectId, (val) => {
+    if (!isClassReady.value) return
+    activeClassId.value = val
+})
+
+watch([activeClassId, classOptions], ([cid]) => {
+    if (!isClassReady.value) return
+    if (!cid) {
+        classSelectId.value = null
+        return
+    }
+    if (classOptions.value.some(c => c.id === cid)) {
+        classSelectId.value = cid
+    } else {
+        classSelectId.value = null
+    }
+})
 const userName = computed(() => cacheStore.displayName || '已登录')
 const userEmail = computed(() => cacheStore.profile?.email ?? '')
 const userAvatar = computed(() => cacheStore.profile?.avatar ?? null)
@@ -257,7 +250,6 @@ const showFooter = computed(() => isAuthenticated.value && !route.meta?.hideFoot
 
 function onUserCommand(command: string) {
     if (command === 'logout') {
-        clearAllStores()
         cacheStore.logout()
         ElMessage.success('已退出登录')
         router.replace('/auth')
@@ -266,8 +258,6 @@ function onUserCommand(command: string) {
 
 watch(() => cacheStore.profile?.id, (newUserId, oldUserId) => {
     if (newUserId && newUserId !== oldUserId) {
-        void loadAllStores()
-        void settingsStore.hydrate()
         void loadClassesFromApi()
     }
 }, { immediate: false })
@@ -301,16 +291,16 @@ watch(trialExpired, (expired) => {
     }
 }, { immediate: true })
 
-const unlockDialogVisible = computed(() => settingsStore.isLocked)
+const unlockDialogVisible = computed(() => cacheStore.isLocked)
 const unlockPassword = ref('')
 const unlocking = ref(false)
 
 function lockNow() {
-    if (!settingsStore.hasLockPassword()) {
+    if (!cacheStore.hasLockPassword()) {
         ElMessage.error('请先在设置中配置锁屏密码')
         return
     }
-    settingsStore.lock()
+    cacheStore.lock()
 }
 
 async function confirmUnlock() {
@@ -322,9 +312,9 @@ async function confirmUnlock() {
     }
     unlocking.value = true
     try {
-        const ok = await settingsStore.verifyLockPassword(pwd)
+        const ok = await cacheStore.verifyLockPassword(pwd)
         if (ok) {
-            settingsStore.unlock()
+            cacheStore.unlock()
             unlockPassword.value = ''
             ElMessage.success('已解锁')
         } else {
@@ -426,7 +416,13 @@ async function confirmUnlock() {
                         </div>
                         <div class="sidebar-section class-section">
                             <div class="section-title">班级选择</div>
-                            <el-select v-model="activeClassId" placeholder="选择班级" class="class-select" size="large">
+                            <el-select
+                                v-model="classSelectId"
+                                :disabled="!isClassReady || classesLoading || classOptions.length === 0"
+                                :placeholder="(!isClassReady || classesLoading) ? '加载班级中…' : '选择班级'"
+                                class="class-select"
+                                size="large"
+                            >
                                 <el-option v-for="c in classOptions" :key="c.id" :label="c.name" :value="c.id" />
                             </el-select>
                             <div class="class-actions">
@@ -442,7 +438,7 @@ async function confirmUnlock() {
                             </div>
                         </div>
                         <div class="sidebar-footer">
-                            <el-button class="logout-btn" text :disabled="!settingsStore.hasLockPassword()" @click="lockNow">
+                            <el-button class="logout-btn" text :disabled="!cacheStore.hasLockPassword()" @click="lockNow">
                                 <i-ep-lock class="logout-icon" /> 锁屏
                             </el-button>
                             <el-button class="logout-btn" text @click="onUserCommand('logout')">
@@ -457,7 +453,7 @@ async function confirmUnlock() {
                             <keep-alive v-if="route.meta?.keepAlive">
                                 <component :is="Component" :key="route.path" />
                             </keep-alive>
-                            <component v-else :is="Component" :key="settingsStore.dataVersion" />
+                            <component v-else :is="Component" :key="cacheStore.dataVersion" />
                         </router-view>
                     </div>
                 </el-main>

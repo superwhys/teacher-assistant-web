@@ -103,21 +103,15 @@ function toNumber(v: unknown, fallback = 0): number {
     return Number.isFinite(n) ? n : fallback
 }
 
-const activeRankingTab = ref<'total' | 'item'>(
-    (localStorage.getItem('ranking-tab') === 'item' ? 'item' : 'total')
-)
-const rankingTimeRange = ref<RankingTimeRange>(
-    (['all', 'weekly', 'monthly'] as string[]).includes(localStorage.getItem('ranking-time-range') || '')
-        ? (localStorage.getItem('ranking-time-range') as RankingTimeRange)
-        : 'all'
-)
+const activeRankingTab = ref<'total' | 'item'>(cacheStore.getPointsRankingTab())
+const rankingTimeRange = ref<RankingTimeRange>(cacheStore.getPointsRankingTimeRange())
 
 watch(activeRankingTab, (val) => {
-    localStorage.setItem('ranking-tab', val)
+    cacheStore.setPointsRankingTab(val)
 })
 
 watch(rankingTimeRange, (val) => {
-    localStorage.setItem('ranking-time-range', val)
+    cacheStore.setPointsRankingTimeRange(val)
 })
 
 const rulesFlat = computed(() => {
@@ -220,29 +214,19 @@ async function withListLoading<T>(fn: () => Promise<T>): Promise<T> {
     }
 }
 
-function getSelectedGroupStorageKey(classId: number) {
-    return `points-selected-group-id:${classId}`
-}
-
 function loadSavedSelectedGroupId(classId: number): { exists: boolean; groupId: number | null } {
-    const raw = localStorage.getItem(getSelectedGroupStorageKey(classId))
-    if (raw === null) return { exists: false, groupId: null }
-    const n = toNumber(raw, 0)
-    return { exists: true, groupId: n > 0 ? n : null }
+    return cacheStore.getPointsSelectedGroupId(classId)
 }
 
 function persistSelectedGroupId(classId: number, groupId: number | null) {
-    localStorage.setItem(getSelectedGroupStorageKey(classId), String(groupId ?? 0))
+    cacheStore.setPointsSelectedGroupId(classId, groupId)
 }
 
 onMounted(async () => {
-    const savedSort = localStorage.getItem('students-sort')
-    if (savedSort) {
-        const valid: SortOption[] = ['default', 'name-asc', 'name-desc', 'available-asc', 'available-desc', 'total-asc', 'total-desc']
-        if ((valid as string[]).includes(savedSort)) sortBy.value = savedSort as SortOption
-    }
-
-    const savedLayout = localStorage.getItem('points-layout')
+    const valid: SortOption[] = ['default', 'name-asc', 'name-desc', 'available-asc', 'available-desc', 'total-asc', 'total-desc']
+    const savedSort = cacheStore.getPointsSortBy()
+    if ((valid as string[]).includes(savedSort)) sortBy.value = savedSort as SortOption
+    const savedLayout = cacheStore.getPointsLayoutMode()
     if (savedLayout === 'card' || savedLayout === 'list') layoutMode.value = savedLayout
 
     await refreshBase()
@@ -252,11 +236,11 @@ onMounted(async () => {
 })
 
 watch(sortBy, (val) => {
-    localStorage.setItem('students-sort', val)
+    cacheStore.setPointsSortBy(val)
 })
 
 watch(layoutMode, (val) => {
-    localStorage.setItem('points-layout', val)
+    cacheStore.setPointsLayoutMode(val)
 })
 
 watch(activeClassId, async () => {

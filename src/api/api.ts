@@ -1,8 +1,12 @@
 import type { ApiResponse } from "@/types/api";
 import { ElMessage } from "element-plus";
 import { useUserStore } from "@/stores/userStore";
+import router from "@/routers";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+const AUTH_EXPIRED_CODE = 100401;
+let isRedirectingToAuth = false;
+let lastAuthExpiredMessageAt = 0;
 
 function showMessage(
   message: string,
@@ -16,7 +20,37 @@ function showMessage(
   });
 }
 
+function handleAuthExpired(message?: string): never {
+  const userStore = useUserStore();
+  userStore.logout();
+  userStore.setExpired(true);
+
+  const errorMessage = message || "登录已过期，请重新登录，否则会影响云端功能的正常使用！";
+  const now = Date.now();
+  if (now - lastAuthExpiredMessageAt > 1500) {
+    showMessage(errorMessage, "error");
+    lastAuthExpiredMessageAt = now;
+  }
+
+  if (!isRedirectingToAuth && router.currentRoute.value.path !== "/auth") {
+    isRedirectingToAuth = true;
+    void router
+      .replace({
+        path: "/auth",
+        query: { redirect: router.currentRoute.value.fullPath },
+      })
+      .finally(() => {
+        isRedirectingToAuth = false;
+      });
+  }
+
+  throw new Error(errorMessage);
+}
+
 function handleResponse<T>(response: ApiResponse<T>): ApiResponse<T> {
+  if (response.code === AUTH_EXPIRED_CODE) {
+    handleAuthExpired(response.message);
+  }
   if (response.code === 0 || response.code === 200) {
     return response;
   } else {
@@ -59,15 +93,7 @@ async function request<T>(
   });
 
   if (response.status === 401) {
-    // await safeParseJson<unknown>(response);
-    // const errorMessage = errResp?.message || `HTTP error! status: ${response.status}`;
-    
-    userStore.setExpired(true);
-    const errorMessage = '登录已过期, 请退出并重新登录, 否则会影响云端功能的正常使用！';
-    showMessage(errorMessage, "error");
-    showMessage(errorMessage, "error");
-    showMessage(errorMessage, "error");
-    throw new Error(errorMessage);
+    handleAuthExpired("登录已过期，请重新登录，否则会影响云端功能的正常使用！");
   }
 
   if (!response.ok) {
@@ -77,7 +103,12 @@ async function request<T>(
     throw new Error(errorMessage);
   }
 
-  const jsonResponse = (await safeParseJson<T>(response)) as ApiResponse<T>;
+  const jsonResponse = await safeParseJson<T>(response);
+  if (!jsonResponse) {
+    const errorMessage = "响应解析失败";
+    showMessage(errorMessage, "error");
+    throw new Error(errorMessage);
+  }
 
   return handleResponse<T>(jsonResponse);
 }

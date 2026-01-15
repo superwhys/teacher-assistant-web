@@ -29,6 +29,7 @@ const newGroupIcon = ref('')
 const newItemName = ref('')
 const newItemValue = ref<number>(1)
 const newItemSign = ref<PointsSign>('plus')
+const newItemValueError = ref('')
 
 const itemEditVisible = ref(false)
 const itemEditMode = ref<'create' | 'edit'>('create')
@@ -58,6 +59,7 @@ function openCreateItem() {
     newItemName.value = ''
     newItemValue.value = 1
     newItemSign.value = 'plus'
+    newItemValueError.value = ''
     itemEditVisible.value = true
 }
 
@@ -67,8 +69,21 @@ function openEditItem(it: PointsItem) {
     newItemName.value = it.name
     newItemValue.value = it.value
     newItemSign.value = it.sign
+    newItemValueError.value = ''
     itemEditVisible.value = true
 }
+
+function validateNewItemValue(val: unknown): string {
+    const n = Number(val)
+    if (!Number.isFinite(n)) return '请输入正确的分值'
+    if (!Number.isInteger(Math.abs(n))) return '分值必须为整数'
+    if (Math.abs(n) <= 0) return '请输入大于 0 的分值'
+    return ''
+}
+
+watch(newItemValue, (val) => {
+    newItemValueError.value = validateNewItemValue(val)
+})
 
 async function onRemoveGroupManage(groupId: string) {
     const g = itemGroups.value.find(x => x.id === groupId)
@@ -93,13 +108,15 @@ async function onRemoveItem(it: PointsItem) {
 function onAddItem() {
     if (!manageSelectedGroupId.value) return
     const name = newItemName.value.trim()
-    const value = Math.abs(newItemValue.value || 0)
+    const rawValue = Number(newItemValue.value || 0)
+    const value = Math.abs(rawValue)
     if (!name) {
         ElMessage.error('请输入积分项名称')
         return
     }
-    if (!value) {
-        ElMessage.error('请输入大于 0 的分值')
+    const valueError = validateNewItemValue(rawValue)
+    newItemValueError.value = valueError
+    if (valueError) {
         return
     }
     if (itemEditMode.value === 'create') {
@@ -191,7 +208,13 @@ function onAddItem() {
             <el-input v-model="newItemName" placeholder="积分项名称" />
         </div>
         <div class="row" style="margin-top:10px;">
-            <el-input-number v-model="newItemValue" :min="0.5" :max="99" :step="0.5" />
+            <div class="value-field">
+                <el-input-number v-model="newItemValue" :min="1" :max="99" :step="1"
+                    :class="['value-input', newItemValueError ? 'is-error' : '']" />
+                <div class="field-error" :style="{ visibility: newItemValueError ? 'visible' : 'hidden' }">
+                    {{ newItemValueError || '占位' }}
+                </div>
+            </div>
             <el-radio-group v-model="newItemSign">
                 <el-radio-button label="plus">加分</el-radio-button>
                 <el-radio-button label="minus">扣分</el-radio-button>
@@ -200,7 +223,7 @@ function onAddItem() {
         <template #footer>
             <span class="dialog-footer">
                 <el-button @click="itemEditVisible = false">取消</el-button>
-                <el-button type="primary" @click="onAddItem">保存</el-button>
+                <el-button type="primary" :disabled="!!newItemValueError" @click="onAddItem">保存</el-button>
             </span>
         </template>
     </el-dialog>
@@ -239,8 +262,29 @@ function onAddItem() {
 
 .row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 10px;
+}
+
+.value-field {
+    display: flex;
+    flex-direction: column;
+    width: 190px;
+}
+
+.field-error {
+    font-size: 12px;
+    line-height: 1.2;
+    padding-top: 4px;
+    color: var(--el-color-danger);
+    max-width: 190px;
+    white-space: normal;
+    word-break: break-all;
+    min-height: 15px;
+}
+
+.value-input.is-error :deep(.el-input__wrapper) {
+    box-shadow: 0 0 0 1px var(--el-color-danger) inset;
 }
 
 .icon-input {

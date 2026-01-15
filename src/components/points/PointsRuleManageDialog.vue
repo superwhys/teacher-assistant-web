@@ -49,6 +49,12 @@ const newItemName = ref('')
 const newItemValue = ref<number>(1)
 const newItemSign = ref<'plus' | 'minus'>('plus')
 
+const itemValueHasDecimal = computed(() => {
+    const v = newItemValue.value
+    if (!Number.isFinite(v)) return false
+    return Math.floor(v) !== v
+})
+
 const selectedGroup = computed(() => {
     const id = selectedGroupId.value
     if (!id) return null
@@ -160,6 +166,9 @@ async function onSaveItem() {
     if (!selectedGroupId.value) return
     const name = newItemName.value.trim()
     const value = Math.abs(newItemValue.value || 0)
+    if (itemValueHasDecimal.value) {
+        return
+    }
     if (!name) {
         ElMessage.error('请输入积分项名称')
         return
@@ -348,7 +357,7 @@ async function onSaveItem() {
             </el-form-item>
             <div class="item-form-row">
                 <el-form-item label="分值" class="item-form-col">
-                    <el-input-number v-model="newItemValue" :min="0.5" :max="99" :step="0.5" />
+                    <el-input-number v-model="newItemValue" :min="1" :max="99" :step="1" />
                 </el-form-item>
                 <el-form-item label="类型" class="item-form-col">
                     <el-radio-group v-model="newItemSign">
@@ -357,11 +366,14 @@ async function onSaveItem() {
                     </el-radio-group>
                 </el-form-item>
             </div>
+            <div class="item-form-row-error">
+                <span :class="['item-value-error', itemValueHasDecimal ? 'is-visible' : '']">分值必须为整数</span>
+            </div>
         </el-form>
         <template #footer>
             <span class="dialog-footer">
                 <el-button :disabled="loading" @click="itemEditVisible = false">取消</el-button>
-                <el-button type="primary" :loading="loading" @click="onSaveItem">保存</el-button>
+                <el-button type="primary" :loading="loading" :disabled="loading || itemValueHasDecimal" @click="onSaveItem">保存</el-button>
             </span>
         </template>
     </el-dialog>
@@ -799,6 +811,25 @@ async function onSaveItem() {
 
 .item-form-col :deep(.el-form-item__content) {
     justify-content: flex-start;
+}
+
+.item-form-row-error {
+    height: 18px;
+    margin-top: 2px;
+    overflow: hidden;
+}
+
+.item-value-error {
+    display: block;
+    font-size: 12px;
+    line-height: 1;
+    color: var(--el-color-danger);
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+.item-value-error.is-visible {
+    opacity: 1;
 }
 </style>
 

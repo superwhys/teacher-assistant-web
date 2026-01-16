@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useCacheStore } from '@/stores/cacheStore'
+import { useMainLoadingStore } from '@/stores/mainLoadingStore'
 
 const routes = [
   {
@@ -69,14 +70,33 @@ const router = createRouter({
 });
 
 router.beforeEach((to) => {
+  const mainLoading = useMainLoadingStore()
+  const token = mainLoading.beginRoute()
+  ;(to as any).__mainLoadingToken = token
+
   const cache = useCacheStore()
   if (!cache.isAuthenticated && to.path !== '/auth') {
+    mainLoading.endRoute(token)
     return { path: '/auth', query: { redirect: to.fullPath } }
   }
   if (cache.isAuthenticated && to.path === '/auth') {
+    mainLoading.endRoute(token)
     return { path: '/points' }
   }
   return true
+})
+
+router.afterEach((to) => {
+  const token = (to as any).__mainLoadingToken
+  if (typeof token === 'number') {
+    const mainLoading = useMainLoadingStore()
+    mainLoading.endRoute(token)
+  }
+})
+
+router.onError(() => {
+  const mainLoading = useMainLoadingStore()
+  mainLoading.clearRoutes()
 })
 
 export default router;

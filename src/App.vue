@@ -6,8 +6,12 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { classManager } from '@/managers/class'
 import type { ClassDTO } from '@/types/class'
 import { useCacheStore } from '@/stores/cacheStore'
+import { useMainLoadingStore } from '@/stores/mainLoadingStore'
+import { userApi } from '@/api/user'
+import { computeTrialFromProfile, normalizeUserProfile } from '@/utils/userProfile'
 
 const cacheStore = useCacheStore()
+const mainLoadingStore = useMainLoadingStore()
 const isAuthenticated = computed(() => cacheStore.isAuthenticated)
 
 const now = ref(new Date())
@@ -24,6 +28,10 @@ onMounted(() => {
     timer = window.setInterval(() => {
         now.value = new Date()
     }, 1000)
+
+    if (cacheStore.token && !cacheStore.isExpired) {
+        void refreshUserProfile()
+    }
 })
 
 const timeString = computed(() => formatTimeHHmm(now.value))
@@ -126,6 +134,23 @@ const userInitial = computed(() => {
     if (!name) return '用'
     return name.charAt(0).toUpperCase()
 })
+
+const userProfileRefreshing = ref(false)
+
+async function refreshUserProfile(): Promise<void> {
+    if (!cacheStore.token || userProfileRefreshing.value) return
+    userProfileRefreshing.value = true
+    try {
+        const res = await userApi.getUserProfile()
+        const profile = normalizeUserProfile(res.data, cacheStore.profile?.email ?? '')
+        const { trial, expiresAt } = computeTrialFromProfile(profile)
+        cacheStore.setAuth(cacheStore.token, profile, trial, expiresAt)
+    } catch {
+        // 请求层已统一处理提示与跳转（如 100401），这里不重复打扰用户
+    } finally {
+        userProfileRefreshing.value = false
+    }
+}
 
 const trialSecondsLeft = computed(() => {
     if (!isAuthenticated.value || !cacheStore.isTrial || cacheStore.trialExpiresAt === null) return null
@@ -448,7 +473,12 @@ async function confirmUnlock() {
                     </div>
                 </el-aside>
                 <el-main class="main">
-                    <div class="content-area">
+                    <div
+                        class="content-area"
+                        v-loading="mainLoadingStore.isLoading"
+                        element-loading-text="加载中..."
+                        element-loading-background="rgba(255, 255, 255, 0.65)"
+                    >
                         <router-view v-slot="{ Component, route }">
                             <keep-alive v-if="route.meta?.keepAlive">
                                 <component :is="Component" :key="route.path" />

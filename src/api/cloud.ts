@@ -8,6 +8,9 @@ export const cloudApi = {
     sync(data: Record<string, any>, syncType: CloudSyncType): Promise<ApiResponse<string>> {
         return post("/cloud/sync", { sync_type: syncType, data });
     },
+    importFromV1(): Promise<ApiResponse<any>> {
+        return post("/cloud/import", {});
+    },
     getBackups(): Promise<ApiResponse<CloudBackupsMap>> {
         return get<CloudBackupsMap>("/cloud/backups");
     },

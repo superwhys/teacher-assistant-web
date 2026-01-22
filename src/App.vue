@@ -12,6 +12,7 @@ import { usePointsItemStore } from '@/stores/pointsItemStore'
 import { useStudentGroupStore } from '@/stores/studentGroupStore'
 import { useShopStore } from '@/stores/shopStore'
 import { cloudApi } from '@/api/cloud'
+import { userApi } from '@/api/user'
 import { importUserData } from '@/utils/storage'
 
 const classStore = useClassStore()
@@ -43,6 +44,22 @@ async function loadAllStores() {
     ])
 }
 
+async function refreshUserProfile(): Promise<void> {
+    if (!userStore.isAuthenticated) return
+    try {
+        const res = await userApi.getUserInfo()
+        if (res.data?.profile?.id) {
+            userStore.updateProfile(res.data.profile)
+        }
+        // const hasImported = res.data?.jsonExt?.v1_has_imported === true
+        // if (!hasImported) {
+        //     migrationDialogVisible.value = true
+        // }
+    } catch (err) {
+        ElMessage.error('获取用户信息失败：' + (err as Error).message)
+    }
+}
+
 const now = ref(new Date())
 let timer: number | undefined
 let autoSyncTimer: number | undefined
@@ -52,6 +69,7 @@ onMounted(async () => {
         now.value = new Date()
     }, 1000)
     await settingsStore.hydrate()
+    void refreshUserProfile()
     if (userStore.profile?.id) {
         await loadAllStores()
     }
@@ -312,6 +330,8 @@ const activeBackupTypeText = computed(() => {
     return activeBackupTab.value === 'manual' ? '手动' : '自动'
 })
 const restoring = ref<{ ts: number | null; type: 'manual' | 'auto' | null }>({ ts: null, type: null })
+const migrationDialogVisible = ref(false)
+const importingMigration = ref(false)
 
 async function onSaveDataToCloud() {
     if (userStore.isTrial) {
@@ -336,6 +356,20 @@ async function onSaveDataToCloud() {
         ElMessage.error('保存失败：' + (err as Error).message)
     } finally {
         isSavingData.value = false
+    }
+}
+
+async function onImportMigration() {
+    if (importingMigration.value) return
+    importingMigration.value = true
+    try {
+        await cloudApi.importFromV1()
+        ElMessage.success('数据迁移已完成')
+        migrationDialogVisible.value = false
+    } catch (err) {
+        ElMessage.error('数据迁移失败：' + (err as Error).message)
+    } finally {
+        importingMigration.value = false
     }
 }
 
@@ -635,6 +669,35 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
                 <template #footer>
                     <div class="update-dlg-footer">
                         <el-button size="large" @click="updateDialogVisible = false">取消</el-button>
+                    </div>
+                </template>
+            </el-dialog>
+            <el-dialog v-model="migrationDialogVisible" title="数据迁移" width="520px" :close-on-click-modal="false">
+                <div class="migration-content">
+                    <div class="migration-title">当前为体验版本。现已上新正式版，请根据下面的操作进行数据迁移。</div>
+                    <div class="migration-steps">
+                        <div class="migration-step">
+                            <div class="step-title">步骤一：请保存最新数据到云端</div>
+                            <div class="step-action">
+                                <el-button type="success" size="default" :loading="isSavingData" :disabled="isSavingData" @click="onSaveDataToCloud">
+                                    <i-ep-upload-filled class="btn-icon" /><span>保存数据</span>
+                                </el-button>
+                            </div>
+                        </div>
+                        <div class="migration-step">
+                            <div class="step-title">步骤二：请点击按钮进行数据迁移</div>
+                            <div class="step-action">
+                                <el-button type="primary" size="default" :loading="importingMigration" :disabled="importingMigration" @click="onImportMigration">
+                                    <i-ep-refresh class="btn-icon" /><span>开始迁移</span>
+                                </el-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <template #footer>
+                    <div class="migration-footer">
+                        <div class="migration-alert">旧版本在 2026.03.06 日下线，届时数据将会丢失，请尽快迁移数据</div>
+                        <el-button size="large" @click="migrationDialogVisible = false">稍后再说</el-button>
                     </div>
                 </template>
             </el-dialog>
@@ -1659,5 +1722,68 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.migration-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.migration-alert {
+    background: #fef0f0;
+    color: #f56c6c;
+    border: 1px solid #fbc4c4;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    box-shadow: 0 6px 14px rgba(245, 108, 108, 0.18);
+}
+
+.migration-title {
+    font-size: 14px;
+    color: #606266;
+    line-height: 1.6;
+}
+
+.migration-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.migration-step {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 12px;
+    border-radius: 12px;
+    background-color: #f8f9fc;
+    border: 1px solid #eceef5;
+}
+
+.migration-step .step-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #303133;
+}
+
+.migration-step .step-action :deep(.el-button) {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.migration-footer {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
 }
 </style>

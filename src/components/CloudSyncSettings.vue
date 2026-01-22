@@ -86,7 +86,8 @@ async function loadBackupHistory() {
             .sort((x: number, y: number) => y - x)
             .slice(0, 3)
         lastSyncAtLocal.value = computeLatestFromLists()
-    } catch {
+    } catch (err) {
+        ElMessage.error('获取备份历史失败：' + (err as Error).message)
         backupsManual.value = []
         backupsAuto.value = []
         lastSyncAtLocal.value = null

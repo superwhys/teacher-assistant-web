@@ -28,4 +28,4 @@ jobs:
                   context: .
                   file: Dockerfile
                   push: true
-                  tags: hoven-registry-cn-beijing.cr.volces.com/library/teacher-assistant:${{ github.ref_name }}
+                  tags: hoven-registry-cn-beijing.cr.volces.com/library/teacher-assistant-web:${{ github.ref_name }}

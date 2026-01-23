@@ -52,7 +52,11 @@ async function refreshUserProfile(): Promise<void> {
             userStore.updateProfile(res.data.profile)
         }
         // const hasImported = res.data?.jsonExt?.v1_has_imported === true
-        // if (!hasImported) {
+        // if (hasImported) {
+        //     migrationDialogMode.value = 'imported'
+        //     migrationDialogVisible.value = true
+        // } else {
+        //     migrationDialogMode.value = 'need_import'
         //     migrationDialogVisible.value = true
         // }
     } catch (err) {
@@ -331,7 +335,13 @@ const activeBackupTypeText = computed(() => {
 })
 const restoring = ref<{ ts: number | null; type: 'manual' | 'auto' | null }>({ ts: null, type: null })
 const migrationDialogVisible = ref(false)
+const migrationDialogMode = ref<'need_import' | 'imported'>('need_import')
 const importingMigration = ref(false)
+const teacherV2Url = 'https://teacher-v2.superwhys.top'
+
+function onGoToTeacherV2() {
+    window.location.href = teacherV2Url
+}
 
 async function onSaveDataToCloud() {
     if (userStore.isTrial) {
@@ -365,7 +375,7 @@ async function onImportMigration() {
     try {
         await cloudApi.importFromV1()
         ElMessage.success('数据迁移已完成')
-        migrationDialogVisible.value = false
+        migrationDialogMode.value = 'imported'
     } catch (err) {
         ElMessage.error('数据迁移失败：' + (err as Error).message)
     } finally {
@@ -672,9 +682,25 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
                     </div>
                 </template>
             </el-dialog>
-            <el-dialog v-model="migrationDialogVisible" title="数据迁移" width="520px" :close-on-click-modal="false">
-                <div class="migration-content">
+            <el-dialog
+                v-model="migrationDialogVisible"
+                :title="migrationDialogMode === 'imported' ? '提示' : '数据迁移'"
+                width="520px"
+                :close-on-click-modal="false"
+                :show-close="migrationDialogMode !== 'imported'"
+                :close-on-press-escape="migrationDialogMode !== 'imported'"
+            >
+                <div v-if="migrationDialogMode === 'imported'" class="migration-done-content">
+                    <div class="migration-done-title">🎉 您已经完成了数据迁移 🎉</div>
+                    <div class="migration-done-desc">体验版本不再支持使用，请切换至正式版本</div>
+                    <div class="migration-done-link" @click="onGoToTeacherV2">teacher-v2.superwhys.top</div>
+                </div>
+                <div v-else class="migration-content">
                     <div class="migration-title">当前为体验版本。现已上新正式版，请根据下面的操作进行数据迁移。</div>
+                    <div class="migration-warn">
+                        <i-ep-warning-filled class="warn-icon" />
+                        <span>您也可以选择暂时不迁移。</span>
+                    </div>
                     <div class="migration-steps">
                         <div class="migration-step">
                             <div class="step-title">步骤一：请保存最新数据到云端</div>
@@ -695,7 +721,10 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
                     </div>
                 </div>
                 <template #footer>
-                    <div class="migration-footer">
+                    <div v-if="migrationDialogMode === 'imported'" class="migration-done-footer">
+                        <el-button type="primary" size="large" @click="onGoToTeacherV2">前往正式版</el-button>
+                    </div>
+                    <div v-else class="migration-footer">
                         <div class="migration-alert">旧版本在 2026.03.06 日下线，届时数据将会丢失，请尽快迁移数据</div>
                         <el-button size="large" @click="migrationDialogVisible = false">稍后再说</el-button>
                     </div>
@@ -1730,6 +1759,43 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
     gap: 16px;
 }
 
+.migration-done-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    padding: 6px 4px;
+}
+
+.migration-done-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #303133;
+}
+
+.migration-done-desc {
+    font-size: 14px;
+    color: #606266;
+    line-height: 1.6;
+}
+
+.migration-done-link {
+    margin-top: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--el-color-primary);
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.migration-done-footer {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .migration-alert {
     background: #fef0f0;
     color: #f56c6c;
@@ -1746,6 +1812,25 @@ async function onRestoreFromBackup(ts: number, type: 'manual' | 'auto') {
     font-size: 14px;
     color: #606266;
     line-height: 1.6;
+}
+
+.migration-warn {
+    background: #fdf6ec;
+    color: #e6a23c;
+    border: 1px solid #f3d19e;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 6px 14px rgba(230, 162, 60, 0.16);
+}
+
+.migration-warn .warn-icon {
+    font-size: 16px;
 }
 
 .migration-steps {

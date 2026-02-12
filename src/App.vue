@@ -51,14 +51,14 @@ async function refreshUserProfile(): Promise<void> {
         if (res.data?.profile?.id) {
             userStore.updateProfile(res.data.profile)
         }
-        // const hasImported = res.data?.jsonExt?.v1_has_imported === true
-        // if (hasImported) {
-        //     migrationDialogMode.value = 'imported'
-        //     migrationDialogVisible.value = true
-        // } else {
-        //     migrationDialogMode.value = 'need_import'
-        //     migrationDialogVisible.value = true
-        // }
+        const hasImported = res.data?.jsonExt?.v1_has_imported === true
+        if (hasImported) {
+            migrationDialogMode.value = 'imported'
+            migrationDialogVisible.value = true
+        } else {
+            migrationDialogMode.value = 'need_import'
+            migrationDialogVisible.value = true
+        }
     } catch (err) {
         ElMessage.error('获取用户信息失败：' + (err as Error).message)
     }

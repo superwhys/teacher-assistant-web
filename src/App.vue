@@ -9,6 +9,7 @@ import { useCacheStore } from '@/stores/cacheStore'
 import { useMainLoadingStore } from '@/stores/mainLoadingStore'
 import { userApi } from '@/api/user'
 import { computeTrialFromProfile, normalizeUserProfile } from '@/utils/userProfile'
+import { hasOldSyncData, onImportMigration, syncToCloudCopy } from '@/utils/oldSync'
 
 const cacheStore = useCacheStore()
 const mainLoadingStore = useMainLoadingStore()
@@ -136,6 +137,38 @@ const userInitial = computed(() => {
 })
 
 const userProfileRefreshing = ref(false)
+const oldSyncChecked = ref(false)
+
+async function tryPromptOldSync(rawProfile: unknown, userId: string): Promise<void> {
+    if (oldSyncChecked.value) return
+    oldSyncChecked.value = true
+    const raw = (rawProfile || {}) as { json_ext?: { is_old?: unknown } }
+    const flag = raw.json_ext?.is_old
+    const isOldUser = flag === true || flag === 'true'
+    if (!isOldUser) return
+    const hasOld = await hasOldSyncData(userId)
+    if (!hasOld) return
+    await ElMessageBox.alert(
+        '<div style="line-height:1.7">' +
+            '<div><strong>检测到旧系统数据，必须完成迁移后才能使用新系统。</strong></div>' +
+            '<div style="margin-top:8px;padding:8px 10px;background:#fef0f0;border:1px solid #fde2e2;border-radius:8px;color:#f56c6c;display:flex;align-items:center;gap:8px">' +
+                '<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#f7ba2a;color:#fff;font-weight:700;font-size:12px;line-height:1">!</span>' +
+                '<span>请确认当前电脑的数据为最新数据，否则迁移后将不可再进行迁移。您将丢失你其他电脑上的更新的数据</span>' +
+            '</div>' +
+        '</div>',
+        '旧数据迁移',
+        {
+        confirmButtonText: '开始迁移',
+        showClose: false,
+        closeOnClickModal: false,
+        closeOnPressEscape: false,
+        dangerouslyUseHTMLString: true,
+    })
+    await syncToCloudCopy(userId, 'manual')
+    await onImportMigration()
+    ElMessage.success('数据迁移已完成')
+    window.location.reload()
+}
 
 async function refreshUserProfile(): Promise<void> {
     if (!cacheStore.token || userProfileRefreshing.value) return
@@ -145,6 +178,7 @@ async function refreshUserProfile(): Promise<void> {
         const profile = normalizeUserProfile(res.data, cacheStore.profile?.email ?? '')
         const { trial, expiresAt } = computeTrialFromProfile(profile)
         cacheStore.setAuth(cacheStore.token, profile, trial, expiresAt)
+        void tryPromptOldSync(res.data, profile.id)
     } catch {
         // 请求层已统一处理提示与跳转（如 100401），这里不重复打扰用户
     } finally {

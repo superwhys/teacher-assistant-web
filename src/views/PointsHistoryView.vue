@@ -61,6 +61,11 @@ function getRecordSourceLabel(r: PointsApplyRecord): string {
     return '-'
 }
 
+function canUndoRecord(r: PointsApplyRecord): boolean {
+    const from = toNumber((r as any)?.from, 0)
+    return from !== 1
+}
+
 const historyPageDesc = computed(() => {
     const list = [...(records.value ?? [])]
     list.sort((a, b) => {
@@ -274,7 +279,14 @@ function onPageChange(page: number) {
                             </el-table-column>
                             <el-table-column label="操作" width="120" align="center">
                                 <template #default="{ row }">
-                                    <el-button type="warning" link @click="undoAction(row.id)">撤回</el-button>
+                                    <el-button
+                                        type="warning"
+                                        link
+                                        :disabled="!canUndoRecord(row)"
+                                        @click="undoAction(row.id)"
+                                    >
+                                        撤回
+                                    </el-button>
                                 </template>
                             </el-table-column>
                         </el-table>

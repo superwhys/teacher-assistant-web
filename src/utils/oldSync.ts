@@ -63,6 +63,9 @@ export const cloudApiCopy = {
     importFromV1(): Promise<ApiResponse<any>> {
         return post("/cloud/import", {});
     },
+    skipMigration(): Promise<ApiResponse<any>> {
+        return post('/cloud/migrate.skip', {})
+    },
 }
 
 export async function syncToCloudCopy(
@@ -79,9 +82,9 @@ export async function hasOldSyncData(userId: string | null): Promise<boolean> {
 }
 
 export async function onImportMigration() {
-    try {
-        await cloudApiCopy.importFromV1()
-    } catch (err) {
-        ElMessage.error('数据迁移失败：' + (err as Error).message)
-    }
+    await cloudApiCopy.importFromV1()
+}
+
+export async function skipOldMigration() {
+    await cloudApiCopy.skipMigration()
 }

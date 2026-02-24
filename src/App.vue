@@ -10,6 +10,7 @@ import { useMainLoadingStore } from '@/stores/mainLoadingStore'
 import { userApi } from '@/api/user'
 import { computeTrialFromProfile, normalizeUserProfile } from '@/utils/userProfile'
 import { hasOldSyncData, onImportMigration as importOldMigration, skipOldMigration, syncToCloudCopy } from '@/utils/oldSync'
+import { isApiRequestError } from './types/api'
 
 const cacheStore = useCacheStore()
 const mainLoadingStore = useMainLoadingStore()
@@ -153,6 +154,22 @@ const skippingMigration = ref(false)
 const migrationUserId = ref<string | null>(null)
 const migrationSyncDone = ref(false)
 
+watch([() => cacheStore.token, () => cacheStore.isExpired], ([token, expired], [prevToken]) => {
+    if (token !== prevToken) {
+        oldSyncChecked.value = false
+        migrationDialogVisible.value = false
+        migrationDialogMode.value = 'default'
+        migrationUserId.value = null
+        migrationSyncDone.value = false
+        isSavingData.value = false
+        importingMigration.value = false
+        skippingMigration.value = false
+    }
+    if (token && !expired && token !== prevToken) {
+        void refreshUserProfile()
+    }
+})
+
 async function tryPromptOldSync(rawProfile: unknown, userId: string): Promise<void> {
     if (oldSyncChecked.value) return
     oldSyncChecked.value = true
@@ -231,10 +248,14 @@ async function refreshUserProfile(): Promise<void> {
         const res = await userApi.getUserProfile()
         const profile = normalizeUserProfile(res.data, cacheStore.profile?.email ?? '')
         const { trial, expiresAt } = computeTrialFromProfile(profile)
+        console.log(`name: ${profile.name}, email: ${profile.email}, trial: ${trial}, expiresAt: ${expiresAt}`)
         cacheStore.setAuth(cacheStore.token, profile, trial, expiresAt)
         void tryPromptOldSync(res.data, profile.id)
-    } catch {
-        // 请求层已统一处理提示与跳转（如 100401），这里不重复打扰用户
+    } catch (err) {
+        if (!isApiRequestError(err)) {
+            console.error(err)
+            ElMessage.error('获取用户信息失败')
+        }
     } finally {
         userProfileRefreshing.value = false
     }

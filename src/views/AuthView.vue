@@ -3,10 +3,9 @@ import { onBeforeUnmount, onMounted, reactive, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { authApi } from '@/api/auth'
-import { userApi } from '@/api/user'
 import { useCacheStore } from '@/stores/cacheStore'
 import { sha256Hex } from '@/utils/crypto'
-import { computeTrialFromProfile, normalizeUserProfile } from '@/utils/userProfile'
+import { isApiRequestError } from '@/types/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -113,12 +112,8 @@ async function handleLogin(): Promise<void> {
             return
         }
 
-        cacheStore.setTokenOnly(token, false, null)
+        cacheStore.setTokenOnly(token)
 
-        const profileRes = await userApi.getUserProfile()
-        const profile = normalizeUserProfile(profileRes.data, email)
-        const { trial, expiresAt } = computeTrialFromProfile(profile)
-        cacheStore.setAuth(token, profile, trial, expiresAt)
         ElMessage.success('登录成功')
         await maybeRedirect()
     } catch (err) {
@@ -168,7 +163,11 @@ async function handleRegister(): Promise<void> {
         loginForm.email = email
         loginForm.password = ''
         registerForm.code = ''
-    } catch {
+    } catch (err) {
+        if (!isApiRequestError(err)) {
+            console.error(err)
+            ElMessage.error('注册失败')
+        }
     } finally {
         registerLoading.value = false
     }

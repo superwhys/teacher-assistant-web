@@ -2,13 +2,14 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { formatTimeHHmm, formatChineseDateWithWeek } from '@/utils/date'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElButton, ElMessage, ElMessageBox } from 'element-plus'
 import { classManager } from '@/managers/class'
 import type { ClassDTO } from '@/types/class'
 import { useCacheStore } from '@/stores/cacheStore'
 import { useMainLoadingStore } from '@/stores/mainLoadingStore'
 import { userApi } from '@/api/user'
 import { computeTrialFromProfile, normalizeUserProfile } from '@/utils/userProfile'
+import { hasOldSyncData, onImportMigration as importOldMigration, skipOldMigration, syncToCloudCopy } from '@/utils/oldSync'
 
 const cacheStore = useCacheStore()
 const mainLoadingStore = useMainLoadingStore()
@@ -143,6 +144,90 @@ const userInitial = computed(() => {
 })
 
 const userProfileRefreshing = ref(false)
+const oldSyncChecked = ref(false)
+const migrationDialogVisible = ref(false)
+const migrationDialogMode = ref<'default' | 'imported'>('default')
+const isSavingData = ref(false)
+const importingMigration = ref(false)
+const skippingMigration = ref(false)
+const migrationUserId = ref<string | null>(null)
+const migrationSyncDone = ref(false)
+
+async function tryPromptOldSync(rawProfile: unknown, userId: string): Promise<void> {
+    if (oldSyncChecked.value) return
+    oldSyncChecked.value = true
+    const raw = (rawProfile || {}) as { json_ext?: { is_old?: unknown } }
+    const flag = raw.json_ext?.is_old
+    const isOldUser = flag === true || flag === 'true'
+    if (!isOldUser) return
+    const hasOld = await hasOldSyncData(userId)
+    if (!hasOld) return
+    migrationUserId.value = userId
+    migrationDialogMode.value = 'default'
+    isSavingData.value = false
+    importingMigration.value = false
+    skippingMigration.value = false
+    migrationDialogVisible.value = true
+    migrationSyncDone.value = false
+}
+
+async function onSaveDataToCloud() {
+    if (!migrationUserId.value || isSavingData.value) return
+    isSavingData.value = true
+    try {
+        await syncToCloudCopy(migrationUserId.value, 'manual')
+        migrationSyncDone.value = true
+        ElMessage.success('已同步到云端副本')
+    } catch {
+        ElMessage.error('同步失败')
+    } finally {
+        isSavingData.value = false
+    }
+}
+
+async function onImportMigration() {
+    if (!migrationUserId.value || importingMigration.value) return
+    if (!migrationSyncDone.value) {
+        ElMessage.warning('请先同步到云端副本')
+        return
+    }
+    importingMigration.value = true
+    try {
+        await importOldMigration()
+        migrationDialogMode.value = 'imported'
+        ElMessage.success('数据迁移已完成')
+    } catch {
+        ElMessage.error('迁移失败')
+    } finally {
+        importingMigration.value = false
+    }
+}
+
+async function onSkipMigration() {
+    if (skippingMigration.value) return
+    try {
+        await ElMessageBox.confirm('确定忽略迁移并以全新系统继续使用吗？', '确认操作', {
+            type: 'warning',
+            confirmButtonText: '确定忽略',
+            cancelButtonText: '取消'
+        })
+        skippingMigration.value = true
+        await skipOldMigration()
+        ElMessage.success('已忽略迁移')
+        migrationDialogVisible.value = false
+    } catch (err) {
+        if (err) {
+            ElMessage.error('忽略迁移失败')
+        }
+    } finally {
+        skippingMigration.value = false
+    }
+}
+
+function onGoToTeacherV2() {
+    migrationDialogVisible.value = false
+    window.location.reload()
+}
 
 async function refreshUserProfile(): Promise<void> {
     if (!cacheStore.token || userProfileRefreshing.value) return
@@ -152,6 +237,7 @@ async function refreshUserProfile(): Promise<void> {
         const profile = normalizeUserProfile(res.data, cacheStore.profile?.email ?? '')
         const { trial, expiresAt } = computeTrialFromProfile(profile)
         cacheStore.setAuth(cacheStore.token, profile, trial, expiresAt)
+        void tryPromptOldSync(res.data, profile.id)
     } catch {
         // 请求层已统一处理提示与跳转（如 100401），这里不重复打扰用户
     } finally {
@@ -525,6 +611,71 @@ async function confirmUnlock() {
                     </span>
                 </template>
             </el-dialog>
+            <el-dialog
+                v-model="migrationDialogVisible"
+                :title="migrationDialogMode === 'imported' ? '提示' : '数据迁移'"
+                width="520px"
+                :close-on-click-modal="false"
+                :show-close="false"
+                :close-on-press-escape="false"
+            >
+                <div class="migration-content">
+                    <div class="migration-title">当前为正式版本，发现你的浏览器内存在旧版本数据，请根据下面的操作进行数据迁移。</div>
+                    <div class="migration-warn">
+                        <div class="migration-warn-left">
+                            <i-ep-warning-filled class="warn-icon" />
+                            <span class="migration-warn-text">你也可以选择不迁移当做全新系统使用</span>
+                        </div>
+                        <el-button
+                            type="info"
+                            plain
+                            size="small"
+                            :loading="skippingMigration"
+                            :disabled="skippingMigration"
+                            @click="onSkipMigration"
+                        >
+                            忽略迁移
+                        </el-button>
+                    </div>
+                    <div class="migration-tip">请确保当前电脑浏览器内的数据为你的最新数据。迁移成功后将不允许再次迁移。</div>
+                    <div class="migration-steps">
+                        <div class="migration-step">
+                            <div class="step-title">步骤一：请保存最新数据到云端</div>
+                            <div class="step-action">
+                                <el-button
+                                    type="success"
+                                    size="default"
+                                    :loading="isSavingData"
+                                    :disabled="isSavingData"
+                                    @click="onSaveDataToCloud"
+                                >
+                                    <i-ep-upload-filled class="btn-icon" /><span>保存数据</span>
+                                </el-button>
+                            </div>
+                        </div>
+                        <div class="migration-step">
+                            <div class="step-title">步骤二：请点击按钮进行数据迁移</div>
+                            <div class="step-action">
+                                <el-button
+                                    type="primary"
+                                    size="default"
+                                    :loading="importingMigration"
+                                    :disabled="importingMigration"
+                                    @click="onImportMigration"
+                                >
+                                    <i-ep-refresh class="btn-icon" /><span>开始迁移</span>
+                                </el-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <template #footer>
+                    <div v-if="migrationDialogMode === 'imported'" class="migration-done-footer">
+                        <el-button type="primary" size="large" @click="onGoToTeacherV2">前往正式版</el-button>
+                    </div>
+                    <div v-else class="migration-footer"></div>
+                </template>
+            </el-dialog>
         </el-container>
         <div v-if="isAuthenticated && unlockDialogVisible" class="lock-overlay">
             <div class="lock-card">
@@ -755,6 +906,102 @@ async function confirmUnlock() {
     font-weight: 600;
     display: inline-flex;
     align-items: center;
+}
+
+.migration-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.migration-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111111;
+}
+
+.migration-warn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: #fff7e6;
+    color: #d46b08;
+}
+
+.migration-warn-left {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.migration-warn .warn-icon {
+    font-size: 18px;
+}
+
+.migration-warn-text {
+    font-size: 12px;
+}
+
+.migration-tip {
+    font-size: 15px;
+    font-weight: 700;
+    color: #f56c6c;
+    background: #fff1f0;
+    border: 1px solid #fddede;
+    border-radius: 10px;
+    padding: 8px 10px;
+}
+
+.migration-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.migration-step {
+    border-radius: 12px;
+    border: 1px solid #ebeef5;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #ffffff;
+}
+
+.migration-step .step-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #303133;
+}
+
+.migration-step .step-action :deep(.el-button) {
+    width: 100%;
+}
+
+.migration-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.migration-alert {
+    flex: 1 1 240px;
+    font-size: 12px;
+    color: #f56c6c;
+    background: #fff1f0;
+    border: 1px solid #fddede;
+    border-radius: 10px;
+    padding: 8px 10px;
+}
+
+.migration-done-footer {
+    display: flex;
+    justify-content: flex-end;
 }
 
 .lock-overlay {

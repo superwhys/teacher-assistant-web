@@ -21,8 +21,10 @@ onMounted(() => {
         isLoading.value = true
         try {
             await Promise.all([historyStore.hydrate()])
-            await reloadPools(true)
-            await refreshPrizes()
+            const poolChanged = await reloadPools(true)
+            if (!poolChanged) {
+                await refreshPrizes()
+            }
         } catch {
         } finally {
             isLoading.value = false
@@ -36,19 +38,21 @@ const pools = ref<UiLotteryPool[]>([])
 const currentPoolId = ref<string | null>(null)
 const currentPool = computed(() => pools.value.find(p => p.id === currentPoolId.value) || null)
 
-async function reloadPools(ensureDefault = false) {
+async function reloadPools(ensureDefault = false): Promise<boolean> {
+    const previousPoolId = currentPoolId.value
     const list = await lotteryManager.listPools()
     if (ensureDefault && list.length === 0) {
         const created = await lotteryManager.createPool('默认奖池')
         pools.value = [created]
         currentPoolId.value = created.id
-        return
+        return previousPoolId !== created.id
     }
 
     pools.value = list
     if (!currentPoolId.value || !pools.value.some(p => p.id === currentPoolId.value)) {
         currentPoolId.value = pools.value[0]?.id || null
     }
+    return previousPoolId !== currentPoolId.value
 }
 
 async function refreshPrizes() {

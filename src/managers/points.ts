@@ -166,17 +166,17 @@ export const pointsManager = {
         return flat
     },
 
-    async applyRule(ruleId: number, studentId: number): Promise<Wallet> {
-        const resp = await pointsApi.applyRule({ rule_id: ruleId, student_id: studentId })
+    async applyRule(classId: number, ruleId: number, studentId: number): Promise<Wallet> {
+        const resp = await pointsApi.applyRule({ class_id: classId, rule_id: ruleId, student_id: studentId })
         return resp.data ?? {}
     },
 
-    async applyRuleBatch(ruleId: number, studentIds: number[]): Promise<void> {
+    async applyRuleBatch(classId: number, ruleId: number, studentIds: number[]): Promise<void> {
         const ids = studentIds.filter(id => id > 0)
         if (ids.length === 0) return
         // 简单串行，避免并发过高导致后端限流/失败
         for (const sid of ids) {
-            await this.applyRule(ruleId, sid)
+            await this.applyRule(classId, ruleId, sid)
         }
     },
 

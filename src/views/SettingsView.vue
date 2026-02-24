@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCacheStore } from '@/stores/cacheStore'
+import { classManager } from '@/managers/class'
+import type { ClassDTO } from '@/types/class'
 
 const cacheStore = useCacheStore()
 const profile = computed(() => cacheStore.profile)
@@ -12,6 +14,9 @@ const userId = computed(() => profile.value?.id ?? '')
 const roleId = computed(() => profile.value?.roleId ?? null)
 const isTrial = computed(() => cacheStore.isTrial)
 const isLoginExpired = computed(() => cacheStore.isExpired)
+const isAuthenticated = computed(() => cacheStore.isAuthenticated)
+const activeClassId = computed(() => cacheStore.getActiveClassId())
+const activeClassName = computed(() => cacheStore.getActiveClassName())
 const userInitial = computed(() => {
     const name = String(displayName.value ?? '').trim()
     if (!name || name === '未登录') return '用'
@@ -23,6 +28,67 @@ const confirmPwd = ref<string>('')
 const oldPwd = ref<string>('')
 const savingPwd = ref<boolean>(false)
 const hasPwd = computed(() => cacheStore.hasLockPassword())
+
+const classes = ref<ClassDTO[]>([])
+const classesLoading = ref(false)
+const currentClass = computed(() => {
+    if (!activeClassId.value) return null
+    return classes.value.find(c => c.id === activeClassId.value) ?? null
+})
+const currentClassName = computed(() => currentClass.value?.name ?? activeClassName.value ?? '')
+const currentSemesterName = computed(() => currentClass.value?.semester_name?.trim() ?? '')
+const nextSemesterDialogVisible = ref(false)
+const nextSemesterName = ref('')
+const nextSemesterClearPoints = ref(false)
+const nextSemesterLoading = ref(false)
+
+async function loadClassesFromApi() {
+    if (!isAuthenticated.value || classesLoading.value) return
+    classesLoading.value = true
+    try {
+        classes.value = await classManager.list()
+    } finally {
+        classesLoading.value = false
+    }
+}
+
+function openNextSemesterDialog() {
+    if (!activeClassId.value) return
+    nextSemesterDialogVisible.value = true
+}
+
+function onNextSemesterDialogClosed() {
+    nextSemesterName.value = ''
+    nextSemesterClearPoints.value = false
+    nextSemesterLoading.value = false
+}
+
+async function confirmNextSemester() {
+    if (!activeClassId.value || nextSemesterLoading.value) return
+    const name = nextSemesterName.value.trim()
+    if (!name) {
+        ElMessage.error('请输入新学期名称')
+        return
+    }
+    nextSemesterLoading.value = true
+    try {
+        await classManager.nextSemester(activeClassId.value, {
+            semester_name: name,
+            clear_points: nextSemesterClearPoints.value,
+        })
+        nextSemesterDialogVisible.value = false
+        nextSemesterName.value = ''
+        nextSemesterClearPoints.value = false
+        ElMessage.success('已切换至新学期')
+        window.setTimeout(() => {
+            window.location.reload()
+        }, 300)
+    } catch {
+        ElMessage.error('切换学期失败')
+    } finally {
+        nextSemesterLoading.value = false
+    }
+}
 
 async function onSaveLockPassword() {
     if (savingPwd.value) return
@@ -97,6 +163,18 @@ function onLockNow() {
     cacheStore.lock()
     ElMessage.success('已锁定')
 }
+
+onMounted(() => {
+    void loadClassesFromApi()
+})
+
+watch([isAuthenticated, () => cacheStore.profile?.id], ([authed]) => {
+    if (authed) {
+        void loadClassesFromApi()
+    } else {
+        classes.value = []
+    }
+})
 </script>
 
 <template>
@@ -143,6 +221,34 @@ function onLockNow() {
                 </div>
             </BaseCard>
 
+            <BaseCard title="学期设置" shadow="never">
+                <div class="semester-card">
+                    <div class="semester-meta">
+                        <div class="semester-item">
+                            <div class="semester-k">当前班级</div>
+                            <div class="semester-v">{{ currentClassName || '-' }}</div>
+                        </div>
+                        <div class="semester-item">
+                            <div class="semester-k">当前学期</div>
+                            <div class="semester-v">{{ currentSemesterName || '未设置' }}</div>
+                        </div>
+                    </div>
+                    <div class="semester-actions">
+                        <el-button
+                            type="success"
+                            plain
+                            size="large"
+                            :loading="classesLoading"
+                            :disabled="!activeClassId || classesLoading"
+                            @click="openNextSemesterDialog"
+                        >
+                            <i-ep-refresh-right class="btn-icon" /> 切换学期
+                        </el-button>
+                    </div>
+                    <div class="semester-tips">切换新学期后，当前学期的积分数据将被归档，无法查看。</div>
+                </div>
+            </BaseCard>
+
             <BaseCard title="锁屏设置" shadow="never">
                 <div class="lock-vertical">
                     <div class="lock-top">
@@ -184,6 +290,30 @@ function onLockNow() {
             </BaseCard>
         </div>
     </div>
+
+    <el-dialog v-model="nextSemesterDialogVisible" title="切换到新学期" width="460px" @closed="onNextSemesterDialogClosed">
+        <div class="semester-warning">
+            <i-ep-warning-filled class="warning-icon" />
+            <div class="warning-text">切换新学期后，当前学期的积分数据将被归档，无法查看</div>
+        </div>
+        <el-form label-position="top">
+            <el-form-item label="新学期名称">
+                <el-input v-model="nextSemesterName" placeholder="例如：2026年春季学期" />
+            </el-form-item>
+            <el-form-item label="是否清空学生积分">
+                <el-radio-group v-model="nextSemesterClearPoints">
+                    <el-radio :label="false">不清空</el-radio>
+                    <el-radio :label="true">清空</el-radio>
+                </el-radio-group>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <span class="dialog-footer">
+                <el-button :disabled="nextSemesterLoading" @click="nextSemesterDialogVisible = false">取 消</el-button>
+                <el-button type="primary" :loading="nextSemesterLoading" @click="confirmNextSemester">确 定</el-button>
+            </span>
+        </template>
+    </el-dialog>
 
 </template>
 
@@ -362,10 +492,86 @@ function onLockNow() {
     padding: 10px 0;
 }
 
+.semester-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.semester-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.semester-item {
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: #ffffff;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.semester-k {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+
+.semester-v {
+    font-size: 14px;
+    color: #111827;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.semester-actions {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.semester-tips {
+    color: #8a4b07;
+    font-size: 12px;
+    line-height: 1.5;
+    background: #fff7e6;
+    border: 1px solid #ffe1b3;
+    border-radius: 10px;
+    padding: 8px 10px;
+}
+
 .lock-vertical {
     display: flex;
     flex-direction: column;
     gap: 16px;
+}
+
+.semester-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #fff7e6;
+    border: 1px solid #ffe1b3;
+    color: #8a4b07;
+    font-size: 13px;
+    margin-bottom: 12px;
+}
+
+.warning-icon {
+    font-size: 18px;
+    margin-top: 2px;
+}
+
+.warning-text {
+    line-height: 1.5;
 }
 
 .form-area .actions {
@@ -420,6 +626,10 @@ function onLockNow() {
     }
 
     .me-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .semester-meta {
         grid-template-columns: 1fr;
     }
 

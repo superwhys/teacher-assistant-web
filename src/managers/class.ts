@@ -1,5 +1,5 @@
 import { classApi } from "@/api/class"
-import type { ClassDTO } from "@/types/class"
+import type { ClassDTO, NextSemesterReq } from "@/types/class"
 
 export const classManager = {
     async create(name: string) {
@@ -15,5 +15,8 @@ export const classManager = {
     },
     async delete(classId: number): Promise<void> {
         await classApi.delete(classId)
+    },
+    async nextSemester(classId: number, data: NextSemesterReq): Promise<void> {
+        await classApi.nextSemester(classId, data)
     },
 }

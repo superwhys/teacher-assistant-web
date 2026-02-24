@@ -450,7 +450,7 @@ async function onSelectRule(rule: { id: number; name: string; sign: 'plus' | 'mi
     if (ids.length === 0) return
 
     try {
-        await pointsManager.applyRuleBatch(rule.id, ids)
+        await pointsManager.applyRuleBatch(activeClassId.value, rule.id, ids)
         await refreshStudentsAndRanking()
         selectorVisible.value = false
         const target = ids.length > 3

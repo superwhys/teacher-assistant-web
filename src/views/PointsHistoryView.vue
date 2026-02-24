@@ -61,6 +61,10 @@ function getRecordSourceLabel(r: PointsApplyRecord): string {
     return '-'
 }
 
+function isMallRecord(r: PointsApplyRecord): boolean {
+    return toNumber((r as any)?.from, 0) === 1
+}
+
 const historyPageDesc = computed(() => {
     const list = [...(records.value ?? [])]
     list.sort((a, b) => {
@@ -87,6 +91,11 @@ function clearHistory() {
 
 async function undoAction(actionId: number) {
     if (!activeClassId.value) return
+    const target = records.value.find(item => item.id === actionId)
+    if (target && isMallRecord(target)) {
+        ElMessage.warning('商城记录不支持撤回')
+        return
+    }
     try {
         await ElMessageBox.confirm('确定撤回该条积分记录吗？', '撤回确认', { type: 'warning' })
         await pointsManager.undoApply(actionId)
@@ -274,7 +283,11 @@ function onPageChange(page: number) {
                             </el-table-column>
                             <el-table-column label="操作" width="120" align="center">
                                 <template #default="{ row }">
-                                    <el-button type="warning" link @click="undoAction(row.id)">撤回</el-button>
+                                    <el-tooltip content="商城记录请前往商城管理页面撤回" :disabled="!isMallRecord(row)">
+                                        <span>
+                                            <el-button type="warning" link :disabled="isMallRecord(row)" @click="undoAction(row.id)">撤回</el-button>
+                                        </span>
+                                    </el-tooltip>
                                 </template>
                             </el-table-column>
                         </el-table>

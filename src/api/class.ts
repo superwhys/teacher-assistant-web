@@ -1,6 +1,6 @@
 import { get, post, put, del } from '@/api/api'
 import type { ApiResponse } from '@/types/api'
-import type { ClassDTO, CreateClassReq, ListClassesResp, UpdateClassReq } from '@/types/class'
+import type { ClassDTO, CreateClassReq, ListClassesResp, NextSemesterReq, UpdateClassReq } from '@/types/class'
 
 export const classApi = {
     create(data: CreateClassReq): Promise<ApiResponse<ClassDTO>> {
@@ -14,5 +14,8 @@ export const classApi = {
     },
     delete(classId: number): Promise<ApiResponse<null>> {
         return del<null>(`/class/${classId}`)
+    },
+    nextSemester(classId: number, data: NextSemesterReq): Promise<ApiResponse<null>> {
+        return post<null>(`/class/${classId}/semester/next`, data)
     },
 }

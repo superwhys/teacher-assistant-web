@@ -55,6 +55,13 @@ const activeClassId = computed<number | null>({
         }
     }
 })
+const currentClass = computed(() => {
+    if (!activeClassId.value) return null
+    return classes.value.find(c => c.id === activeClassId.value) ?? null
+})
+const currentSemesterName = computed(() => {
+    return currentClass.value?.semester_name?.trim() ?? ''
+})
 
 // 同步当前班级名称到 cacheStore，供各页面展示
 watch([activeClassId, classes], ([cid]) => {
@@ -450,6 +457,10 @@ async function confirmUnlock() {
                             >
                                 <el-option v-for="c in classOptions" :key="c.id" :label="c.name" :value="c.id" />
                             </el-select>
+                            <div v-if="activeClassId" class="semester-info">
+                                <span class="semester-label">当前学期</span>
+                                <span class="semester-name">{{ currentSemesterName || '未设置' }}</span>
+                            </div>
                             <div class="class-actions">
                                 <el-button type="primary" size="default" @click="openCreateDialog">
                                     <i-ep-plus class="btn-icon" /><span>新建班级</span>
@@ -948,6 +959,29 @@ async function confirmUnlock() {
     width: 100%;
 }
 
+.semester-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background-color: #ffffff;
+    border: 1px dashed #dcdfe6;
+    font-size: 12px;
+    color: #606266;
+}
+
+.semester-label {
+    font-weight: 600;
+    color: #909399;
+}
+
+.semester-name {
+    color: #303133;
+    font-weight: 600;
+}
+
 .class-actions {
     display: flex;
     flex-direction: column;
@@ -1071,6 +1105,10 @@ async function confirmUnlock() {
     }
 
     .class-select {
+        display: none;
+    }
+
+    .semester-info {
         display: none;
     }
 

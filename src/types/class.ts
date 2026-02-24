@@ -13,6 +13,8 @@ export type ClassInfo = {
 export type ClassDTO = {
     id?: number
     name?: string
+    semester_id?: number
+    semester_name?: string
     teacher_id?: number
 }
 
@@ -21,6 +23,7 @@ export type ClassDTO = {
  */
 export type CreateClassReq = {
     name?: string
+    semester_name?: string
 }
 
 /**
@@ -29,6 +32,14 @@ export type CreateClassReq = {
 export type UpdateClassReq = {
     id?: number
     name?: string
+}
+
+/**
+ * 切换到下一学期请求体
+ */
+export type NextSemesterReq = {
+    semester_name?: string
+    is_clear_points?: boolean
 }
 
 /**

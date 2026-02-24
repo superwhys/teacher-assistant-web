@@ -179,7 +179,6 @@ async function onSaveDataToCloud() {
         migrationSyncDone.value = true
         ElMessage.success('已同步到云端副本')
     } catch {
-        ElMessage.error('同步失败')
     } finally {
         isSavingData.value = false
     }
@@ -197,7 +196,6 @@ async function onImportMigration() {
         migrationDialogMode.value = 'imported'
         ElMessage.success('数据迁移已完成')
     } catch {
-        ElMessage.error('迁移失败')
     } finally {
         importingMigration.value = false
     }
@@ -215,10 +213,7 @@ async function onSkipMigration() {
         await skipOldMigration()
         ElMessage.success('已忽略迁移')
         migrationDialogVisible.value = false
-    } catch (err) {
-        if (err) {
-            ElMessage.error('忽略迁移失败')
-        }
+    } catch {
     } finally {
         skippingMigration.value = false
     }
@@ -271,6 +266,7 @@ let trialReminderTimer: number | null = null
 
 const createDialogVisible = ref(false)
 const createClassName = ref('')
+const createSemesterName = ref('')
 const editDialogVisible = ref(false)
 const editClassName = ref('')
 const editingClassId = ref<number | null>(null)
@@ -294,26 +290,32 @@ async function confirmCreateClass() {
         ElMessage.error('请输入班级名称')
         return
     }
+    const semesterName = createSemesterName.value.trim()
+    if (!semesterName) {
+        ElMessage.error('请输入学期名称')
+        return
+    }
     if (classes.value.some(c => c.name === name)) {
         ElMessage.error('班级名称已存在')
         return
     }
     try {
-        const created = await classManager.create(name)
+        const created = await classManager.create(name, semesterName)
         createDialogVisible.value = false
         createClassName.value = ''
+        createSemesterName.value = ''
         ElMessage.success('已创建班级')
         await loadClassesFromApi()
         if (typeof created?.id === 'number') {
             activeClassId.value = created.id
         }
-    } catch (e) {
-        ElMessage.error('创建班级失败')
+    } catch {
     }
 }
 
 function onCreateDialogClosed() {
     createClassName.value = ''
+    createSemesterName.value = ''
 }
 
 async function confirmEditClass() {
@@ -335,7 +337,6 @@ async function confirmEditClass() {
         ElMessage.success('已修改班级名称')
         await loadClassesFromApi()
     } catch {
-        ElMessage.error('修改班级失败')
     }
 }
 
@@ -589,6 +590,9 @@ async function confirmUnlock() {
                 <el-form label-position="top">
                     <el-form-item label="班级名称">
                         <el-input v-model="createClassName" placeholder="例如：一年级三班" />
+                    </el-form-item>
+                    <el-form-item label="学期名称">
+                        <el-input v-model="createSemesterName" placeholder="例如：2025-2026学年上学期" />
                     </el-form-item>
                 </el-form>
                 <template #footer>

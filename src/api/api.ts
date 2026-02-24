@@ -1,4 +1,4 @@
-import type { ApiResponse } from "@/types/api";
+import { ApiRequestError, type ApiResponse } from "@/types/api";
 import { ElMessage } from "element-plus";
 import { useCacheStore } from "@/stores/cacheStore";
 import router from "@/routers";
@@ -44,13 +44,13 @@ function handleResponse<T>(response: ApiResponse<T>): ApiResponse<T> {
     const errorMessage = response.message || "登录已过期，请重新登录";
     showMessage(errorMessage, "error");
     void redirectToAuth();
-    throw new Error(errorMessage);
+    throw new ApiRequestError(errorMessage);
   }
   if (response.code === 0 || response.code === 200) {
     return response;
   } else {
     showMessage(response.message || "操作失败", "error");
-    throw new Error(response.message || "请求失败");
+    throw new ApiRequestError(response.message || "请求失败");
   }
 }
 
@@ -91,14 +91,14 @@ async function request<T>(
     cacheStore.setExpired(true);
     const errorMessage = '登录已过期, 请退出并重新登录';
     showMessage(errorMessage, "error");
-    throw new Error(errorMessage);
+    throw new ApiRequestError(errorMessage);
   }
 
   if (!response.ok) {
     const errResp = (await safeParseJson<unknown>(response)) as ApiResponse<unknown> | null;
     const errorMessage = errResp?.message || `HTTP error! status: ${response.status}`;
     showMessage(errorMessage, "error");
-    throw new Error(errorMessage);
+    throw new ApiRequestError(errorMessage);
   }
 
   const jsonResponse = (await safeParseJson<T>(response)) as ApiResponse<T>;
@@ -121,14 +121,14 @@ async function requestBlob(
     cacheStore.setExpired(true);
     const errorMessage = '登录已过期, 请退出并重新登录';
     showMessage(errorMessage, "error");
-    throw new Error(errorMessage);
+    throw new ApiRequestError(errorMessage);
   }
 
   if (!response.ok) {
     const errResp = (await safeParseJson<unknown>(response)) as ApiResponse<unknown> | null;
     const errorMessage = errResp?.message || `HTTP error! status: ${response.status}`;
     showMessage(errorMessage, "error");
-    throw new Error(errorMessage);
+    throw new ApiRequestError(errorMessage);
   }
 
   return await response.blob();

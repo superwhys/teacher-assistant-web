@@ -80,4 +80,49 @@ const emit = defineEmits<{
     </div>
 </template>
 
+<style scoped>
+.records-wrapper {
+    padding-bottom: 20px;
+}
+
+.records-pagination {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 14px;
+}
+
+.empty-records {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    color: #888;
+}
+
+.empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    color: #c6c6c6;
+}
+
+.empty-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.empty-sub {
+    font-size: 14px;
+    color: #999;
+}
+
+.points-badge {
+    padding: 4px 12px;
+    background: #fff7ed;
+    color: #ea580c;
+    border-radius: 999px;
+    font-weight: 600;
+}
+</style>
 

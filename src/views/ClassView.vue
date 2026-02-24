@@ -201,8 +201,7 @@ async function removeStudent(student: UiStudent) {
         await studentManager.delete(student.id)
         ElMessage.success('已删除')
         await refresh()
-    } catch (err) {
-        if (err) ElMessage.error('删除失败')
+    } catch {
     }
 }
 
@@ -216,7 +215,6 @@ async function handleAddSingle(payload: { name: string, gender: ApiGender }) {
         ElMessage.success('已添加学生')
         await refresh()
     } catch {
-        ElMessage.error('添加学生失败')
     }
 }
 
@@ -230,7 +228,6 @@ async function handleAddBatch(payload: { students: CreateStudentReq[] }) {
         ElMessage.success('已批量添加')
         await refresh()
     } catch {
-        ElMessage.error('批量添加学生失败')
     }
 }
 
@@ -247,7 +244,6 @@ async function handleSaveStudentEdit(payload: { id: number, name: string, gender
         editingStudent.value = null
         await refresh()
     } catch {
-        ElMessage.error('保存失败')
     }
 }
 
@@ -258,7 +254,6 @@ async function handleCreateGroup(payload: { name: string }) {
         ElMessage.success('已创建分组')
         await refresh()
     } catch {
-        ElMessage.error('创建分组失败')
     }
 }
 
@@ -268,7 +263,6 @@ async function handleDeleteGroup(payload: { groupId: number }) {
         ElMessage.success('已删除分组')
         await refresh()
     } catch {
-        ElMessage.error('删除分组失败')
     }
 }
 
@@ -295,7 +289,6 @@ async function handleSaveGroupMembers(payload: { groupId: number, memberIds: num
         ElMessage.success('已保存分组成员')
         await refresh()
     } catch {
-        ElMessage.error('保存分组成员失败')
     }
 }
 
@@ -323,7 +316,6 @@ async function handleConfirmGroupImport(payload: { groups: Array<{ groupName: st
         ElMessage.success('分组导入完成')
         await refresh()
     } catch {
-        ElMessage.error('分组导入失败')
     }
 }
 </script>

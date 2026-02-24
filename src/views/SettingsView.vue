@@ -84,7 +84,6 @@ async function confirmNextSemester() {
             window.location.reload()
         }, 300)
     } catch {
-        ElMessage.error('切换学期失败')
     } finally {
         nextSemesterLoading.value = false
     }

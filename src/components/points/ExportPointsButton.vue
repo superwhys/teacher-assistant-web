@@ -5,6 +5,7 @@ import { studentManager } from '@/managers/student'
 import { pointsManager, type UiPointsRule } from '@/managers/points'
 import type { StudentGroupDTO } from '@/types/student'
 import type { ExportPointsRecordsPreviewReq, ExportSort, ExportType } from '@/types/points'
+import { isApiRequestError } from '@/types/api'
 
 const props = defineProps<{
     activeClassId: string | null
@@ -73,10 +74,14 @@ async function ensureBaseLoaded(classId: number) {
         ])
         groupsOfActive.value = groups ?? []
         rulesOfActive.value = rules ?? []
-    } catch (err: any) {
+    } catch (err) {
         groupsOfActive.value = []
         rulesOfActive.value = []
-        ElMessage.error(`加载导出选项失败：${err?.message || '未知错误'}`)
+
+        if (!isApiRequestError(err)) {
+            console.error(err)
+            ElMessage.error('加载导出选项失败')
+        }
     } finally {
         baseLoading.value = false
     }
@@ -156,11 +161,10 @@ async function refreshPreview() {
         previewKey.value = String(resp.key ?? '')
         previewHeaders.value = resp.headers ?? []
         previewValues.value = resp.values ?? []
-    } catch (err: any) {
+    } catch {
         previewKey.value = ''
         previewHeaders.value = []
         previewValues.value = []
-        ElMessage.error(`预览失败：${err?.message || '未知错误'}`)
     } finally {
         previewLoading.value = false
     }
@@ -282,8 +286,7 @@ async function doExportExcel() {
         window.URL.revokeObjectURL(url)
         ElMessage.success('导出成功')
         exportVisible.value = false
-    } catch (err: any) {
-        ElMessage.error(`导出失败：${err?.message || '未知错误'}`)
+    } catch {
     } finally {
         exportLoading.value = false
     }
@@ -316,12 +319,8 @@ async function doExportExcel() {
             <div class="form-row" v-if="exportScope === 'group'">
                 <el-form-item label="选择分组" class="full-width">
                     <el-select v-model="exportGroupId" placeholder="请选择分组" size="default" class="full-width-select">
-                        <el-option
-                            v-for="g in groupOptions"
-                            :key="g.id"
-                            :label="`${g.name}（${g.count}）`"
-                            :value="g.id"
-                        />
+                        <el-option v-for="g in groupOptions" :key="g.id" :label="`${g.name}（${g.count}）`"
+                            :value="g.id" />
                     </el-select>
                 </el-form-item>
             </div>
@@ -333,44 +332,32 @@ async function doExportExcel() {
                         <el-option label="积分倒序" value="points-desc" />
                     </el-select>
                 </el-form-item>
-                
+
                 <el-form-item label="按积分项筛选" class="half-width">
-                    <el-select v-model="filterItemIds" placeholder="全部积分项" clearable multiple collapse-tags collapse-tags-tooltip size="default">
-                        <el-option
-                            v-for="item in allPointsItems"
-                            :key="item.id"
+                    <el-select v-model="filterItemIds" placeholder="全部积分项" clearable multiple collapse-tags
+                        collapse-tags-tooltip size="default">
+                        <el-option v-for="item in allPointsItems" :key="item.id"
                             :label="`${item.groupName ? item.groupName + ' / ' : ''}${item.name}${item.sign === 'plus' ? ' (加分)' : ' (扣分)'}`"
-                            :value="item.id"
-                        />
+                            :value="item.id" />
                     </el-select>
                 </el-form-item>
             </div>
 
             <el-form-item label="时间范围 (可选)" class="full-width">
-                <el-date-picker
-                    v-model="dateRange"
-                    type="datetimerange"
-                    range-separator="至"
-                    start-placeholder="开始时间"
-                    end-placeholder="结束时间"
-                    :default-time="defaultTime"
-                    size="default"
-                    class="date-range-picker"
-                />
+                <el-date-picker v-model="dateRange" type="datetimerange" range-separator="至" start-placeholder="开始时间"
+                    end-placeholder="结束时间" :default-time="defaultTime" size="default" class="date-range-picker" />
             </el-form-item>
 
             <div class="preview-section">
                 <div class="preview-header">
                     <span>数据预览 ({{ previewRows.length }} 条)</span>
                 </div>
-                <div
-                    class="preview-table-wrapper"
-                    v-loading="previewLoading"
-                    element-loading-text="预览生成中..."
-                    element-loading-background="rgba(255, 255, 255, 0.65)"
-                >
-                    <el-table :data="previewRows" size="small" border stripe :style="{ width: '100%', height: '200px' }">
-                        <el-table-column v-for="col in previewColumns" :key="col.prop" :prop="col.prop" :label="col.label" />
+                <div class="preview-table-wrapper" v-loading="previewLoading" element-loading-text="预览生成中..."
+                    element-loading-background="rgba(255, 255, 255, 0.65)">
+                    <el-table :data="previewRows" size="small" border stripe
+                        :style="{ width: '100%', height: '200px' }">
+                        <el-table-column v-for="col in previewColumns" :key="col.prop" :prop="col.prop"
+                            :label="col.label" />
                         <template #empty>
                             <div class="empty-preview">无数据</div>
                         </template>
@@ -455,5 +442,3 @@ async function doExportExcel() {
     text-align: center;
 }
 </style>
-
-

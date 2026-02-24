@@ -39,27 +39,15 @@ const emit = defineEmits<{
 <template>
     <div class="bottom-actions">
         <div class="filter-row">
-            <el-select
-                :model-value="selectedGroupId ?? 0"
-                placeholder="全部学生"
-                class="group-filter"
-                :disabled="!activeClassId"
-                clearable
-                size="large"
-                @update:model-value="emit('update:selectedGroupId', ($event || 0) === 0 ? null : $event)"
-            >
+            <el-select :model-value="selectedGroupId ?? 0" placeholder="全部学生" class="group-filter"
+                :disabled="!activeClassId" clearable size="large"
+                @update:model-value="emit('update:selectedGroupId', ($event || 0) === 0 ? null : $event)">
                 <el-option label="全部学生" :value="0" />
                 <el-option v-for="g in groups" :key="g.id" :label="g.name" :value="g.id" />
             </el-select>
 
-            <el-select
-                :model-value="sortBy"
-                placeholder="排序方式"
-                class="sort-filter"
-                :disabled="!activeClassId"
-                size="large"
-                @update:model-value="emit('update:sortBy', $event)"
-            >
+            <el-select :model-value="sortBy" placeholder="排序方式" class="sort-filter" :disabled="!activeClassId"
+                size="large" @update:model-value="emit('update:sortBy', $event)">
                 <el-option label="默认排序" value="default" />
                 <el-option label="姓名 A-Z" value="name-asc">
                     <div class="sort-option">
@@ -99,14 +87,8 @@ const emit = defineEmits<{
                 </el-option>
             </el-select>
 
-            <el-input
-                :model-value="keyword"
-                class="search-input"
-                placeholder="搜索学生"
-                clearable
-                size="large"
-                @update:model-value="emit('update:keyword', $event)"
-            >
+            <el-input :model-value="keyword" class="search-input" placeholder="搜索学生" clearable size="large"
+                @update:model-value="emit('update:keyword', $event)">
                 <template #prefix>
                     <i-ep-search />
                 </template>
@@ -114,41 +96,25 @@ const emit = defineEmits<{
         </div>
 
         <div class="main-actions-row">
-            <el-button
-                size="large"
-                type="primary"
-                class="action-btn"
-                :disabled="!activeClassId || !hasStudents"
-                @click="emit('open-apply-all', { tab: 'plus' })"
-            >
+            <el-button size="large" type="primary" class="action-btn" :disabled="!activeClassId || !hasStudents"
+                @click="emit('open-apply-all', { tab: 'plus' })">
                 <template #icon><i-ep-plus /></template>
                 {{ selectedCount > 0 ? `批量加分（${selectedCount}）` : '全体加分' }}
             </el-button>
 
-            <el-button v-if="selectedCount > 0" size="large" type="info" plain class="clear-btn" @click="emit('clear-selection')">
+            <el-button v-if="selectedCount > 0" size="large" type="info" plain class="clear-btn"
+                @click="emit('clear-selection')">
                 <template #icon><i-ep-close /></template>
                 清空
             </el-button>
-            <el-button
-                v-else
-                size="large"
-                type="warning"
-                plain
-                class="undo-btn"
-                :disabled="!activeClassId || !canUndo"
-                @click="emit('undo-once')"
-            >
+            <el-button v-else size="large" type="warning" plain class="undo-btn" :disabled="!activeClassId || !canUndo"
+                @click="emit('undo-once')">
                 <template #icon><i-ep-refresh-left /></template>
                 撤回
             </el-button>
 
-            <el-button
-                size="large"
-                type="danger"
-                class="action-btn"
-                :disabled="!activeClassId || !hasStudents"
-                @click="emit('open-apply-all', { tab: 'minus' })"
-            >
+            <el-button size="large" type="danger" class="action-btn" :disabled="!activeClassId || !hasStudents"
+                @click="emit('open-apply-all', { tab: 'minus' })">
                 <template #icon><i-ep-minus /></template>
                 {{ selectedCount > 0 ? `批量扣分（${selectedCount}）` : '全体扣分' }}
             </el-button>
@@ -286,5 +252,3 @@ const emit = defineEmits<{
     }
 }
 </style>
-
-

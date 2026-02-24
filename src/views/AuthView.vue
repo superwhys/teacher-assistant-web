@@ -85,9 +85,7 @@ async function handleSendEmailCode(): Promise<void> {
         await authApi.sendEmailCode({ email })
         ElMessage.success('验证码已发送，请查收邮箱')
         startCountdown()
-    } catch (err) {
-        const message = (err as Error).message || '验证码发送失败'
-        ElMessage.error(message)
+    } catch {
     } finally {
         sendLoading.value = false
     }
@@ -125,8 +123,6 @@ async function handleLogin(): Promise<void> {
         await maybeRedirect()
     } catch (err) {
         cacheStore.logout()
-        const message = (err as Error).message || '登录失败'
-        ElMessage.error(message)
     } finally {
         loginLoading.value = false
     }
@@ -172,9 +168,7 @@ async function handleRegister(): Promise<void> {
         loginForm.email = email
         loginForm.password = ''
         registerForm.code = ''
-    } catch (err) {
-        const message = (err as Error).message || '注册失败'
-        ElMessage.error(message)
+    } catch {
     } finally {
         registerLoading.value = false
     }

@@ -101,4 +101,89 @@ function getSelectedStudentClass(): string {
     </el-dialog>
 </template>
 
+<style scoped>
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.exchange-form {
+    padding-top: 10px;
+}
+
+.student-option-enough {
+    color: #10b981;
+    font-weight: 500;
+}
+
+.student-option-insufficient {
+    color: #ef4444;
+    font-weight: 500;
+}
+
+.select-insufficient :deep(.el-input__wrapper) {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 1px #ef4444 inset !important;
+}
+
+.select-insufficient :deep(.el-input__wrapper:hover) {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 1px #ef4444 inset !important;
+}
+
+.select-insufficient :deep(.el-input__wrapper.is-focus) {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 1px #ef4444 inset !important;
+}
+
+.select-insufficient :deep(.el-input__inner) {
+    color: #ef4444 !important;
+    font-weight: 500 !important;
+}
+
+.select-insufficient :deep(.el-select__placeholder) {
+    color: #ef4444 !important;
+}
+
+.select-insufficient :deep(.el-select__selected-item) {
+    color: #ef4444 !important;
+}
+
+.select-insufficient :deep(input) {
+    color: #ef4444 !important;
+}
+
+.select-enough :deep(.el-input__wrapper) {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 1px #10b981 inset !important;
+}
+
+.select-enough :deep(.el-input__wrapper:hover) {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 1px #10b981 inset !important;
+}
+
+.select-enough :deep(.el-input__wrapper.is-focus) {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 1px #10b981 inset !important;
+}
+
+.select-enough :deep(.el-input__inner) {
+    color: #10b981 !important;
+    font-weight: 500 !important;
+}
+
+.select-enough :deep(.el-select__placeholder) {
+    color: #10b981 !important;
+}
+
+.select-enough :deep(.el-select__selected-item) {
+    color: #10b981 !important;
+}
+
+.select-enough :deep(input) {
+    color: #10b981 !important;
+}
+</style>
 

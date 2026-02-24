@@ -195,4 +195,78 @@ function confirmImport() {
     </el-dialog>
 </template>
 
+<style scoped>
+.upload-area {
+    margin-bottom: 16px;
+}
+
+.upload-icon {
+    font-size: 48px;
+    color: #2d5cf6;
+    margin-bottom: 12px;
+}
+
+.upload-file-name {
+    margin-top: 4px;
+    color: var(--el-text-color-regular);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.upload-file-name .file-icon {
+    font-size: 16px;
+}
+
+.upload-file-name .change-hint {
+    color: var(--el-text-color-secondary);
+}
+
+.excel-guide {
+    margin-top: 8px;
+    color: var(--el-text-color-regular);
+    font-size: 13px;
+}
+
+.guide-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.guide-list {
+    padding-left: 18px;
+    margin: 0;
+}
+
+.excel-preview {
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px dashed var(--el-border-color);
+    border-radius: 8px;
+}
+
+.preview-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.preview-title {
+    font-weight: 600;
+}
+
+.preview-meta {
+    width: 100%;
+}
+
+.preview-actions {
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+</style>
 

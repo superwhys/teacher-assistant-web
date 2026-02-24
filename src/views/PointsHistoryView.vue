@@ -101,8 +101,7 @@ async function undoAction(actionId: number) {
         await pointsManager.undoApply(actionId)
         ElMessage.success('已撤回')
         await fetchRecords()
-    } catch (err) {
-        if (err) ElMessage.error('撤回失败')
+    } catch {
     }
 }
 

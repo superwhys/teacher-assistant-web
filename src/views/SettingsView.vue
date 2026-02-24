@@ -74,7 +74,7 @@ async function confirmNextSemester() {
     try {
         await classManager.nextSemester(activeClassId.value, {
             semester_name: name,
-            clear_points: nextSemesterClearPoints.value,
+            is_clear_points: nextSemesterClearPoints.value,
         })
         nextSemesterDialogVisible.value = false
         nextSemesterName.value = ''

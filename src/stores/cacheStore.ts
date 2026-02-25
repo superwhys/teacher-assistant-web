@@ -10,6 +10,7 @@ const USER_CACHE_PREFIX = 'ta_cache:'
 type UserScopedCache = {
     activeClassId?: number | null
     activeClassName?: string | null
+    activeSemesterName?: string | null
     studentsSort?: StudentsSortOption | null
     classLayout?: 'card' | 'list' | null
     pointsSelectedGroupByClass?: Record<string, number | null> | null
@@ -35,6 +36,7 @@ function safeParseJson<T>(raw: string | null): T | null {
 export const useCacheStore = defineStore('cache', () => {
     let activeClassId = ref<number | null>(null)
     let activeClassName = ref<string | null>(null)
+    let activeSemesterName = ref<string | null>(null)
     let studentsSort = ref<StudentsSortOption | null>(null)
     let classLayout = ref<'card' | 'list' | null>(null)
     let pointsSelectedGroupByClass = ref<Record<string, number | null>>({})
@@ -68,6 +70,7 @@ export const useCacheStore = defineStore('cache', () => {
 
         activeClassId.value = typeof obj.activeClassId === 'number' ? obj.activeClassId : null
         activeClassName.value = typeof obj.activeClassName === 'string' ? obj.activeClassName : null
+        activeSemesterName.value = typeof obj.activeSemesterName === 'string' ? obj.activeSemesterName : null
         studentsSort.value = (obj.studentsSort as StudentsSortOption | null) ?? null
         classLayout.value = (obj.classLayout as any) ?? null
         pointsSelectedGroupByClass.value = (obj.pointsSelectedGroupByClass && typeof obj.pointsSelectedGroupByClass === 'object')
@@ -95,6 +98,7 @@ export const useCacheStore = defineStore('cache', () => {
         const payload: UserScopedCache = {
             activeClassId: activeClassId.value,
             activeClassName: activeClassName.value,
+            activeSemesterName: activeSemesterName.value,
             studentsSort: studentsSort.value,
             classLayout: classLayout.value,
             pointsSelectedGroupByClass: pointsSelectedGroupByClass.value,
@@ -192,6 +196,18 @@ export const useCacheStore = defineStore('cache', () => {
 
     function clearActiveClassName() {
         activeClassName.value = null
+    }
+
+    function setActiveSemesterName(name: string) {
+        activeSemesterName.value = name
+    }
+
+    function getActiveSemesterName() {
+        return activeSemesterName.value
+    }
+
+    function clearActiveSemesterName() {
+        activeSemesterName.value = null
     }
 
     function setStudentsSort(sort: StudentsSortOption) {
@@ -310,6 +326,7 @@ export const useCacheStore = defineStore('cache', () => {
         // 清空内存态（不删除本地 user cache，便于下次同账号登录恢复）
         activeClassId.value = null
         activeClassName.value = null
+        activeSemesterName.value = null
         studentsSort.value = null
         classLayout.value = null
         pointsSelectedGroupByClass.value = {}
@@ -335,6 +352,7 @@ export const useCacheStore = defineStore('cache', () => {
         [
             activeClassId,
             activeClassName,
+            activeSemesterName,
             studentsSort,
             classLayout,
             pointsSelectedGroupByClass,
@@ -362,6 +380,10 @@ export const useCacheStore = defineStore('cache', () => {
         setActiveClassName,
         getActiveClassName,
         clearActiveClassName,
+        activeSemesterName,
+        setActiveSemesterName,
+        getActiveSemesterName,
+        clearActiveSemesterName,
         studentsSort,
         setStudentsSort,
         getStudentsSort,
@@ -389,6 +411,7 @@ export const useCacheStore = defineStore('cache', () => {
         displayName,
         isLocked,
         dataVersion,
+        bumpDataVersion,
         hasLockPassword,
         setLockPassword,
         clearLockPassword,

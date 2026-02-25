@@ -17,6 +17,7 @@ const isLoginExpired = computed(() => cacheStore.isExpired)
 const isAuthenticated = computed(() => cacheStore.isAuthenticated)
 const activeClassId = computed(() => cacheStore.getActiveClassId())
 const activeClassName = computed(() => cacheStore.getActiveClassName())
+const activeSemesterName = computed(() => cacheStore.getActiveSemesterName())
 const userInitial = computed(() => {
     const name = String(displayName.value ?? '').trim()
     if (!name || name === '未登录') return '用'
@@ -36,7 +37,11 @@ const currentClass = computed(() => {
     return classes.value.find(c => c.id === activeClassId.value) ?? null
 })
 const currentClassName = computed(() => currentClass.value?.name ?? activeClassName.value ?? '')
-const currentSemesterName = computed(() => currentClass.value?.semester_name?.trim() ?? '')
+const currentSemesterName = computed(() => {
+    const nameFromStore = activeSemesterName.value?.trim() ?? ''
+    if (nameFromStore) return nameFromStore
+    return currentClass.value?.semester_name?.trim() ?? ''
+})
 const nextSemesterDialogVisible = ref(false)
 const nextSemesterName = ref('')
 const nextSemesterClearPoints = ref(false)
@@ -168,7 +173,7 @@ onMounted(() => {
     void loadClassesFromApi()
 })
 
-watch([isAuthenticated, () => cacheStore.profile?.id], ([authed]) => {
+watch([isAuthenticated, () => cacheStore.profile?.id, activeClassId, () => cacheStore.dataVersion], ([authed]) => {
     if (authed) {
         void loadClassesFromApi()
     } else {

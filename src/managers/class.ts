@@ -1,5 +1,5 @@
 import { classApi } from "@/api/class"
-import type { ClassDTO, NextSemesterReq } from "@/types/class"
+import type { ClassDTO, NextSemesterReq, SemesterDTO, UpdateSemesterReq } from "@/types/class"
 
 export const classManager = {
     async create(name: string) {
@@ -18,5 +18,12 @@ export const classManager = {
     },
     async nextSemester(classId: number, data: NextSemesterReq): Promise<void> {
         await classApi.nextSemester(classId, data)
+    },
+    async listSemesters(classId: number): Promise<SemesterDTO[]> {
+        const resp = await classApi.listSemesters(classId)
+        return resp.data?.semesters ?? []
+    },
+    async updateSemester(classId: number, data: UpdateSemesterReq): Promise<void> {
+        await classApi.updateSemester(classId, data)
     },
 }

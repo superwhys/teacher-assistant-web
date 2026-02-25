@@ -43,10 +43,35 @@ export type NextSemesterReq = {
 }
 
 /**
+ * 学期实体
+ */
+export type SemesterDTO = {
+    id?: number
+    class_id?: number
+    name?: string
+    start_date?: string
+    end_date?: string
+}
+
+/**
+ * 切换到指定学期请求体
+ */
+export type UpdateSemesterReq = {
+    classID?: number
+    semester_id?: number
+}
+
+/**
  * 班级列表响应 data
  */
 export type ListClassesResp = {
     classes?: ClassDTO[]
 }
 
+/**
+ * 学期列表响应 data
+ */
+export type ListSemestersResp = {
+    semesters?: SemesterDTO[]
+}
 

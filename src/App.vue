@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { formatTimeHHmm, formatChineseDateWithWeek } from '@/utils/date'
 import { ElButton, ElMessage, ElMessageBox } from 'element-plus'
 import { classManager } from '@/managers/class'
-import type { ClassDTO } from '@/types/class'
+import type { ClassDTO, SemesterDTO } from '@/types/class'
 import { useCacheStore } from '@/stores/cacheStore'
 import { useMainLoadingStore } from '@/stores/mainLoadingStore'
 import { userApi } from '@/api/user'
@@ -60,14 +60,23 @@ const currentClass = computed(() => {
     if (!activeClassId.value) return null
     return classes.value.find(c => c.id === activeClassId.value) ?? null
 })
-const currentSemesterName = computed(() => {
-    return currentClass.value?.semester_name?.trim() ?? ''
+const semesters = ref<SemesterDTO[]>([])
+const semestersLoading = ref(false)
+const isSemesterReady = ref(false)
+const semesterSwitching = ref(false)
+const semesterSelectId = ref<number | null>(null)
+let semesterRequestSeq = 0
+const semesterOptions = computed(() => {
+    return semesters.value.filter((s): s is { id: number, name: string } => {
+        return typeof s.id === 'number' && typeof s.name === 'string' && s.name.trim().length > 0
+    })
 })
 
 // 同步当前班级名称到 cacheStore，供各页面展示
 watch([activeClassId, classes], ([cid]) => {
     if (!cid) {
         cacheStore.clearActiveClassName()
+        cacheStore.clearActiveSemesterName()
         return
     }
     const name = classes.value.find(c => c.id === cid)?.name ?? null
@@ -92,6 +101,57 @@ async function loadClassesFromApi() {
         }
     } finally {
         classesLoading.value = false
+    }
+}
+
+function resetSemestersState() {
+    semesters.value = []
+    semesterSelectId.value = null
+    isSemesterReady.value = false
+    cacheStore.clearActiveSemesterName()
+}
+
+function syncActiveSemesterNameToCache() {
+    const semesterName = semesterOptions.value.find(s => s.id === semesterSelectId.value)?.name?.trim() ?? ''
+    if (semesterName) {
+        cacheStore.setActiveSemesterName(semesterName)
+    } else {
+        cacheStore.clearActiveSemesterName()
+    }
+}
+
+function syncSemesterSelectWithCurrentClass() {
+    const currentSemesterId = currentClass.value?.semester_id ?? null
+    if (currentSemesterId && semesterOptions.value.some(s => s.id === currentSemesterId)) {
+        semesterSelectId.value = currentSemesterId
+        syncActiveSemesterNameToCache()
+        return
+    }
+    if (semesterSelectId.value && semesterOptions.value.some(s => s.id === semesterSelectId.value)) {
+        syncActiveSemesterNameToCache()
+        return
+    }
+    semesterSelectId.value = null
+    syncActiveSemesterNameToCache()
+}
+
+async function loadSemestersFromApi() {
+    const classId = activeClassId.value
+    if (!isAuthenticated.value || !classId) {
+        resetSemestersState()
+        return
+    }
+    const requestSeq = ++semesterRequestSeq
+    semestersLoading.value = true
+    try {
+        const list = await classManager.listSemesters(classId)
+        if (activeClassId.value !== classId || requestSeq !== semesterRequestSeq) return
+        semesters.value = list
+        syncSemesterSelectWithCurrentClass()
+    } finally {
+        if (requestSeq === semesterRequestSeq) {
+            semestersLoading.value = false
+        }
     }
 }
 
@@ -132,6 +192,49 @@ watch([activeClassId, classOptions], ([cid]) => {
         classSelectId.value = cid
     } else {
         classSelectId.value = null
+    }
+})
+
+watch([isAuthenticated, activeClassId], ([authed, cid]) => {
+    if (!authed || !cid) {
+        resetSemestersState()
+        return
+    }
+    isSemesterReady.value = false
+    void (async () => {
+        await loadSemestersFromApi()
+        if (activeClassId.value === cid) {
+            isSemesterReady.value = true
+        }
+    })()
+}, { immediate: true })
+
+watch([currentClass, semesterOptions], () => {
+    if (!isSemesterReady.value || semesterSwitching.value) return
+    syncSemesterSelectWithCurrentClass()
+})
+
+watch(semesterSelectId, async (next, prev) => {
+    if (!isSemesterReady.value || semesterSwitching.value) return
+    if (!activeClassId.value || !next || next === prev) return
+    const currentSemesterId = currentClass.value?.semester_id ?? null
+    if (next === currentSemesterId) return
+    semesterSwitching.value = true
+    try {
+        await classManager.updateSemester(activeClassId.value, {
+            classID: activeClassId.value,
+            semester_id: next,
+        })
+        ElMessage.success('已切换当前学期')
+        await loadClassesFromApi()
+        await loadSemestersFromApi()
+        cacheStore.bumpDataVersion()
+    } catch {
+        semesterSelectId.value = currentSemesterId
+        syncActiveSemesterNameToCache()
+        ElMessage.error('切换学期失败')
+    } finally {
+        semesterSwitching.value = false
     }
 })
 const userName = computed(() => cacheStore.displayName || '已登录')
@@ -544,8 +647,22 @@ async function confirmUnlock() {
                                 <el-option v-for="c in classOptions" :key="c.id" :label="c.name" :value="c.id" />
                             </el-select>
                             <div v-if="activeClassId" class="semester-info">
-                                <span class="semester-label">当前学期</span>
-                                <span class="semester-name">{{ currentSemesterName || '未设置' }}</span>
+                                <div class="semester-label">当前学期</div>
+                                <el-select
+                                    v-model="semesterSelectId"
+                                    class="semester-select"
+                                    size="default"
+                                    :loading="semestersLoading || semesterSwitching"
+                                    :disabled="!isSemesterReady || semestersLoading || semesterSwitching || semesterOptions.length === 0"
+                                    :placeholder="(!isSemesterReady || semestersLoading) ? '加载学期中…' : '选择学期'"
+                                >
+                                    <el-option v-for="(s, index) in semesterOptions" :key="s.id" :label="s.name" :value="s.id">
+                                        <div class="semester-option-item">
+                                            <span class="semester-option-name">{{ s.name }}</span>
+                                            <el-tag v-if="index === 0" size="small" type="success" effect="plain">最新</el-tag>
+                                        </div>
+                                    </el-option>
+                                </el-select>
                             </div>
                             <div class="class-actions">
                                 <el-button type="primary" size="default" @click="openCreateDialog">
@@ -1208,8 +1325,8 @@ async function confirmUnlock() {
 
 .semester-info {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: stretch;
     gap: 8px;
     padding: 8px 10px;
     border-radius: 10px;
@@ -1224,9 +1341,23 @@ async function confirmUnlock() {
     color: #909399;
 }
 
-.semester-name {
-    color: #303133;
-    font-weight: 600;
+.semester-select {
+    width: 100%;
+}
+
+.semester-option-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+}
+
+.semester-option-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .class-actions {

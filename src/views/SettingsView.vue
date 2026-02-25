@@ -249,7 +249,7 @@ watch([isAuthenticated, () => cacheStore.profile?.id, activeClassId, () => cache
                             <i-ep-refresh-right class="btn-icon" /> 切换学期
                         </el-button>
                     </div>
-                    <div class="semester-tips">切换新学期后，当前学期的积分数据将被归档，无法查看。</div>
+                    <div class="semester-tips">切换新学期后，将无法操作当前学期的积分数据，仅能查看积分记录。</div>
                 </div>
             </BaseCard>
 
@@ -298,7 +298,7 @@ watch([isAuthenticated, () => cacheStore.profile?.id, activeClassId, () => cache
     <el-dialog v-model="nextSemesterDialogVisible" title="切换到新学期" width="460px" @closed="onNextSemesterDialogClosed">
         <div class="semester-warning">
             <i-ep-warning-filled class="warning-icon" />
-            <div class="warning-text">切换新学期后，当前学期的积分数据将被归档，无法查看</div>
+            <div class="warning-text">切换新学期后，将无法操作当前学期的积分数据，仅能查看积分记录。</div>
         </div>
         <el-form label-position="top">
             <el-form-item label="新学期名称">

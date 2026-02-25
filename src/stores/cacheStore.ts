@@ -11,6 +11,7 @@ type UserScopedCache = {
     activeClassId?: number | null
     activeClassName?: string | null
     activeSemesterName?: string | null
+    activeSemesterIsLatest?: boolean | null
     studentsSort?: StudentsSortOption | null
     classLayout?: 'card' | 'list' | null
     pointsSelectedGroupByClass?: Record<string, number | null> | null
@@ -37,6 +38,7 @@ export const useCacheStore = defineStore('cache', () => {
     let activeClassId = ref<number | null>(null)
     let activeClassName = ref<string | null>(null)
     let activeSemesterName = ref<string | null>(null)
+    let activeSemesterIsLatest = ref<boolean | null>(null)
     let studentsSort = ref<StudentsSortOption | null>(null)
     let classLayout = ref<'card' | 'list' | null>(null)
     let pointsSelectedGroupByClass = ref<Record<string, number | null>>({})
@@ -71,6 +73,7 @@ export const useCacheStore = defineStore('cache', () => {
         activeClassId.value = typeof obj.activeClassId === 'number' ? obj.activeClassId : null
         activeClassName.value = typeof obj.activeClassName === 'string' ? obj.activeClassName : null
         activeSemesterName.value = typeof obj.activeSemesterName === 'string' ? obj.activeSemesterName : null
+        activeSemesterIsLatest.value = typeof obj.activeSemesterIsLatest === 'boolean' ? obj.activeSemesterIsLatest : null
         studentsSort.value = (obj.studentsSort as StudentsSortOption | null) ?? null
         classLayout.value = (obj.classLayout as any) ?? null
         pointsSelectedGroupByClass.value = (obj.pointsSelectedGroupByClass && typeof obj.pointsSelectedGroupByClass === 'object')
@@ -99,6 +102,7 @@ export const useCacheStore = defineStore('cache', () => {
             activeClassId: activeClassId.value,
             activeClassName: activeClassName.value,
             activeSemesterName: activeSemesterName.value,
+            activeSemesterIsLatest: activeSemesterIsLatest.value,
             studentsSort: studentsSort.value,
             classLayout: classLayout.value,
             pointsSelectedGroupByClass: pointsSelectedGroupByClass.value,
@@ -208,6 +212,14 @@ export const useCacheStore = defineStore('cache', () => {
 
     function clearActiveSemesterName() {
         activeSemesterName.value = null
+    }
+
+    function setActiveSemesterIsLatest(isLatest: boolean | null) {
+        activeSemesterIsLatest.value = typeof isLatest === 'boolean' ? isLatest : null
+    }
+
+    function getActiveSemesterIsLatest() {
+        return activeSemesterIsLatest.value
     }
 
     function setStudentsSort(sort: StudentsSortOption) {
@@ -324,6 +336,7 @@ export const useCacheStore = defineStore('cache', () => {
         activeClassId.value = null
         activeClassName.value = null
         activeSemesterName.value = null
+        activeSemesterIsLatest.value = null
         studentsSort.value = null
         classLayout.value = null
         pointsSelectedGroupByClass.value = {}
@@ -350,6 +363,7 @@ export const useCacheStore = defineStore('cache', () => {
             activeClassId,
             activeClassName,
             activeSemesterName,
+            activeSemesterIsLatest,
             studentsSort,
             classLayout,
             pointsSelectedGroupByClass,
@@ -381,6 +395,9 @@ export const useCacheStore = defineStore('cache', () => {
         setActiveSemesterName,
         getActiveSemesterName,
         clearActiveSemesterName,
+        activeSemesterIsLatest,
+        setActiveSemesterIsLatest,
+        getActiveSemesterIsLatest,
         studentsSort,
         setStudentsSort,
         getStudentsSort,

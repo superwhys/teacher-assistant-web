@@ -28,7 +28,9 @@ const classRankingItems = ref<StudentRankingItem[]>([])
 
 const activeClassId = computed<number | null>(() => cacheStore.getActiveClassId())
 const activeClassName = computed(() => cacheStore.getActiveClassName() ?? '')
+const activeSemesterIsLatest = computed(() => cacheStore.getActiveSemesterIsLatest())
 const activeClassIdStr = computed<string | null>(() => activeClassId.value ? String(activeClassId.value) : null)
+const isArchivedSemester = computed(() => !!activeClassId.value && activeSemesterIsLatest.value === false)
 
 function toUiGender(gender?: ApiGender): UiPointsStudent['gender'] {
     if (gender === 2) return 'female'
@@ -428,6 +430,10 @@ async function openSelectorForStudents(studentIds: number[], tab: SelectorTab) {
 }
 
 async function openSelectorForAll(tab: SelectorTab) {
+    if (isArchivedSemester.value) {
+        ElMessage.warning('归档学期无法查看积分余额也不支持操作')
+        return
+    }
     const ids = selectedIds.value.length > 0 ? selectedIds.value : filteredStudents.value.map(s => s.id)
     if (!activeClassId.value || ids.length === 0) {
         ElMessage.info('没有可操作的学生')
@@ -445,6 +451,10 @@ async function refreshStudentsAndRanking() {
 }
 
 async function onSelectRule(rule: { id: number; name: string; sign: 'plus' | 'minus'; points: number }) {
+    if (isArchivedSemester.value) {
+        ElMessage.warning('归档学期无法查看积分余额也不支持操作')
+        return
+    }
     if (!activeClassId.value) return
     const ids = selectorTargets.value.filter(id => id > 0)
     if (ids.length === 0) return
@@ -463,6 +473,10 @@ async function onSelectRule(rule: { id: number; name: string; sign: 'plus' | 'mi
 }
 
 async function undoOnce() {
+    if (isArchivedSemester.value) {
+        ElMessage.warning('归档学期无法查看积分余额也不支持操作')
+        return
+    }
     if (!activeClassId.value) return
     const resp = await pointsManager.listApplyRecords({
         class_id: activeClassId.value,
@@ -504,7 +518,13 @@ function openHistory(studentName: string) {
                 element-loading-text="加载中..."
                 element-loading-background="rgba(255, 255, 255, 0.65)"
             >
+                <div v-if="isArchivedSemester" class="archived-semester-tip">
+                    <i-ep-warning-filled class="archived-semester-icon" />
+                    <div class="archived-semester-title">当前为归档学期</div>
+                    <div class="archived-semester-text">归档学期无法查看积分余额也不支持操作</div>
+                </div>
                 <PointsStudentList
+                    v-else
                     :active="!!activeClassId"
                     :class-name="activeClassName"
                     :students="filteredStudents"
@@ -529,14 +549,14 @@ function openHistory(studentName: string) {
         </PointsRankingPanel>
 
         <PointsBottomActions
-            :active-class-id="activeClassId"
+            :active-class-id="isArchivedSemester ? null : activeClassId"
             :groups="groupOptions.map(g => ({ id: g.id, name: g.name, memberCount: g.memberCount }))"
             :selected-group-id="selectedGroupId"
             :sort-by="sortBy"
             :keyword="keyword"
             :selected-count="selectedIds.length"
-            :can-undo="!!activeClassId"
-            :has-students="filteredStudents.length > 0"
+            :can-undo="!!activeClassId && !isArchivedSemester"
+            :has-students="!isArchivedSemester && filteredStudents.length > 0"
             @update:selected-group-id="onSelectedGroupChange($event)"
             @update:sort-by="sortBy = $event"
             @update:keyword="keyword = $event"
@@ -568,5 +588,36 @@ function openHistory(studentName: string) {
     flex: 1;
     min-height: 40vh;
     min-width: 0;
+}
+
+.archived-semester-tip {
+    height: 100%;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: 1px dashed #f3d19e;
+    border-radius: 14px;
+    background: #fffaf2;
+    color: #8a4b07;
+    text-align: center;
+    padding: 24px 16px;
+}
+
+.archived-semester-icon {
+    font-size: 28px;
+}
+
+.archived-semester-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #d46b08;
+}
+
+.archived-semester-text {
+    font-size: 14px;
+    line-height: 1.6;
 }
 </style>

@@ -26,6 +26,8 @@ const cacheStore = useCacheStore()
 const activeTab = ref<'shop' | 'records'>('shop')
 
 const activeClassId = computed<number | null>(() => cacheStore.getActiveClassId())
+const activeSemesterIsLatest = computed(() => cacheStore.getActiveSemesterIsLatest())
+const isArchivedSemester = computed(() => !!activeClassId.value && activeSemesterIsLatest.value === false)
 
 function toNumber(v: unknown, fallback = 0): number {
     const n = typeof v === 'number' ? v : Number(v)
@@ -204,6 +206,10 @@ async function openExchangeDialog(item: Prize) {
         ElMessage.error('请先选择班级')
         return
     }
+    if (isArchivedSemester.value) {
+        ElMessage.warning('归档学期不支持兑换奖品')
+        return
+    }
     if (toNumber(item.stock, 0) <= 0) {
         ElMessage.warning('商品库存不足')
         return
@@ -220,6 +226,10 @@ async function openExchangeDialog(item: Prize) {
 
 async function confirmExchange() {
     if (!activeClassId.value) return
+    if (isArchivedSemester.value) {
+        ElMessage.warning('归档学期不支持兑换奖品')
+        return
+    }
     const studentId = exchangeForm.studentId
     if (!studentId) {
         ElMessage.warning('请选择学生')
@@ -397,10 +407,14 @@ async function onRecordsPageChange(page: number) {
 
         <el-tabs v-model="activeTab" class="shop-tabs">
             <el-tab-pane label="商品列表" name="shop">
+                <div v-if="isArchivedSemester" class="shop-archived-tip">
+                    <i-ep-warning-filled class="shop-archived-icon" />
+                    <span>当前为归档学期，仅支持查看商品，不支持兑换奖品</span>
+                </div>
                 <ShopToolbar @add="openAddItemDialog" @open-import="importDialogVisible = true"
                     @download-template="exportTemplate" />
 
-                <ShopPrizeGrid :items="shopItems" :active="!!activeClassId" :resolve-icon="getShopIconComponent"
+                <ShopPrizeGrid :items="shopItems" :active="!!activeClassId && !isArchivedSemester" :resolve-icon="getShopIconComponent"
                     @edit="openEditItemDialog" @delete="deleteItem" @exchange="openExchangeDialog" />
             </el-tab-pane>
 
@@ -448,5 +462,22 @@ async function onRecordsPageChange(page: number) {
 .shop-tabs :deep(.el-tab-pane) {
     display: flex;
     flex-direction: column;
+}
+
+.shop-archived-tip {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #8a4b07;
+    background: #fff7e6;
+    border: 1px solid #ffe1b3;
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-size: 13px;
+}
+
+.shop-archived-icon {
+    font-size: 16px;
 }
 </style>

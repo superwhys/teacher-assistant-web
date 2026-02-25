@@ -78,6 +78,7 @@ watch([activeClassId, classes], ([cid]) => {
     if (!cid) {
         cacheStore.clearActiveClassName()
         cacheStore.clearActiveSemesterName()
+        cacheStore.setActiveSemesterIsLatest(null)
         return
     }
     const name = classes.value.find(c => c.id === cid)?.name ?? null
@@ -110,6 +111,7 @@ function resetSemestersState() {
     semesterSelectId.value = null
     isSemesterReady.value = false
     cacheStore.clearActiveSemesterName()
+    cacheStore.setActiveSemesterIsLatest(null)
 }
 
 function syncActiveSemesterNameToCache() {
@@ -119,6 +121,12 @@ function syncActiveSemesterNameToCache() {
     } else {
         cacheStore.clearActiveSemesterName()
     }
+    const latestSemesterId = semesterOptions.value[0]?.id ?? null
+    if (!latestSemesterId || !semesterSelectId.value) {
+        cacheStore.setActiveSemesterIsLatest(null)
+        return
+    }
+    cacheStore.setActiveSemesterIsLatest(semesterSelectId.value === latestSemesterId)
 }
 
 function syncSemesterSelectWithCurrentClass() {

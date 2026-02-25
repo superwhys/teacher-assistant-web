@@ -459,7 +459,6 @@ async function onSelectRule(rule: { id: number; name: string; sign: 'plus' | 'mi
         ElMessage.success(`已对「${target}」${rule.sign === 'plus' ? '加' : '减'}${Math.abs(rule.points)} 分（${rule.name}）`)
         if (selectedIds.value.length > 0) clearSelection()
     } catch {
-        ElMessage.error('操作失败')
     }
 }
 
@@ -480,7 +479,6 @@ async function undoOnce() {
         await refreshStudentsAndRanking()
         ElMessage.success('已撤回最近一次操作')
     } catch {
-        ElMessage.error('撤回失败')
     }
 }
 

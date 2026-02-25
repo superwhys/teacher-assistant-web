@@ -238,6 +238,8 @@ function onSelect(rule: UiRule) {
 
 .item-name {
     font-size: 15px;
+    text-align: left;
+    justify-self: start;
 }
 
 .item-value {

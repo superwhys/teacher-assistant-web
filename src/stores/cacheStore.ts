@@ -300,11 +300,8 @@ export const useCacheStore = defineStore('cache', () => {
         loadUserScopedCache(user?.id)
     }
 
-    function setTokenOnly(tokenValue: string, trial: boolean, expiresAt?: number | null): void {
+    function setTokenOnly(tokenValue: string): void {
         token.value = tokenValue
-        isTrial.value = trial
-        trialExpiresAt.value = typeof expiresAt === 'number' ? expiresAt : null
-        isExpired.value = false
     }
 
     function updateProfile(user: UserProfile): void {

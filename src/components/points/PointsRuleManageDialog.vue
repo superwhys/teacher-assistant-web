@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pointsManager } from '@/managers/points'
 import type { Rule, RuleGroup } from '@/types/points'
+import { isApiRequestError } from '@/types/api'
 
 defineOptions({ name: 'PointsRuleManageDialog' })
 
@@ -106,8 +107,11 @@ async function onAddGroup() {
         selectedGroupId.value = createdId || selectedGroupId.value
         ElMessage.success('已新增分组')
         emit('changed', groups.value)
-    } catch (err: any) {
-        ElMessage.error(err?.message || '新增分组失败')
+    } catch (err) {
+        if (!isApiRequestError(err)) {
+            console.error(err)
+            ElMessage.error('新增分组失败')
+        }
     } finally {
         loading.value = false
     }
@@ -142,7 +146,12 @@ async function onRemoveGroupManage(groupId: number) {
         await loadGroups()
         ElMessage.success('已删除分组及其分值项')
         emit('changed', groups.value)
-    } catch { } finally {
+    } catch (err) {
+        if (!isApiRequestError(err)) {
+            console.error(err)
+            ElMessage.error('删除分组失败')
+        }
+    } finally {
         loading.value = false
     }
 }
@@ -157,7 +166,12 @@ async function onRemoveItem(rule: Rule) {
         await loadGroups()
         ElMessage.success('已删除')
         emit('changed', groups.value)
-    } catch { } finally {
+    } catch (err) {
+        if (!isApiRequestError(err)) {
+            console.error(err)
+            ElMessage.error('删除分值项失败')
+        }
+    } finally {
         loading.value = false
     }
 }
@@ -200,8 +214,11 @@ async function onSaveItem() {
         itemEditVisible.value = false
         await loadGroups()
         emit('changed', groups.value)
-    } catch (err: any) {
-        ElMessage.error(err?.message || '保存失败')
+    } catch (err) {
+        if (!isApiRequestError(err)) {
+            console.error(err)
+            ElMessage.error('保存分值项失败')
+        }
     } finally {
         loading.value = false
     }
@@ -209,14 +226,8 @@ async function onSaveItem() {
 </script>
 
 <template>
-    <el-dialog
-        v-model="innerVisible"
-        title="分值项管理"
-        width="1000px"
-        class="points-rule-manage-dialog"
-        modal-class="points-rule-manage-modal"
-        align-center
-    >
+    <el-dialog v-model="innerVisible" title="分值项管理" width="1000px" class="points-rule-manage-dialog"
+        modal-class="points-rule-manage-modal" align-center>
         <div class="manage-shell" v-loading="loading" element-loading-text="加载中...">
             <aside class="sidebar">
                 <div class="panel">
@@ -229,22 +240,13 @@ async function onSaveItem() {
 
                     <div class="group-create">
                         <div class="group-create-inputs">
-                            <el-input
-                                v-model="newGroupName"
-                                size="default"
-                                clearable
-                                placeholder="分组名称"
-                                class="group-name-input"
-                            />
-                            <el-input v-model="newGroupIcon" size="default" clearable placeholder="emoji" class="icon-input" />
+                            <el-input v-model="newGroupName" size="default" clearable placeholder="分组名称"
+                                class="group-name-input" />
+                            <el-input v-model="newGroupIcon" size="default" clearable placeholder="emoji"
+                                class="icon-input" />
                         </div>
-                        <el-button
-                            type="primary"
-                            size="small"
-                            class="group-add-btn"
-                            :disabled="!newGroupName.trim()"
-                            @click="onAddGroup"
-                        >
+                        <el-button type="primary" size="small" class="group-add-btn" :disabled="!newGroupName.trim()"
+                            @click="onAddGroup">
                             <i-ep-plus /> 新建分组
                         </el-button>
                     </div>
@@ -255,23 +257,15 @@ async function onSaveItem() {
                         </div>
 
                         <div v-else class="group-items">
-                            <div
-                                v-for="g in groups"
-                                :key="g.id"
+                            <div v-for="g in groups" :key="g.id"
                                 :class="['group-item', selectedGroupId === toNumber(g.id, 0) ? 'is-active' : '']"
-                                @click="selectedGroupId = toNumber(g.id, 0)"
-                            >
+                                @click="selectedGroupId = toNumber(g.id, 0)">
                                 <div class="group-item-main">
                                     <span class="group-icon">{{ g.icon || '📁' }}</span>
                                     <span class="group-name" :title="g.name">{{ g.name }}</span>
                                 </div>
-                                <el-button
-                                    type="danger"
-                                    link
-                                    size="small"
-                                    class="group-delete-btn"
-                                    @click.stop="onRemoveGroupManage(toNumber(g.id, 0))"
-                                >
+                                <el-button type="danger" link size="small" class="group-delete-btn"
+                                    @click.stop="onRemoveGroupManage(toNumber(g.id, 0))">
                                     删除
                                 </el-button>
                             </div>
@@ -291,13 +285,8 @@ async function onSaveItem() {
                             </el-tag>
                         </div>
                         <div class="panel-actions">
-                            <el-button
-                                type="primary"
-                                size="small"
-                                class="add-item-btn"
-                                :disabled="!selectedGroupId"
-                                @click="openCreateItem"
-                            >
+                            <el-button type="primary" size="small" class="add-item-btn" :disabled="!selectedGroupId"
+                                @click="openCreateItem">
                                 <i-ep-plus />
                                 新增分值项
                             </el-button>
@@ -305,15 +294,8 @@ async function onSaveItem() {
                     </div>
 
                     <div class="panel-body">
-                        <el-table
-                            v-if="selectedGroupId"
-                            :data="selectedGroupRules"
-                            border
-                            stripe
-                            size="default"
-                            height="100%"
-                            class="rule-table"
-                        >
+                        <el-table v-if="selectedGroupId" :data="selectedGroupRules" border stripe size="default"
+                            height="100%" class="rule-table">
                             <el-table-column type="index" label="#" width="60" />
                             <el-table-column label="名称" min-width="240">
                                 <template #default="{ row }">
@@ -323,7 +305,8 @@ async function onSaveItem() {
                             <el-table-column label="分值" width="120" align="center">
                                 <template #default="{ row }">
                                     <span :class="['badge', inferRuleSign(row) === 'plus' ? 'plus' : 'minus']">
-                                        {{ inferRuleSign(row) === 'plus' ? '+' : '-' }}{{ Math.abs(toNumber(row.points, 0)) }}
+                                        {{ inferRuleSign(row) === 'plus' ? '+' : '-' }}{{ Math.abs(toNumber(row.points,
+                                        0)) }}
                                     </span>
                                 </template>
                             </el-table-column>
@@ -373,7 +356,8 @@ async function onSaveItem() {
         <template #footer>
             <span class="dialog-footer">
                 <el-button :disabled="loading" @click="itemEditVisible = false">取消</el-button>
-                <el-button type="primary" :loading="loading" :disabled="loading || itemValueHasDecimal" @click="onSaveItem">保存</el-button>
+                <el-button type="primary" :loading="loading" :disabled="loading || itemValueHasDecimal"
+                    @click="onSaveItem">保存</el-button>
             </span>
         </template>
     </el-dialog>
@@ -832,5 +816,3 @@ async function onSaveItem() {
     opacity: 1;
 }
 </style>
-
-

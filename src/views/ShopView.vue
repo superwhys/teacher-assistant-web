@@ -134,34 +134,33 @@ async function saveItem() {
     }
 
     try {
-    if (itemDialogMode.value === 'add') {
+        if (itemDialogMode.value === 'add') {
             const payload: CreatePrizeReq = {
                 name: itemForm.name.trim(),
-            points: itemForm.points,
-            stock: itemForm.stock,
-            description: itemForm.description,
+                points: itemForm.points,
+                stock: itemForm.stock,
+                description: itemForm.description,
                 icon: itemForm.icon,
             }
             await shopManager.createPrize(payload)
-        ElMessage.success('商品添加成功')
-    } else {
+            ElMessage.success('商品添加成功')
+        } else {
             if (!itemForm.id) {
                 ElMessage.error('商品 ID 异常')
                 return
             }
             await shopManager.updatePrize(itemForm.id, {
                 name: itemForm.name.trim(),
-            points: itemForm.points,
-            stock: itemForm.stock,
-            description: itemForm.description,
+                points: itemForm.points,
+                stock: itemForm.stock,
+                description: itemForm.description,
                 icon: itemForm.icon,
-        })
-        ElMessage.success('商品更新成功')
-    }
-    itemDialogVisible.value = false
+            })
+            ElMessage.success('商品更新成功')
+        }
+        itemDialogVisible.value = false
         await refreshPrizes()
-    } catch (err: any) {
-        ElMessage.error(err?.message || '保存失败')
+    } catch {
     }
 }
 
@@ -175,12 +174,10 @@ function deleteItem(item: Prize) {
             return
         }
         shopManager.deletePrize(id).then(async () => {
-        ElMessage.success('商品已删除')
+            ElMessage.success('商品已删除')
             await refreshPrizes()
-        }).catch((err: any) => {
-            ElMessage.error(err?.message || '删除失败')
-        })
-    }).catch(() => {})
+        }).catch(() => { })
+    }).catch(() => { })
 }
 
 const exchangeDialogVisible = ref(false)
@@ -261,8 +258,7 @@ async function confirmExchange() {
         if (activeTab.value === 'records') {
             await loadRecordsPage(recordsCurrentPage.value)
         }
-    } catch (err: any) {
-        ElMessage.error(err.message || '兑换失败')
+    } catch {
     }
 }
 
@@ -280,18 +276,16 @@ function undoExchange(record: PrizeRecord) {
             ElMessage.success('兑换记录已撤销')
             await refreshPrizes()
             await loadRecordsPage(recordsCurrentPage.value)
-        }).catch((err: any) => {
-            ElMessage.error(err?.message || '撤销失败')
-        })
-    }).catch(() => {})
+        }).catch(() => { })
+    }).catch(() => { })
 }
 const importDialogVisible = ref(false)
 
 async function confirmImport(items: CreatePrizeReq[]) {
     if (items.length === 0) {
         ElMessage.warning('没有可导入的商品')
-            return
-        }
+        return
+    }
     let successCount = 0
     for (const it of items) {
         try {
@@ -324,8 +318,8 @@ async function ensureStudentsLoaded(): Promise<void> {
     if (!clsId) {
         students.value = []
         studentsLoadedForClassId = null
-            return
-        }
+        return
+    }
     if (studentsLoadedForClassId === clsId && students.value.length > 0) return
     const reqId = ++lastStudentsReqId
     try {
@@ -355,8 +349,8 @@ async function loadRecordsPage(page: number): Promise<void> {
     if (!activeClassId.value) {
         records.value = []
         recordsTotal.value = 0
-            return
-        }
+        return
+    }
     recordsLoading.value = true
     try {
         const nextPage = Math.max(1, toNumber(page, 1))
@@ -403,62 +397,32 @@ async function onRecordsPageChange(page: number) {
 
         <el-tabs v-model="activeTab" class="shop-tabs">
             <el-tab-pane label="商品列表" name="shop">
-                <ShopToolbar
-                    @add="openAddItemDialog"
-                    @open-import="importDialogVisible = true"
-                    @download-template="exportTemplate"
-                />
+                <ShopToolbar @add="openAddItemDialog" @open-import="importDialogVisible = true"
+                    @download-template="exportTemplate" />
 
-                <ShopPrizeGrid
-                    :items="shopItems"
-                    :active="!!activeClassId"
-                    :resolve-icon="getShopIconComponent"
-                    @edit="openEditItemDialog"
-                    @delete="deleteItem"
-                    @exchange="openExchangeDialog"
-                />
+                <ShopPrizeGrid :items="shopItems" :active="!!activeClassId" :resolve-icon="getShopIconComponent"
+                    @edit="openEditItemDialog" @delete="deleteItem" @exchange="openExchangeDialog" />
             </el-tab-pane>
 
             <el-tab-pane label="兑换记录" name="records">
-                <ShopRecordsTable
-                    :records="exchangeRecords"
-                    :loading="recordsLoading"
-                    :total="recordsTotal"
-                    :page-size="recordsPageSize"
-                    :current-page="recordsCurrentPage"
-                    :student-id-name-map="studentIdNameMap"
-                    :prize-id-map="prizeIdMap"
-                    @undo="undoExchange"
-                    @page-change="onRecordsPageChange"
-                />
+                <ShopRecordsTable :records="exchangeRecords" :loading="recordsLoading" :total="recordsTotal"
+                    :page-size="recordsPageSize" :current-page="recordsCurrentPage"
+                    :student-id-name-map="studentIdNameMap" :prize-id-map="prizeIdMap" @undo="undoExchange"
+                    @page-change="onRecordsPageChange" />
             </el-tab-pane>
         </el-tabs>
 
-        <ShopPrizeEditorDialog
-            v-model="itemDialogVisible"
-            :mode="itemDialogMode"
-            :form="itemForm"
-            @save="saveItem"
-        />
+        <ShopPrizeEditorDialog v-model="itemDialogVisible" :mode="itemDialogMode" :form="itemForm" @save="saveItem" />
 
-        <ShopExchangeDialog
-            v-model="exchangeDialogVisible"
-            :form="exchangeForm"
-            :students="studentsForExchange"
-            :required-points="requiredPoints"
-            :available-points-by-student-id="availablePointsByStudentId"
-            :max-count="selectedPrize?.stock || 1"
-            @confirm="confirmExchange"
-        />
+        <ShopExchangeDialog v-model="exchangeDialogVisible" :form="exchangeForm" :students="studentsForExchange"
+            :required-points="requiredPoints" :available-points-by-student-id="availablePointsByStudentId"
+            :max-count="selectedPrize?.stock || 1" @confirm="confirmExchange" />
 
-        <ShopImportDialog
-            v-model="importDialogVisible"
-            @confirm="confirmImport"
-        />
-                </div>
-            </template>
+        <ShopImportDialog v-model="importDialogVisible" @confirm="confirmImport" />
+    </div>
+</template>
 
-<style>
+<style scoped>
 .shop-page {
     width: 100%;
     height: 100%;
@@ -468,23 +432,6 @@ async function onRecordsPageChange(page: number) {
     overflow: hidden;
 }
 
-.header-row {
-    margin-bottom: 20px;
-}
-
-.title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 24px;
-    font-weight: 700;
-}
-
-.title-icon {
-    font-size: 28px;
-    color: #2d5cf6;
-}
-
 .shop-tabs {
     flex: 1;
     display: flex;
@@ -492,541 +439,14 @@ async function onRecordsPageChange(page: number) {
     min-height: 0;
 }
 
-.shop-tabs .el-tabs__content {
+.shop-tabs :deep(.el-tabs__content) {
     flex: 1;
     overflow: auto;
     min-height: 0;
 }
 
-.shop-tabs .el-tab-pane {
+.shop-tabs :deep(.el-tab-pane) {
     display: flex;
     flex-direction: column;
-}
-
-.shop-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 20px;
-    flex-shrink: 0;
-}
-
-.shop-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 16px;
-    padding-bottom: 20px;
-    align-content: start;
-}
-
-.shop-item-card {
-    position: relative;
-    border: 2px solid #e6e8f0;
-    border-radius: 16px;
-    padding: 0;
-    background: #fff;
-    transition: all 0.3s;
-    overflow: hidden;
-}
-
-.shop-item-card:hover {
-    border-color: #2d5cf6;
-    box-shadow: 0 6px 16px rgba(45, 92, 246, 0.12);
-    transform: translateY(-4px);
-}
-
-.card-actions {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    display: flex;
-    gap: 2px;
-    z-index: 10;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-.card-actions .el-button {
-    padding: 4px;
-    background: transparent !important;
-    border: none;
-}
-
-.card-actions .el-button:hover {
-    background: rgba(0, 0, 0, 0.05) !important;
-}
-
-.card-actions .el-button.is-text {
-    background: transparent !important;
-}
-
-.shop-item-card:hover .card-actions {
-    opacity: 1;
-}
-
-.card-content {
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-}
-
-.item-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-}
-
-.item-name {
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
-    text-align: center;
-    line-height: 1.4;
-}
-
-.item-desc {
-    width: 100%;
-    font-size: 12px;
-    color: #999;
-    text-align: center;
-    line-height: 1.5;
-    min-height: 36px;
-    max-height: 48px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-}
-
-.item-price-info {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 0 8px;
-}
-
-.price-row {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: nowrap;
-    gap: 4px;
-}
-
-.coin-icon {
-    font-size: 20px;
-    color: #f59e0b;
-}
-
-.points-number {
-    font-size: 20px;
-    font-weight: 700;
-    color: #f59e0b;
-    line-height: 1;
-    white-space: nowrap;
-}
-
-.points-text {
-    font-size: 14px;
-    color: #f59e0b;
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-.stock-info {
-    font-size: 13px;
-    color: #999;
-    text-align: right;
-}
-
-.stock-info.out-of-stock {
-    color: #ef4444;
-    font-weight: 600;
-}
-
-.exchange-btn {
-    width: 100%;
-    height: 38px;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.records-wrapper {
-    padding-bottom: 20px;
-}
-
-.records-pagination {
-    display: flex;
-    justify-content: flex-end;
-    padding-top: 14px;
-}
-
-.empty-shop,
-.empty-records {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 80px 20px;
-    color: #888;
-}
-
-.empty-icon {
-    font-size: 64px;
-    margin-bottom: 16px;
-    color: #c6c6c6;
-}
-
-.empty-title {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 8px;
-}
-
-.empty-sub {
-    font-size: 14px;
-    color: #999;
-}
-
-.points-badge {
-    padding: 4px 12px;
-    background: #fff7ed;
-    color: #ea580c;
-    border-radius: 999px;
-    font-weight: 600;
-}
-
-.dialog-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-}
-
-.item-form,
-.exchange-form {
-    padding-top: 10px;
-}
-
-.student-option-enough {
-    color: #10b981;
-    font-weight: 500;
-}
-
-.student-option-insufficient {
-    color: #ef4444;
-    font-weight: 500;
-}
-
-.select-insufficient .el-input__wrapper {
-    border-color: #ef4444 !important;
-    box-shadow: 0 0 0 1px #ef4444 inset !important;
-}
-
-.select-insufficient .el-input__wrapper:hover {
-    border-color: #ef4444 !important;
-    box-shadow: 0 0 0 1px #ef4444 inset !important;
-}
-
-.select-insufficient .el-input__wrapper.is-focus {
-    border-color: #ef4444 !important;
-    box-shadow: 0 0 0 1px #ef4444 inset !important;
-}
-
-.select-insufficient .el-input__inner {
-    color: #ef4444 !important;
-    font-weight: 500 !important;
-}
-
-.select-insufficient .el-select__placeholder {
-    color: #ef4444 !important;
-}
-
-.select-insufficient .el-select__selected-item {
-    color: #ef4444 !important;
-}
-
-.select-insufficient input {
-    color: #ef4444 !important;
-}
-
-.select-enough .el-input__wrapper {
-    border-color: #10b981 !important;
-    box-shadow: 0 0 0 1px #10b981 inset !important;
-}
-
-.select-enough .el-input__wrapper:hover {
-    border-color: #10b981 !important;
-    box-shadow: 0 0 0 1px #10b981 inset !important;
-}
-
-.select-enough .el-input__wrapper.is-focus {
-    border-color: #10b981 !important;
-    box-shadow: 0 0 0 1px #10b981 inset !important;
-}
-
-.select-enough .el-input__inner {
-    color: #10b981 !important;
-    font-weight: 500 !important;
-}
-
-.select-enough .el-select__placeholder {
-    color: #10b981 !important;
-}
-
-.select-enough .el-select__selected-item {
-    color: #10b981 !important;
-}
-
-.select-enough input {
-    color: #10b981 !important;
-}
-
-.upload-area {
-    margin-bottom: 16px;
-}
-
-.upload-icon {
-    font-size: 48px;
-    color: #2d5cf6;
-    margin-bottom: 12px;
-}
-
-.upload-file-name {
-    margin-top: 4px;
-    color: var(--el-text-color-regular);
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.upload-file-name .file-icon {
-    font-size: 16px;
-}
-
-.upload-file-name .change-hint {
-    color: var(--el-text-color-secondary);
-}
-
-.excel-guide {
-    margin-top: 8px;
-    color: var(--el-text-color-regular);
-    font-size: 13px;
-}
-
-.guide-title {
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-
-.guide-list {
-    padding-left: 18px;
-    margin: 0;
-}
-
-.excel-preview {
-    margin-top: 12px;
-    padding: 12px;
-    border: 1px dashed var(--el-border-color);
-    border-radius: 8px;
-}
-
-.preview-header {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    margin-bottom: 8px;
-}
-
-.preview-title {
-    font-weight: 600;
-}
-
-.preview-meta {
-    width: 100%;
-}
-
-.preview-actions {
-    margin-top: 10px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-}
-
-@media (max-width: 1024px) {
-    .shop-grid {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    }
-}
-
-@media (max-width: 768px) {
-    .shop-page {
-        padding: 12px;
-    }
-
-    .header-row {
-        margin-bottom: 16px;
-    }
-
-    .title {
-        font-size: 18px;
-        gap: 6px;
-    }
-
-    .title-icon {
-        font-size: 22px;
-    }
-
-    .shop-grid {
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 12px;
-    }
-
-    .shop-toolbar {
-        gap: 10px;
-        margin-bottom: 16px;
-    }
-
-    .shop-toolbar .el-button {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .card-actions {
-        opacity: 1;
-    }
-
-    .card-content {
-        padding: 14px;
-        gap: 10px;
-    }
-
-    .item-icon {
-        width: 44px;
-        height: 44px;
-        font-size: 22px;
-    }
-
-    .item-name {
-        font-size: 15px;
-    }
-
-    .points-number {
-        font-size: 18px;
-    }
-
-    .coin-icon {
-        font-size: 18px;
-    }
-    
-    .points-text {
-        font-size: 12px;
-    }
-
-    .exchange-btn {
-        height: 36px;
-        font-size: 13px;
-    }
-}
-
-@media (max-width: 480px) {
-    .shop-page {
-        padding: 10px;
-    }
-
-    .header-row {
-        margin-bottom: 12px;
-    }
-
-    .title {
-        font-size: 16px;
-        gap: 4px;
-    }
-
-    .title-icon {
-        font-size: 20px;
-    }
-
-    .shop-toolbar {
-        gap: 8px;
-        margin-bottom: 12px;
-    }
-
-    .shop-toolbar .el-button {
-        flex: 1;
-        min-width: 0;
-        font-size: 13px;
-        padding: 8px 10px;
-    }
-
-    .shop-grid {
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-        gap: 10px;
-    }
-
-    .card-content {
-        padding: 12px;
-        gap: 8px;
-    }
-
-    .item-icon {
-        width: 40px;
-        height: 40px;
-        font-size: 20px;
-    }
-
-    .item-name {
-        font-size: 14px;
-    }
-
-    .points-number {
-        font-size: 16px;
-    }
-    
-    .coin-icon {
-        font-size: 16px;
-    }
-    
-    .points-text {
-        font-size: 11px;
-    }
-}
-
-@media (max-width: 360px) {
-    .title {
-        font-size: 15px;
-    }
-
-    .shop-toolbar {
-        gap: 6px;
-    }
-
-    .shop-toolbar .el-button {
-        font-size: 12px;
-        padding: 8px 8px;
-    }
-
-    .shop-toolbar .el-button span {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
 }
 </style>
-
-
-

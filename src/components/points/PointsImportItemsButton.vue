@@ -5,6 +5,7 @@ import type { UploadRawFile, UploadFile, UploadInstance } from 'element-plus'
 import { parseItemsExcelToRows, type ImportItemRow } from '@/utils/pointsImport'
 import { pointsManager } from '@/managers/points'
 import * as XLSX from 'xlsx'
+import { isApiRequestError } from '@/types/api'
 
 defineOptions({ name: 'PointsImportItemsButton' })
 
@@ -74,8 +75,11 @@ async function handleExcelFile(file: File) {
         importParsed.value = rows
         importSkipped.value = skipped
         ElMessage.success(`解析成功：${rows.length} 条，跳过 ${skipped} 条`)
-    } catch (err: any) {
-        ElMessage.error(`导入失败：${err?.message || '未知错误'}`)
+    } catch (err) {
+        if (!isApiRequestError(err)) {
+            console.error(err)
+            ElMessage.error('导入失败')
+        }
     } finally {
         importLoading.value = false
     }

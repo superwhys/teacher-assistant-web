@@ -23,10 +23,7 @@ async function handleSubmit() {
     await submitOpinion({ content: opinionContent.value.trim() })
     ElMessage.success('反馈已提交，感谢您的宝贵意见！')
     opinionContent.value = ''
-  } catch (error) {
-    if (error instanceof Error && error.message !== 'cancel') {
-      ElMessage.error('提交失败，请稍后重试')
-    }
+  } catch {
   } finally {
     submitting.value = false
   }

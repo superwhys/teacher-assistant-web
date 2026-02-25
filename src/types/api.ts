@@ -45,3 +45,16 @@ export interface CloudSyncDataReq {
 }
 
 export type CloudBackupsMap = Record<CloudSyncType, number[]>
+
+export class ApiRequestError extends Error {
+    readonly isApiRequestError = true;
+
+    constructor(message: string) {
+        super(message);
+        this.name = "ApiRequestError";
+    }
+}
+
+export function isApiRequestError(err: unknown): err is ApiRequestError {
+    return !!(err && typeof err === "object" && "isApiRequestError" in err);
+}

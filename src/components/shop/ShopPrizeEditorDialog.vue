@@ -78,4 +78,15 @@ function close() {
     </el-dialog>
 </template>
 
+<style scoped>
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.item-form {
+    padding-top: 10px;
+}
+</style>
 

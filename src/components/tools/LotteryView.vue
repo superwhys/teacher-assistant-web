@@ -7,6 +7,7 @@ import { useLotteryHistoryStore } from '@/stores/lotteryHistoryStore'
 import type { DrawRecord } from '@/types/lottery'
 import type { UiLotteryPool, UiLotteryPrize } from '@/managers/lottery'
 import type { ShopItem } from '@/types/shopItem'
+import { isApiRequestError } from '@/types/api'
 
 defineOptions({
     name: 'LotteryView'
@@ -25,7 +26,11 @@ onMounted(() => {
             if (!poolChanged) {
                 await refreshPrizes()
             }
-        } catch {
+        } catch (err) {
+            if (!isApiRequestError(err)) {
+                console.error(err)
+                ElMessage.error('加载抽奖池失败')
+            }
         } finally {
             isLoading.value = false
         }
@@ -135,7 +140,11 @@ async function savePrize() {
         }
         addDialogVisible.value = false
         await refreshPrizes()
-    } catch {
+    } catch (err) {
+        if (!isApiRequestError(err)) {
+            console.error(err)
+            ElMessage.error('保存奖品失败')
+        }
     } finally {
         isLoading.value = false
     }
@@ -151,11 +160,15 @@ function deletePrize(item: UiLotteryPrize) {
             await lotteryManager.removePrize(currentPoolId.value, item.name)
             await refreshPrizes()
             ElMessage.success('已删除')
-        } catch {
+        } catch (err) {
+            if (!isApiRequestError(err)) {
+                console.error(err)
+                ElMessage.error('删除奖品失败')
+            }
         } finally {
             isLoading.value = false
         }
-    }).catch(() => {})
+    }).catch(() => { })
 }
 
 function toggleEnabled(item: UiLotteryPrize) {
@@ -165,7 +178,11 @@ function toggleEnabled(item: UiLotteryPrize) {
         try {
             await lotteryManager.updatePrize(currentPoolId.value, item.name, { enabled: !item.enabled })
             await refreshPrizes()
-        } catch {
+        } catch (err) {
+            if (!isApiRequestError(err)) {
+                console.error(err)
+                ElMessage.error('更新奖品失败')
+            }
         } finally {
             isLoading.value = false
         }
@@ -207,9 +224,12 @@ function openImportDialog() {
         shopItemsLoading.value = true
         try {
             await loadShopItems()
-        } catch {
+        } catch (err) {
+            if (!isApiRequestError(err)) {
+                console.error(err)
+                ElMessage.error('加载商品失败')
+            }
             shopItems.value = []
-            ElMessage.error('获取商品列表失败')
         } finally {
             shopItemsLoading.value = false
         }
@@ -230,7 +250,11 @@ function confirmImport(overwrite = false) {
             ElMessage.success(`导入成功：${count} 个奖品`)
             importDialogVisible.value = false
             await refreshPrizes()
-        } catch {
+        } catch (err) {
+            if (!isApiRequestError(err)) {
+                console.error(err)
+                ElMessage.error('导入奖品失败')
+            }
         } finally {
             isLoading.value = false
         }
@@ -339,11 +363,15 @@ function clearAll() {
             await lotteryManager.clearPool(currentPoolId.value)
             await refreshPrizes()
             ElMessage.success('已清空')
-        } catch {
+        } catch (err) {
+            if (!isApiRequestError(err)) {
+                console.error(err)
+                ElMessage.error('清空奖池失败')
+            }
         } finally {
             isLoading.value = false
         }
-    }).catch(() => {})
+    }).catch(() => { })
 }
 
 function clearRecords() {
@@ -354,7 +382,7 @@ function clearRecords() {
         historyStore.clearRecords(currentPoolId.value)
         records.value = historyStore.getRecords(currentPoolId.value)
         ElMessage.success('已清空')
-    }).catch(() => {})
+    }).catch(() => { })
 }
 
 const poolManageDialogVisible = ref(false)
@@ -398,7 +426,11 @@ function savePool() {
                 ElMessage.success('已更新奖池')
             }
             poolManageDialogVisible.value = false
-        } catch {
+        } catch (err) {
+            if (!isApiRequestError(err)) {
+                console.error(err)
+                ElMessage.error('保存奖池失败')
+            }
         } finally {
             isLoading.value = false
         }
@@ -430,18 +462,8 @@ onBeforeUnmount(() => {
                     </div>
                     <div class="pool-section">
                         <div class="pool-selector-group">
-                            <el-select
-                                v-model="currentPoolId"
-                                size="small"
-                                class="pool-selector"
-                                placeholder="选择奖池"
-                            >
-                                <el-option
-                                    v-for="pool in pools"
-                                    :key="pool.id"
-                                    :label="pool.name"
-                                    :value="pool.id"
-                                />
+                            <el-select v-model="currentPoolId" size="small" class="pool-selector" placeholder="选择奖池">
+                                <el-option v-for="pool in pools" :key="pool.id" :label="pool.name" :value="pool.id" />
                                 <template #empty>
                                     <div class="pool-selector-empty">
                                         <el-button text type="primary" size="small" @click.stop="openAddPoolDialog">
@@ -450,25 +472,12 @@ onBeforeUnmount(() => {
                                     </div>
                                 </template>
                             </el-select>
-                            <el-button
-                                v-if="currentPool"
-                                text
-                                type="primary"
-                                size="small"
-                                @click="openEditPoolDialog(currentPool)"
-                                class="pool-action-btn"
-                                title="编辑奖池"
-                            >
+                            <el-button v-if="currentPool" text type="primary" size="small"
+                                @click="openEditPoolDialog(currentPool)" class="pool-action-btn" title="编辑奖池">
                                 <i-ep-edit />
                             </el-button>
-                            <el-button
-                                text
-                                type="primary"
-                                size="small"
-                                @click="openAddPoolDialog"
-                                class="pool-action-btn"
-                                title="新建奖池"
-                            >
+                            <el-button text type="primary" size="small" @click="openAddPoolDialog"
+                                class="pool-action-btn" title="新建奖池">
                                 <i-ep-folder-add />
                             </el-button>
                         </div>
@@ -480,7 +489,7 @@ onBeforeUnmount(() => {
                         <el-button size="small" type="success" plain @click="openImportDialog">
                             <i-ep-upload-filled /> 导入
                         </el-button>
-                        <el-button size="small" type="danger" plain @click="clearAll" :disabled="prizes.length===0">
+                        <el-button size="small" type="danger" plain @click="clearAll" :disabled="prizes.length === 0">
                             <i-ep-delete /> 清空
                         </el-button>
                     </div>
@@ -488,20 +497,10 @@ onBeforeUnmount(() => {
 
                 <div class="panel-body">
                     <div v-if="prizes.length > 0" class="prize-list">
-                        <div
-                            v-for="p in prizes"
-                            :key="p.name"
-                            class="prize-item"
-                            :class="{ disabled: !p.enabled }"
-                        >
+                        <div v-for="p in prizes" :key="p.name" class="prize-item" :class="{ disabled: !p.enabled }">
                             <div class="pi-icon">
                                 <i-ep-star-filled />
-                                <el-button
-                                    class="pi-edit-btn"
-                                    text
-                                    type="primary"
-                                    @click="openEditDialog(p)"
-                                >
+                                <el-button class="pi-edit-btn" text type="primary" @click="openEditDialog(p)">
                                     <i-ep-edit />
                                 </el-button>
                             </div>
@@ -510,7 +509,7 @@ onBeforeUnmount(() => {
                                     <span class="pi-name" :title="p.name">{{ p.name }}</span>
                                 </div>
                                 <div class="pi-tags">
-                                    <span v-if="p.source==='shop'" class="pi-tag origin">商城商品</span>
+                                    <span v-if="p.source === 'shop'" class="pi-tag origin">商城商品</span>
                                     <span class="pi-tag weight">权重 {{ p.weight }}</span>
                                 </div>
                             </div>
@@ -542,13 +541,8 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div class="control-panel">
-                    <el-button
-                        size="large"
-                        type="primary"
-                        class="control-btn"
-                        @click="toggleRolling"
-                        :disabled="enabledPrizes.length===0"
-                    >
+                    <el-button size="large" type="primary" class="control-btn" @click="toggleRolling"
+                        :disabled="enabledPrizes.length === 0">
                         <i-ep-video-play v-if="!isRolling" />
                         <i-ep-video-pause v-else />
                         {{ isRolling ? '停止抽奖' : '开始抽奖' }}
@@ -557,7 +551,8 @@ onBeforeUnmount(() => {
                         <i-ep-magic-stick />
                         抽取 1 次
                     </el-button>
-                    <el-button size="large" class="control-btn" type="danger" plain :disabled="records.length===0" @click="clearRecords">
+                    <el-button size="large" class="control-btn" type="danger" plain :disabled="records.length === 0"
+                        @click="clearRecords">
                         <i-ep-delete /> 清空历史
                     </el-button>
                 </div>
@@ -588,7 +583,7 @@ onBeforeUnmount(() => {
             </main>
         </div>
 
-        <el-dialog v-model="addDialogVisible" :title="editMode==='add' ? '添加奖品' : '编辑奖品'" width="520px">
+        <el-dialog v-model="addDialogVisible" :title="editMode === 'add' ? '添加奖品' : '编辑奖品'" width="520px">
             <el-form :model="prizeForm" label-position="top" class="prize-form">
                 <el-form-item label="奖品名称" required>
                     <el-input v-model="prizeForm.name" placeholder="请输入奖品名称" />
@@ -602,8 +597,8 @@ onBeforeUnmount(() => {
             </el-form>
             <template #footer>
                 <div class="dialog-footer">
-                    <el-button @click="addDialogVisible=false">取消</el-button>
-                    <el-button v-if="editMode==='edit'" type="danger" plain @click="handleDeleteCurrentPrize">
+                    <el-button @click="addDialogVisible = false">取消</el-button>
+                    <el-button v-if="editMode === 'edit'" type="danger" plain @click="handleDeleteCurrentPrize">
                         删除
                     </el-button>
                     <el-button type="primary" @click="savePrize">保存</el-button>
@@ -618,21 +613,17 @@ onBeforeUnmount(() => {
                     <el-radio-button label="stock">权重=库存</el-radio-button>
                 </el-radio-group>
                 <div class="import-actions">
-                    <el-button type="primary" :disabled="importSelection.length===0" @click="confirmImport(false)">
+                    <el-button type="primary" :disabled="importSelection.length === 0" @click="confirmImport(false)">
                         <i-ep-upload-filled /> 追加导入
                     </el-button>
-                    <el-button type="warning" plain :disabled="importSelection.length===0" @click="confirmImport(true)">
+                    <el-button type="warning" plain :disabled="importSelection.length === 0"
+                        @click="confirmImport(true)">
                         覆盖现有
                     </el-button>
                 </div>
             </div>
-            <el-table
-                :data="shopItems"
-                border
-                height="360px"
-                v-loading="shopItemsLoading"
-                @selection-change="(rows:any[])=>{importSelection = rows.map(r=>r.id)}"
-            >
+            <el-table :data="shopItems" border height="360px" v-loading="shopItemsLoading"
+                @selection-change="(rows: any[]) => { importSelection = rows.map(r => r.id) }">
                 <el-table-column type="selection" width="60" />
                 <el-table-column label="商品" prop="name" min-width="160" />
                 <el-table-column label="库存" prop="stock" width="100" align="center" />
@@ -641,7 +632,7 @@ onBeforeUnmount(() => {
             </el-table>
         </el-dialog>
 
-        <el-dialog v-model="poolManageDialogVisible" :title="poolEditMode==='add' ? '新建奖池' : '编辑奖池'" width="480px">
+        <el-dialog v-model="poolManageDialogVisible" :title="poolEditMode === 'add' ? '新建奖池' : '编辑奖池'" width="480px">
             <el-form :model="poolForm" label-position="top" class="pool-form">
                 <el-form-item label="奖池名称" required>
                     <el-input v-model="poolForm.name" placeholder="请输入奖池名称" />
@@ -649,15 +640,15 @@ onBeforeUnmount(() => {
             </el-form>
             <template #footer>
                 <div class="dialog-footer">
-                    <el-button @click="poolManageDialogVisible=false">取消</el-button>
-                    <el-button v-if="poolEditMode==='edit'" type="danger" plain @click="deletePool">
+                    <el-button @click="poolManageDialogVisible = false">取消</el-button>
+                    <el-button v-if="poolEditMode === 'edit'" type="danger" plain @click="deletePool">
                         删除（暂不支持）
                     </el-button>
                     <el-button type="primary" @click="savePool">保存</el-button>
                 </div>
             </template>
         </el-dialog>
-        
+
     </div>
 </template>
 
@@ -979,11 +970,25 @@ onBeforeUnmount(() => {
 }
 
 @keyframes celebrate-spin {
-    0% { transform: rotate(0deg) scale(1); }
-    25% { transform: rotate(-15deg) scale(1.2); }
-    50% { transform: rotate(15deg) scale(1); }
-    75% { transform: rotate(-10deg) scale(1.2); }
-    100% { transform: rotate(0deg) scale(1); }
+    0% {
+        transform: rotate(0deg) scale(1);
+    }
+
+    25% {
+        transform: rotate(-15deg) scale(1.2);
+    }
+
+    50% {
+        transform: rotate(15deg) scale(1);
+    }
+
+    75% {
+        transform: rotate(-10deg) scale(1.2);
+    }
+
+    100% {
+        transform: rotate(0deg) scale(1);
+    }
 }
 
 .display-card.selected {
@@ -991,11 +996,14 @@ onBeforeUnmount(() => {
 }
 
 @keyframes pulse-gold {
-    0%, 100% {
+
+    0%,
+    100% {
         background: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #ffd700 100%);
         box-shadow: 0 8px 32px rgba(255, 215, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
         transform: scale(1);
     }
+
     50% {
         background: linear-gradient(135deg, #ffed4e 0%, #ffd700 50%, #ffed4e 100%);
         box-shadow: 0 12px 40px rgba(255, 237, 78, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
@@ -1145,18 +1153,27 @@ onBeforeUnmount(() => {
 }
 
 @keyframes name-bounce {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
 }
 
 @media (max-width: 960px) {
     .layout {
         grid-template-columns: 1fr;
     }
+
     .side-panel {
         order: 2;
         max-height: 320px;
     }
+
     .display-panel {
         order: 1;
     }
@@ -1166,44 +1183,56 @@ onBeforeUnmount(() => {
     .lottery-page {
         padding: 12px;
     }
+
     .panel-title {
         font-size: 18px;
     }
+
     .panel-header {
         gap: 12px;
         padding-bottom: 12px;
     }
+
     .pool-selector-group {
         flex-wrap: wrap;
         padding: 8px 10px;
     }
+
     .pool-selector {
         width: 100%;
         min-width: 0;
     }
+
     .pool-action-btn {
         flex: 1;
         min-width: 0;
     }
+
     .prize-actions {
         flex-direction: column;
     }
+
     .prize-actions .el-button {
         width: 100%;
     }
+
     .display-panel {
         padding: 18px;
     }
+
     .display-card {
         padding: 28px 16px;
     }
+
     .display-name {
         font-size: 42px;
     }
+
     .control-btn {
         min-width: 140px;
         height: 50px;
     }
+
     .history-item {
         flex-direction: column;
         align-items: flex-start;
@@ -1236,10 +1265,12 @@ onBeforeUnmount(() => {
         flex-direction: column;
         align-items: stretch;
     }
+
     .import-actions {
         width: 100%;
         justify-content: space-between;
     }
+
     .import-actions :deep(.el-button) {
         flex: 1;
         min-width: 0;

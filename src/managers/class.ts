@@ -2,8 +2,8 @@ import { classApi } from "@/api/class"
 import type { ClassDTO, NextSemesterReq, SemesterDTO, UpdateSemesterReq } from "@/types/class"
 
 export const classManager = {
-    async create(name: string) {
-        const resp = await classApi.create({ name })
+    async create(name: string, semesterName?: string) {
+        const resp = await classApi.create({ name, semester_name: semesterName })
         return resp.data
     },
     async list(): Promise<ClassDTO[]> {

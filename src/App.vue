@@ -258,7 +258,7 @@ const userInitial = computed(() => {
 const userProfileRefreshing = ref(false)
 const oldSyncChecked = ref(false)
 const migrationDialogVisible = ref(false)
-const migrationDialogMode = ref<'default' | 'imported'>('default')
+const migrationDialogMode = ref<'default' | 'no-local' | 'imported'>('default')
 const isSavingData = ref(false)
 const importingMigration = ref(false)
 const skippingMigration = ref(false)
@@ -288,10 +288,9 @@ async function tryPromptOldSync(rawProfile: unknown, userId: string): Promise<vo
     const flag = raw.json_ext?.is_old
     const isOldUser = flag === true || flag === 'true'
     if (!isOldUser) return
-    const hasOld = await hasOldSyncData(userId)
-    if (!hasOld) return
     migrationUserId.value = userId
-    migrationDialogMode.value = 'default'
+    const hasOld = await hasOldSyncData(userId)
+    migrationDialogMode.value = hasOld ? 'default' : 'no-local'
     isSavingData.value = false
     importingMigration.value = false
     skippingMigration.value = false
@@ -770,11 +769,17 @@ async function confirmUnlock() {
                 :close-on-press-escape="false"
             >
                 <div class="migration-content">
-                    <div class="migration-title">当前为正式版本，发现你的浏览器内存在旧版本数据，请根据下面的操作进行数据迁移。</div>
+                    <div v-if="migrationDialogMode === 'no-local'" class="migration-title">当前账号尚未迁移数据</div>
+                    <div v-else class="migration-title">当前为正式版本，发现你的浏览器内存在旧版本数据，请根据下面的操作进行数据迁移。</div>
+                    <div v-if="migrationDialogMode === 'no-local'" class="migration-tip">
+                        检测到当前账号属于旧版本账号，但本电脑未发现旧版本本地数据。请前往旧电脑登录并先同步数据完成迁移。
+                    </div>
+                    <div v-else class="migration-tip">请确保当前电脑浏览器内的数据为你的最新数据。迁移成功后将不允许再次迁移。</div>
                     <div class="migration-warn">
                         <div class="migration-warn-left">
                             <i-ep-warning-filled class="warn-icon" />
-                            <span class="migration-warn-text">你也可以选择不迁移当做全新系统使用</span>
+                            <span v-if="migrationDialogMode === 'no-local'" class="migration-warn-text">你可以先去旧电脑同步数据后再迁移，或选择忽略当作全新账号使用</span>
+                            <span v-else class="migration-warn-text">你也可以选择不迁移当做全新系统使用</span>
                         </div>
                         <el-button
                             type="info"
@@ -787,8 +792,7 @@ async function confirmUnlock() {
                             忽略迁移
                         </el-button>
                     </div>
-                    <div class="migration-tip">请确保当前电脑浏览器内的数据为你的最新数据。迁移成功后将不允许再次迁移。</div>
-                    <div class="migration-steps">
+                    <div v-if="migrationDialogMode !== 'no-local'" class="migration-steps">
                         <div class="migration-step">
                             <div class="step-title">步骤一：请保存最新数据到云端</div>
                             <div class="step-action">

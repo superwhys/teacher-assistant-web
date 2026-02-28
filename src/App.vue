@@ -792,6 +792,7 @@ async function confirmUnlock() {
                             忽略迁移
                         </el-button>
                     </div>
+                    <div class="migration-alert">提示：忽略迁移后将无法再次进行迁移，请谨慎操作。</div>
                     <div v-if="migrationDialogMode !== 'no-local'" class="migration-steps">
                         <div class="migration-step">
                             <div class="step-title">步骤一：请保存最新数据到云端</div>

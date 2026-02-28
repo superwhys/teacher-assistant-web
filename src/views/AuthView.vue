@@ -12,10 +12,14 @@ const route = useRoute()
 const cacheStore = useCacheStore()
 
 const activeTab = ref<'login' | 'register'>('login')
+const showResetCard = ref(false)
 const loginLoading = ref(false)
 const registerLoading = ref(false)
-const sendLoading = ref(false)
-const countdown = ref(0)
+const resetLoading = ref(false)
+const registerSendLoading = ref(false)
+const resetSendLoading = ref(false)
+const registerCountdown = ref(0)
+const resetCountdown = ref(0)
 
 const loginForm = reactive({
     email: '',
@@ -30,36 +34,71 @@ const registerForm = reactive({
     code: '',
 })
 
-let countdownTimer: number | undefined
+const resetForm = reactive({
+    email: '',
+    password: '',
+    confirmPassword: '',
+    code: '',
+})
+
+let registerCountdownTimer: number | undefined
+let resetCountdownTimer: number | undefined
 
 const redirectPath = computed(() => {
     const target = route.query.redirect
     return typeof target === 'string' && target.trim() ? target : '/points'
 })
 
-function clearCountdown(): void {
-    if (countdownTimer !== undefined) {
-        window.clearInterval(countdownTimer)
-        countdownTimer = undefined
+const panelTitle = computed(() => showResetCard.value ? '重置密码' : '欢迎登录')
+
+const panelDesc = computed(() => showResetCard.value
+    ? '请输入邮箱验证码并设置新密码'
+    : '首次登录可免费试用 7 天。 过期后如需继续试用，请购买正式版授权码')
+
+function clearRegisterCountdown(): void {
+    if (registerCountdownTimer !== undefined) {
+        window.clearInterval(registerCountdownTimer)
+        registerCountdownTimer = undefined
     }
 }
 
-function startCountdown(): void {
-    clearCountdown()
-    countdown.value = 60
-    countdownTimer = window.setInterval(() => {
-        if (countdown.value <= 1) {
-            clearCountdown()
-            countdown.value = 0
+function clearResetCountdown(): void {
+    if (resetCountdownTimer !== undefined) {
+        window.clearInterval(resetCountdownTimer)
+        resetCountdownTimer = undefined
+    }
+}
+
+function startRegisterCountdown(): void {
+    clearRegisterCountdown()
+    registerCountdown.value = 60
+    registerCountdownTimer = window.setInterval(() => {
+        if (registerCountdown.value <= 1) {
+            clearRegisterCountdown()
+            registerCountdown.value = 0
         } else {
-            countdown.value -= 1
+            registerCountdown.value -= 1
+        }
+    }, 1000)
+}
+
+function startResetCountdown(): void {
+    clearResetCountdown()
+    resetCountdown.value = 60
+    resetCountdownTimer = window.setInterval(() => {
+        if (resetCountdown.value <= 1) {
+            clearResetCountdown()
+            resetCountdown.value = 0
+        } else {
+            resetCountdown.value -= 1
         }
     }, 1000)
 }
 
 async function maybeRedirect(): Promise<void> {
     if (cacheStore.isAuthenticated) {
-        clearCountdown()
+        clearRegisterCountdown()
+        clearResetCountdown()
         await router.replace(redirectPath.value)
     }
 }
@@ -68,8 +107,17 @@ function validateEmail(email: string): boolean {
     return /.+@.+/.test(email)
 }
 
-async function handleSendEmailCode(): Promise<void> {
-    if (sendLoading.value || countdown.value > 0) return
+function openResetCard(): void {
+    showResetCard.value = true
+    resetForm.email = loginForm.email.trim()
+}
+
+function closeResetCard(): void {
+    showResetCard.value = false
+}
+
+async function handleSendRegisterCode(): Promise<void> {
+    if (registerSendLoading.value || registerCountdown.value > 0) return
     const email = registerForm.email.trim()
     if (!email) {
         ElMessage.error('请先输入邮箱')
@@ -79,14 +127,36 @@ async function handleSendEmailCode(): Promise<void> {
         ElMessage.error('请输入有效的邮箱地址')
         return
     }
-    sendLoading.value = true
+    registerSendLoading.value = true
     try {
         await authApi.sendEmailCode({ email })
         ElMessage.success('验证码已发送，请查收邮箱')
-        startCountdown()
+        startRegisterCountdown()
     } catch {
     } finally {
-        sendLoading.value = false
+        registerSendLoading.value = false
+    }
+}
+
+async function handleSendResetCode(): Promise<void> {
+    if (resetSendLoading.value || resetCountdown.value > 0) return
+    const email = resetForm.email.trim()
+    if (!email) {
+        ElMessage.error('请先输入邮箱')
+        return
+    }
+    if (!validateEmail(email)) {
+        ElMessage.error('请输入有效的邮箱地址')
+        return
+    }
+    resetSendLoading.value = true
+    try {
+        await authApi.sendEmailCode({ email })
+        ElMessage.success('验证码已发送，请查收邮箱')
+        startResetCountdown()
+    } catch {
+    } finally {
+        resetSendLoading.value = false
     }
 }
 
@@ -173,12 +243,61 @@ async function handleRegister(): Promise<void> {
     }
 }
 
+async function handlePasswordReset(): Promise<void> {
+    if (resetLoading.value) return
+    const email = resetForm.email.trim()
+    const password = resetForm.password.trim()
+    const confirmPassword = resetForm.confirmPassword.trim()
+    const code = resetForm.code.trim()
+    if (!email) {
+        ElMessage.error('请输入邮箱')
+        return
+    }
+    if (!validateEmail(email)) {
+        ElMessage.error('请输入有效的邮箱地址')
+        return
+    }
+    if (!password || password.length < 6) {
+        ElMessage.error('密码至少 6 位')
+        return
+    }
+    if (password !== confirmPassword) {
+        ElMessage.error('两次输入的密码不一致')
+        return
+    }
+    if (!code) {
+        ElMessage.error('请输入邮箱验证码')
+        return
+    }
+    resetLoading.value = true
+    try {
+        const hashedPassword = await sha256Hex(password)
+        await authApi.passwordReset({ email, password: hashedPassword, code })
+        ElMessage.success('密码重置成功，请使用新密码登录')
+        closeResetCard()
+        activeTab.value = 'login'
+        loginForm.email = email
+        loginForm.password = ''
+        resetForm.password = ''
+        resetForm.confirmPassword = ''
+        resetForm.code = ''
+    } catch (err) {
+        if (!isApiRequestError(err)) {
+            console.error(err)
+            ElMessage.error('重置密码失败')
+        }
+    } finally {
+        resetLoading.value = false
+    }
+}
+
 onMounted(async () => {
     await maybeRedirect()
 })
 
 onBeforeUnmount(() => {
-    clearCountdown()
+    clearRegisterCountdown()
+    clearResetCountdown()
 })
 </script>
 
@@ -194,12 +313,42 @@ onBeforeUnmount(() => {
             </div>
             <div class="panel">
                 <div class="panel-header">
-                    <div class="panel-title">欢迎登录</div>
-                    <div class="panel-desc">首次登录可免费试用 7 天。 过期后如需继续试用，请购买正式版授权码</div>
+                    <div class="panel-title">{{ panelTitle }}</div>
+                    <div class="panel-desc">{{ panelDesc }}</div>
                 </div>
 
                 <div class="card">
-                    <el-tabs v-model="activeTab" stretch class="auth-tabs">
+                    <el-form v-if="showResetCard" label-position="top" class="form-block">
+                        <el-form-item label="邮箱">
+                            <el-input v-model="resetForm.email" placeholder="输入邮箱" autocomplete="email" />
+                        </el-form-item>
+                        <el-form-item label="邮箱验证码">
+                            <div class="code-row">
+                                <el-input v-model="resetForm.code" placeholder="输入邮箱验证码" maxlength="6" />
+                                <el-button class="send-code-btn" type="primary" plain size="large"
+                                    :loading="resetSendLoading" :disabled="resetSendLoading || resetCountdown > 0"
+                                    @click="handleSendResetCode">
+                                    {{ resetCountdown > 0 ? `${resetCountdown}s` : '获取验证码' }}
+                                </el-button>
+                            </div>
+                        </el-form-item>
+                        <el-form-item label="新密码">
+                            <el-input v-model="resetForm.password" type="password" placeholder="设置新密码（至少 6 位）"
+                                autocomplete="new-password" show-password />
+                        </el-form-item>
+                        <el-form-item label="确认新密码">
+                            <el-input v-model="resetForm.confirmPassword" type="password" placeholder="再次输入新密码"
+                                autocomplete="new-password" @keyup.enter="handlePasswordReset" show-password />
+                        </el-form-item>
+                        <div class="form-actions form-actions-between">
+                            <el-button size="large" @click="closeResetCard">返回登录</el-button>
+                            <el-button type="primary" size="large" :loading="resetLoading" :disabled="resetLoading"
+                                @click="handlePasswordReset">
+                                <i-ep-refresh class="btn-icon" /> 重置密码
+                            </el-button>
+                        </div>
+                    </el-form>
+                    <el-tabs v-else v-model="activeTab" stretch class="auth-tabs">
                         <el-tab-pane label="登录" name="login">
                             <el-form label-position="top" class="form-block">
                                 <el-form-item label="邮箱">
@@ -209,6 +358,9 @@ onBeforeUnmount(() => {
                                     <el-input v-model="loginForm.password" type="password" placeholder="输入密码"
                                         autocomplete="current-password" @keyup.enter="handleLogin" show-password />
                                 </el-form-item>
+                                <div class="secondary-actions">
+                                    <el-button type="primary" link size="small" @click="openResetCard">忘记密码？</el-button>
+                                </div>
                                 <div class="form-actions">
                                     <el-button type="primary" size="large" :loading="loginLoading" :disabled="loginLoading"
                                         @click="handleLogin">
@@ -237,9 +389,9 @@ onBeforeUnmount(() => {
                                     <div class="code-row">
                                         <el-input v-model="registerForm.code" placeholder="输入邮箱验证码" maxlength="6" />
                                         <el-button class="send-code-btn" type="primary" plain size="large"
-                                            :loading="sendLoading" :disabled="sendLoading || countdown > 0"
-                                            @click="handleSendEmailCode">
-                                            {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
+                                            :loading="registerSendLoading" :disabled="registerSendLoading || registerCountdown > 0"
+                                            @click="handleSendRegisterCode">
+                                            {{ registerCountdown > 0 ? `${registerCountdown}s` : '获取验证码' }}
                                         </el-button>
                                     </div>
                                 </el-form-item>
@@ -358,6 +510,17 @@ onBeforeUnmount(() => {
 .form-actions {
     display: flex;
     justify-content: flex-end;
+}
+
+.form-actions-between {
+    justify-content: space-between;
+}
+
+.secondary-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -8px;
+    margin-bottom: 12px;
 }
 
 .code-row {

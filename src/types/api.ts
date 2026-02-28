@@ -24,6 +24,12 @@ export interface SendEmailCodeRequest {
     email: string;
 }
 
+export interface PasswordResetRequest {
+    email: string;
+    password: string;
+    code: string;
+}
+
 export interface LoginResponse {
     token: string;
 }

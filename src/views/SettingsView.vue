@@ -44,7 +44,7 @@ const currentSemesterName = computed(() => {
 })
 const nextSemesterDialogVisible = ref(false)
 const nextSemesterName = ref('')
-const nextSemesterClearPoints = ref(false)
+const nextSemesterClearPoints = ref(true)
 const nextSemesterLoading = ref(false)
 
 async function loadClassesFromApi() {
@@ -304,10 +304,10 @@ watch([isAuthenticated, () => cacheStore.profile?.id, activeClassId, () => cache
             <el-form-item label="新学期名称">
                 <el-input v-model="nextSemesterName" placeholder="例如：2026年春季学期" />
             </el-form-item>
-            <el-form-item label="是否清空学生积分">
+            <el-form-item label="是否清零学生积分(清零后仍可以切换回旧学期查看学生积分)">
                 <el-radio-group v-model="nextSemesterClearPoints">
-                    <el-radio :label="false">不清空</el-radio>
                     <el-radio :label="true">清空</el-radio>
+                    <el-radio :label="false">不清空</el-radio>
                 </el-radio-group>
             </el-form-item>
         </el-form>

@@ -828,7 +828,12 @@ async function confirmUnlock() {
                     <div v-if="migrationDialogMode === 'imported'" class="migration-done-footer">
                         <el-button type="primary" size="large" @click="onGoToTeacherV2">前往正式版</el-button>
                     </div>
-                    <div v-else class="migration-footer"></div>
+                    <div v-else class="migration-footer">
+                        <el-button plain @click="onUserCommand('logout')">
+                            <i-ep-switch-button class="btn-icon" />
+                            <span>退出登录</span>
+                        </el-button>
+                    </div>
                 </template>
             </el-dialog>
         </el-container>
@@ -1139,7 +1144,7 @@ async function confirmUnlock() {
 .migration-footer {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 12px;
     flex-wrap: wrap;
 }

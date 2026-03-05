@@ -668,6 +668,7 @@ async function confirmUnlock() {
                             <div class="section-title">班级选择</div>
                             <el-select
                                 v-model="classSelectId"
+                                :loading="classesLoading"
                                 :disabled="!isClassReady || classesLoading || classOptions.length === 0"
                                 :placeholder="(!isClassReady || classesLoading) ? '加载班级中…' : '选择班级'"
                                 class="class-select"

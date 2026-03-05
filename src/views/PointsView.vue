@@ -412,6 +412,7 @@ const filteredStudents = computed<UiPointsStudent[]>(() => {
 })
 
 const selectedIds = ref<number[]>([])
+const pointsApplying = ref(false)
 
 function clearSelection() {
     selectedIds.value = []
@@ -423,6 +424,7 @@ const selectorTab = ref<SelectorTab>('plus')
 const selectorTargets = ref<number[]>([])
 
 async function openSelectorForStudents(studentIds: number[], tab: SelectorTab) {
+    if (pointsApplying.value) return
     await ensureRuleGroupsLoaded()
     selectorTargets.value = studentIds
     selectorTab.value = tab
@@ -458,7 +460,9 @@ async function onSelectRule(rule: { id: number; name: string; sign: 'plus' | 'mi
     if (!activeClassId.value) return
     const ids = selectorTargets.value.filter(id => id > 0)
     if (ids.length === 0) return
+    if (pointsApplying.value) return
 
+    pointsApplying.value = true
     try {
         await pointsManager.applyRuleBatch(activeClassId.value, rule.id, ids)
         await refreshStudentsAndRanking()
@@ -469,6 +473,8 @@ async function onSelectRule(rule: { id: number; name: string; sign: 'plus' | 'mi
         ElMessage.success(`已对「${target}」${rule.sign === 'plus' ? '加' : '减'}${Math.abs(rule.points)} 分（${rule.name}）`)
         if (selectedIds.value.length > 0) clearSelection()
     } catch {
+    } finally {
+        pointsApplying.value = false
     }
 }
 
@@ -569,6 +575,7 @@ function openHistory(studentName: string) {
             v-model="selectorVisible"
             v-model:tab="selectorTab"
             :groups="ruleGroups"
+            :loading="pointsApplying"
             @select="onSelectRule"
         />
     </div>

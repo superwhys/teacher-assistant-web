@@ -2,9 +2,9 @@ SHELL := /bin/bash
 
 .PHONY: help build deploy
 
-SERVER ?= hs-master
+SERVER ?= ali-prod
 NGINX_WWW ?= /etc/nginx/www
-FOLDER ?=
+FOLDER ?= teacher.superwhys.top
 DIST_DIR ?= dist
 REMOTE_DIR = $(NGINX_WWW)/$(FOLDER)
 

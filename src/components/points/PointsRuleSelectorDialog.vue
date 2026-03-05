@@ -24,6 +24,7 @@ type Props = {
     modelValue: boolean
     tab?: SelectorTab
     groups: RuleGroup[]
+    loading?: boolean
 }
 
 const props = defineProps<Props>()
@@ -123,6 +124,7 @@ function filterRules(list: UiRule[]): UiRule[] {
 }
 
 function onSelect(rule: UiRule) {
+    if (props.loading) return
     emit('select', rule)
 }
 </script>
@@ -133,8 +135,11 @@ function onSelect(rule: UiRule) {
         title="选择积分规则"
         :width="dialogWidth"
         class="points-rule-selector-dialog"
+        :close-on-click-modal="!props.loading"
+        :close-on-press-escape="!props.loading"
+        :show-close="!props.loading"
     >
-        <div class="selector-content">
+        <div class="selector-content" v-loading="props.loading">
             <el-tabs v-model="innerTab" class="selector-tabs">
                 <el-tab-pane label="全部" name="all" />
                 <el-tab-pane label="加分" name="plus" />
@@ -161,7 +166,12 @@ function onSelect(rule: UiRule) {
                         </div>
                     </template>
                     <div class="items">
-                        <div v-for="r in filterRules(g.rules)" :key="r.id" class="item-row" @click="onSelect(r)">
+                        <div
+                            v-for="r in filterRules(g.rules)"
+                            :key="r.id"
+                            :class="['item-row', { 'is-loading': props.loading }]"
+                            @click="onSelect(r)"
+                        >
                             <div class="item-name">{{ r.name }}</div>
                             <div :class="['item-value', r.sign === 'plus' ? 'plus' : 'minus']">
                                 {{ r.sign === 'plus' ? '+' : '-' }}{{ Math.abs(r.points) }}
@@ -176,7 +186,7 @@ function onSelect(rule: UiRule) {
 
         <template #footer>
             <span class="dialog-footer">
-                <el-button @click="innerVisible = false">关闭</el-button>
+                <el-button :disabled="props.loading" @click="innerVisible = false">关闭</el-button>
             </span>
         </template>
     </el-dialog>
@@ -230,6 +240,11 @@ function onSelect(rule: UiRule) {
     border-bottom: 1px solid #f5f5f5;
     cursor: pointer;
     border-radius: 8px;
+}
+
+.item-row.is-loading {
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 .item-row:hover {

@@ -298,6 +298,23 @@ export const useCacheStore = defineStore('cache', () => {
         pointsLayoutMode.value = mode === 'list' ? 'list' : 'card'
     }
 
+    function resetUserScopedRuntimeState(): void {
+        activeClassId.value = null
+        activeClassName.value = null
+        activeSemesterName.value = null
+        activeSemesterIsLatest.value = null
+        studentsSort.value = null
+        classLayout.value = null
+        pointsSelectedGroupByClass.value = {}
+        pointsRankingTab.value = 'total'
+        pointsRankingTimeRange.value = 'all'
+        pointsSortBy.value = 'default'
+        pointsLayoutMode.value = 'card'
+        isLocked.value = false
+        lockPasswordSalt.value = null
+        lockPasswordHash.value = null
+    }
+
     function setAuth(
         tokenValue: string,
         user: UserProfile,
@@ -313,7 +330,16 @@ export const useCacheStore = defineStore('cache', () => {
     }
 
     function setTokenOnly(tokenValue: string): void {
-        token.value = tokenValue
+        const nextToken = String(tokenValue ?? '').trim()
+        if (!nextToken) return
+        const tokenChanged = token.value !== nextToken
+        token.value = nextToken
+        if (!tokenChanged) return
+        profile.value = null
+        isTrial.value = false
+        trialExpiresAt.value = null
+        isExpired.value = false
+        resetUserScopedRuntimeState()
     }
 
     function updateProfile(user: UserProfile): void {
@@ -333,20 +359,7 @@ export const useCacheStore = defineStore('cache', () => {
         trialExpiresAt.value = null
         isExpired.value = false
         // 清空内存态（不删除本地 user cache，便于下次同账号登录恢复）
-        activeClassId.value = null
-        activeClassName.value = null
-        activeSemesterName.value = null
-        activeSemesterIsLatest.value = null
-        studentsSort.value = null
-        classLayout.value = null
-        pointsSelectedGroupByClass.value = {}
-        pointsRankingTab.value = 'total'
-        pointsRankingTimeRange.value = 'all'
-        pointsSortBy.value = 'default'
-        pointsLayoutMode.value = 'card'
-        isLocked.value = false
-        lockPasswordSalt.value = null
-        lockPasswordHash.value = null
+        resetUserScopedRuntimeState()
     }
 
     const isAuthenticated = computed<boolean>(() => !!token.value)

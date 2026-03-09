@@ -33,15 +33,6 @@ onMounted(() => {
         now.value = new Date()
     }, 1000)
 
-    const tokenFromQuery = typeof route.query.token === 'string' ? route.query.token.trim() : ''
-    if (tokenFromQuery) {
-        cacheStore.setTokenOnly(tokenFromQuery)
-        cacheStore.setExpired(false)
-        const nextQuery = { ...route.query }
-        delete (nextQuery as Record<string, unknown>).token
-        void router.replace({ path: route.path, query: nextQuery, hash: route.hash })
-    }
-
     if (cacheStore.token && !cacheStore.isExpired) {
         void refreshUserProfile()
     }

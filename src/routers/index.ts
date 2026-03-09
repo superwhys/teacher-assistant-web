@@ -75,11 +75,6 @@ router.beforeEach((to) => {
   ;(to as any).__mainLoadingToken = token
 
   const cache = useCacheStore()
-  const tokenFromQuery = typeof to.query.token === 'string' ? to.query.token.trim() : ''
-  if (tokenFromQuery) {
-    cache.setTokenOnly(tokenFromQuery)
-    cache.setExpired(false)
-  }
   if (!cache.isAuthenticated && to.path !== '/auth') {
     mainLoading.endRoute(token)
     return { path: '/auth', query: { redirect: to.fullPath } }

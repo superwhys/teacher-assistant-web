@@ -14,6 +14,8 @@ import { isApiRequestError } from './types/api'
 
 const cacheStore = useCacheStore()
 const mainLoadingStore = useMainLoadingStore()
+const router = useRouter()
+const route = useRoute()
 const isAuthenticated = computed(() => cacheStore.isAuthenticated)
 
 const now = ref(new Date())
@@ -30,6 +32,15 @@ onMounted(() => {
     timer = window.setInterval(() => {
         now.value = new Date()
     }, 1000)
+
+    const tokenFromQuery = typeof route.query.token === 'string' ? route.query.token.trim() : ''
+    if (tokenFromQuery) {
+        cacheStore.setTokenOnly(tokenFromQuery)
+        cacheStore.setExpired(false)
+        const nextQuery = { ...route.query }
+        delete (nextQuery as Record<string, unknown>).token
+        void router.replace({ path: route.path, query: nextQuery, hash: route.hash })
+    }
 
     if (cacheStore.token && !cacheStore.isExpired) {
         void refreshUserProfile()
@@ -494,8 +505,6 @@ async function removeCurrentClass() {
     }
 }
 
-const router = useRouter()
-const route = useRoute()
 const showFooter = computed(() => isAuthenticated.value && !route.meta?.hideFooter)
 
 function onUserCommand(command: string) {

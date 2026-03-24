@@ -10,6 +10,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     ActionItem: typeof import('./components/ActionItem.vue')['default']
     AddStudentDialog: typeof import('./components/class/AddStudentDialog.vue')['default']
+    AnimatedCharacters: typeof import('./components/login/AnimatedCharacters.vue')['default']
     BaseCard: typeof import('./components/BaseCard.vue')['default']
     ClassBottomActions: typeof import('./components/class/ClassBottomActions.vue')['default']
     ClassStudentList: typeof import('./components/class/ClassStudentList.vue')['default']
@@ -111,6 +112,7 @@ declare module 'vue' {
     IEpWarning: typeof import('~icons/ep/warning')['default']
     IEpWarningFilled: typeof import('~icons/ep/warning-filled')['default']
     ImportPointsButton: typeof import('./components/points/ImportPointsButton.vue')['default']
+    LoginAnimationExample: typeof import('./components/login/LoginAnimationExample.vue')['default']
     LotteryView: typeof import('./components/tools/LotteryView.vue')['default']
     PointsBottomActions: typeof import('./components/points/PointsBottomActions.vue')['default']
     PointsHeaderActionsPanel: typeof import('./components/points/PointsHeaderActionsPanel.vue')['default']

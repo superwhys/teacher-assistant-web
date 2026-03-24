@@ -72,7 +72,7 @@ const router = createRouter({
 router.beforeEach((to) => {
   const mainLoading = useMainLoadingStore()
   const token = mainLoading.beginRoute()
-  ;(to as any).__mainLoadingToken = token
+    ; (to as any).__mainLoadingToken = token
 
   const cache = useCacheStore()
   if (!cache.isAuthenticated && to.path !== '/auth') {

@@ -666,30 +666,24 @@ async function confirmUnlock() {
                         </div>
                         <div class="sidebar-section class-section">
                             <div class="section-title">班级选择</div>
-                            <el-select
-                                v-model="classSelectId"
-                                :loading="classesLoading"
+                            <el-select v-model="classSelectId" :loading="classesLoading"
                                 :disabled="!isClassReady || classesLoading || classOptions.length === 0"
                                 :placeholder="(!isClassReady || classesLoading) ? '加载班级中…' : '选择班级'"
-                                class="class-select"
-                                size="large"
-                            >
+                                class="class-select" size="large">
                                 <el-option v-for="c in classOptions" :key="c.id" :label="c.name" :value="c.id" />
                             </el-select>
                             <div v-if="activeClassId" class="semester-info">
                                 <div class="semester-label">当前学期</div>
-                                <el-select
-                                    v-model="semesterSelectId"
-                                    class="semester-select"
-                                    size="default"
+                                <el-select v-model="semesterSelectId" class="semester-select" size="default"
                                     :loading="semestersLoading || semesterSwitching"
                                     :disabled="!isSemesterReady || semestersLoading || semesterSwitching || semesterOptions.length === 0"
-                                    :placeholder="(!isSemesterReady || semestersLoading) ? '加载学期中…' : '选择学期'"
-                                >
-                                    <el-option v-for="(s, index) in semesterOptions" :key="s.id" :label="s.name" :value="s.id">
+                                    :placeholder="(!isSemesterReady || semestersLoading) ? '加载学期中…' : '选择学期'">
+                                    <el-option v-for="(s, index) in semesterOptions" :key="s.id" :label="s.name"
+                                        :value="s.id">
                                         <div class="semester-option-item">
                                             <span class="semester-option-name">{{ s.name }}</span>
-                                            <el-tag v-if="index === 0" size="small" type="success" effect="plain">最新</el-tag>
+                                            <el-tag v-if="index === 0" size="small" type="success"
+                                                effect="plain">最新</el-tag>
                                         </div>
                                     </el-option>
                                 </el-select>
@@ -698,16 +692,19 @@ async function confirmUnlock() {
                                 <el-button type="primary" size="default" @click="openCreateDialog">
                                     <i-ep-plus class="btn-icon" /><span>新建班级</span>
                                 </el-button>
-                                <el-button type="warning" plain size="default" :disabled="!activeClassId" @click="openEditDialog">
+                                <el-button type="warning" plain size="default" :disabled="!activeClassId"
+                                    @click="openEditDialog">
                                     <i-ep-edit class="btn-icon" /><span>编辑班级</span>
                                 </el-button>
-                                <el-button type="danger" plain size="default" :disabled="!activeClassId" @click="removeCurrentClass">
+                                <el-button type="danger" plain size="default" :disabled="!activeClassId"
+                                    @click="removeCurrentClass">
                                     <i-ep-delete class="btn-icon" /><span>删除班级</span>
                                 </el-button>
                             </div>
                         </div>
                         <div class="sidebar-footer">
-                            <el-button class="logout-btn" text :disabled="!cacheStore.hasLockPassword()" @click="lockNow">
+                            <el-button class="logout-btn" text :disabled="!cacheStore.hasLockPassword()"
+                                @click="lockNow">
                                 <i-ep-lock class="logout-icon" /> 锁屏
                             </el-button>
                             <el-button class="logout-btn" text @click="onUserCommand('logout')">
@@ -716,13 +713,9 @@ async function confirmUnlock() {
                         </div>
                     </div>
                 </el-aside>
-                <el-main class="main">
-                    <div
-                        class="content-area"
-                        v-loading="mainLoadingStore.isLoading"
-                        element-loading-text="加载中..."
-                        element-loading-background="rgba(255, 255, 255, 0.65)"
-                    >
+                <el-main class="main" :class="{ 'main--no-padding': route.path === '/auth' }">
+                    <div class="content-area" v-loading="mainLoadingStore.isLoading" element-loading-text="加载中..."
+                        element-loading-background="rgba(255, 255, 255, 0.65)">
                         <router-view v-slot="{ Component, route }">
                             <keep-alive v-if="route.meta?.keepAlive">
                                 <component :is="Component" :key="route.path" />
@@ -761,14 +754,8 @@ async function confirmUnlock() {
                     </span>
                 </template>
             </el-dialog>
-            <el-dialog
-                v-model="migrationDialogVisible"
-                :title="migrationDialogMode === 'imported' ? '提示' : '数据迁移'"
-                width="520px"
-                :close-on-click-modal="false"
-                :show-close="false"
-                :close-on-press-escape="false"
-            >
+            <el-dialog v-model="migrationDialogVisible" :title="migrationDialogMode === 'imported' ? '提示' : '数据迁移'"
+                width="520px" :close-on-click-modal="false" :show-close="false" :close-on-press-escape="false">
                 <div class="migration-content">
                     <div v-if="migrationDialogMode === 'no-local'" class="migration-title">当前账号尚未迁移数据</div>
                     <div v-else class="migration-title">当前为正式版本，发现你的浏览器内存在旧版本数据，请根据下面的操作进行数据迁移。</div>
@@ -779,17 +766,12 @@ async function confirmUnlock() {
                     <div class="migration-warn">
                         <div class="migration-warn-left">
                             <i-ep-warning-filled class="warn-icon" />
-                            <span v-if="migrationDialogMode === 'no-local'" class="migration-warn-text">你可以先去旧电脑同步数据后再迁移，或选择忽略当作全新账号使用</span>
+                            <span v-if="migrationDialogMode === 'no-local'"
+                                class="migration-warn-text">你可以先去旧电脑同步数据后再迁移，或选择忽略当作全新账号使用</span>
                             <span v-else class="migration-warn-text">你也可以选择不迁移当做全新系统使用</span>
                         </div>
-                        <el-button
-                            type="info"
-                            plain
-                            size="small"
-                            :loading="skippingMigration"
-                            :disabled="skippingMigration"
-                            @click="onSkipMigration"
-                        >
+                        <el-button type="info" plain size="small" :loading="skippingMigration"
+                            :disabled="skippingMigration" @click="onSkipMigration">
                             忽略迁移
                         </el-button>
                     </div>
@@ -798,13 +780,8 @@ async function confirmUnlock() {
                         <div class="migration-step">
                             <div class="step-title">步骤一：请保存最新数据到云端</div>
                             <div class="step-action">
-                                <el-button
-                                    type="success"
-                                    size="default"
-                                    :loading="isSavingData"
-                                    :disabled="isSavingData"
-                                    @click="onSaveDataToCloud"
-                                >
+                                <el-button type="success" size="default" :loading="isSavingData"
+                                    :disabled="isSavingData" @click="onSaveDataToCloud">
                                     <i-ep-upload-filled class="btn-icon" /><span>保存数据</span>
                                 </el-button>
                             </div>
@@ -812,13 +789,8 @@ async function confirmUnlock() {
                         <div class="migration-step">
                             <div class="step-title">步骤二：请点击按钮进行数据迁移</div>
                             <div class="step-action">
-                                <el-button
-                                    type="primary"
-                                    size="default"
-                                    :loading="importingMigration"
-                                    :disabled="importingMigration"
-                                    @click="onImportMigration"
-                                >
+                                <el-button type="primary" size="default" :loading="importingMigration"
+                                    :disabled="importingMigration" @click="onImportMigration">
                                     <i-ep-refresh class="btn-icon" /><span>开始迁移</span>
                                 </el-button>
                             </div>
@@ -1467,7 +1439,6 @@ async function confirmUnlock() {
 
 .main {
     flex: 1 1 auto !important;
-    /* overflow: hidden !important; */
     background-color: #f0f2f5 !important;
     padding: 20px !important;
     height: 100% !important;
@@ -1475,12 +1446,16 @@ async function confirmUnlock() {
     flex-direction: column !important;
 }
 
+.main.main--no-padding {
+    padding: 0 !important;
+}
+
 .content-area {
     width: 100%;
     height: 100%;
 }
 
-.content-area > * {
+.content-area>* {
     height: 100%;
 }
 
@@ -1816,5 +1791,4 @@ async function confirmUnlock() {
     }
 
 }
-
 </style>

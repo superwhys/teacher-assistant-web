@@ -4,7 +4,6 @@ import { ElMessage } from 'element-plus'
 import type { UploadRawFile, UploadFile, UploadInstance } from 'element-plus'
 import { parseExcelToImportRowsSimple, type ImportRow } from '@/utils/pointsImport'
 import { pointsManager } from '@/managers/points'
-import * as XLSX from 'xlsx'
 import { isApiRequestError } from '@/types/api'
 
 const props = defineProps<{
@@ -134,13 +133,14 @@ async function confirmImportPoints() {
     }
 }
 
-function downloadTemplate() {
+async function downloadTemplate() {
     const templateData = [
         { 姓名: '张三', 分值: 5 },
         { 姓名: '李四', 分值: -3 },
         { 姓名: '王五', 分值: 3 }
     ]
 
+    const XLSX = await import('xlsx')
     const worksheet = XLSX.utils.json_to_sheet(templateData)
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, '积分导入模板')

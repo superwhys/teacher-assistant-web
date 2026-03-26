@@ -2,8 +2,6 @@
  * Excel 积分导入：解析文件为可导入的行数据
  */
 
-import * as XLSX from 'xlsx'
-
 export type ImportRow = {
     studentName: string
     delta: number
@@ -56,6 +54,7 @@ export async function parseExcelToImportRows(
     validItemNames: Iterable<string>,
 ): Promise<{ rows: ImportRow[]; skipped: number }> {
     const arrayBuffer = await readArrayBuffer(file)
+    const XLSX = await import('xlsx')
     const workbook = XLSX.read(arrayBuffer, { type: 'array' })
     const firstSheetName = workbook.SheetNames[0]
     if (!firstSheetName) throw new Error('Excel 文件没有工作表')
@@ -106,6 +105,7 @@ export async function parseExcelToImportRowsSimple(
     file: File,
 ): Promise<{ rows: ImportRow[]; skipped: number }> {
     const arrayBuffer = await readArrayBuffer(file)
+    const XLSX = await import('xlsx')
     const workbook = XLSX.read(arrayBuffer, { type: 'array' })
     const firstSheetName = workbook.SheetNames[0]
     if (!firstSheetName) throw new Error('Excel 文件没有工作表')
@@ -153,6 +153,7 @@ export type ImportItemRow = {
 
 export async function parseItemsExcelToRows(file: File): Promise<{ rows: ImportItemRow[]; skipped: number }> {
     const arrayBuffer = await readArrayBuffer(file)
+    const XLSX = await import('xlsx')
     const workbook = XLSX.read(arrayBuffer, { type: 'array' })
     const firstSheetName = workbook.SheetNames[0]
     if (!firstSheetName) throw new Error('Excel 文件没有工作表')

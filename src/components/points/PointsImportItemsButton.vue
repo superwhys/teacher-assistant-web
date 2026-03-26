@@ -4,7 +4,6 @@ import { ElMessage } from 'element-plus'
 import type { UploadRawFile, UploadFile, UploadInstance } from 'element-plus'
 import { parseItemsExcelToRows, type ImportItemRow } from '@/utils/pointsImport'
 import { pointsManager } from '@/managers/points'
-import * as XLSX from 'xlsx'
 import { isApiRequestError } from '@/types/api'
 
 defineOptions({ name: 'PointsImportItemsButton' })
@@ -179,7 +178,7 @@ async function confirmImport() {
     }
 }
 
-function downloadTemplate() {
+async function downloadTemplate() {
     const templateData = [
         { 组名: '常规操作', 项目名: '作业完成', 分值: 5 },
         { 组名: '常规操作', 项目名: '忘带作业', 分值: -3 },
@@ -187,6 +186,7 @@ function downloadTemplate() {
         { 组名: '课堂表现', 项目名: '课堂违纪', 分值: -5 },
     ]
 
+    const XLSX = await import('xlsx')
     const worksheet = XLSX.utils.json_to_sheet(templateData)
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, '积分项模板')

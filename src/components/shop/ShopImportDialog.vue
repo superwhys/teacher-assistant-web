@@ -3,7 +3,6 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { UploadInstance } from 'element-plus'
 import type { CreatePrizeReq } from '@/types/mall'
-import * as XLSX from 'xlsx'
 
 defineOptions({ name: 'ShopImportDialog' })
 
@@ -32,6 +31,7 @@ async function handleImportFile(file: File) {
     parsing.value = true
     try {
         const data = await file.arrayBuffer()
+        const XLSX = await import('xlsx')
         const workbook = XLSX.read(data)
         const firstSheetName = workbook.SheetNames[0]
         if (!firstSheetName) {

@@ -2,7 +2,6 @@
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { UploadRawFile, UploadFile, UploadInstance } from 'element-plus'
-import * as XLSX from 'xlsx'
 import type { UiStudent } from './ClassStudentList.vue'
 import type { UiGroup } from './GroupManageDialog.vue'
 
@@ -56,6 +55,7 @@ async function importFromFile(file: File) {
             reader.readAsArrayBuffer(file)
         })
 
+        const XLSX = await import('xlsx')
         const workbook = XLSX.read(arrayBuffer, { type: 'array' })
         const firstSheetName = workbook.SheetNames[0]
         if (!firstSheetName) throw new Error('Excel 文件没有工作表')
@@ -154,7 +154,7 @@ function clearPreview() {
     uploadRef.value?.clearFiles()
 }
 
-function downloadTemplate() {
+async function downloadTemplate() {
     const templateData = [
         { 分组名称: '第一组', 学生姓名: '张三' },
         { 分组名称: '第一组', 学生姓名: '李四' },
@@ -162,6 +162,7 @@ function downloadTemplate() {
         { 分组名称: '第二组', 学生姓名: '赵六' },
     ]
 
+    const XLSX = await import('xlsx')
     const worksheet = XLSX.utils.json_to_sheet(templateData)
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, '分组导入模板')

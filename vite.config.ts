@@ -59,6 +59,7 @@ export default defineConfig({
             if (id.includes('/vue-router/')) return 'vue-vendor';
             if (id.includes('/pinia/')) return 'vue-vendor';
             if (id.includes('/vue/')) return 'vue-vendor';
+            if (id.includes('/xlsx/')) return 'xlsx';
             return 'vendor';
           }
         },

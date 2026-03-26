@@ -7,7 +7,6 @@ import { shopManager } from '@/managers/shop'
 import type { StudentDTO } from '@/types/student'
 import type { CreatePrizeReq, Prize, PrizeRecord } from '@/types/mall'
 import { getShopIconComponent } from '@/components/shop/shopIcons'
-import * as XLSX from 'xlsx'
 
 import ShopHeaderRow from '@/components/shop/ShopHeaderRow.vue'
 import ShopToolbar from '@/components/shop/ShopToolbar.vue'
@@ -309,11 +308,12 @@ async function confirmImport(items: CreatePrizeReq[]) {
     await refreshPrizes()
 }
 
-function exportTemplate() {
+async function exportTemplate() {
     const template = [
         { '商品名称': '示例商品1', '积分': 100, '库存': 10, '描述': '这是一个示例商品' },
         { '商品名称': '示例商品2', '积分': 200, '库存': 5, '描述': '' }
     ]
+    const XLSX = await import('xlsx')
     const ws = XLSX.utils.json_to_sheet(template)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, '商品清单')

@@ -2,7 +2,6 @@
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { UploadRawFile, UploadFile, UploadInstance } from 'element-plus'
-import * as XLSX from 'xlsx'
 import type { ApiGender, CreateStudentReq } from '@/types/student'
 
 const props = defineProps<{
@@ -143,6 +142,7 @@ async function importExcelFromFile(file: File) {
             reader.readAsArrayBuffer(file)
         })
 
+        const XLSX = await import('xlsx')
         const workbook = XLSX.read(arrayBuffer, { type: 'array' })
         const firstSheetName = workbook.SheetNames[0]
         if (!firstSheetName) throw new Error('Excel 文件没有工作表')
@@ -216,7 +216,7 @@ function confirmExcelImport() {
     clearExcelPreview()
 }
 
-function downloadTemplate() {
+async function downloadTemplate() {
     const templateData = [
         { 姓名: '张三', 性别: '男' },
         { 姓名: '李四', 性别: '女' },
@@ -224,6 +224,7 @@ function downloadTemplate() {
         { 姓名: '赵六', 性别: '女' },
     ]
 
+    const XLSX = await import('xlsx')
     const worksheet = XLSX.utils.json_to_sheet(templateData)
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, '学生名单模板')

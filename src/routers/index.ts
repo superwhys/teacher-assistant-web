@@ -65,14 +65,7 @@ const routes = [
   },
   {
     path: '/auth',
-    component: () => import('@/layouts/AuthLayout.vue'),
-    children: [
-      {
-        path: '',
-        component: () => import('@/views/AuthView.vue'),
-        meta: { keepAlive: false },
-      },
-    ],
+    component: () => import('@/views/AuthView.vue'),
   },
 ];
 

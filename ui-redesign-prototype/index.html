@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教师助手 UI 改版原型</title>
+    <link rel="stylesheet" href="./styles.css">
+</head>
+
+<body>
+    <div class="prototype-shell">
+        <aside class="sidebar">
+            <div class="brand-card">
+                <div class="brand-badge">TA</div>
+                <div>
+                    <div class="brand-title">教师助手</div>
+                    <div class="brand-subtitle">课堂启动台原型 · 已补齐业务入口</div>
+                </div>
+            </div>
+
+            <nav class="nav-list" aria-label="主导航">
+                <button class="nav-item is-active" data-section-target="dashboard">
+                    <span class="nav-icon">01</span>
+                    <span>班级总览</span>
+                </button>
+                <button class="nav-item" data-section-target="students">
+                    <span class="nav-icon">02</span>
+                    <span>学生管理</span>
+                </button>
+                <button class="nav-item" data-section-target="points">
+                    <span class="nav-icon">03</span>
+                    <span>积分中心</span>
+                </button>
+                <button class="nav-item" data-section-target="shop">
+                    <span class="nav-icon">04</span>
+                    <span>积分商城</span>
+                </button>
+                <button class="nav-item" data-section-target="tools">
+                    <span class="nav-icon">05</span>
+                    <span>课堂工具</span>
+                </button>
+                <button class="nav-item" data-section-target="settings">
+                    <span class="nav-icon">06</span>
+                    <span>设置中心</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-panel">
+                <div class="panel-title">这版补齐重点</div>
+                <ul class="compact-list">
+                    <li>首页改成课堂启动台</li>
+                    <li>补齐学期状态与历史入口</li>
+                    <li>积分页体现操作闭环</li>
+                    <li>学生与工具页更接近真实业务</li>
+                </ul>
+            </div>
+        </aside>
+
+        <main class="content">
+            <header class="topbar">
+                <div>
+                    <div class="page-caption">2025-2026 学年 · 春季学期</div>
+                    <h1>高一（2）班课堂工作台</h1>
+                    <div class="topbar-meta">
+                        <span class="status-chip status-sky">最新学期</span>
+                        <span class="status-chip status-emerald">允许积分操作</span>
+                        <span class="status-chip">最近更新 08:24</span>
+                    </div>
+                </div>
+
+                <div class="topbar-actions">
+                    <button class="ghost-button" id="topbar-lock-trigger">立即锁屏</button>
+                    <button class="ghost-button">切换学期</button>
+                    <button class="ghost-button">切换班级</button>
+                    <button class="ghost-button" data-section-shortcut="settings">进入设置</button>
+                    <button class="primary-button" data-section-shortcut="points">进入积分中心</button>
+                </div>
+            </header>
+
+            <section class="view-section is-active" data-section="dashboard">
+                <div class="hero-grid dashboard-hero-grid">
+                    <article class="hero-card dashboard-hero-card">
+                        <div class="hero-banner">
+                            <div>
+                                <div class="eyebrow">班级启动台</div>
+                                <h2>高一（2）班</h2>
+                                <div class="student-meta">班主任 王老师 · 当前用于课堂积分与工具联动</div>
+                            </div>
+                            <div class="hero-status-stack">
+                                <span class="status-chip status-sky">当前学期：春季学期</span>
+                                <span class="status-chip status-emerald">当前状态：可积分操作</span>
+                                <span class="status-chip">归档学期：仅支持浏览历史</span>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-summary-grid">
+                            <div class="summary-item summary-accent-blue">
+                                <span>学生人数</span>
+                                <strong id="overview-student-count">0</strong>
+                            </div>
+                            <div class="summary-item summary-accent-purple">
+                                <span>分组数量</span>
+                                <strong id="overview-group-count">0</strong>
+                            </div>
+                            <div class="summary-item summary-accent-gold">
+                                <span>积分记录</span>
+                                <strong id="overview-record-count">0</strong>
+                            </div>
+                            <div class="summary-item summary-accent-green">
+                                <span>商城奖品</span>
+                                <strong id="overview-shop-count">0 个</strong>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-highlight-grid">
+                            <div class="summary-item">
+                                <span>榜首学生</span>
+                                <strong id="overview-top-student">-</strong>
+                                <div class="student-meta" id="overview-top-score">总积分 0</div>
+                            </div>
+                            <div class="summary-item">
+                                <span>最近一次课堂更新</span>
+                                <strong id="overview-latest-record-name">-</strong>
+                                <div class="student-meta" id="overview-latest-record-meta">暂无记录</div>
+                            </div>
+                            <div class="summary-item">
+                                <span>课堂重点提醒</span>
+                                <strong id="overview-class-focus">积分正常进行中</strong>
+                                <div class="student-meta">支持最近一次操作撤回与历史记录查看</div>
+                            </div>
+                        </div>
+
+                        <div class="hero-actions dashboard-quick-actions">
+                            <button class="primary-button" data-section-shortcut="students">进入学生管理</button>
+                            <button class="ghost-button" data-section-shortcut="points">进入积分中心</button>
+                            <button class="ghost-button" data-section-shortcut="points">查看积分历史</button>
+                            <button class="ghost-button" data-section-shortcut="shop">查看积分商城</button>
+                            <button class="ghost-button" data-section-shortcut="tools">打开工具箱</button>
+                        </div>
+                    </article>
+
+                    <article class="spotlight-card dashboard-status-card">
+                        <div class="spotlight-head">
+                            <h3>课堂状态概览</h3>
+                            <span class="text-link">切换到归档学期时自动只读</span>
+                        </div>
+                        <div class="class-summary-list">
+                            <div class="summary-item">
+                                <span>最新学期</span>
+                                <strong>2025-2026 春季学期</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>历史浏览</span>
+                                <strong>支持查看旧学期排行榜与积分历史</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>课堂操作闭环</span>
+                                <strong>加减分、查看记录、撤回最近一次</strong>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <div class="stats-grid dashboard-metrics-grid">
+                    <article class="metric-card accent-purple">
+                        <span>榜首学生</span>
+                        <strong id="overview-card-top-student">-</strong>
+                        <small id="overview-card-top-meta">总积分 0</small>
+                    </article>
+                    <article class="metric-card accent-blue">
+                        <span>最近积分记录</span>
+                        <strong id="overview-card-record-name">-</strong>
+                        <small id="overview-card-record-meta">暂无记录</small>
+                    </article>
+                    <article class="metric-card accent-gold">
+                        <span>课堂快捷入口</span>
+                        <strong>5 个</strong>
+                        <small>学生、积分、商城、工具、设置</small>
+                    </article>
+                    <article class="metric-card accent-green">
+                        <span>当前学期权限</span>
+                        <strong>可操作</strong>
+                        <small>归档学期自动切换为只读模式</small>
+                    </article>
+                </div>
+
+                <div class="dashboard-grid">
+                    <article class="panel">
+                        <div class="panel-head panel-head-stack">
+                            <div>
+                                <h3>排行榜预览</h3>
+                                <div class="student-meta">支持总榜 / 单项榜和时间范围切换</div>
+                            </div>
+                            <div class="toolbar compact-toolbar">
+                                <div class="segmented-control" id="dashboard-ranking-mode">
+                                    <button class="chip-button is-active" data-ranking-mode="total">总榜</button>
+                                    <button class="chip-button" data-ranking-mode="item">单项榜</button>
+                                </div>
+                                <div class="segmented-control" id="dashboard-ranking-range">
+                                    <button class="chip-button" data-ranking-range="week">本周</button>
+                                    <button class="chip-button" data-ranking-range="month">本月</button>
+                                    <button class="chip-button is-active" data-ranking-range="term">本学期</button>
+                                </div>
+                                <button class="text-link-button" data-section-shortcut="points">查看完整排行榜</button>
+                            </div>
+                        </div>
+                        <div id="dashboard-leaderboard" class="leaderboard compact-leaderboard"></div>
+                    </article>
+
+                    <article class="panel">
+                        <div class="panel-head panel-head-stack">
+                            <div>
+                                <h3>最近积分记录预览</h3>
+                                <div class="student-meta">首页即可快速回看课堂最新操作</div>
+                            </div>
+                            <div class="toolbar compact-toolbar">
+                                <button class="ghost-button small-ghost-button" id="dashboard-undo-last">撤回最近一次</button>
+                                <button class="text-link-button" data-section-shortcut="points">查看积分历史</button>
+                            </div>
+                        </div>
+                        <div id="dashboard-records" class="record-list compact-record-list"></div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="view-section" data-section="students">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">学生管理</div>
+                        <h2>学生名册、分组维护和课堂筛选都放在这一页</h2>
+                    </div>
+                    <div class="toolbar">
+                        <button class="ghost-button">单个添加</button>
+                        <button class="ghost-button">批量添加</button>
+                        <button class="primary-button">Excel 导入学生</button>
+                    </div>
+                </div>
+
+                <div class="panel students-control-panel">
+                    <div class="students-control-grid">
+                        <div class="control-block">
+                            <span class="portal-label">快速搜索</span>
+                            <input id="student-search" class="search-input" type="search" placeholder="搜索学生姓名、小组或标签">
+                        </div>
+                        <div class="control-block">
+                            <span class="portal-label">展示方式</span>
+                            <div class="segmented-control" id="student-view-switch">
+                                <button class="chip-button is-active" data-student-view="card">卡片视图</button>
+                                <button class="chip-button" data-student-view="list">列表视图</button>
+                            </div>
+                        </div>
+                        <div class="control-block">
+                            <span class="portal-label">排序方式</span>
+                            <div class="segmented-control" id="student-sort-switch">
+                                <button class="chip-button is-active" data-student-sort="points-desc">按积分</button>
+                                <button class="chip-button" data-student-sort="name-asc">按姓名</button>
+                            </div>
+                        </div>
+                        <div class="control-block">
+                            <span class="portal-label">分组入口</span>
+                            <div class="toolbar compact-toolbar">
+                                <button class="ghost-button small-ghost-button">管理分组</button>
+                                <button class="ghost-button small-ghost-button">Excel 导入分组</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="filter-row" id="group-filters"></div>
+                </div>
+
+                <div class="students-layout">
+                    <article class="panel">
+                        <div class="panel-head">
+                            <h3>学生名册</h3>
+                            <span class="text-link">点击卡片可切换当前操作学生</span>
+                        </div>
+                        <div class="student-grid" id="student-grid"></div>
+                    </article>
+
+                    <article class="panel student-side-panel">
+                        <div class="panel-head">
+                            <h3>当前分组概览</h3>
+                            <span class="status-chip status-sky">支持分组筛选</span>
+                        </div>
+                        <div class="class-summary-list">
+                            <div class="summary-item">
+                                <span>当前选中学生</span>
+                                <strong id="selected-student-name">-</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>当前所在分组</span>
+                                <strong id="selected-student-group">-</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>可执行操作</span>
+                                <strong>编辑学生 / 删除学生 / 调整分组成员</strong>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="view-section" data-section="points">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">积分中心</div>
+                        <h2>课堂加减分、排行榜筛选和积分历史形成完整闭环</h2>
+                    </div>
+                    <div class="toolbar">
+                        <button class="ghost-button">导入积分项</button>
+                        <button class="ghost-button">导入积分</button>
+                        <button class="ghost-button">导出结果</button>
+                        <button class="primary-button">规则管理</button>
+                    </div>
+                </div>
+
+                <div class="points-top-grid">
+                    <article class="panel">
+                        <div class="panel-head">
+                            <h3>课堂积分操作</h3>
+                            <span class="text-link">支持单人 / 多人 / 全班加减分</span>
+                        </div>
+                        <div class="points-operation-grid">
+                            <div class="summary-item">
+                                <span>当前对象</span>
+                                <strong id="point-target-name">林若溪</strong>
+                                <div class="student-meta" id="point-target-meta">第1组 · 当前单人模式</div>
+                            </div>
+                            <div class="control-block">
+                                <span class="portal-label">操作模式</span>
+                                <div class="segmented-control" id="point-mode-switch">
+                                    <button class="chip-button is-active" data-point-mode="single">单人</button>
+                                    <button class="chip-button" data-point-mode="multiple">多人</button>
+                                    <button class="chip-button" data-point-mode="class">全班</button>
+                                </div>
+                            </div>
+                            <div class="control-block">
+                                <span class="portal-label">快捷操作</span>
+                                <div class="toolbar compact-toolbar">
+                                    <button class="primary-button small-primary-button" data-point-adjust="2"
+                                        data-point-reason="主动发言">+2 主动发言</button>
+                                    <button class="primary-button small-primary-button" data-point-adjust="4"
+                                        data-point-reason="小组展示">+4 小组展示</button>
+                                    <button class="ghost-button small-ghost-button" data-point-adjust="-1"
+                                        data-point-reason="课堂提醒">-1 课堂提醒</button>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="panel">
+                        <div class="panel-head">
+                            <h3>规则与导入总览</h3>
+                            <span class="status-chip">已支持 Excel</span>
+                        </div>
+                        <div class="class-summary-list">
+                            <div class="summary-item">
+                                <span>积分组</span>
+                                <strong>课堂表现 / 作业表现 / 小组合作 / 纪律规范</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>积分项</span>
+                                <strong>积极发言 / 作业优秀 / 小组展示 / 课堂提醒</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>支持能力</span>
+                                <strong>积分项导入、积分导入、结果导出、历史导出</strong>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <div class="points-layout">
+                    <article class="panel">
+                        <div class="panel-head panel-head-stack">
+                            <div>
+                                <h3>实时排行榜</h3>
+                                <div class="student-meta">支持总榜 / 单项榜以及时间范围切换</div>
+                            </div>
+                            <div class="toolbar compact-toolbar">
+                                <div class="segmented-control" id="points-ranking-mode">
+                                    <button class="chip-button is-active" data-ranking-mode="total">总榜</button>
+                                    <button class="chip-button" data-ranking-mode="item">单项榜</button>
+                                </div>
+                                <div class="segmented-control" id="points-ranking-range">
+                                    <button class="chip-button" data-ranking-range="week">本周</button>
+                                    <button class="chip-button" data-ranking-range="month">本月</button>
+                                    <button class="chip-button is-active" data-ranking-range="term">本学期</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="leaderboard" class="leaderboard"></div>
+                    </article>
+
+                    <article class="panel">
+                        <div class="panel-head panel-head-stack">
+                            <div>
+                                <h3>最近积分记录</h3>
+                                <div class="student-meta">普通积分记录支持撤回，商城兑换需到商城页处理</div>
+                            </div>
+                            <div class="toolbar compact-toolbar">
+                                <button class="ghost-button small-ghost-button" id="points-undo-last">撤回最近一次</button>
+                                <button class="text-link-button">查看积分历史</button>
+                            </div>
+                        </div>
+                        <div id="point-records" class="record-list"></div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="view-section" data-section="shop">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">积分商城</div>
+                        <h2>商品卡片和兑换信息并排展示，方便课堂讲解与奖品管理</h2>
+                    </div>
+                    <div class="toolbar">
+                        <button class="ghost-button">导入奖品</button>
+                        <button class="ghost-button">查看兑换记录</button>
+                        <button class="primary-button">新增奖品</button>
+                    </div>
+                </div>
+
+                <div class="shop-grid" id="shop-grid"></div>
+            </section>
+
+            <section class="view-section" data-section="tools">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">课堂工具</div>
+                        <h2>把工具箱做成课堂控制台，同时体现奖池来源和扩展入口</h2>
+                    </div>
+                    <div class="toolbar">
+                        <button class="ghost-button">保存课堂配置</button>
+                        <button class="ghost-button">更多工具</button>
+                    </div>
+                </div>
+
+                <div class="points-top-grid">
+                    <article class="panel">
+                        <div class="panel-head">
+                            <h3>抽奖器奖池来源</h3>
+                            <span class="text-link">支持商城导入或自定义奖品</span>
+                        </div>
+                        <div class="toolbar compact-toolbar">
+                            <button class="primary-button small-primary-button">从商城导入奖品</button>
+                            <button class="ghost-button small-ghost-button">自定义奖池</button>
+                            <button class="ghost-button small-ghost-button">查看奖池记录</button>
+                        </div>
+                    </article>
+
+                    <article class="panel">
+                        <div class="panel-head">
+                            <h3>课堂工具状态</h3>
+                            <span class="status-chip status-amber">统一保存配置</span>
+                        </div>
+                        <div class="class-summary-list">
+                            <div class="summary-item">
+                                <span>当前开启工具</span>
+                                <strong>计时器 / 点名器 / 抽奖器</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>预留入口</span>
+                                <strong>更多工具持续扩展中</strong>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <div class="tools-grid">
+                    <article class="tool-panel timer-panel">
+                        <div class="panel-head">
+                            <h3>计时器</h3>
+                            <span class="status-chip status-amber" id="timer-status">待开始</span>
+                        </div>
+                        <div class="timer-display" id="timer-display">15:00</div>
+                        <div class="preset-row">
+                            <button class="chip-button" data-timer-minutes="5">5 分钟</button>
+                            <button class="chip-button" data-timer-minutes="10">10 分钟</button>
+                            <button class="chip-button is-active" data-timer-minutes="15">15 分钟</button>
+                            <button class="chip-button" data-timer-minutes="20">20 分钟</button>
+                        </div>
+                        <div class="tool-actions">
+                            <button class="primary-button" id="timer-toggle">开始计时</button>
+                            <button class="ghost-button" id="timer-reset">重置</button>
+                        </div>
+                    </article>
+
+                    <article class="tool-panel rollcall-panel">
+                        <div class="panel-head">
+                            <h3>点名器</h3>
+                            <span class="status-chip status-rose">随机模式</span>
+                        </div>
+                        <div class="rollcall-card">
+                            <div class="rollcall-avatar" id="rollcall-avatar">李</div>
+                            <div class="rollcall-name" id="rollcall-name">李嘉禾</div>
+                            <p id="rollcall-meta">来自第 2 组 · 当前积分 126</p>
+                        </div>
+                        <div class="tool-actions">
+                            <button class="primary-button" id="rollcall-trigger">随机点名</button>
+                            <button class="ghost-button" data-section-shortcut="students">查看学生卡片</button>
+                        </div>
+                    </article>
+
+                    <article class="tool-panel lottery-panel">
+                        <div class="panel-head">
+                            <h3>抽奖器</h3>
+                            <span class="status-chip status-violet">奖池预览</span>
+                        </div>
+                        <div class="prize-list">
+                            <div class="prize-card">
+                                <strong>免作业券</strong>
+                                <span>来自商城 · 剩余 3 张</span>
+                            </div>
+                            <div class="prize-card">
+                                <strong>阅读优先位</strong>
+                                <span>来自商城 · 剩余 5 次</span>
+                            </div>
+                            <div class="prize-card">
+                                <strong>文具盲盒</strong>
+                                <span>自定义奖池 · 剩余 2 份</span>
+                            </div>
+                        </div>
+                        <div class="tool-actions">
+                            <button class="ghost-button small-ghost-button">同步商城奖品</button>
+                            <button class="ghost-button small-ghost-button">编辑奖池</button>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="view-section" data-section="settings">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">设置中心</div>
+                        <h2>集中处理账号信息、锁屏、反馈和本地数据迁移提示</h2>
+                    </div>
+                    <div class="toolbar">
+                        <button class="ghost-button" id="settings-lock-trigger">立即锁屏</button>
+                        <button class="primary-button">保存设置</button>
+                    </div>
+                </div>
+
+                <div class="points-top-grid settings-top-grid">
+                    <article class="panel">
+                        <div class="panel-head">
+                            <h3>当前账号信息</h3>
+                            <span class="status-chip status-amber">试用账号</span>
+                        </div>
+                        <div class="class-summary-list">
+                            <div class="summary-item">
+                                <span>用户昵称</span>
+                                <strong>王老师</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>登录邮箱</span>
+                                <strong id="settings-user-email">teacher-demo@school.cn</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>试用状态</span>
+                                <strong>剩余 12 天 · 支持课堂全流程体验</strong>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="panel">
+                        <div class="panel-head">
+                            <h3>锁屏状态</h3>
+                            <span class="status-chip status-sky" id="settings-lock-status">未设置锁屏密码</span>
+                        </div>
+                        <div class="class-summary-list">
+                            <div class="summary-item">
+                                <span>锁屏密码</span>
+                                <strong id="settings-lock-summary">当前未启用</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>说明</span>
+                                <strong id="settings-lock-tip">未设置密码时，不能直接锁屏。</strong>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <div class="dashboard-grid settings-grid">
+                    <article class="panel">
+                        <div class="panel-head panel-head-stack">
+                            <div>
+                                <h3>锁屏设置</h3>
+                                <div class="student-meta">支持设置、修改、清除锁屏密码，并立即锁屏体验</div>
+                            </div>
+                            <div class="toolbar compact-toolbar">
+                                <button class="ghost-button small-ghost-button" id="lock-clear-trigger">清除密码</button>
+                                <button class="ghost-button small-ghost-button" id="lock-screen-preview">立即锁屏</button>
+                            </div>
+                        </div>
+                        <div class="settings-form-grid">
+                            <label class="control-block">
+                                <span class="portal-label">锁屏密码</span>
+                                <input id="lock-password-input" class="search-input" type="password"
+                                    placeholder="请输入 4-6 位锁屏密码">
+                            </label>
+                            <div class="toolbar compact-toolbar">
+                                <button class="primary-button small-primary-button"
+                                    id="lock-save-trigger">保存锁屏密码</button>
+                                <button class="ghost-button small-ghost-button">修改锁屏密码</button>
+                            </div>
+                            <div class="summary-item">
+                                <span>本地存储说明</span>
+                                <strong>原型中以本地状态模拟摘要存储，不展示明文回显。</strong>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="panel">
+                        <div class="panel-head panel-head-stack">
+                            <div>
+                                <h3>意见反馈</h3>
+                                <div class="student-meta">用于提交建议、问题反馈和课堂使用体验</div>
+                            </div>
+                            <span class="status-chip" id="settings-feedback-count">本地已提交 0 条</span>
+                        </div>
+                        <div class="settings-form-grid">
+                            <label class="control-block">
+                                <span class="portal-label">反馈内容</span>
+                                <textarea id="feedback-input" class="feedback-textarea"
+                                    placeholder="例如：希望排行榜支持按分组筛选，锁屏页面可显示当前班级信息。"></textarea>
+                            </label>
+                            <div class="toolbar compact-toolbar">
+                                <button class="primary-button small-primary-button"
+                                    id="feedback-submit-trigger">提交反馈</button>
+                                <button class="ghost-button small-ghost-button"
+                                    id="feedback-clear-trigger">清空内容</button>
+                            </div>
+                            <div class="summary-item">
+                                <span>最近一次反馈</span>
+                                <strong id="settings-feedback-latest">暂无提交记录</strong>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <div class="dashboard-grid settings-grid">
+                    <article class="panel">
+                        <div class="panel-head">
+                            <h3>旧版本数据迁移</h3>
+                            <span class="status-chip status-violet" id="settings-migration-status">检测到迁移提醒</span>
+                        </div>
+                        <div class="class-summary-list">
+                            <div class="summary-item">
+                                <span>迁移说明</span>
+                                <strong>支持从旧版本导入本地数据，避免班级与积分信息丢失。</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>当前提示</span>
+                                <strong id="settings-migration-summary">建议首次登录后完成旧版本数据导入。</strong>
+                            </div>
+                        </div>
+                        <div class="toolbar compact-toolbar settings-action-row">
+                            <button class="primary-button small-primary-button"
+                                id="migration-start-trigger">开始迁移</button>
+                            <button class="ghost-button small-ghost-button" id="migration-ignore-trigger">稍后处理</button>
+                        </div>
+                    </article>
+
+                    <article class="panel">
+                        <div class="panel-head">
+                            <h3>设置页快捷入口</h3>
+                            <span class="text-link">覆盖真实业务辅助能力</span>
+                        </div>
+                        <div class="portal-grid">
+                            <button class="portal-card" id="portal-lock-trigger">
+                                <span class="portal-label">防误触</span>
+                                <strong>锁屏控制</strong>
+                                <p>设置密码后可在课堂中一键锁屏，防止大屏误触。</p>
+                            </button>
+                            <button class="portal-card">
+                                <span class="portal-label">账号状态</span>
+                                <strong>试用提示</strong>
+                                <p>展示头像、邮箱和试用到期提醒。</p>
+                            </button>
+                            <button class="portal-card">
+                                <span class="portal-label">反馈入口</span>
+                                <strong>提交建议</strong>
+                                <p>记录老师的使用反馈与迭代建议。</p>
+                            </button>
+                            <button class="portal-card">
+                                <span class="portal-label">数据辅助</span>
+                                <strong>旧版迁移</strong>
+                                <p>提示导入旧版本本地数据并展示当前迁移状态。</p>
+                            </button>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <div class="bottom-dock">
+                <div class="dock-hint">课堂高频操作</div>
+                <div class="dock-actions">
+                    <button class="dock-button" data-section-shortcut="students">学生管理</button>
+                    <button class="dock-button" data-section-shortcut="points">积分中心</button>
+                    <button class="dock-button" data-section-shortcut="points">积分历史</button>
+                    <button class="dock-button" data-section-shortcut="tools">打开工具箱</button>
+                    <button class="dock-button" data-section-shortcut="settings">设置中心</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="lock-overlay" id="lock-overlay" aria-hidden="true">
+        <div class="lock-panel">
+            <div class="eyebrow">课堂锁屏</div>
+            <h2 id="lock-overlay-title">课堂已锁定</h2>
+            <p class="student-meta" id="lock-overlay-summary">请输入锁屏密码后解锁，防止课堂大屏误触。</p>
+            <label class="control-block">
+                <span class="portal-label">解锁密码</span>
+                <input id="lock-unlock-input" class="search-input" type="password" placeholder="请输入锁屏密码">
+            </label>
+            <div class="toolbar compact-toolbar">
+                <button class="primary-button" id="lock-unlock-trigger">解锁</button>
+                <button class="ghost-button" id="lock-close-trigger">关闭预览</button>
+            </div>
+            <div class="status-chip" id="lock-overlay-status">当前未锁定</div>
+        </div>
+    </div>
+
+    <script src="./script.js"></script>
+</body>
+
+</html>

@@ -10,7 +10,9 @@ const USER_CACHE_PREFIX = 'ta_cache:'
 type UserScopedCache = {
     activeClassId?: number | null
     activeClassName?: string | null
+    activeSemesterId?: number | null
     activeSemesterName?: string | null
+    activeSemesterStatus?: number | null
     activeSemesterIsLatest?: boolean | null
     studentsSort?: StudentsSortOption | null
     classLayout?: 'card' | 'list' | null
@@ -37,7 +39,9 @@ function safeParseJson<T>(raw: string | null): T | null {
 export const useCacheStore = defineStore('cache', () => {
     let activeClassId = ref<number | null>(null)
     let activeClassName = ref<string | null>(null)
+    let activeSemesterId = ref<number | null>(null)
     let activeSemesterName = ref<string | null>(null)
+    let activeSemesterStatus = ref<number | null>(null)
     let activeSemesterIsLatest = ref<boolean | null>(null)
     let studentsSort = ref<StudentsSortOption | null>(null)
     let classLayout = ref<'card' | 'list' | null>(null)
@@ -72,7 +76,9 @@ export const useCacheStore = defineStore('cache', () => {
 
         activeClassId.value = typeof obj.activeClassId === 'number' ? obj.activeClassId : null
         activeClassName.value = typeof obj.activeClassName === 'string' ? obj.activeClassName : null
+        activeSemesterId.value = typeof obj.activeSemesterId === 'number' ? obj.activeSemesterId : null
         activeSemesterName.value = typeof obj.activeSemesterName === 'string' ? obj.activeSemesterName : null
+        activeSemesterStatus.value = typeof obj.activeSemesterStatus === 'number' ? obj.activeSemesterStatus : null
         activeSemesterIsLatest.value = typeof obj.activeSemesterIsLatest === 'boolean' ? obj.activeSemesterIsLatest : null
         studentsSort.value = (obj.studentsSort as StudentsSortOption | null) ?? null
         classLayout.value = (obj.classLayout as any) ?? null
@@ -101,7 +107,9 @@ export const useCacheStore = defineStore('cache', () => {
         const payload: UserScopedCache = {
             activeClassId: activeClassId.value,
             activeClassName: activeClassName.value,
+            activeSemesterId: activeSemesterId.value,
             activeSemesterName: activeSemesterName.value,
+            activeSemesterStatus: activeSemesterStatus.value,
             activeSemesterIsLatest: activeSemesterIsLatest.value,
             studentsSort: studentsSort.value,
             classLayout: classLayout.value,
@@ -202,6 +210,27 @@ export const useCacheStore = defineStore('cache', () => {
         activeClassName.value = null
     }
 
+    function setActiveSemesterId(id: number | null) {
+        activeSemesterId.value = typeof id === 'number' && Number.isFinite(id) ? id : null
+    }
+
+    function getActiveSemesterId() {
+        const raw: any = activeSemesterId.value as any
+        if (typeof raw === 'number' && Number.isFinite(raw)) return raw
+        if (typeof raw === 'string') {
+            const n = Number(raw)
+            if (Number.isFinite(n) && n > 0) {
+                activeSemesterId.value = n
+                return n
+            }
+        }
+        return null
+    }
+
+    function clearActiveSemesterId() {
+        activeSemesterId.value = null
+    }
+
     function setActiveSemesterName(name: string) {
         activeSemesterName.value = name
     }
@@ -212,6 +241,30 @@ export const useCacheStore = defineStore('cache', () => {
 
     function clearActiveSemesterName() {
         activeSemesterName.value = null
+    }
+
+    /** 设置当前激活学期状态。 */
+    function setActiveSemesterStatus(status: number | null) {
+        activeSemesterStatus.value = typeof status === 'number' && Number.isFinite(status) ? status : null
+    }
+
+    /** 获取当前激活学期状态。 */
+    function getActiveSemesterStatus() {
+        const raw: any = activeSemesterStatus.value as any
+        if (typeof raw === 'number' && Number.isFinite(raw)) return raw
+        if (typeof raw === 'string') {
+            const n = Number(raw)
+            if (Number.isFinite(n)) {
+                activeSemesterStatus.value = n
+                return n
+            }
+        }
+        return null
+    }
+
+    /** 清空当前激活学期状态。 */
+    function clearActiveSemesterStatus() {
+        activeSemesterStatus.value = null
     }
 
     function setActiveSemesterIsLatest(isLatest: boolean | null) {
@@ -301,7 +354,9 @@ export const useCacheStore = defineStore('cache', () => {
     function resetUserScopedRuntimeState(): void {
         activeClassId.value = null
         activeClassName.value = null
+        activeSemesterId.value = null
         activeSemesterName.value = null
+        activeSemesterStatus.value = null
         activeSemesterIsLatest.value = null
         studentsSort.value = null
         classLayout.value = null
@@ -375,7 +430,9 @@ export const useCacheStore = defineStore('cache', () => {
         [
             activeClassId,
             activeClassName,
+            activeSemesterId,
             activeSemesterName,
+            activeSemesterStatus,
             activeSemesterIsLatest,
             studentsSort,
             classLayout,
@@ -404,10 +461,18 @@ export const useCacheStore = defineStore('cache', () => {
         setActiveClassName,
         getActiveClassName,
         clearActiveClassName,
+        activeSemesterId,
+        setActiveSemesterId,
+        getActiveSemesterId,
+        clearActiveSemesterId,
         activeSemesterName,
         setActiveSemesterName,
         getActiveSemesterName,
         clearActiveSemesterName,
+        activeSemesterStatus,
+        setActiveSemesterStatus,
+        getActiveSemesterStatus,
+        clearActiveSemesterStatus,
         activeSemesterIsLatest,
         setActiveSemesterIsLatest,
         getActiveSemesterIsLatest,

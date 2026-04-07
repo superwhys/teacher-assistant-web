@@ -39,7 +39,27 @@
                     </div>
                 </div>
 
-                <div class="preview-list">
+                <div class="ranking-filter">
+                    <div class="ranking-filter__group" role="tablist" aria-label="排行榜周期">
+                        <button
+                            v-for="item in rankingTimeRangeOptions"
+                            :key="item.value"
+                            type="button"
+                            class="ranking-filter__button"
+                            :class="{ 'is-active': rankingTimeRange === item.value }"
+                            @click="rankingTimeRange = item.value"
+                        >
+                            {{ item.label }}
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="rankingPreview.length === 0" class="ranking-empty-state">
+                    <strong>暂无排行榜数据</strong>
+                    <p>当前周期下还没有可展示的积分排名。</p>
+                </div>
+
+                <div v-else class="preview-list">
                     <article v-for="item in rankingPreview" :key="item.rank" class="preview-item">
                         <div>
                             <strong>{{ item.title }}</strong>
@@ -75,9 +95,13 @@
 
 <script setup lang="ts">
 import { dashboardApi } from "@/api/dashboard";
+import { pointsManager } from "@/managers/points";
+import { studentManager } from "@/managers/student";
 import { useCacheStore } from "@/stores/cacheStore";
 import type { DashboardStatisticsResp } from "@/types/dashboard";
-import { computed, onMounted, reactive, ref } from "vue";
+import type { RankingTimeRange, StudentRankingItem } from "@/types/points";
+import type { StudentDTO } from "@/types/student";
+import { computed, reactive, ref, watch } from "vue";
 
 /** 定义状态标签结构。 */
 interface ChipItem {
@@ -118,13 +142,6 @@ interface SummaryMetricData {
     value: string | number
 }
 
-/** 定义排行榜接口数据结构。 */
-interface RankingPreviewData {
-    rank: number
-    student_name: string
-    total_points: number
-}
-
 /** 定义积分记录接口数据结构。 */
 interface RecordPreviewData {
     id: number
@@ -149,6 +166,11 @@ interface RecordPreviewItem {
     valueToneClass: string
 }
 
+interface RankingTimeRangeOption {
+    value: RankingTimeRange
+    label: string
+}
+
 /** 提供摘要卡片的展示配置。 */
 const summaryCardConfigs: SummaryCardConfig[] = [
     { id: "students", label: "学生人数", helper: "已完成名册导入", toneClass: "summary-card--blue" },
@@ -158,6 +180,16 @@ const summaryCardConfigs: SummaryCardConfig[] = [
 ]
 
 const cacheStore = useCacheStore()
+const currentClassId = computed<number | null>(() => cacheStore.getActiveClassId())
+const currentSemesterId = computed<number | null>(() => cacheStore.getActiveSemesterId())
+const rankingTimeRange = ref<RankingTimeRange>(cacheStore.getPointsRankingTimeRange())
+const rankingStudents = ref<StudentDTO[]>([])
+const rankingPreviewResponse = ref<StudentRankingItem[]>([])
+const rankingTimeRangeOptions: RankingTimeRangeOption[] = [
+    { value: "all", label: "全部" },
+    { value: "weekly", label: "周榜" },
+    { value: "monthly", label: "月榜" }
+]
 
 /** 创建首页空白摘要数据。 */
 function createEmptyDashboardSummaryResponse(): DashboardSummaryResponseData {
@@ -175,21 +207,6 @@ function createEmptyDashboardSummaryResponse(): DashboardSummaryResponseData {
 
 /** 提供首页空白摘要数据。 */
 const dashboardSummaryResponse = reactive<DashboardSummaryResponseData>(createEmptyDashboardSummaryResponse())
-
-/** 提供排行榜占位接口数据。 */
-/** TODO: 替换为排行榜接口数据 */
-const rankingPreviewResponse = reactive<RankingPreviewData[]>([
-    { rank: 1, student_name: "赵思远", total_points: 144 },
-    { rank: 2, student_name: "林若溪", total_points: 138 },
-    { rank: 3, student_name: "李嘉禾", total_points: 126 },
-    { rank: 4, student_name: "张三", total_points: 126 },
-    { rank: 5, student_name: "李四", total_points: 126 },
-    { rank: 6, student_name: "王五", total_points: 126 },
-    { rank: 7, student_name: "赵六", total_points: 126 },
-    { rank: 8, student_name: "孙七", total_points: 126 },
-    { rank: 9, student_name: "周八", total_points: 126 },
-    { rank: 10, student_name: "吴九", total_points: 126 }
-])
 
 /** 提供最近积分记录占位接口数据。 */
 /** TODO: 替换为积分记录接口数据 */
@@ -227,6 +244,22 @@ function toggleRankingPreviewMask(): void {
     isRankingPreviewMasked.value = !isRankingPreviewMasked.value
 }
 
+/** 返回学生 ID 到姓名的映射表。 */
+const studentIdNameMap = computed<Record<number, string>>(() => {
+    const map: Record<number, string> = {}
+
+    for (const student of rankingStudents.value) {
+        const id = student.id ?? 0
+        const name = student.name?.trim() ?? ""
+        if (!id || !name) {
+            continue
+        }
+        map[id] = name
+    }
+
+    return map
+})
+
 /** 将接口返回的首页摘要数据写入页面状态。 */
 function applyDashboardSummaryResponse(data?: DashboardStatisticsResp): void {
     dashboardSummaryResponse.current_term_name = data?.current_term_name ?? "未知学期"
@@ -240,19 +273,62 @@ function applyDashboardSummaryResponse(data?: DashboardStatisticsResp): void {
 /** 加载首页摘要接口数据。 */
 async function loadDashboardSummary(): Promise<void> {
     try {
-        const classId = cacheStore.getActiveClassId()
+        const classId = currentClassId.value
         if (!classId) {
+            applyDashboardSummaryResponse(undefined)
             return
         }
 
         const response = await dashboardApi.getStatistics({
-            class_id: classId
+            class_id: classId,
         })
         applyDashboardSummaryResponse(response.data)
     } catch (error) {
         console.error("获取首页统计数据失败", error)
     }
 }
+
+/** 加载排行榜所需的学生姓名映射。 */
+async function loadRankingStudents(): Promise<void> {
+    const classId = currentClassId.value
+    if (!classId) {
+        rankingStudents.value = []
+        return
+    }
+
+    try {
+        rankingStudents.value = await studentManager.list(classId)
+    } catch (error) {
+        console.error("获取排行榜学生数据失败", error)
+        rankingStudents.value = []
+    }
+}
+
+/** 加载排行榜接口数据。 */
+async function loadRankingPreview(): Promise<void> {
+    const classId = currentClassId.value
+    if (!classId) {
+        rankingPreviewResponse.value = []
+        return
+    }
+
+    try {
+        const response = await pointsManager.getClassRanking({
+            class_id: classId,
+            time_range: rankingTimeRange.value,
+            limit: 10,
+        })
+        rankingPreviewResponse.value = response.items ?? []
+    } catch (error) {
+        console.error("获取排行榜数据失败", error)
+        rankingPreviewResponse.value = []
+    }
+}
+
+/** 同步保存排行榜时间维度。 */
+watch(rankingTimeRange, (value) => {
+    cacheStore.setPointsRankingTimeRange(value)
+})
 
 /** 顶部状态标签。 */
 const heroStatusChips = computed<ChipItem[]>(() => [
@@ -277,11 +353,18 @@ const summaryItems = computed<SummaryItem[]>(() => {
 
 /** 排行榜预览。 */
 const rankingPreview = computed<PreviewItem[]>(() => {
-    return rankingPreviewResponse.map((item) => ({
-        rank: item.rank,
-        title: isRankingPreviewMasked.value ? getMaskedRankingText() : item.student_name,
-        value: isRankingPreviewMasked.value ? getMaskedRankingText() : formatRankingValue(item.total_points)
-    }))
+    return rankingPreviewResponse.value.map((item, index) => {
+        const rank = typeof item.rank === "number" ? item.rank : index + 1
+        const studentId = item.student_id ?? 0
+        const studentName = studentIdNameMap.value[studentId] ?? `学生 ${rank}`
+        const score = typeof item.score === "number" ? item.score : 0
+
+        return {
+            rank,
+            title: isRankingPreviewMasked.value ? getMaskedRankingText() : studentName,
+            value: isRankingPreviewMasked.value ? getMaskedRankingText() : formatRankingValue(score)
+        }
+    })
 })
 
 /** 基于接口数据生成最近积分记录预览。 */
@@ -295,8 +378,18 @@ const recordPreview = computed<RecordPreviewItem[]>(() => {
     }))
 })
 
-onMounted(() => {
-    void loadDashboardSummary()
+/** 监听班级与学期变化后重新加载首页数据。 */
+watch([currentClassId, currentSemesterId], async () => {
+    await Promise.all([
+        loadDashboardSummary(),
+        loadRankingStudents(),
+        loadRankingPreview(),
+    ])
+}, { immediate: true })
+
+/** 监听排行榜时间维度变化后重新加载排行榜。 */
+watch(rankingTimeRange, () => {
+    void loadRankingPreview()
 })
 </script>
 
@@ -384,6 +477,47 @@ onMounted(() => {
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: 12px;
+}
+
+.ranking-filter {
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: center;
+}
+
+.ranking-filter__group {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px;
+    border-radius: 999px;
+    background: rgba(85, 104, 255, 0.08);
+    border: 1px solid rgba(122, 141, 198, 0.14);
+}
+
+.ranking-filter__button {
+    min-width: 72px;
+    min-height: 36px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: #627099;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.ranking-filter__button:hover {
+    color: #3c4fb0;
+    transform: translateY(-1px);
+}
+
+.ranking-filter__button.is-active {
+    background: linear-gradient(135deg, #5568ff, #8e6cff);
+    color: #ffffff;
+    box-shadow: 0 10px 18px rgba(85, 104, 255, 0.22);
 }
 
 .hero-intro__hint {
@@ -506,6 +640,30 @@ onMounted(() => {
 .preview-list {
     display: grid;
     gap: 14px;
+}
+
+.ranking-empty-state {
+    display: grid;
+    place-items: center;
+    gap: 8px;
+    min-height: 180px;
+    padding: 24px;
+    border: 1px dashed rgba(122, 141, 198, 0.24);
+    border-radius: 24px;
+    background: rgba(247, 249, 255, 0.72);
+    text-align: center;
+}
+
+.ranking-empty-state strong {
+    color: #16213e;
+    font-size: 16px;
+}
+
+.ranking-empty-state p {
+    margin: 0;
+    color: #627099;
+    font-size: 14px;
+    line-height: 1.7;
 }
 
 .panel-grid {

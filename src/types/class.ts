@@ -15,6 +15,7 @@ export type ClassDTO = {
     name?: string
     semester_id?: number
     semester_name?: string
+    semester?: SemesterDTO
     teacher_id?: number
 }
 
@@ -49,6 +50,7 @@ export type SemesterDTO = {
     id?: number
     class_id?: number
     name?: string
+    status?: number // 1: 正常, 2: 已归档··
     start_date?: string
     end_date?: string
 }

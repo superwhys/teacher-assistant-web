@@ -20,8 +20,8 @@
         <main class="main-view__main">
             <header class="main-view__header">
                 <div class="page-heading">
-                    <p class="page-heading__caption">2025-2026 学年 · 春季学期</p>
-                    <h1 class="page-heading__title">{{ currentNavItem.heading }}</h1>
+                    <p class="page-heading__caption">{{ pageHeadingCaption }}</p>
+                    <h1 class="page-heading__title">{{ currentPageTitle }}</h1>
                     <div class="status-chips">
                         <span v-for="item in statusChips" :key="item.id" class="status-chip" :class="item.toneClass">
                             {{ item.label }}
@@ -30,11 +30,24 @@
                 </div>
 
                 <div class="header-actions">
-                    <component :is="item.to ? RouterLink : 'button'" v-for="item in headerActions" :key="item.id"
-                        class="header-actions__button" :class="{ 'is-primary': item.primary }"
-                        v-bind="item.to ? { to: item.to } : { type: 'button' }">
-                        {{ item.label }}
-                    </component>
+                    <button type="button" class="header-actions__button">
+                        立即锁屏
+                    </button>
+                    <SemesterSwitchButton
+                        :active-class-id="activeClassId"
+                        :current-semester-id="currentSemesterId"
+                        @switched="handleSemesterSwitched"
+                    />
+                    <ClassSwitchButton
+                        :active-class-id="activeClassId"
+                        @switched="handleClassSwitched"
+                    />
+                    <RouterLink to="/v3/settings" class="header-actions__button">
+                        进入设置
+                    </RouterLink>
+                    <RouterLink to="/v3/points" class="header-actions__button is-primary">
+                        进入积分中心
+                    </RouterLink>
                 </div>
             </header>
 
@@ -50,12 +63,19 @@
                     </RouterLink>
                 </div>
             </div>
+
         </main>
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import ClassSwitchButton from "@/v3/components/ClassSwitchButton.vue";
+import SemesterSwitchButton from "@/v3/components/SemesterSwitchButton.vue";
+import { classManager } from "@/managers/class";
+import { useCacheStore } from "@/stores/cacheStore";
+import type { ClassDTO, SemesterDTO } from "@/types/class";
+import { ElMessage } from "element-plus";
+import { computed, ref, watch } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
 
 /** 定义左侧导航项结构。 */
@@ -65,14 +85,6 @@ interface NavItem {
     icon: string
     to: string
     heading: string
-}
-
-/** 定义按钮项结构。 */
-interface ActionItem {
-    id: string
-    label: string
-    to?: string
-    primary?: boolean
 }
 
 /** 定义带路由的快捷入口结构。 */
@@ -90,6 +102,9 @@ interface ChipItem {
 }
 
 const route = useRoute();
+const cacheStore = useCacheStore()
+const classes = ref<ClassDTO[]>([])
+const classesLoading = ref(false)
 
 const navItems: NavItem[] = [
     {
@@ -136,22 +151,6 @@ const navItems: NavItem[] = [
     }
 ]
 
-/** 提供顶部状态标签的静态数据。 */
-const statusChips: ChipItem[] = [
-    { id: "latest", label: "最新学期", toneClass: "status-chip--sky" },
-    { id: "allowed", label: "允许积分操作", toneClass: "status-chip--green" },
-    { id: "updated", label: "最近更新 08:24" }
-]
-
-/** 提供顶部操作按钮区域的静态数据。 */
-const headerActions: ActionItem[] = [
-    { id: "lock", label: "立即锁屏" },
-    { id: "term", label: "切换学期" },
-    { id: "class", label: "切换班级" },
-    { id: "settings", label: "进入设置", to: "/v3/settings" },
-    { id: "points", label: "进入积分中心", to: "/v3/points", primary: true }
-]
-
 /** 提供底部快捷入口的静态数据。 */
 const dockActions: LinkActionItem[] = [
     { id: "dock-students", label: "学生管理", to: "/v3/students" },
@@ -161,10 +160,237 @@ const dockActions: LinkActionItem[] = [
     { id: "dock-settings", label: "设置中心", to: "/v3/settings" }
 ]
 
+/** 返回当前激活的班级 ID。 */
+const activeClassId = computed<number | null>({
+    get: () => cacheStore.getActiveClassId(),
+    set: (value) => {
+        if (typeof value === "number") {
+            cacheStore.setActiveClassId(value)
+            return
+        }
+
+        cacheStore.clearActiveClassId()
+    }
+})
+
+/** 返回当前班级选项。 */
+const classOptions = computed(() => {
+    return classes.value.filter((item): item is { id: number, name: string } => {
+        return typeof item.id === "number" && typeof item.name === "string" && item.name.trim().length > 0
+    })
+})
+
+/** 返回当前激活的班级。 */
+const currentClass = computed<ClassDTO | null>(() => {
+    if (!activeClassId.value) {
+        return null
+    }
+
+    return classes.value.find((item) => item.id === activeClassId.value) ?? null
+})
+
+/** 返回当前激活学期状态。 */
+const currentSemesterStatus = computed<number | null>(() => {
+    return cacheStore.getActiveSemesterStatus()
+})
+
+/** 返回当前激活学期 ID。 */
+const currentSemesterId = computed<number | null>(() => {
+    return cacheStore.getActiveSemesterId()
+})
+
+/** 返回顶部状态标签。 */
+const statusChips = computed<ChipItem[]>(() => {
+    if (currentSemesterStatus.value === 1) {
+        return [
+            { id: "latest", label: "最新学期", toneClass: "status-chip--sky" },
+            { id: "allowed", label: "允许积分操作", toneClass: "status-chip--green" },
+        ]
+    }
+
+    return [
+        { id: "archived", label: "归档学期", toneClass: "status-chip--slate" },
+        { id: "blocked", label: "不允许积分操作", toneClass: "status-chip--amber" },
+    ]
+})
+
+/** 加载班级列表。 */
+async function loadClasses(): Promise<void> {
+    if (classesLoading.value) {
+        return
+    }
+
+    classesLoading.value = true
+    try {
+        classes.value = await classManager.list()
+    } finally {
+        classesLoading.value = false
+    }
+}
+
+/** 重置当前学期缓存状态。 */
+function resetSemesterCacheState(): void {
+    cacheStore.clearActiveSemesterId()
+    cacheStore.clearActiveSemesterName()
+    cacheStore.clearActiveSemesterStatus()
+}
+
+/** 基于当前班级同步班级名称到缓存。 */
+function syncActiveClassNameToCache(): void {
+    const className = currentClass.value?.name?.trim() ?? ""
+    if (className) {
+        cacheStore.setActiveClassName(className)
+    } else {
+        cacheStore.clearActiveClassName()
+    }
+}
+
+/** 基于当前班级同步学期信息到缓存。 */
+function syncActiveSemesterToCache(): void {
+    const semesterId = currentClass.value?.semester?.id
+        ?? currentClass.value?.semester_id
+        ?? null
+    const semesterName = currentClass.value?.semester?.name?.trim()
+        ?? currentClass.value?.semester_name?.trim()
+        ?? ""
+    const semesterStatus = currentClass.value?.semester?.status
+
+    cacheStore.setActiveSemesterId(semesterId)
+
+    if (semesterName) {
+        cacheStore.setActiveSemesterName(semesterName)
+    } else {
+        cacheStore.clearActiveSemesterName()
+    }
+
+    cacheStore.setActiveSemesterStatus(
+        typeof semesterStatus === "number" ? semesterStatus : null
+    )
+}
+
+/** 将指定学期应用到当前班级。 */
+function applySemesterToCurrentClass(semester: SemesterDTO): void {
+    if (!currentClass.value) {
+        return
+    }
+
+    classes.value = classes.value.map((item) => {
+        if (item.id !== currentClass.value?.id) {
+            return item
+        }
+
+        return {
+            ...item,
+            semester_id: semester.id,
+            semester_name: semester.name,
+            semester: {
+                ...item.semester,
+                ...semester,
+                class_id: semester.class_id ?? item.id,
+            },
+        }
+    })
+}
+
+/** 将选中的学期信息直接同步到缓存。 */
+function writeSelectedSemesterToCache(semester: SemesterDTO): void {
+    cacheStore.setActiveSemesterId(typeof semester.id === "number" ? semester.id : null)
+
+    const semesterName = semester.name?.trim() ?? ""
+    if (semesterName) {
+        cacheStore.setActiveSemesterName(semesterName)
+    } else {
+        cacheStore.clearActiveSemesterName()
+    }
+
+    cacheStore.setActiveSemesterStatus(
+        typeof semester.status === "number" ? semester.status : null
+    )
+}
+
+/** 加载当前班级与学期信息。 */
+async function loadCurrentClassAndSemesterInfo(): Promise<void> {
+    if (!cacheStore.isAuthenticated) {
+        classes.value = []
+        activeClassId.value = null
+        cacheStore.clearActiveClassName()
+        resetSemesterCacheState()
+        return
+    }
+
+    try {
+        await loadClasses()
+        const validClassIds = new Set(classOptions.value.map((item) => item.id))
+
+        if (activeClassId.value && !validClassIds.has(activeClassId.value)) {
+            activeClassId.value = null
+        }
+
+        if (!activeClassId.value) {
+            activeClassId.value = classOptions.value[0]?.id ?? null
+        }
+
+        syncActiveClassNameToCache()
+        if (!activeClassId.value) {
+            resetSemesterCacheState()
+            return
+        }
+
+        syncActiveSemesterToCache()
+    } catch (error) {
+        console.error("获取当前班级和学期信息失败", error)
+    }
+}
+
+/** 处理班级切换成功事件。 */
+async function handleClassSwitched(classId: number): Promise<void> {
+    try {
+        activeClassId.value = classId
+        await loadCurrentClassAndSemesterInfo()
+        ElMessage.success("已切换当前班级")
+    } catch (error) {
+        console.error("切换班级失败", error)
+        ElMessage.error("切换班级失败")
+    }
+}
+
+/** 处理学期切换成功事件。 */
+function handleSemesterSwitched(semester: SemesterDTO): void {
+    writeSelectedSemesterToCache(semester)
+    applySemesterToCurrentClass(semester)
+    ElMessage.success("已切换当前学期")
+}
+
+/** 返回当前班级名称。 */
+const currentClassName = computed<string>(() => cacheStore.getActiveClassName()?.trim() || "未知班级")
+
+/** 返回当前学期名称。 */
+const currentSemesterName = computed<string>(() => cacheStore.getActiveSemesterName()?.trim() || "未知学期")
+
+/** 返回页面顶部的班级与学期说明。 */
+const pageHeadingCaption = computed<string>(() => `${currentClassName.value} · ${currentSemesterName.value}`)
+
 /** 返回当前激活的导航项。 */
 const currentNavItem = computed<NavItem>(() => {
     return navItems.find((item) => route.path.startsWith(item.to)) ?? navItems[0]!
 })
+
+/** 返回当前页面标题。 */
+const currentPageTitle = computed<string>(() => {
+    if (currentNavItem.value.id === "dashboard") {
+        return `${currentClassName.value}课堂工作台`
+    }
+
+    return currentNavItem.value.heading
+})
+
+watch(
+    [() => cacheStore.profile?.id, () => cacheStore.getActiveClassId()],
+    () => {
+        void loadCurrentClassAndSemesterInfo()
+    },
+    { immediate: true }
+)
 </script>
 
 <style scoped>
@@ -224,7 +450,6 @@ const currentNavItem = computed<NavItem>(() => {
     min-width: 0;
 }
 
-.brand-card__eyebrow,
 .page-heading__caption {
     margin: 0;
     font-size: 13px;
@@ -242,12 +467,6 @@ const currentNavItem = computed<NavItem>(() => {
     margin-top: 4px;
     font-size: 20px;
     font-weight: 800;
-}
-
-.brand-card__subtitle {
-    margin: 6px 0 0;
-    color: rgba(238, 243, 255, 0.72);
-    font-size: 13px;
 }
 
 .aside-nav {
@@ -338,6 +557,16 @@ const currentNavItem = computed<NavItem>(() => {
 .status-chip--green {
     color: #067647;
     background: rgba(18, 185, 129, 0.12);
+}
+
+.status-chip--slate {
+    color: #475467;
+    background: rgba(71, 84, 103, 0.12);
+}
+
+.status-chip--amber {
+    color: #b54708;
+    background: rgba(247, 144, 9, 0.14);
 }
 
 .header-actions {

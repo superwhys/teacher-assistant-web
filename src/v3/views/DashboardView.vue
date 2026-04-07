@@ -29,16 +29,20 @@
             <article class="panel-card">
                 <div class="panel-head">
                     <div>
-                        <h3>排行榜预览</h3>
+                        <h3>排行榜</h3>
                     </div>
-                    <button class="text-button" type="button">查看完整排行榜</button>
+                    <div class="panel-actions">
+                        <button class="text-button" type="button" @click="toggleRankingPreviewMask">
+                            {{ isRankingPreviewMasked ? "显示" : "隐藏" }}
+                        </button>
+                        <button class="text-button" type="button">查看完整排行榜</button>
+                    </div>
                 </div>
 
                 <div class="preview-list">
-                    <article v-for="item in rankingPreview" :key="item.title" class="preview-item">
+                    <article v-for="item in rankingPreview" :key="item.rank" class="preview-item">
                         <div>
                             <strong>{{ item.title }}</strong>
-                            <p>{{ item.meta }}</p>
                         </div>
                         <span>{{ item.value }}</span>
                     </article>
@@ -48,7 +52,7 @@
             <article class="panel-card">
                 <div class="panel-head">
                     <div>
-                        <h3>最近积分记录预览</h3>
+                        <h3>最近积分记录</h3>
                     </div>
                     <button class="text-button" type="button">查看积分历史</button>
                 </div>
@@ -70,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive } from "vue";
+import { computed, reactive, ref } from "vue";
 
 /** 定义状态标签结构。 */
 interface ChipItem {
@@ -92,7 +96,6 @@ interface SummaryItem {
 interface PreviewItem {
     rank: number
     title: string
-    meta: string
     value: string
 }
 
@@ -115,26 +118,23 @@ interface SummaryMetricData {
 /** 定义排行榜接口数据结构。 */
 interface RankingPreviewData {
     rank: number
-    studentName: string
-    description: string
-    totalPoints: number
+    student_name: string
+    total_points: number
 }
 
 /** 定义积分记录接口数据结构。 */
 interface RecordPreviewData {
     id: number
-    studentName: string
+    student_name: string
     description: string
-    deltaPoints: number
+    delta_points: number
 }
 
 /** 定义首页接口数据结构。 */
-interface DashboardResponseData {
-    currentTermName: string
-    operationStatusText: string
+interface DashboardSummaryResponseData {
+    current_term_name: string
+    operation_status_text: string
     summary: Record<SummaryMetricKey, SummaryMetricData>
-    rankingPreview: RankingPreviewData[]
-    recordPreview: RecordPreviewData[]
 }
 
 /** 定义积分记录展示结构。 */
@@ -156,52 +156,78 @@ const summaryCardConfigs: SummaryCardConfig[] = [
 
 /** 提供首页占位接口数据。 */
 /** TODO: 替换为接口数据 */
-const dashboardResponse = reactive<DashboardResponseData>({
-    currentTermName: "春季学期",
-    operationStatusText: "可积分操作",
+const dashboardSummaryResponse = reactive<DashboardSummaryResponseData>({
+    current_term_name: "春季学期",
+    operation_status_text: "可积分操作",
     summary: {
         students: { value: 6 },
         groups: { value: 3 },
         records: { value: 4 },
         shop: { value: "3 个" }
-    },
-    rankingPreview: [
-        { rank: 1, studentName: "赵思远", description: "14 组课堂互动后领先", totalPoints: 144 },
-        { rank: 2, studentName: "林若溪", description: "课堂反馈稳定", totalPoints: 138 },
-        { rank: 3, studentName: "李嘉禾", description: "最近两次均有加分", totalPoints: 126 }
-    ],
-    recordPreview: [
-        { id: 1, studentName: "赵思远", description: "小组展示加分", deltaPoints: 4 },
-        { id: 2, studentName: "林若溪", description: "阅读测验优秀", deltaPoints: 3 },
-        { id: 3, studentName: "周亦辰", description: "课堂走神提醒", deltaPoints: -1 }
-    ]
+    }
 })
 
+/** 提供排行榜占位接口数据。 */
+/** TODO: 替换为排行榜接口数据 */
+const rankingPreviewResponse = reactive<RankingPreviewData[]>([
+    { rank: 1, student_name: "赵思远", total_points: 144 },
+    { rank: 2, student_name: "林若溪", total_points: 138 },
+    { rank: 3, student_name: "李嘉禾", total_points: 126 },
+    { rank: 4, student_name: "张三", total_points: 126 },
+    { rank: 5, student_name: "李四", total_points: 126 },
+    { rank: 6, student_name: "王五", total_points: 126 },
+    { rank: 7, student_name: "赵六", total_points: 126 },
+    { rank: 8, student_name: "孙七", total_points: 126 },
+    { rank: 9, student_name: "周八", total_points: 126 },
+    { rank: 10, student_name: "吴九", total_points: 126 }
+])
+
+/** 提供最近积分记录占位接口数据。 */
+/** TODO: 替换为积分记录接口数据 */
+const recordPreviewResponse = reactive<RecordPreviewData[]>([
+    { id: 1, student_name: "赵思远", description: "小组展示加分", delta_points: 4 },
+    { id: 2, student_name: "林若溪", description: "阅读测验优秀", delta_points: 3 },
+    { id: 3, student_name: "周亦辰", description: "课堂走神提醒", delta_points: -1 }
+])
+
+/** 标记排行榜预览是否启用脱敏。 */
+const isRankingPreviewMasked = ref(false)
+
 /** 格式化排行榜积分展示文本。 */
-function formatRankingValue(totalPoints: number): string {
-    return `积分 ${totalPoints}`
+function formatRankingValue(total_points: number): string {
+    return `积分 ${total_points}`
 }
 
 /** 格式化积分变动展示文本。 */
-function formatDeltaValue(deltaPoints: number): string {
-    return deltaPoints > 0 ? `+${deltaPoints}` : `${deltaPoints}`
+function formatDeltaValue(delta_points: number): string {
+    return delta_points > 0 ? `+${delta_points}` : `${delta_points}`
 }
 
 /** 返回积分变动对应的样式类名。 */
-function getDeltaToneClass(deltaPoints: number): string {
-    return deltaPoints < 0 ? "is-negative" : "is-positive"
+function getDeltaToneClass(delta_points: number): string {
+    return delta_points < 0 ? "is-negative" : "is-positive"
+}
+
+/** 返回排行榜脱敏后的展示文本。 */
+function getMaskedRankingText(): string {
+    return "***"
+}
+
+/** 切换排行榜预览的脱敏状态。 */
+function toggleRankingPreviewMask(): void {
+    isRankingPreviewMasked.value = !isRankingPreviewMasked.value
 }
 
 /** 顶部状态标签。 */
 const heroStatusChips = computed<ChipItem[]>(() => [
-    { id: "current-term", label: `当前学期：${dashboardResponse.currentTermName}`, toneClass: "status-chip--sky" },
-    { id: "current-state", label: `当前状态：${dashboardResponse.operationStatusText}`, toneClass: "status-chip--green" }
+    { id: "current-term", label: `当前学期：${dashboardSummaryResponse.current_term_name}`, toneClass: "status-chip--sky" },
+    { id: "current-state", label: `当前状态：${dashboardSummaryResponse.operation_status_text}`, toneClass: "status-chip--green" }
 ])
 
 /** 摘要卡片。 */
 const summaryItems = computed<SummaryItem[]>(() => {
     return summaryCardConfigs.map((config) => {
-        const summaryData = dashboardResponse.summary[config.id]
+        const summaryData = dashboardSummaryResponse.summary[config.id]
 
         return {
             id: config.id,
@@ -215,22 +241,21 @@ const summaryItems = computed<SummaryItem[]>(() => {
 
 /** 排行榜预览。 */
 const rankingPreview = computed<PreviewItem[]>(() => {
-    return dashboardResponse.rankingPreview.map((item) => ({
+    return rankingPreviewResponse.map((item) => ({
         rank: item.rank,
-        title: item.studentName,
-        meta: item.description,
-        value: formatRankingValue(item.totalPoints)
+        title: isRankingPreviewMasked.value ? getMaskedRankingText() : item.student_name,
+        value: isRankingPreviewMasked.value ? getMaskedRankingText() : formatRankingValue(item.total_points)
     }))
 })
 
 /** 基于接口数据生成最近积分记录预览。 */
 const recordPreview = computed<RecordPreviewItem[]>(() => {
-    return dashboardResponse.recordPreview.map((item) => ({
+    return recordPreviewResponse.map((item) => ({
         id: item.id,
-        title: item.studentName,
+        title: item.student_name,
         meta: item.description,
-        value: formatDeltaValue(item.deltaPoints),
-        valueToneClass: getDeltaToneClass(item.deltaPoints)
+        value: formatDeltaValue(item.delta_points),
+        valueToneClass: getDeltaToneClass(item.delta_points)
     }))
 })
 </script>
@@ -312,6 +337,13 @@ const recordPreview = computed<RecordPreviewItem[]>(() => {
 
 .panel-head h3 {
     margin: 0;
+}
+
+.panel-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 12px;
 }
 
 .hero-intro__hint {
@@ -489,6 +521,10 @@ const recordPreview = computed<RecordPreviewItem[]>(() => {
     .hero-card__head {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .panel-actions {
+        justify-content: flex-start;
     }
 
     .hero-status {

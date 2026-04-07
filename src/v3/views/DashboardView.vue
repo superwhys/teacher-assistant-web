@@ -74,7 +74,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { dashboardApi } from "@/api/dashboard";
+import { useCacheStore } from "@/stores/cacheStore";
+import type { DashboardStatisticsResp } from "@/types/dashboard";
+import { computed, onMounted, reactive, ref } from "vue";
 
 /** 定义状态标签结构。 */
 interface ChipItem {
@@ -154,18 +157,24 @@ const summaryCardConfigs: SummaryCardConfig[] = [
     { id: "shop", label: "商城奖品", helper: "可用于课堂激励", toneClass: "summary-card--green" }
 ]
 
-/** 提供首页占位接口数据。 */
-/** TODO: 替换为接口数据 */
-const dashboardSummaryResponse = reactive<DashboardSummaryResponseData>({
-    current_term_name: "春季学期",
-    operation_status_text: "可积分操作",
-    summary: {
-        students: { value: 6 },
-        groups: { value: 3 },
-        records: { value: 4 },
-        shop: { value: "3 个" }
+const cacheStore = useCacheStore()
+
+/** 创建首页空白摘要数据。 */
+function createEmptyDashboardSummaryResponse(): DashboardSummaryResponseData {
+    return {
+        current_term_name: "未知学期",
+        operation_status_text: "未知",
+        summary: {
+            students: { value: 0 },
+            groups: { value: 0 },
+            records: { value: 0 },
+            shop: { value: 0 }
+        }
     }
-})
+}
+
+/** 提供首页空白摘要数据。 */
+const dashboardSummaryResponse = reactive<DashboardSummaryResponseData>(createEmptyDashboardSummaryResponse())
 
 /** 提供排行榜占位接口数据。 */
 /** TODO: 替换为排行榜接口数据 */
@@ -218,6 +227,33 @@ function toggleRankingPreviewMask(): void {
     isRankingPreviewMasked.value = !isRankingPreviewMasked.value
 }
 
+/** 将接口返回的首页摘要数据写入页面状态。 */
+function applyDashboardSummaryResponse(data?: DashboardStatisticsResp): void {
+    dashboardSummaryResponse.current_term_name = data?.current_term_name ?? "未知学期"
+    dashboardSummaryResponse.operation_status_text = data?.operation_status_text ?? "未知"
+    dashboardSummaryResponse.summary.students.value = data?.summary?.students?.value ?? 0
+    dashboardSummaryResponse.summary.groups.value = data?.summary?.groups?.value ?? 0
+    dashboardSummaryResponse.summary.records.value = data?.summary?.records?.value ?? 0
+    dashboardSummaryResponse.summary.shop.value = data?.summary?.shop?.value ?? 0
+}
+
+/** 加载首页摘要接口数据。 */
+async function loadDashboardSummary(): Promise<void> {
+    try {
+        const classId = cacheStore.getActiveClassId()
+        if (!classId) {
+            return
+        }
+
+        const response = await dashboardApi.getStatistics({
+            class_id: classId
+        })
+        applyDashboardSummaryResponse(response.data)
+    } catch (error) {
+        console.error("获取首页统计数据失败", error)
+    }
+}
+
 /** 顶部状态标签。 */
 const heroStatusChips = computed<ChipItem[]>(() => [
     { id: "current-term", label: `当前学期：${dashboardSummaryResponse.current_term_name}`, toneClass: "status-chip--sky" },
@@ -257,6 +293,10 @@ const recordPreview = computed<RecordPreviewItem[]>(() => {
         value: formatDeltaValue(item.delta_points),
         valueToneClass: getDeltaToneClass(item.delta_points)
     }))
+})
+
+onMounted(() => {
+    void loadDashboardSummary()
 })
 </script>
 

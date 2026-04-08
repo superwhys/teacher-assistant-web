@@ -6,7 +6,8 @@
                     <span class="control-label">快速搜索</span>
                     <div class="search-box">
                         <i-ep-search class="search-box__icon" />
-                        <input v-model="keyword" type="search" class="search-box__input" placeholder="搜索学生姓名、分组或标签">
+                        <input v-model="keyword" type="search" class="search-box__input"
+                            placeholder="搜索学生姓名；多个姓名可用逗号隔开">
                     </div>
                 </label>
 
@@ -27,8 +28,8 @@
                 <div class="control-block">
                     <span class="control-label">排序方式</span>
                     <div class="segmented-control segmented-control--wrap sort-control">
-                        <button type="button" class="chip-button"
-                            :class="{ 'is-active': isSortFieldActive('points') }" @click="handleSelectSortField('points')">
+                        <button type="button" class="chip-button" :class="{ 'is-active': isSortFieldActive('points') }"
+                            @click="handleSelectSortField('points')">
                             按积分
                         </button>
                         <button type="button" class="chip-button" :class="{ 'is-active': isSortFieldActive('name') }"
@@ -85,28 +86,19 @@
         </section>
 
         <section class="students-layout">
-            <StudentsListPanel
-                class="student-panel"
-                :has-active-class="hasActiveClass"
-                :is-all-selected="isAllFilteredStudentsSelected"
-                :layout-mode="layoutMode"
-                :loading="loading"
-                :selected-student-ids="selectedStudentIds"
-                :students="filteredStudents"
-                @edit-student="openEdit"
-                @remove-student="requestRemoveStudent"
-                @select-student="handleSelectStudent"
-                @toggle-select-all="toggleSelectAllStudents"
-            />
+            <StudentsListPanel class="student-panel" :has-active-class="hasActiveClass"
+                :is-all-selected="isAllFilteredStudentsSelected" :layout-mode="layoutMode" :loading="loading"
+                :selected-student-ids="selectedStudentIds" :students="filteredStudents" @edit-student="openEdit"
+                @remove-student="requestRemoveStudent" @select-student="handleSelectStudent"
+                @toggle-select-all="toggleSelectAllStudents" />
 
             <aside class="side-column">
-                <StudentsSelectionPanel
-                    :class-id="activeClassId"
-                    :selected-student="selectedStudent"
-                    :selected-students="selectedStudents"
-                    :status-label="selectionStatusLabel"
-                    :title="selectedPanelTitle"
-                />
+                <StudentsSelectionPanel :class-id="activeClassId" :is-archived-semester="isArchivedSemester"
+                    :points-applying="pointsApplying" :selected-student="selectedStudent"
+                    :selected-students="selectedStudents" :status-label="selectionStatusLabel"
+                    :title="selectedPanelTitle" @locate-student="handleLocateStudent"
+                    @open-points="openPointsSelectorForSelected"
+                    @remove-selected-student="handleRemoveSelectedStudent" />
             </aside>
         </section>
 
@@ -126,13 +118,18 @@
         <StudentsConfirmDialog v-model="deleteStudentDialogVisible" title="删除学生" eyebrow="风险操作"
             description="删除学生后将同步移除其相关分组关系，请确认当前操作。" :message="deleteStudentMessage" confirm-text="确认删除"
             @confirm="confirmRemoveStudent" />
+
+        <StudentsPointsRuleDialog v-model="selectorVisible" v-model:tab="selectorTab" :groups="ruleGroups"
+            :loading="pointsApplying || ruleGroupsLoading" @select="handleSelectRule" />
     </div>
 </template>
 
 <script setup lang="ts">
 import type { UiGender, UiStudent } from "@/components/class/ClassStudentList.vue";
+import { pointsManager } from "@/managers/points";
 import { studentManager } from "@/managers/student";
 import { useCacheStore } from "@/stores/cacheStore";
+import type { RuleGroup } from "@/types/points";
 import type {
     ApiGender,
     CreateStudentReq,
@@ -150,8 +147,9 @@ import StudentsListPanel, {
     type StudentsListPanelItem,
     type StudentsListPanelLayoutMode
 } from "@/v3/components/students/StudentsListPanel.vue";
+import StudentsPointsRuleDialog from "@/v3/components/students/StudentsPointsRuleDialog.vue";
 import StudentsSelectionPanel from "@/v3/components/students/StudentsSelectionPanel.vue";
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 
 /** 定义学生页展示布局模式。 */
 type LayoutMode = StudentsListPanelLayoutMode
@@ -165,6 +163,9 @@ interface GroupChipItem {
 
 /** 定义学生卡片展示结构。 */
 type StudentCardItem = StudentsListPanelItem
+
+/** 定义积分规则选择弹窗页签。 */
+type PointsSelectorTab = "all" | "plus" | "minus"
 
 const cacheStore = useCacheStore()
 const loading = ref(false)
@@ -181,9 +182,17 @@ const editStudentVisible = ref(false)
 const deleteStudentDialogVisible = ref(false)
 const editingStudent = ref<UiStudent | null>(null)
 const pendingDeleteStudent = ref<StudentCardItem | null>(null)
+const ruleGroups = ref<RuleGroup[]>([])
+const selectorVisible = ref(false)
+const selectorTab = ref<PointsSelectorTab>("plus")
+const selectorTargets = ref<number[]>([])
+const pointsApplying = ref(false)
+const ruleGroupsLoading = ref(false)
 
 const activeClassId = computed<number | null>(() => cacheStore.getActiveClassId())
 const hasActiveClass = computed<boolean>(() => typeof activeClassId.value === "number")
+const activeSemesterIsLatest = computed<boolean | null>(() => cacheStore.getActiveSemesterIsLatest())
+const isArchivedSemester = computed<boolean>(() => hasActiveClass.value && activeSemesterIsLatest.value === false)
 
 /** 返回当前学生页的布局缓存值。 */
 const layoutMode = computed<LayoutMode>({
@@ -362,13 +371,22 @@ const groupChips = computed<GroupChipItem[]>(() => {
 /** 返回筛选并排序后的学生列表。 */
 const filteredStudents = computed<StudentCardItem[]>(() => {
     const normalizedKeyword = keyword.value.trim().toLowerCase()
+    const keywordTokens = normalizedKeyword
+        .split(/[，,]/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+    const useMultiNameSearch = keywordTokens.length > 1
 
     const filteredList = studentCards.value.filter((student) => {
         const matchGroup = selectedGroupId.value === null || student.groupId === selectedGroupId.value
         const matchKeyword = !normalizedKeyword
-            || student.name.toLowerCase().includes(normalizedKeyword)
-            || student.groupName.toLowerCase().includes(normalizedKeyword)
-            || student.tags.join(" ").toLowerCase().includes(normalizedKeyword)
+            || (useMultiNameSearch
+                ? keywordTokens.some((token) => student.name.toLowerCase().includes(token))
+                : (
+                    student.name.toLowerCase().includes(normalizedKeyword)
+                    || student.groupName.toLowerCase().includes(normalizedKeyword)
+                    || student.tags.join(" ").toLowerCase().includes(normalizedKeyword)
+                ))
 
         return matchGroup && matchKeyword
     })
@@ -409,6 +427,11 @@ const selectedStudents = computed<StudentCardItem[]>(() => {
     return selectedStudentIds.value
         .map((studentId) => studentMap.get(studentId) ?? null)
         .filter((student): student is StudentCardItem => student !== null)
+})
+
+/** 返回当前学生映射表。 */
+const studentCardMap = computed<Map<number, StudentCardItem>>(() => {
+    return new Map(studentCards.value.map((student) => [student.id, student]))
 })
 
 /** 返回当前筛选结果是否已全部选中。 */
@@ -530,6 +553,115 @@ async function loadStudentData(): Promise<void> {
     }
 }
 
+/** 确保积分规则组已加载。 */
+async function ensureRuleGroupsLoaded(): Promise<void> {
+    if (ruleGroups.value.length > 0 || ruleGroupsLoading.value) {
+        return
+    }
+
+    ruleGroupsLoading.value = true
+    try {
+        ruleGroups.value = await pointsManager.listRuleGroups()
+    } catch (error) {
+        console.error("加载积分规则失败", error)
+        ruleGroups.value = []
+        ElMessage.error("加载积分规则失败")
+    } finally {
+        ruleGroupsLoading.value = false
+    }
+}
+
+/** 返回积分操作目标的展示文案。 */
+function getPointsTargetLabel(studentIds: number[]): string {
+    const studentNames = studentIds
+        .map((studentId) => studentCardMap.value.get(studentId)?.name?.trim() || "")
+        .filter((studentName) => Boolean(studentName))
+
+    if (studentNames.length === 0) {
+        return "所选学生"
+    }
+
+    if (studentNames.length > 3) {
+        return `${studentNames.slice(0, 3).join("、")} 等${studentNames.length}人`
+    }
+
+    return studentNames.join("、")
+}
+
+/** 打开积分规则选择弹窗。 */
+async function openPointsSelector(studentIds: number[], tab: Exclude<PointsSelectorTab, "all">): Promise<void> {
+    if (isArchivedSemester.value) {
+        ElMessage.warning("归档学期不支持积分操作")
+        return
+    }
+
+    if (!activeClassId.value) {
+        ElMessage.warning("请先选择班级")
+        return
+    }
+
+    const validStudentIds = studentIds.filter((studentId) => studentId > 0)
+    if (validStudentIds.length === 0) {
+        ElMessage.info("请先选择学生")
+        return
+    }
+
+    await ensureRuleGroupsLoaded()
+    if (ruleGroups.value.length === 0) {
+        ElMessage.warning("暂无可用积分规则")
+        return
+    }
+
+    selectorTargets.value = validStudentIds
+    selectorTab.value = tab
+    selectorVisible.value = true
+}
+
+/** 打开当前选中学生的积分操作。 */
+async function openPointsSelectorForSelected(payload: { tab: Exclude<PointsSelectorTab, "all"> }): Promise<void> {
+    await openPointsSelector(selectedStudentIds.value, payload.tab)
+}
+
+/** 定位到当前学生在列表中的位置。 */
+async function handleLocateStudent(studentId: number): Promise<void> {
+    if (studentId <= 0) {
+        return
+    }
+
+    await nextTick()
+    const targetElement = document.getElementById(`student-card-${studentId}`)
+    if (!targetElement) {
+        ElMessage.info("当前学生不在筛选结果中")
+        return
+    }
+
+    targetElement.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest"
+    })
+}
+
+/** 处理积分规则选择。 */
+async function handleSelectRule(rule: { id: number, name: string, sign: "plus" | "minus", points: number }): Promise<void> {
+    if (!activeClassId.value || selectorTargets.value.length === 0 || pointsApplying.value) {
+        return
+    }
+
+    pointsApplying.value = true
+    try {
+        await pointsManager.applyRuleBatch(activeClassId.value, rule.id, selectorTargets.value)
+        await loadStudentData()
+        selectorVisible.value = false
+        ElMessage.success(`已对「${getPointsTargetLabel(selectorTargets.value)}」${rule.sign === "plus" ? "加" : "减"}${Math.abs(rule.points)} 分（${rule.name}）`)
+    } catch (error) {
+        console.error("执行积分操作失败", error)
+        ElMessage.error("执行积分操作失败")
+    } finally {
+        pointsApplying.value = false
+    }
+}
+
 /** 处理学生卡片选中。 */
 function handleSelectStudent(studentId: number): void {
     if (selectedStudentIds.value.includes(studentId)) {
@@ -538,6 +670,11 @@ function handleSelectStudent(studentId: number): void {
     }
 
     selectedStudentIds.value = [...selectedStudentIds.value, studentId]
+}
+
+/** 从已选列表中移除指定学生。 */
+function handleRemoveSelectedStudent(studentId: number): void {
+    selectedStudentIds.value = selectedStudentIds.value.filter((id) => id !== studentId)
 }
 
 /** 切换当前筛选结果的全选状态。 */
@@ -961,7 +1098,7 @@ watch(filteredStudents, () => {
 }
 
 .students-layout {
-    grid-template-columns: minmax(0, 1.72fr) minmax(240px, 0.64fr);
+    grid-template-columns: minmax(0, 1.92fr) minmax(240px, 0.54fr);
     align-items: start;
 }
 

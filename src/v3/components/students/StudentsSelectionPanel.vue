@@ -4,7 +4,13 @@
             <div>
                 <h3>{{ title }}</h3>
             </div>
-            <span class="status-chip status-chip--sky">{{ statusLabel }}</span>
+            <div class="panel-head__actions">
+                <button v-if="selectedStudent" type="button" class="icon-action-button" title="定位到学生位置"
+                    @click="emit('locate-student', selectedStudent.id)">
+                    <i-ep-location />
+                </button>
+                <span class="status-chip status-chip--sky">{{ statusLabel }}</span>
+            </div>
         </div>
 
         <div class="selection-panel__body">
@@ -21,18 +27,30 @@
 
                 <div class="detail-list">
                     <div class="detail-item">
-                        <span>当前选中学生</span>
-                        <strong>{{ selectedStudent.name }}</strong>
-                    </div>
-                    <div class="detail-item">
-                        <span>当前所在分组</span>
-                        <strong>{{ selectedStudent.groupName }}</strong>
-                    </div>
-                    <div class="detail-item">
                         <span>积分情况</span>
                         <strong>可用 {{ selectedStudent.availablePoints }} / 总分 {{ selectedStudent.totalPoints }}</strong>
                     </div>
                 </div>
+
+                <section class="points-actions-card">
+                    <div class="points-actions-card__head">
+                        <span>积分操作</span>
+                        <strong>{{ isArchivedSemester ? "归档学期不支持积分操作" : "支持当前学生单独加分或扣分" }}</strong>
+                    </div>
+
+                    <div class="points-actions-grid">
+                        <button type="button" class="action-button action-button--plus" :disabled="isPointsActionDisabled"
+                            @click="emit('open-points', { tab: 'plus' })">
+                            <i-ep-plus />
+                            <span>{{ pointsApplying ? "处理中..." : "单人加分" }}</span>
+                        </button>
+                        <button type="button" class="action-button action-button--minus" :disabled="isPointsActionDisabled"
+                            @click="emit('open-points', { tab: 'minus' })">
+                            <i-ep-minus />
+                            <span>{{ pointsApplying ? "处理中..." : "单人扣分" }}</span>
+                        </button>
+                    </div>
+                </section>
 
                 <section class="recent-records">
                     <div class="recent-records__head">
@@ -69,9 +87,44 @@
                     </div>
                 </div>
 
+                <section class="points-actions-card">
+                    <div class="points-actions-card__head">
+                        <span>积分操作</span>
+                        <strong>{{ isArchivedSemester ? "归档学期不支持积分操作" : `支持当前选中的 ${selectedStudents.length} 名学生批量加分或扣分` }}</strong>
+                    </div>
+
+                    <div class="points-actions-grid">
+                        <button type="button" class="action-button action-button--plus" :disabled="isPointsActionDisabled"
+                            @click="emit('open-points', { tab: 'plus' })">
+                            <i-ep-plus />
+                            <span>{{ pointsApplying ? "处理中..." : `批量加分（${selectedStudents.length}）` }}</span>
+                        </button>
+                        <button type="button" class="action-button action-button--minus" :disabled="isPointsActionDisabled"
+                            @click="emit('open-points', { tab: 'minus' })">
+                            <i-ep-minus />
+                            <span>{{ pointsApplying ? "处理中..." : `批量扣分（${selectedStudents.length}）` }}</span>
+                        </button>
+                    </div>
+                </section>
+
                 <div class="selected-name-list">
                     <div v-for="student in selectedStudents" :key="student.id" class="selected-name-item">
-                        <strong>{{ student.name }}</strong>
+                        <div class="selected-name-item__main">
+                            <div class="selected-name-item__avatar" :class="student.toneClass">
+                                {{ student.initials }}
+                            </div>
+                            <div class="selected-name-item__body">
+                                <strong>{{ student.name }}</strong>
+                                <p>{{ student.groupName }} · 可用 {{ student.availablePoints }} / 总分 {{ student.totalPoints }}</p>
+                            </div>
+                        </div>
+                        <div class="selected-name-item__actions">
+                            <span class="selected-name-item__badge">{{ student.groupName }}</span>
+                            <button type="button" class="selected-name-item__remove" title="移除当前学生"
+                                @click="emit('remove-selected-student', student.id)">
+                                <i-ep-close />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </template>
@@ -90,21 +143,34 @@ import { pointsManager } from "@/managers/points";
 import type { Record as PointsApplyRecord } from "@/types/points";
 import { formatChineseDateTime } from "@/utils/date";
 import type { StudentsListCardItem } from "@/v3/components/students/StudentsListCard.vue";
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 
 /** 定义学生选择面板属性结构。 */
 interface StudentsSelectionPanelProps {
     classId: number | null
+    isArchivedSemester?: boolean
+    pointsApplying?: boolean
     selectedStudent: StudentsListCardItem | null
     selectedStudents: StudentsListCardItem[]
     statusLabel: string
     title: string
 }
 
+/** 定义学生选择面板事件结构。 */
+interface StudentsSelectionPanelEmits {
+    (event: "locate-student", studentId: number): void
+    (event: "open-points", payload: { tab: "plus" | "minus" }): void
+    (event: "remove-selected-student", studentId: number): void
+}
+
 const props = defineProps<StudentsSelectionPanelProps>()
+const emit = defineEmits<StudentsSelectionPanelEmits>()
 const recentRecords = ref<PointsApplyRecord[]>([])
 const recordsLoading = ref(false)
 let recordsFetchSeq = 0
+const isArchivedSemester = computed<boolean>(() => Boolean(props.isArchivedSemester))
+const pointsApplying = computed<boolean>(() => Boolean(props.pointsApplying))
+const isPointsActionDisabled = computed<boolean>(() => isArchivedSemester.value || pointsApplying.value)
 
 /** 返回性别显示文案。 */
 function getGenderLabel(gender: UiGender): string {
@@ -250,6 +316,12 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
     margin-bottom: 18px;
 }
 
+.panel-head__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .selection-panel__body {
     flex: 1;
     min-height: 0;
@@ -277,6 +349,27 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
 .status-chip--sky {
     background: rgba(59, 130, 246, 0.12);
     color: #2563eb;
+}
+
+.icon-action-button {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(122, 141, 198, 0.22);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.88);
+    color: #5568ff;
+    font: inherit;
+    cursor: pointer;
+    transition: transform 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.icon-action-button:hover {
+    transform: translateY(-2px);
+    border-color: rgba(85, 104, 255, 0.24);
+    background: rgba(85, 104, 255, 0.08);
 }
 
 .selected-student {
@@ -327,6 +420,74 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
     margin: 6px 0 0;
     color: #627099;
     line-height: 1.6;
+}
+
+.points-actions-card {
+    margin-top: 18px;
+    display: grid;
+    gap: 14px;
+}
+
+.points-actions-card__head {
+    padding: 16px 18px;
+    border-radius: 20px;
+    background: rgba(85, 104, 255, 0.06);
+}
+
+.points-actions-card__head span {
+    display: block;
+    color: #627099;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.points-actions-card__head strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 17px;
+    line-height: 1.6;
+}
+
+.points-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.action-button {
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 16px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+}
+
+.action-button:hover {
+    transform: translateY(-2px);
+}
+
+.action-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.action-button--plus {
+    background: linear-gradient(135deg, #5568ff, #8e6cff);
+    color: #ffffff;
+}
+
+.action-button--minus {
+    background: rgba(255, 107, 129, 0.12);
+    color: #d92d20;
+    border: 1px solid rgba(255, 107, 129, 0.18);
 }
 
 .recent-records {
@@ -411,15 +572,91 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
 }
 
 .selected-name-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     padding: 14px 16px;
     border-radius: 18px;
     background: rgba(255, 255, 255, 0.72);
 }
 
-.selected-name-item strong {
+.selected-name-item__main {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.selected-name-item__avatar {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 800;
+    border-radius: 14px;
+    flex-shrink: 0;
+}
+
+.selected-name-item__body {
+    min-width: 0;
+}
+
+.selected-name-item__body strong {
     display: block;
     font-size: 16px;
-    line-height: 1.6;
+    line-height: 1.5;
+}
+
+.selected-name-item__body p {
+    margin: 4px 0 0;
+    color: #627099;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.selected-name-item__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(85, 104, 255, 0.1);
+    color: #5568ff;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.selected-name-item__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.selected-name-item__remove {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 107, 129, 0.18);
+    border-radius: 999px;
+    background: rgba(255, 107, 129, 0.12);
+    color: #d92d20;
+    font: inherit;
+    cursor: pointer;
+    transition: transform 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.selected-name-item__remove:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 107, 129, 0.28);
+    background: rgba(255, 107, 129, 0.18);
 }
 
 .detail-item {
@@ -469,6 +706,24 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
     .panel-head {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .points-actions-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .selected-name-item {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .selected-name-item__actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .selected-name-item__badge {
+        align-self: flex-start;
     }
 }
 </style>

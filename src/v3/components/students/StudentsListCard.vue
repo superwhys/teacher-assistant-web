@@ -1,5 +1,5 @@
 <template>
-    <article class="student-card" :class="{ 'is-selected': selected }" @click="emit('select', student.id)">
+    <article :id="`student-card-${student.id}`" class="student-card" :class="{ 'is-selected': selected }" @click="emit('select', student.id)">
         <div v-if="selected" class="student-card__selected-badge">
             <i-ep-check />
         </div>
@@ -32,15 +32,9 @@
             </span>
         </div>
 
-        <div class="student-metrics">
-            <div class="student-metric">
-                <span>可用积分</span>
-                <strong>{{ student.availablePoints }}</strong>
-            </div>
-            <div class="student-metric">
-                <span>总积分</span>
-                <strong>{{ student.totalPoints }}</strong>
-            </div>
+        <div class="student-score">
+            <span>总积分</span>
+            <strong>{{ student.totalPoints }}</strong>
         </div>
     </article>
 </template>
@@ -93,9 +87,9 @@ function getGenderLabel(gender: UiGender): string {
 .student-card {
     position: relative;
     overflow: hidden;
-    padding: 24px 20px 20px;
+    padding: 20px 16px 16px;
     border: 1px solid rgba(122, 141, 198, 0.18);
-    border-radius: 26px;
+    border-radius: 22px;
     background: rgba(255, 255, 255, 0.88);
     box-shadow: 0 14px 30px rgba(71, 90, 150, 0.12);
     cursor: pointer;
@@ -119,11 +113,11 @@ function getGenderLabel(gender: UiGender): string {
 
 .student-card__selected-badge {
     position: absolute;
-    top: 14px;
-    right: 14px;
+    top: 12px;
+    right: 12px;
     z-index: 2;
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     display: grid;
     place-items: center;
     border-radius: 999px;
@@ -135,12 +129,11 @@ function getGenderLabel(gender: UiGender): string {
 .student-card__accent {
     position: absolute;
     inset: 0 0 auto 0;
-    height: 4px;
+    height: 3px;
     background: linear-gradient(90deg, #5568ff, #8e6cff);
 }
 
-.student-card__head,
-.student-metrics {
+.student-card__head {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -151,17 +144,18 @@ function getGenderLabel(gender: UiGender): string {
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 }
 
 .student-avatar {
-    width: 52px;
-    height: 52px;
+    width: 44px;
+    height: 44px;
     display: grid;
     place-items: center;
     color: #ffffff;
+    font-size: 18px;
     font-weight: 800;
-    border-radius: 18px;
+    border-radius: 14px;
     flex-shrink: 0;
 }
 
@@ -188,68 +182,67 @@ function getGenderLabel(gender: UiGender): string {
 .student-profile__body strong {
     display: block;
     margin: 0;
-    font-size: 20px;
+    font-size: 18px;
 }
 
 .student-profile__body p {
-    margin: 6px 0 0;
+    margin: 4px 0 0;
     color: #627099;
+    font-size: 13px;
     line-height: 1.6;
 }
 
 .student-card__actions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
 }
 
 .student-tags {
-    margin-top: 16px;
+    margin-top: 12px;
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
 }
 
 .student-tag {
     display: inline-flex;
     align-items: center;
-    min-height: 32px;
-    padding: 0 12px;
+    min-height: 28px;
+    padding: 0 10px;
     border-radius: 999px;
     background: rgba(85, 104, 255, 0.08);
     color: #5568ff;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.student-score {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(85, 104, 255, 0.06);
+}
+
+.student-score span {
+    color: #627099;
     font-size: 12px;
     font-weight: 700;
 }
 
-.student-metrics {
-    margin-top: 18px;
-}
-
-.student-metric {
-    flex: 1;
-    min-width: 0;
-    padding: 14px 16px;
-    border-radius: 18px;
-    background: rgba(85, 104, 255, 0.06);
-}
-
-.student-metric span {
-    display: block;
-    color: #627099;
-    font-size: 13px;
-}
-
-.student-metric strong {
-    display: block;
-    margin-top: 8px;
-    font-size: 22px;
+.student-score strong {
+    font-size: 20px;
+    line-height: 1;
 }
 
 .icon-button {
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     background: rgba(85, 104, 255, 0.1);
     color: #5568ff;
     font: inherit;
@@ -267,10 +260,6 @@ function getGenderLabel(gender: UiGender): string {
 }
 
 @media (max-width: 768px) {
-    .student-metrics {
-        grid-template-columns: 1fr;
-    }
-
     .student-card__head {
         flex-direction: column;
         align-items: stretch;

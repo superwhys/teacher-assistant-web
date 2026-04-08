@@ -32,51 +32,31 @@
         <div v-else-if="layoutMode === 'list'" class="list-column">
             <div v-if="studentsGroupedByLetter.length > 0" class="index-container">
                 <div class="letter-index">
-                    <button
-                        v-for="letter in availableLetters"
-                        :key="letter"
-                        type="button"
-                        class="index-item"
-                        @click="scrollToLetter(letter)"
-                    >
+                    <button v-for="letter in availableLetters" :key="letter" type="button" class="index-item"
+                        @click="scrollToLetter(letter)">
                         {{ letter }}
                     </button>
                 </div>
             </div>
 
             <div class="list-content">
-                <section
-                    v-for="group in studentsGroupedByLetter"
-                    :key="group.letter"
-                    :id="`student-letter-group-${group.letter}`"
-                    class="letter-group"
-                >
+                <section v-for="group in studentsGroupedByLetter" :key="group.letter"
+                    :id="`student-letter-group-${group.letter}`" class="letter-group">
                     <div class="letter-header">{{ group.letter }}</div>
                     <div class="student-group-stack">
-                        <StudentsListCard
-                            v-for="student in group.students"
-                            :key="student.id"
-                            :selected="isStudentSelected(student.id)"
-                            :student="student"
-                            @edit="emit('edit-student', $event)"
-                            @remove="emit('remove-student', $event)"
-                            @select="emit('select-student', $event)"
-                        />
+                        <StudentsListCard v-for="student in group.students" :key="student.id"
+                            :selected="isStudentSelected(student.id)" :student="student"
+                            @edit="emit('edit-student', $event)" @remove="emit('remove-student', $event)"
+                            @select="emit('select-student', $event)" />
                     </div>
                 </section>
             </div>
         </div>
 
         <div v-else class="student-grid">
-            <StudentsListCard
-                v-for="student in students"
-                :key="student.id"
-                :selected="isStudentSelected(student.id)"
-                :student="student"
-                @edit="emit('edit-student', $event)"
-                @remove="emit('remove-student', $event)"
-                @select="emit('select-student', $event)"
-            />
+            <StudentsListCard v-for="student in students" :key="student.id" :selected="isStudentSelected(student.id)"
+                :student="student" @edit="emit('edit-student', $event)" @remove="emit('remove-student', $event)"
+                @select="emit('select-student', $event)" />
         </div>
     </article>
 </template>
@@ -270,8 +250,8 @@ function scrollToLetter(letter: string): void {
 
 .student-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 18px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
 }
 
 .list-column {
@@ -323,7 +303,7 @@ function scrollToLetter(letter: string): void {
     min-width: 0;
 }
 
-.letter-group + .letter-group {
+.letter-group+.letter-group {
     margin-top: 22px;
 }
 
@@ -336,7 +316,7 @@ function scrollToLetter(letter: string): void {
 
 .student-group-stack {
     display: grid;
-    gap: 14px;
+    gap: 12px;
 }
 
 .ghost-button {
@@ -380,11 +360,17 @@ function scrollToLetter(letter: string): void {
 
 @media (max-width: 1560px) {
     .student-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1436px) {
+    .student-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1236px) {
     .students-list-panel {
         padding: 18px;
     }

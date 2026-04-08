@@ -71,6 +71,8 @@ const visible = computed({
 
 .students-dialog-shell :deep(.el-dialog) {
     margin: 0 auto;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 48px);
     overflow: hidden;
     border: 1px solid rgba(122, 141, 198, 0.18);
     border-radius: 32px;
@@ -79,6 +81,8 @@ const visible = computed({
         radial-gradient(circle at bottom left, rgba(85, 104, 255, 0.1), transparent 24%),
         rgba(255, 255, 255, 0.94);
     box-shadow: 0 24px 60px rgba(40, 56, 105, 0.24);
+    display: flex;
+    flex-direction: column;
 }
 
 .students-dialog-shell :deep(.el-dialog__header) {
@@ -145,6 +149,9 @@ const visible = computed({
 }
 
 .students-dialog-shell__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
     padding: 20px 24px 24px;
 }
 

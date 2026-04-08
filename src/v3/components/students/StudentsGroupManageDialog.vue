@@ -1,11 +1,5 @@
 <template>
-    <StudentsDialogShell
-        v-model="visible"
-        title="分组管理"
-        eyebrow="学生分组"
-        description="在同一弹窗中完成新建分组、删除分组和成员调整，操作风格与学生管理页保持一致。"
-        width="980px"
-    >
+    <StudentsDialogShell v-model="visible" title="分组管理" eyebrow="学生分组" width="980px">
         <div class="group-manage-dialog">
             <section class="surface-card">
                 <div class="section-head">
@@ -19,12 +13,7 @@
                 </div>
 
                 <div class="action-row">
-                    <el-input
-                        v-model="newGroupName"
-                        size="large"
-                        placeholder="请输入新分组名称"
-                        :disabled="!active"
-                    />
+                    <el-input v-model="newGroupName" size="large" placeholder="请输入新分组名称" :disabled="!active" />
                     <button type="button" class="primary-button" :disabled="!active" @click="handleAddGroup">
                         新建分组
                     </button>
@@ -44,27 +33,14 @@
                 </div>
 
                 <div class="action-row">
-                    <el-select
-                        v-model="selectedGroupId"
-                        size="large"
-                        placeholder="请选择要编辑的分组"
-                        :disabled="!active"
-                        class="group-select"
-                    >
-                        <el-option
-                            v-for="group in groupOptions"
-                            :key="group.id"
-                            :label="group.label"
-                            :value="group.id"
-                        />
+                    <el-select v-model="selectedGroupId" size="large" placeholder="请选择要编辑的分组" :disabled="!active"
+                        class="group-select">
+                        <el-option v-for="group in groupOptions" :key="group.id" :label="group.label"
+                            :value="group.id" />
                     </el-select>
 
-                    <button
-                        type="button"
-                        class="danger-button"
-                        :disabled="!active || !selectedGroupId"
-                        @click="openDeleteConfirm"
-                    >
+                    <button type="button" class="danger-button" :disabled="!active || !selectedGroupId"
+                        @click="openDeleteConfirm">
                         删除该组
                     </button>
                 </div>
@@ -81,14 +57,8 @@
                     </div>
                 </div>
 
-                <el-transfer
-                    v-model="targetKeys"
-                    filterable
-                    class="v3-transfer"
-                    :data="transferData"
-                    :titles="['未分组', '本组成员']"
-                    v-loading="loading"
-                />
+                <el-transfer v-model="targetKeys" filterable class="v3-transfer" :data="transferData"
+                    :titles="['未分组', '本组成员']" v-loading="loading" />
             </section>
 
             <section v-else class="empty-card">
@@ -102,25 +72,16 @@
                 <button type="button" class="ghost-button" @click="visible = false">
                     关闭
                 </button>
-                <button
-                    type="button"
-                    class="primary-button"
-                    :disabled="!active || !selectedGroupId"
-                    @click="handleSaveMembers"
-                >
+                <button type="button" class="primary-button" :disabled="!active || !selectedGroupId"
+                    @click="handleSaveMembers">
                     保存成员
                 </button>
             </div>
         </template>
     </StudentsDialogShell>
 
-    <StudentsDialogShell
-        v-model="deleteConfirmVisible"
-        title="删除分组"
-        eyebrow="风险操作"
-        description="删除分组不会删除学生本身，只会移除该组关系。确认后将立即生效。"
-        width="460px"
-    >
+    <StudentsDialogShell v-model="deleteConfirmVisible" title="删除分组" eyebrow="风险操作"
+        description="删除分组不会删除学生本身，只会移除该组关系。确认后将立即生效。" width="460px">
         <div class="confirm-card">
             <strong>确定删除分组「{{ selectedGroupName }}」吗？</strong>
             <p>删除后，本组学生会回到未分组状态。</p>
@@ -498,9 +459,9 @@ function handleSaveMembers(): void {
     box-shadow: 0 0 0 4px rgba(85, 104, 255, 0.08);
 }
 
-.action-row > .ghost-button,
-.action-row > .primary-button,
-.action-row > .danger-button {
+.action-row>.ghost-button,
+.action-row>.primary-button,
+.action-row>.danger-button {
     flex-shrink: 0;
 }
 

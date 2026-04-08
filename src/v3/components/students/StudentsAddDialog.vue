@@ -1,35 +1,18 @@
 <template>
-    <StudentsDialogShell
-        v-model="visible"
-        title="添加学生"
-        eyebrow="学生管理"
-        description="统一处理单个添加、批量添加和 Excel 导入，让课堂名单维护保持和当前重构页面一致的视觉风格。"
-        width="860px"
-    >
+    <StudentsDialogShell v-model="visible" title="添加学生" eyebrow="学生管理" description="支持单个添加、批量添加和 Excel 导入"
+        width="860px">
         <div class="students-add-dialog">
             <div class="mode-switch">
-                <button
-                    type="button"
-                    class="mode-switch__button"
-                    :class="{ 'is-active': addMode === 'single' }"
-                    @click="addMode = 'single'"
-                >
+                <button type="button" class="mode-switch__button" :class="{ 'is-active': addMode === 'single' }"
+                    @click="addMode = 'single'">
                     单个添加
                 </button>
-                <button
-                    type="button"
-                    class="mode-switch__button"
-                    :class="{ 'is-active': addMode === 'batch' }"
-                    @click="addMode = 'batch'"
-                >
+                <button type="button" class="mode-switch__button" :class="{ 'is-active': addMode === 'batch' }"
+                    @click="addMode = 'batch'">
                     批量添加
                 </button>
-                <button
-                    type="button"
-                    class="mode-switch__button"
-                    :class="{ 'is-active': addMode === 'excel' }"
-                    @click="addMode = 'excel'"
-                >
+                <button type="button" class="mode-switch__button" :class="{ 'is-active': addMode === 'excel' }"
+                    @click="addMode = 'excel'">
                     Excel 导入
                 </button>
             </div>
@@ -38,33 +21,20 @@
                 <div class="form-grid">
                     <label class="field-block">
                         <span class="field-block__label">姓名</span>
-                        <el-input
-                            v-model="singleName"
-                            size="large"
-                            placeholder="请输入学生姓名"
-                            :disabled="disabled"
-                        />
+                        <el-input v-model="singleName" size="large" placeholder="请输入学生姓名" :disabled="disabled" />
                     </label>
 
                     <div class="field-block">
                         <span class="field-block__label">性别</span>
                         <div class="gender-switch">
-                            <button
-                                type="button"
-                                class="gender-switch__button"
-                                :class="{ 'is-active': singleGender === 1 }"
-                                :disabled="disabled"
-                                @click="singleGender = 1"
-                            >
+                            <button type="button" class="gender-switch__button"
+                                :class="{ 'is-active': singleGender === 1 }" :disabled="disabled"
+                                @click="singleGender = 1">
                                 男
                             </button>
-                            <button
-                                type="button"
-                                class="gender-switch__button"
-                                :class="{ 'is-active': singleGender === 2 }"
-                                :disabled="disabled"
-                                @click="singleGender = 2"
-                            >
+                            <button type="button" class="gender-switch__button"
+                                :class="{ 'is-active': singleGender === 2 }" :disabled="disabled"
+                                @click="singleGender = 2">
                                 女
                             </button>
                         </div>
@@ -76,34 +46,21 @@
                 <div class="form-grid">
                     <label class="field-block field-block--full">
                         <span class="field-block__label">姓名列表</span>
-                        <el-input
-                            v-model="batchText"
-                            type="textarea"
-                            :rows="5"
-                            placeholder="例：张三:男, 李四:女&#10;王五 刘六"
-                            :disabled="disabled"
-                        />
+                        <el-input v-model="batchText" type="textarea" :rows="5" placeholder="例：张三:男, 李四:女&#10;王五 刘六"
+                            :disabled="disabled" />
                     </label>
 
                     <div class="field-block">
                         <span class="field-block__label">默认性别</span>
                         <div class="gender-switch">
-                            <button
-                                type="button"
-                                class="gender-switch__button"
-                                :class="{ 'is-active': batchGender === 1 }"
-                                :disabled="disabled"
-                                @click="batchGender = 1"
-                            >
+                            <button type="button" class="gender-switch__button"
+                                :class="{ 'is-active': batchGender === 1 }" :disabled="disabled"
+                                @click="batchGender = 1">
                                 男
                             </button>
-                            <button
-                                type="button"
-                                class="gender-switch__button"
-                                :class="{ 'is-active': batchGender === 2 }"
-                                :disabled="disabled"
-                                @click="batchGender = 2"
-                            >
+                            <button type="button" class="gender-switch__button"
+                                :class="{ 'is-active': batchGender === 2 }" :disabled="disabled"
+                                @click="batchGender = 2">
                                 女
                             </button>
                         </div>
@@ -118,7 +75,8 @@
                         </div>
                         <div class="meta-tags">
                             <span class="meta-tag">共 {{ batchPreviewRows.length }} 条</span>
-                            <span v-if="batchDuplicateCount" class="meta-tag meta-tag--warn">重复 {{ batchDuplicateCount }} 条</span>
+                            <span v-if="batchDuplicateCount" class="meta-tag meta-tag--warn">重复 {{ batchDuplicateCount
+                                }} 条</span>
                         </div>
                     </div>
 
@@ -134,17 +92,9 @@
             </section>
 
             <section v-else class="surface-card excel-card">
-                <el-upload
-                    ref="uploadRef"
-                    drag
-                    accept=".xls,.xlsx"
-                    :auto-upload="false"
-                    :show-file-list="false"
-                    :before-upload="beforeExcelUpload"
-                    :on-change="handleExcelChange"
-                    :disabled="disabled"
-                    class="v3-upload"
-                >
+                <el-upload ref="uploadRef" drag accept=".xls,.xlsx" :auto-upload="false" :show-file-list="false"
+                    :before-upload="beforeExcelUpload" :on-change="handleExcelChange" :disabled="disabled"
+                    class="v3-upload">
                     <i-ep-upload-filled class="v3-upload__icon" />
                     <strong class="v3-upload__title">{{ excelFileName || "拖拽或点击选择 Excel 文件" }}</strong>
                     <p class="v3-upload__hint">支持 `.xls`、`.xlsx`，表头包含“姓名”，性别列可选。</p>
@@ -199,23 +149,13 @@
                     取消
                 </button>
 
-                <button
-                    v-if="addMode === 'single'"
-                    type="button"
-                    class="primary-button"
-                    :disabled="disabled"
-                    @click="addStudentSingle"
-                >
+                <button v-if="addMode === 'single'" type="button" class="primary-button" :disabled="disabled"
+                    @click="addStudentSingle">
                     添加学生
                 </button>
 
-                <button
-                    v-else-if="addMode === 'batch'"
-                    type="button"
-                    class="primary-button"
-                    :disabled="disabled"
-                    @click="addStudentBatch"
-                >
+                <button v-else-if="addMode === 'batch'" type="button" class="primary-button" :disabled="disabled"
+                    @click="addStudentBatch">
                     批量添加
                 </button>
 
@@ -223,12 +163,8 @@
                     <button type="button" class="ghost-button" :disabled="disabled" @click="clearExcelPreview">
                         清空
                     </button>
-                    <button
-                        type="button"
-                        class="primary-button"
-                        :disabled="disabled || excelParsedStudents.length === 0"
-                        @click="confirmExcelImport"
-                    >
+                    <button type="button" class="primary-button"
+                        :disabled="disabled || excelParsedStudents.length === 0" @click="confirmExcelImport">
                         确认导入
                     </button>
                 </div>

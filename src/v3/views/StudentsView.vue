@@ -101,6 +101,7 @@
 
             <aside class="side-column">
                 <StudentsSelectionPanel
+                    :class-id="activeClassId"
                     :selected-student="selectedStudent"
                     :selected-students="selectedStudents"
                     :status-label="selectionStatusLabel"

@@ -3,54 +3,66 @@
         切换学期
     </button>
 
-    <el-dialog v-model="dialogVisible" title="切换学期" width="420px" @opened="onDialogOpened">
-        <div class="switch-dialog__body">
-            <p class="switch-dialog__hint">请选择要切换到的学期</p>
-            <el-select
-                v-model="selectedSemesterId"
-                class="switch-dialog__select"
-                size="large"
-                :loading="semestersLoading"
-                :disabled="semestersLoading || semesterOptions.length === 0"
-                :placeholder="semestersLoading ? '加载学期中…' : '请选择学期'"
-            >
-                <el-option
-                    v-for="item in semesterOptions"
-                    :key="item.id"
-                    :label="item.name"
-                    :value="item.id"
-                >
-                    <div class="semester-option">
-                        <span class="semester-option__name">{{ item.name }}</span>
-                        <el-tag
-                            class="semester-option__status"
-                            size="small"
-                            :type="item.status === 2 ? 'info' : 'success'"
-                            effect="light"
-                            round
+    <StudentsDialogShell
+        v-model="dialogVisible"
+        title="切换学期"
+        eyebrow="主导航"
+        description="选择当前班级下要查看和操作的学期，切换后页面状态会同步刷新。"
+        width="520px"
+    >
+        <div class="switch-dialog">
+            <section class="surface-card">
+                <label class="field-block">
+                    <span class="field-block__label">当前学期</span>
+                    <el-select
+                        v-model="selectedSemesterId"
+                        class="switch-dialog__select"
+                        size="large"
+                        :loading="semestersLoading"
+                        :disabled="semestersLoading || semesterOptions.length === 0"
+                        :placeholder="semestersLoading ? '加载学期中…' : '请选择学期'"
+                    >
+                        <el-option
+                            v-for="item in semesterOptions"
+                            :key="item.id"
+                            :label="item.name"
+                            :value="item.id"
                         >
-                            {{ getSemesterStatusLabel(item.status) }}
-                        </el-tag>
-                    </div>
-                </el-option>
-            </el-select>
+                            <div class="semester-option">
+                                <span class="semester-option__name">{{ item.name }}</span>
+                                <el-tag
+                                    class="semester-option__status"
+                                    size="small"
+                                    :type="item.status === 2 ? 'info' : 'success'"
+                                    effect="light"
+                                    round
+                                >
+                                    {{ getSemesterStatusLabel(item.status) }}
+                                </el-tag>
+                            </div>
+                        </el-option>
+                    </el-select>
+                </label>
+            </section>
         </div>
+
         <template #footer>
-            <span class="switch-dialog__footer">
-                <el-button @click="dialogVisible = false">取消</el-button>
-                <el-button type="primary" :loading="semesterSwitching" @click="applySemesterSwitch">
-                    应用切换
-                </el-button>
-            </span>
+            <div class="dialog-actions">
+                <button type="button" class="ghost-button" @click="dialogVisible = false">取消</button>
+                <button type="button" class="primary-button" :disabled="semesterSwitching" @click="applySemesterSwitch">
+                    {{ semesterSwitching ? "切换中..." : "应用切换" }}
+                </button>
+            </div>
         </template>
-    </el-dialog>
+    </StudentsDialogShell>
 </template>
 
 <script setup lang="ts">
 import { classManager } from "@/managers/class"
 import type { SemesterDTO } from "@/types/class"
+import StudentsDialogShell from "@/v3/components/students/StudentsDialogShell.vue";
 import { ElMessage } from "element-plus"
-import { computed, ref } from "vue"
+import { computed, ref, watch } from "vue"
 
 /** 定义可切换的学期选项结构。 */
 interface SemesterOption {
@@ -110,12 +122,6 @@ async function loadSemesters(): Promise<void> {
     }
 }
 
-/** 打开弹窗后同步当前选中学期。 */
-async function onDialogOpened(): Promise<void> {
-    selectedSemesterId.value = props.currentSemesterId
-    await loadSemesters()
-}
-
 /** 应用当前选中的学期。 */
 async function applySemesterSwitch(): Promise<void> {
     const classId = props.activeClassId
@@ -156,6 +162,16 @@ async function applySemesterSwitch(): Promise<void> {
         semesterSwitching.value = false
     }
 }
+
+/** 在弹窗打开时同步学期列表和当前选中值。 */
+watch(dialogVisible, async (visible) => {
+    if (!visible) {
+        return
+    }
+
+    selectedSemesterId.value = props.currentSemesterId
+    await loadSemesters()
+})
 </script>
 
 <style scoped>
@@ -178,17 +194,31 @@ async function applySemesterSwitch(): Promise<void> {
     transform: translateY(-2px);
 }
 
-.switch-dialog__body {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+.switch-dialog {
+    display: grid;
+    gap: 16px;
 }
 
-.switch-dialog__hint {
-    margin: 0;
+.surface-card {
+    padding: 20px;
+    border: 1px solid rgba(122, 141, 198, 0.16);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.field-block {
+    display: grid;
+    gap: 10px;
+}
+
+.field-block__label {
+    display: block;
     color: #627099;
-    font-size: 14px;
-    line-height: 1.7;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
 .switch-dialog__select {
@@ -214,9 +244,59 @@ async function applySemesterSwitch(): Promise<void> {
     flex-shrink: 0;
 }
 
-.switch-dialog__footer {
+.dialog-actions {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
+}
+
+.ghost-button,
+.primary-button {
+    min-height: 46px;
+    padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    border: none;
+    font: inherit;
+    cursor: pointer;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+.ghost-button {
+    border: 1px solid rgba(122, 141, 198, 0.24);
+    background: rgba(255, 255, 255, 0.82);
+    color: #16213e;
+}
+
+.primary-button {
+    background: linear-gradient(135deg, #5568ff, #8e6cff);
+    color: #ffffff;
+    box-shadow: 0 12px 24px rgba(85, 104, 255, 0.26);
+}
+
+.ghost-button:hover,
+.primary-button:hover {
+    transform: translateY(-2px);
+}
+
+.ghost-button:disabled,
+.primary-button:disabled {
+    opacity: 0.56;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.switch-dialog :deep(.el-input__wrapper) {
+    border-radius: 16px;
+    box-shadow: none;
+    border: 1px solid rgba(122, 141, 198, 0.22);
+    background: rgba(255, 255, 255, 0.88);
+}
+
+.switch-dialog :deep(.el-input__wrapper.is-focus) {
+    border-color: rgba(85, 104, 255, 0.36);
+    box-shadow: 0 0 0 4px rgba(85, 104, 255, 0.08);
 }
 </style>

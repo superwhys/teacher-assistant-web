@@ -69,7 +69,7 @@ const recordPreview = computed<RecordPreviewItem[]>(() => {
 
 /** 跳转到积分历史页面。 */
 function goToHistoryPage(): void {
-    void router.push("/points/history")
+    void router.push("/v3/points/history")
 }
 
 /** 格式化积分变动展示文本。 */

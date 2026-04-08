@@ -14,14 +14,9 @@
 
         <div class="ranking-filter">
             <div class="ranking-filter__group" role="tablist" aria-label="排行榜周期">
-                <button
-                    v-for="item in rankingTimeRangeOptions"
-                    :key="item.value"
-                    type="button"
-                    class="ranking-filter__button"
-                    :class="{ 'is-active': rankingTimeRange === item.value }"
-                    @click="rankingTimeRange = item.value"
-                >
+                <button v-for="item in rankingTimeRangeOptions" :key="item.value" type="button"
+                    class="ranking-filter__button" :class="{ 'is-active': rankingTimeRange === item.value }"
+                    @click="rankingTimeRange = item.value">
                     {{ item.label }}
                 </button>
             </div>
@@ -134,7 +129,7 @@ function toggleRankingPreviewMask(): void {
 
 /** 跳转到积分主页面查看完整排行榜。 */
 function goToPointsPage(): void {
-    void router.push("/points")
+    void router.push("/v3/points")
 }
 
 /** 加载排行榜所需的学生姓名映射。 */

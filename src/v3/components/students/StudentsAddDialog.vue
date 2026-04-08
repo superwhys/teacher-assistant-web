@@ -1,5 +1,5 @@
 <template>
-    <StudentsDialogShell v-model="visible" title="添加学生" eyebrow="学生管理" description="支持单个添加、批量添加和 Excel 导入"
+    <AppDialogShell v-model="visible" title="添加学生" eyebrow="学生管理" description="支持单个添加、批量添加和 Excel 导入"
         width="860px">
         <div class="students-add-dialog">
             <div class="mode-switch">
@@ -170,7 +170,7 @@
                 </div>
             </div>
         </template>
-    </StudentsDialogShell>
+    </AppDialogShell>
 </template>
 
 <script setup lang="ts">
@@ -178,7 +178,7 @@ import type { UploadFile, UploadInstance, UploadRawFile } from "element-plus";
 import { ElMessage } from "element-plus";
 import { computed, ref, watch } from "vue";
 import type { ApiGender, CreateStudentReq } from "@/types/student";
-import StudentsDialogShell from "@/v3/components/students/StudentsDialogShell.vue";
+import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 
 /** 定义学生新增弹窗的展示模式。 */
 export type StudentAddMode = "single" | "batch" | "excel"

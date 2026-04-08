@@ -1,5 +1,5 @@
 <template>
-    <StudentsDialogShell
+    <AppDialogShell
         v-model="visible"
         title="选择积分规则"
         eyebrow="积分操作"
@@ -94,7 +94,7 @@
                             <span v-if="activeGroup.icon" class="group-head__icon">{{ activeGroup.icon }}</span>
                             <div>
                                 <h4>{{ activeGroup.name }}</h4>
-                                <p>{{ activeGroup.description || "当前分组下可直接选择积分项目。" }}</p>
+                                    <p>当前分组下可直接选择积分项目。</p>
                             </div>
                         </div>
                         <div class="meta-tags">
@@ -118,7 +118,7 @@
                         >
                             <div class="rule-card__body">
                                 <strong>{{ rule.name }}</strong>
-                                <p>{{ rule.description || `${activeGroup.name} · ${rule.sign === 'plus' ? '加分' : '扣分'}规则` }}</p>
+                                <p>{{ `${activeGroup.name} · ${rule.sign === 'plus' ? '加分' : '扣分'}规则` }}</p>
                             </div>
                             <div class="rule-card__meta">
                                 <span class="rule-card__points">
@@ -144,12 +144,12 @@
                 </button>
             </div>
         </template>
-    </StudentsDialogShell>
+    </AppDialogShell>
 </template>
 
 <script setup lang="ts">
 import type { Rule, RuleGroup } from "@/types/points";
-import StudentsDialogShell from "@/v3/components/students/StudentsDialogShell.vue";
+import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import { computed, ref, watch } from "vue";
 
 /** 定义积分规则弹窗页签类型。 */
@@ -159,7 +159,6 @@ type SelectorTab = "all" | "plus" | "minus"
 type UiRule = {
     id: number
     name: string
-    description: string
     icon: string
     points: number
     sign: "plus" | "minus"
@@ -169,7 +168,6 @@ type UiRule = {
 type UiGroup = {
     id: number
     name: string
-    description: string
     icon: string
     rules: UiRule[]
 }
@@ -247,7 +245,6 @@ const uiGroups = computed<UiGroup[]>(() => {
                     return {
                         id: ruleId,
                         name: ruleName,
-                        description: (rule.description ?? "").trim(),
                         icon: (rule.icon ?? "").trim(),
                         points: toNumber(rule.points, 0),
                         sign: inferRuleSign(rule)
@@ -258,7 +255,6 @@ const uiGroups = computed<UiGroup[]>(() => {
             return {
                 id: groupId,
                 name: groupName,
-                description: (group.description ?? "").trim(),
                 icon: (group.icon ?? "").trim(),
                 rules
             }
@@ -276,7 +272,6 @@ const filteredGroups = computed<UiGroup[]>(() => {
                 const matchTab = currentTab.value === "all" || rule.sign === currentTab.value
                 const matchKeyword = !normalizedKeyword
                     || rule.name.toLowerCase().includes(normalizedKeyword)
-                    || rule.description.toLowerCase().includes(normalizedKeyword)
 
                 return matchTab && matchKeyword
             })

@@ -96,7 +96,6 @@ export type CreateRuleItem = {
     type?: number
     name?: string
     icon?: string
-    description?: string
 }
 
 export type CreateRuleReq = {
@@ -104,7 +103,6 @@ export type CreateRuleReq = {
 }
 
 export type UpdateRuleReq = {
-    description?: string
     icon?: string
     name?: string
     points?: number
@@ -113,7 +111,6 @@ export type UpdateRuleReq = {
 }
 
 export type Rule = {
-    description?: string
     icon?: string
     id?: number
     name?: string
@@ -124,7 +121,6 @@ export type Rule = {
 export type CreateRuleGroupItem = {
     name?: string
     icon?: string
-    description?: string
 }
 
 export type CreateRuleGroupReq = {
@@ -132,14 +128,12 @@ export type CreateRuleGroupReq = {
 }
 
 export type UpdateRuleGroupReq = {
-    description?: string
     group_id?: number
     icon?: string
     name?: string
 }
 
 export type RuleGroup = {
-    description?: string
     icon?: string
     id?: number
     name?: string

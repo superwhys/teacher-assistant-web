@@ -6,23 +6,23 @@
         destroy-on-close
         align-center
         append-to-body
-        class="students-dialog-shell"
-        modal-class="students-dialog-shell__overlay"
+        class="app-dialog-shell"
+        modal-class="app-dialog-shell__overlay"
     >
         <template #header>
-            <div class="students-dialog-shell__header">
-                <span v-if="eyebrow" class="students-dialog-shell__eyebrow">{{ eyebrow }}</span>
-                <h3 class="students-dialog-shell__title">{{ title }}</h3>
-                <p v-if="description" class="students-dialog-shell__description">{{ description }}</p>
+            <div class="app-dialog-shell__header">
+                <span v-if="eyebrow" class="app-dialog-shell__eyebrow">{{ eyebrow }}</span>
+                <h3 class="app-dialog-shell__title">{{ title }}</h3>
+                <p v-if="description" class="app-dialog-shell__description">{{ description }}</p>
             </div>
         </template>
 
-        <div class="students-dialog-shell__body">
+        <div class="app-dialog-shell__body">
             <slot />
         </div>
 
         <template v-if="$slots.footer" #footer>
-            <div class="students-dialog-shell__footer">
+            <div class="app-dialog-shell__footer">
                 <slot name="footer" />
             </div>
         </template>
@@ -32,8 +32,10 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
-/** 定义学生页统一弹窗壳组件的属性结构。 */
-interface StudentsDialogShellProps {
+defineOptions({ name: "AppDialogShell" })
+
+/** 定义通用弹窗壳组件的属性结构。 */
+interface AppDialogShellProps {
     description?: string
     eyebrow?: string
     modelValue: boolean
@@ -42,7 +44,7 @@ interface StudentsDialogShellProps {
     width?: string
 }
 
-const props = withDefaults(defineProps<StudentsDialogShellProps>(), {
+const props = withDefaults(defineProps<AppDialogShellProps>(), {
     description: "",
     eyebrow: "",
     showClose: true,
@@ -60,16 +62,16 @@ const visible = computed({
 </script>
 
 <style scoped>
-:global(.students-dialog-shell__overlay) {
+:global(.app-dialog-shell__overlay) {
     background: rgba(18, 27, 54, 0.46);
     backdrop-filter: blur(16px);
 }
 
-:global(.students-dialog-shell__overlay .el-overlay-dialog) {
+:global(.app-dialog-shell__overlay .el-overlay-dialog) {
     padding: 24px;
 }
 
-.students-dialog-shell :deep(.el-dialog) {
+.app-dialog-shell :deep(.el-dialog) {
     margin: 0 auto;
     max-width: calc(100vw - 24px);
     max-height: calc(100vh - 48px);
@@ -85,17 +87,17 @@ const visible = computed({
     flex-direction: column;
 }
 
-.students-dialog-shell :deep(.el-dialog__header) {
+.app-dialog-shell :deep(.el-dialog__header) {
     margin: 0;
     padding: 0;
 }
 
-.students-dialog-shell :deep(.el-dialog__body),
-.students-dialog-shell :deep(.el-dialog__footer) {
+.app-dialog-shell :deep(.el-dialog__body),
+.app-dialog-shell :deep(.el-dialog__footer) {
     padding: 0;
 }
 
-.students-dialog-shell :deep(.el-dialog__headerbtn) {
+.app-dialog-shell :deep(.el-dialog__headerbtn) {
     top: 20px;
     right: 20px;
     width: 40px;
@@ -106,16 +108,16 @@ const visible = computed({
     transition: transform 0.16s ease, background-color 0.16s ease;
 }
 
-.students-dialog-shell :deep(.el-dialog__headerbtn:hover) {
+.app-dialog-shell :deep(.el-dialog__headerbtn:hover) {
     transform: translateY(-2px);
     background: rgba(85, 104, 255, 0.16);
 }
 
-.students-dialog-shell__header {
+.app-dialog-shell__header {
     padding: 24px 24px 0;
 }
 
-.students-dialog-shell__eyebrow {
+.app-dialog-shell__eyebrow {
     display: inline-flex;
     align-items: center;
     min-height: 32px;
@@ -129,12 +131,12 @@ const visible = computed({
     text-transform: uppercase;
 }
 
-.students-dialog-shell__title,
-.students-dialog-shell__description {
+.app-dialog-shell__title,
+.app-dialog-shell__description {
     margin: 0;
 }
 
-.students-dialog-shell__title {
+.app-dialog-shell__title {
     margin-top: 12px;
     color: #16213e;
     font-size: 28px;
@@ -142,49 +144,49 @@ const visible = computed({
     line-height: 1.2;
 }
 
-.students-dialog-shell__description {
+.app-dialog-shell__description {
     margin-top: 8px;
     color: #627099;
     line-height: 1.7;
 }
 
-.students-dialog-shell__body {
+.app-dialog-shell__body {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
     padding: 20px 24px 24px;
 }
 
-.students-dialog-shell__footer {
+.app-dialog-shell__footer {
     padding: 0 24px 24px;
 }
 
 @media (max-width: 768px) {
-    :global(.students-dialog-shell__overlay .el-overlay-dialog) {
+    :global(.app-dialog-shell__overlay .el-overlay-dialog) {
         padding: 10px;
     }
 
-    .students-dialog-shell__header,
-    .students-dialog-shell__body,
-    .students-dialog-shell__footer {
+    .app-dialog-shell__header,
+    .app-dialog-shell__body,
+    .app-dialog-shell__footer {
         padding-left: 16px;
         padding-right: 16px;
     }
 
-    .students-dialog-shell__header {
+    .app-dialog-shell__header {
         padding-top: 16px;
     }
 
-    .students-dialog-shell__body {
+    .app-dialog-shell__body {
         padding-top: 16px;
         padding-bottom: 16px;
     }
 
-    .students-dialog-shell__footer {
+    .app-dialog-shell__footer {
         padding-bottom: 16px;
     }
 
-    .students-dialog-shell__title {
+    .app-dialog-shell__title {
         font-size: 24px;
     }
 }

@@ -24,7 +24,6 @@ export type PointsRuleSign = 'plus' | 'minus'
 export type UiPointsRule = {
     id: number
     name: string
-    description: string
     icon: string
     points: number
     sign: PointsRuleSign
@@ -73,7 +72,6 @@ export const pointsManager = {
             .map(g => ({
                 name: (g?.name ?? '').trim(),
                 icon: (g?.icon ?? '').trim(),
-                description: (g?.description ?? '').trim(),
             }))
             .filter(g => !!g.name)
 
@@ -116,7 +114,6 @@ export const pointsManager = {
                 type: toNumber((r as any)?.type, 0),
                 name: ((r as any)?.name ?? '').trim(),
                 icon: ((r as any)?.icon ?? '').trim(),
-                description: ((r as any)?.description ?? '').trim(),
             }))
             .filter(r => !!r.name && r.rule_group_id > 0 && r.points > 0 && (r.type === 1 || r.type === 2))
 
@@ -144,7 +141,6 @@ export const pointsManager = {
             const groupId = toNumber(g.id, 0)
             const groupName = (g.name ?? '').trim()
             const groupIcon = (g.icon ?? '').trim()
-            const groupDesc = (g.description ?? '').trim()
             const rules = g.rules ?? []
 
             for (const r of rules) {
@@ -154,7 +150,6 @@ export const pointsManager = {
                 flat.push({
                     id,
                     name,
-                    description: (r.description ?? '').trim() || groupDesc,
                     icon: (r.icon ?? '').trim() || groupIcon,
                     points: toNumber(r.points, 0),
                     sign: inferRuleSign(r),

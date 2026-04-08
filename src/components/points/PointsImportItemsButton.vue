@@ -118,7 +118,7 @@ async function confirmImport() {
         const missingGroupNames = groupNames.filter(gn => !groupNameToId.has(gn))
         const createdGroups = missingGroupNames.length
         if (createdGroups > 0) {
-            await pointsManager.createRuleGroups(missingGroupNames.map(name => ({ name, icon: '', description: '' })))
+            await pointsManager.createRuleGroups(missingGroupNames.map(name => ({ name, icon: '' })))
         }
 
         if (createdGroups > 0) {
@@ -156,7 +156,6 @@ async function confirmImport() {
                 rule_group_id: gid,
                 type: row.sign === 'minus' ? 2 : 1,
                 icon: '',
-                description: '',
             })
         }
 

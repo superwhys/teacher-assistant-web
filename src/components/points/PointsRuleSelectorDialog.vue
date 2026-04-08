@@ -7,7 +7,6 @@ type SelectorTab = 'all' | 'plus' | 'minus'
 type UiRule = {
     id: number
     name: string
-    description: string
     icon: string
     points: number
     sign: 'plus' | 'minus'
@@ -95,7 +94,6 @@ const uiGroups = computed<UiGroup[]>(() => {
                 return {
                     id: rid,
                     name: rname,
-                    description: (r.description ?? '').trim(),
                     icon: (r.icon ?? '').trim(),
                     points,
                     sign,

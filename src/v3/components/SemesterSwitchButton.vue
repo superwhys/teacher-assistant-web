@@ -3,7 +3,7 @@
         切换学期
     </button>
 
-    <StudentsDialogShell
+    <AppDialogShell
         v-model="dialogVisible"
         title="切换学期"
         eyebrow="主导航"
@@ -54,13 +54,13 @@
                 </button>
             </div>
         </template>
-    </StudentsDialogShell>
+    </AppDialogShell>
 </template>
 
 <script setup lang="ts">
 import { classManager } from "@/managers/class"
 import type { SemesterDTO } from "@/types/class"
-import StudentsDialogShell from "@/v3/components/students/StudentsDialogShell.vue";
+import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import { ElMessage } from "element-plus"
 import { computed, ref, watch } from "vue"
 

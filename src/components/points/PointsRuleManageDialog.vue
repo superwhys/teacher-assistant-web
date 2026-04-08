@@ -202,7 +202,6 @@ async function onSaveItem() {
                 type,
                 rule_group_id: selectedGroupId.value,
                 icon: '',
-                description: '',
             })
             ElMessage.success('已新增积分项')
         } else {

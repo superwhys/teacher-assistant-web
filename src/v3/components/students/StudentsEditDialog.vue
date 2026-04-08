@@ -1,5 +1,5 @@
 <template>
-    <StudentsDialogShell
+    <AppDialogShell
         v-model="visible"
         title="编辑学生"
         eyebrow="学生管理"
@@ -57,7 +57,7 @@
                 </button>
             </div>
         </template>
-    </StudentsDialogShell>
+    </AppDialogShell>
 </template>
 
 <script setup lang="ts">
@@ -65,7 +65,7 @@ import { ElMessage } from "element-plus";
 import { computed, ref, watch } from "vue";
 import type { ApiGender } from "@/types/student";
 import type { UiStudent } from "@/components/class/ClassStudentList.vue";
-import StudentsDialogShell from "@/v3/components/students/StudentsDialogShell.vue";
+import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 
 /** 定义学生编辑弹窗属性结构。 */
 interface StudentsEditDialogProps {

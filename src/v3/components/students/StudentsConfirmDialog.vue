@@ -1,5 +1,5 @@
 <template>
-    <StudentsDialogShell
+    <AppDialogShell
         v-model="visible"
         :title="title"
         :eyebrow="eyebrow"
@@ -20,12 +20,12 @@
                 </button>
             </div>
         </template>
-    </StudentsDialogShell>
+    </AppDialogShell>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
-import StudentsDialogShell from "@/v3/components/students/StudentsDialogShell.vue";
+import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 
 /** 定义确认弹窗属性结构。 */
 interface StudentsConfirmDialogProps {

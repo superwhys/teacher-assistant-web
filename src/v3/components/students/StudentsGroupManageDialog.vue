@@ -1,5 +1,5 @@
 <template>
-    <StudentsDialogShell v-model="visible" title="分组管理" eyebrow="学生分组" width="980px">
+    <AppDialogShell v-model="visible" title="分组管理" eyebrow="学生分组" width="980px">
         <div class="group-manage-dialog">
             <section class="surface-card">
                 <div class="section-head">
@@ -78,9 +78,9 @@
                 </button>
             </div>
         </template>
-    </StudentsDialogShell>
+    </AppDialogShell>
 
-    <StudentsDialogShell v-model="deleteConfirmVisible" title="删除分组" eyebrow="风险操作"
+    <AppDialogShell v-model="deleteConfirmVisible" title="删除分组" eyebrow="风险操作"
         description="删除分组不会删除学生本身，只会移除该组关系。确认后将立即生效。" width="460px">
         <div class="confirm-card">
             <strong>确定删除分组「{{ selectedGroupName }}」吗？</strong>
@@ -97,7 +97,7 @@
                 </button>
             </div>
         </template>
-    </StudentsDialogShell>
+    </AppDialogShell>
 </template>
 
 <script setup lang="ts">
@@ -105,7 +105,7 @@ import { ElMessage } from "element-plus";
 import { computed, ref, watch } from "vue";
 import { studentManager } from "@/managers/student";
 import type { StudentDTO } from "@/types/student";
-import StudentsDialogShell from "@/v3/components/students/StudentsDialogShell.vue";
+import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 
 /** 定义分组管理弹窗使用的分组结构。 */
 export interface UiGroup {

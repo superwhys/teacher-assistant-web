@@ -1,5 +1,5 @@
 <template>
-    <StudentsDialogShell
+    <AppDialogShell
         v-model="visible"
         title="导入分组"
         eyebrow="学生分组"
@@ -108,7 +108,7 @@
                 </div>
             </div>
         </template>
-    </StudentsDialogShell>
+    </AppDialogShell>
 </template>
 
 <script setup lang="ts">
@@ -117,7 +117,7 @@ import { ElMessage } from "element-plus";
 import { computed, ref } from "vue";
 import type { UiStudent } from "@/components/class/ClassStudentList.vue";
 import type { UiGroup } from "@/v3/components/students/StudentsGroupManageDialog.vue";
-import StudentsDialogShell from "@/v3/components/students/StudentsDialogShell.vue";
+import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 
 /** 定义分组导入解析成员结构。 */
 interface ParsedGroupMember {

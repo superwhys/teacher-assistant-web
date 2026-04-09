@@ -4,23 +4,15 @@
             <div class="panel-head">
                 <div>
                     <h3>数据切换</h3>
-                    <p>可在排行榜与历史记录之间切换，避免页面内容过长。</p>
+                    <p>可在排行榜与历史记录之间切换。</p>
                 </div>
                 <div class="segmented-control">
-                    <button
-                        type="button"
-                        class="chip-button"
-                        :class="{ 'is-active': activeContentTab === 'ranking' }"
-                        @click="handleSelectContentTab('ranking')"
-                    >
+                    <button type="button" class="chip-button" :class="{ 'is-active': activeContentTab === 'ranking' }"
+                        @click="handleSelectContentTab('ranking')">
                         排行榜
                     </button>
-                    <button
-                        type="button"
-                        class="chip-button"
-                        :class="{ 'is-active': activeContentTab === 'records' }"
-                        @click="handleSelectContentTab('records')"
-                    >
+                    <button type="button" class="chip-button" :class="{ 'is-active': activeContentTab === 'records' }"
+                        @click="handleSelectContentTab('records')">
                         历史记录
                     </button>
                 </div>
@@ -37,33 +29,22 @@
                         </div>
                         <div class="toolbar-row toolbar-row--wrap">
                             <div class="segmented-control">
-                                <button
-                                    type="button"
-                                    class="chip-button"
+                                <button type="button" class="chip-button"
                                     :class="{ 'is-active': activeRankingTab === 'total' }"
-                                    @click="handleSelectRankingTab('total')"
-                                >
+                                    @click="handleSelectRankingTab('total')">
                                     总榜
                                 </button>
-                                <button
-                                    type="button"
-                                    class="chip-button"
+                                <button type="button" class="chip-button"
                                     :class="{ 'is-active': activeRankingTab === 'item' }"
-                                    @click="handleSelectRankingTab('item')"
-                                >
+                                    @click="handleSelectRankingTab('item')">
                                     单项榜
                                 </button>
                             </div>
 
                             <div class="segmented-control">
-                                <button
-                                    v-for="item in rankingRangeOptions"
-                                    :key="item.value"
-                                    type="button"
-                                    class="chip-button"
-                                    :class="{ 'is-active': currentRankingTimeRange === item.value }"
-                                    @click="currentRankingTimeRange = item.value"
-                                >
+                                <button v-for="item in rankingRangeOptions" :key="item.value" type="button"
+                                    class="chip-button" :class="{ 'is-active': currentRankingTimeRange === item.value }"
+                                    @click="currentRankingTimeRange = item.value">
                                     {{ item.label }}
                                 </button>
                             </div>
@@ -74,22 +55,27 @@
                         <label class="field-block">
                             <span class="field-label">积分项</span>
                             <el-select v-model="currentSelectedRankingRuleId" placeholder="请选择积分项" class="field-full">
-                                <el-option
-                                    v-for="rule in ruleOptions"
-                                    :key="rule.id"
+                                <el-option v-for="rule in ruleOptions" :key="rule.id"
                                     :label="`${rule.groupName ? `${rule.groupName} / ` : ''}${rule.name}`"
-                                    :value="rule.id"
-                                />
+                                    :value="rule.id" />
                             </el-select>
                         </label>
                     </div>
 
                     <div v-if="rankingItems.length > 0" class="ranking-list" v-loading="rankingLoading">
-                        <article v-for="item in rankingItems" :key="item.id" class="ranking-item">
+                        <article v-for="item in rankingItems" :key="item.id" class="ranking-item"
+                            :class="item.rankClass">
                             <div class="ranking-item__rank" :class="item.rankClass">{{ item.rankLabel }}</div>
                             <div class="ranking-item__content">
-                                <strong>{{ item.name }}</strong>
-                                <p>{{ item.meta }}</p>
+                                <div class="ranking-item__name">
+                                    <i-ep-trophy v-if="item.rankClass === 'is-top-1'" class="ranking-item__icon"
+                                        :class="item.rankClass" />
+                                    <i-ep-medal v-else-if="item.rankClass === 'is-top-2'" class="ranking-item__icon"
+                                        :class="item.rankClass" />
+                                    <i-ep-star-filled v-else-if="item.rankClass === 'is-top-3'"
+                                        class="ranking-item__icon" :class="item.rankClass" />
+                                    <strong>{{ item.name }}</strong>
+                                </div>
                             </div>
                             <div class="ranking-item__score">
                                 <span>{{ item.scoreLabel }}</span>
@@ -110,10 +96,12 @@
                             <p>保留课堂最新操作记录，并支持在当前页快速撤回最近一次规则积分。</p>
                         </div>
                         <div class="toolbar-row toolbar-row--wrap">
-                            <button type="button" class="ghost-button ghost-button--small" :disabled="recordsLoading" @click="emit('refresh-records')">
+                            <button type="button" class="ghost-button ghost-button--small" :disabled="recordsLoading"
+                                @click="emit('refresh-records')">
                                 刷新记录
                             </button>
-                            <button type="button" class="ghost-button ghost-button--small" :disabled="!canMutatePoints" @click="emit('undo-latest-record')">
+                            <button type="button" class="ghost-button ghost-button--small" :disabled="!canMutatePoints"
+                                @click="emit('undo-latest-record')">
                                 撤回最近一次
                             </button>
                         </div>
@@ -124,21 +112,17 @@
                             <span class="field-label">学生搜索</span>
                             <div class="search-box">
                                 <i-ep-search class="search-box__icon" />
-                                <input v-model="currentHistoryKeyword" type="search" class="search-box__input" placeholder="搜索学生姓名">
+                                <input v-model="currentHistoryKeyword" type="search" class="search-box__input"
+                                    placeholder="搜索学生姓名">
                             </div>
                         </label>
 
                         <div class="field-block">
                             <span class="field-label">记录类型</span>
                             <div class="segmented-control">
-                                <button
-                                    v-for="item in historySignOptions"
-                                    :key="item.value"
-                                    type="button"
-                                    class="chip-button"
-                                    :class="{ 'is-active': historySign === item.value }"
-                                    @click="emit('select-history-sign', item.value)"
-                                >
+                                <button v-for="item in historySignOptions" :key="item.value" type="button"
+                                    class="chip-button" :class="{ 'is-active': historySign === item.value }"
+                                    @click="emit('select-history-sign', item.value)">
                                     {{ item.label }}
                                 </button>
                             </div>
@@ -147,20 +131,25 @@
 
                     <div v-if="historyRecords.length > 0" class="record-list" v-loading="recordsLoading">
                         <article v-for="record in historyRecords" :key="record.id" class="record-item">
-                            <div class="record-item__score" :class="inferRecordDelta(record) < 0 ? 'is-minus' : 'is-plus'">
+                            <div class="record-item__score"
+                                :class="inferRecordDelta(record) < 0 ? 'is-minus' : 'is-plus'">
                                 {{ inferRecordDelta(record) > 0 ? "+" : "" }}{{ inferRecordDelta(record) }}
                             </div>
 
                             <div class="record-item__content">
-                                <strong>{{ record.rule_desc?.trim() || "未命名积分规则" }}</strong>
-                                <p>{{ record.student_name?.trim() || `学生 ${record.student_id || "-"}` }}</p>
+                                <div class="record-item__summary">
+                                    <strong>{{ record.rule_desc?.trim() || "未命名积分规则" }}</strong>
+                                    <span class="record-item__student">{{ record.student_name?.trim() || `学生
+                                        ${record.student_id || "-"}` }}</span>
+                                </div>
                                 <div class="record-item__meta">
                                     <span>{{ getRecordSourceLabel(record) }}</span>
                                     <span>{{ getRecordTimeLabel(record) }}</span>
                                 </div>
                             </div>
 
-                            <button type="button" class="text-button" :disabled="!canUndoRecord(record)" @click="emit('undo-record', record)">
+                            <button type="button" class="text-button" :disabled="!canUndoRecord(record)"
+                                @click="emit('undo-record', record)">
                                 撤回
                             </button>
                         </article>
@@ -172,11 +161,14 @@
                     </div>
 
                     <div v-if="historyPageCount > 1" class="pagination-row">
-                        <button type="button" class="ghost-button ghost-button--small" :disabled="historyPage <= 1 || recordsLoading" @click="emit('go-prev-history-page')">
+                        <button type="button" class="ghost-button ghost-button--small"
+                            :disabled="historyPage <= 1 || recordsLoading" @click="emit('go-prev-history-page')">
                             上一页
                         </button>
                         <span class="pagination-row__label">{{ `第 ${historyPage} / ${historyPageCount} 页` }}</span>
-                        <button type="button" class="ghost-button ghost-button--small" :disabled="historyPage >= historyPageCount || recordsLoading" @click="emit('go-next-history-page')">
+                        <button type="button" class="ghost-button ghost-button--small"
+                            :disabled="historyPage >= historyPageCount || recordsLoading"
+                            @click="emit('go-next-history-page')">
                             下一页
                         </button>
                     </div>
@@ -218,7 +210,6 @@ interface RuleOption {
 /** 定义排行榜展示结构。 */
 interface RankingDisplayItem {
     id: number
-    meta: string
     name: string
     rankClass: string
     rankLabel: string
@@ -327,19 +318,19 @@ function handleSelectRankingTab(tab: "total" | "item"): void {
     align-items: flex-start;
 }
 
-.ranking-panel > .panel-head {
+.ranking-panel>.panel-head {
     margin-bottom: 16px;
 }
 
 .panel-head h3,
 .panel-head p,
 .empty-state p,
-.record-item__content p {
+.record-item__student {
     margin: 0;
 }
 
 .panel-head p,
-.record-item__content p,
+.record-item__student,
 .empty-state p {
     color: #627099;
     line-height: 1.7;
@@ -490,20 +481,42 @@ function handleSelectRankingTab(tab: "total" | "item"): void {
     gap: 14px;
 }
 
+.ranking-list {
+    grid-auto-flow: column;
+    grid-template-rows: repeat(5, minmax(86px, auto));
+    grid-auto-columns: minmax(0, 1fr);
+    align-items: start;
+    max-height: calc(5 * 86px + 4 * 14px);
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-gutter: stable;
+}
+
 .ranking-item,
 .record-item {
     border: 1px solid rgba(122, 141, 198, 0.16);
     border-radius: 22px;
     background: linear-gradient(180deg, rgba(247, 249, 255, 0.96), rgba(255, 255, 255, 0.9));
-    box-shadow: 0 10px 24px rgba(71, 90, 150, 0.1);
 }
 
 .ranking-item {
+    position: relative;
     display: grid;
     grid-template-columns: 54px minmax(0, 1fr) auto;
     align-items: center;
     gap: 14px;
-    padding: 16px 18px;
+    min-height: 86px;
+    padding: 14px 18px;
+    overflow: hidden;
+}
+
+.ranking-item::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    border-radius: 22px 0 0 22px;
+    background: transparent;
 }
 
 .ranking-item__rank {
@@ -523,14 +536,73 @@ function handleSelectRankingTab(tab: "total" | "item"): void {
     color: #b54708;
 }
 
+.ranking-item.is-top-1 {
+    border-color: rgba(255, 182, 72, 0.34);
+    background: linear-gradient(180deg, rgba(255, 248, 235, 0.96), rgba(255, 255, 255, 0.92));
+}
+
+.ranking-item.is-top-1::before {
+    background: linear-gradient(180deg, #ffb648, #ffd66b);
+}
+
 .ranking-item__rank.is-top-2 {
-    background: rgba(148, 163, 184, 0.16);
-    color: #475467;
+    background: rgba(255, 143, 107, 0.16);
+    color: #c2410c;
+}
+
+.ranking-item.is-top-2 {
+    border-color: rgba(255, 143, 107, 0.34);
+    background: linear-gradient(180deg, rgba(255, 245, 240, 0.96), rgba(255, 255, 255, 0.92));
+}
+
+.ranking-item.is-top-2::before {
+    background: linear-gradient(180deg, #ff8f6b, #ffb089);
 }
 
 .ranking-item__rank.is-top-3 {
-    background: rgba(255, 143, 107, 0.16);
+    background: rgba(129, 140, 248, 0.14);
+    color: #4f46e5;
+}
+
+.ranking-item.is-top-3 {
+    border-color: rgba(129, 140, 248, 0.3);
+    background: linear-gradient(180deg, rgba(240, 244, 255, 0.98), rgba(255, 255, 255, 0.92));
+}
+
+.ranking-item.is-top-3::before {
+    background: linear-gradient(180deg, #7c8cff, #a5b4fc);
+}
+
+.ranking-item__name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.ranking-item__icon {
+    flex: 0 0 auto;
+    font-size: 16px;
+    color: #5568ff;
+}
+
+.ranking-item__icon.is-top-1 {
+    color: #b54708;
+}
+
+.ranking-item__icon.is-top-2 {
     color: #c2410c;
+}
+
+.ranking-item__icon.is-top-3 {
+    color: #4f46e5;
+}
+
+.ranking-item.is-top-1 .ranking-item__content strong,
+.ranking-item.is-top-2 .ranking-item__content strong,
+.ranking-item.is-top-3 .ranking-item__content strong {
+    font-size: 19px;
+    font-weight: 800;
 }
 
 .ranking-item__content strong,
@@ -538,10 +610,6 @@ function handleSelectRankingTab(tab: "total" | "item"): void {
 .empty-state strong {
     color: #16213e;
     font-size: 17px;
-}
-
-.ranking-item__content p {
-    margin-top: 6px;
 }
 
 .ranking-item__score span {
@@ -553,16 +621,17 @@ function handleSelectRankingTab(tab: "total" | "item"): void {
 
 .record-item {
     display: grid;
-    grid-template-columns: 92px minmax(0, 1fr) auto;
+    grid-template-columns: 76px minmax(0, 1fr) auto;
     align-items: center;
-    gap: 16px;
-    padding: 16px 18px;
+    gap: 14px;
+    padding: 14px 16px;
 }
 
 .record-item__score {
-    font-size: 26px;
+    font-size: 22px;
     font-weight: 800;
     text-align: center;
+    white-space: nowrap;
 }
 
 .record-item__score.is-plus {
@@ -573,12 +642,33 @@ function handleSelectRankingTab(tab: "total" | "item"): void {
     color: #ff6b81;
 }
 
-.record-item__content p {
-    margin-top: 6px;
+.record-item__content {
+    min-width: 0;
+    display: grid;
+    gap: 8px;
+}
+
+.record-item__summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.record-item__summary strong {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.record-item__student {
+    flex: 0 1 auto;
+    min-width: 0;
 }
 
 .record-item__meta {
-    margin-top: 10px;
+    margin-top: 0;
 }
 
 .record-item__meta span {
@@ -616,6 +706,16 @@ function handleSelectRankingTab(tab: "total" | "item"): void {
 }
 
 @media (max-width: 1080px) {
+    .ranking-list {
+        grid-auto-flow: row;
+        grid-template-rows: none;
+        grid-auto-columns: auto;
+        grid-template-columns: 1fr;
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
+    }
+
     .records-filter-grid {
         grid-template-columns: 1fr;
         display: grid;
@@ -639,6 +739,10 @@ function handleSelectRankingTab(tab: "total" | "item"): void {
     .ranking-item__rank,
     .record-item__score {
         text-align: left;
+    }
+
+    .record-item__summary {
+        align-items: flex-start;
     }
 }
 </style>

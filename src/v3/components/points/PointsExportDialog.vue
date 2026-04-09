@@ -82,37 +82,39 @@
                 </div>
             </section>
 
-            <section
-                v-loading="previewLoading"
-                class="preview-card"
-                element-loading-text="正在生成预览..."
-                element-loading-background="rgba(255, 255, 255, 0.68)"
-            >
+            <section class="preview-card">
                 <div class="preview-card__head">
                     <div>
                         <strong>数据预览</strong>
                         <p>当前共预览 {{ previewRows.length }} 条数据，可确认后导出为 Excel。</p>
                     </div>
-                    <button type="button" class="ghost-button ghost-button--small" :disabled="previewLoading" @click="refreshPreview">
+                    <button type="button" class="ghost-button ghost-button--small" :disabled="previewBusy" @click="refreshPreview">
                         刷新预览
                     </button>
                 </div>
 
-                <el-table :data="previewRows" border class="preview-table" height="340">
-                    <el-table-column
-                        v-for="column in previewColumns"
-                        :key="column.prop"
-                        :prop="column.prop"
-                        :label="column.label"
-                        min-width="120"
-                    />
-                    <template #empty>
-                        <div class="empty-state">
-                            <strong>暂无可导出数据</strong>
-                            <p>请调整筛选条件后重新预览。</p>
-                        </div>
-                    </template>
-                </el-table>
+                <div
+                    v-loading="previewBusy"
+                    class="preview-table-wrap"
+                    element-loading-text="正在生成预览..."
+                    element-loading-background="rgba(255, 255, 255, 0.68)"
+                >
+                    <el-table :data="previewRows" border class="preview-table" height="340">
+                        <el-table-column
+                            v-for="column in previewColumns"
+                            :key="column.prop"
+                            :prop="column.prop"
+                            :label="column.label"
+                            min-width="120"
+                        />
+                        <template #empty>
+                            <div class="empty-state">
+                                <strong>暂无可导出数据</strong>
+                                <p>请调整筛选条件后重新预览。</p>
+                            </div>
+                        </template>
+                    </el-table>
+                </div>
             </section>
         </div>
 
@@ -182,6 +184,7 @@ const previewKey = ref("")
 const previewHeaders = ref<string[]>([])
 const previewValues = ref<string[][]>([])
 const previewLoading = ref(false)
+const previewPending = ref(false)
 const exportLoading = ref(false)
 const dateRange = ref<[Date, Date] | []>([])
 const defaultTime: [Date, Date] = [
@@ -193,6 +196,8 @@ const visible = computed({
     get: () => props.modelValue,
     set: (value: boolean) => emit("update:modelValue", value)
 })
+
+const previewBusy = computed<boolean>(() => previewPending.value || previewLoading.value)
 
 const previewColumns = computed(() => {
     return previewHeaders.value.map((label, index) => ({
@@ -276,6 +281,7 @@ async function refreshPreview(): Promise<void> {
         previewKey.value = ""
         previewHeaders.value = []
         previewValues.value = []
+        previewPending.value = false
         return
     }
 
@@ -283,6 +289,7 @@ async function refreshPreview(): Promise<void> {
         return
     }
 
+    previewPending.value = false
     previewLoading.value = true
     try {
         const response = await pointsManager.exportRuleRecordsPreview(request)
@@ -297,6 +304,7 @@ async function refreshPreview(): Promise<void> {
         ElMessage.error("生成导出预览失败")
     } finally {
         previewLoading.value = false
+        previewPending.value = false
     }
 }
 
@@ -350,6 +358,8 @@ function schedulePreviewRefresh(): void {
         return
     }
 
+    previewPending.value = true
+
     if (previewTimer) {
         window.clearTimeout(previewTimer)
     }
@@ -365,6 +375,8 @@ watch(visible, (value) => {
         schedulePreviewRefresh()
         return
     }
+
+    previewPending.value = false
 
     if (previewTimer) {
         window.clearTimeout(previewTimer)
@@ -389,6 +401,7 @@ watch([exportType, exportScope, exportGroupId, sortBy, filterRuleIds, dateRange]
     border-radius: 24px;
     background: rgba(255, 255, 255, 0.82);
     padding: 18px;
+    min-width: 0;
 }
 
 .filters-grid {
@@ -442,12 +455,17 @@ watch([exportType, exportScope, exportGroupId, sortBy, filterRuleIds, dateRange]
 }
 
 .dialog-layout :deep(.el-radio-button__inner) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-height: 44px;
     padding: 0 16px;
     border-radius: 16px;
     border: 1px solid rgba(122, 141, 198, 0.22);
     background: rgba(255, 255, 255, 0.88);
     color: #16213e;
+    line-height: 1;
+    text-align: center;
     box-shadow: none;
     transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
 }
@@ -498,6 +516,16 @@ watch([exportType, exportScope, exportGroupId, sortBy, filterRuleIds, dateRange]
 .preview-table :deep(.el-table__inner-wrapper) {
     border-radius: 18px;
     overflow: hidden;
+}
+
+.preview-table-wrap {
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.preview-table {
+    width: 100%;
+    min-width: 100%;
 }
 
 .empty-state {

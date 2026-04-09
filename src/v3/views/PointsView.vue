@@ -34,12 +34,13 @@
             @open-export="handleOpenExportDialog" @update:selected-rule-group-id="selectedRuleGroupId = $event" />
 
         <PointsContentPanel :active-content-tab="activeContentTab" :active-ranking-tab="activeRankingTab"
-            :can-mutate-points="canMutatePoints" :can-undo-record="canUndoRecord" :get-record-source-label="getRecordSourceLabel"
-            :get-record-time-label="getRecordTimeLabel" :history-keyword="historyKeyword" :history-page="historyPage"
-            :history-page-count="historyPageCount" :history-records="historyRecords" :history-sign="historySign"
-            :history-sign-options="historySignOptions" :infer-record-delta="inferRecordDelta" :ranking-items="rankingItems"
-            :ranking-loading="rankingLoading" :ranking-range-options="rankingRangeOptions"
-            :ranking-time-range="rankingTimeRange" :records-loading="recordsLoading" :rule-options="flatRules"
+            :can-mutate-points="canMutatePoints" :can-undo-record="canUndoRecord"
+            :get-record-source-label="getRecordSourceLabel" :get-record-time-label="getRecordTimeLabel"
+            :history-keyword="historyKeyword" :history-page="historyPage" :history-page-count="historyPageCount"
+            :history-records="historyRecords" :history-sign="historySign" :history-sign-options="historySignOptions"
+            :infer-record-delta="inferRecordDelta" :ranking-items="rankingItems" :ranking-loading="rankingLoading"
+            :ranking-range-options="rankingRangeOptions" :ranking-time-range="rankingTimeRange"
+            :records-loading="recordsLoading" :rule-options="flatRules"
             :selected-ranking-rule-id="selectedRankingRuleId" @go-next-history-page="goToNextHistoryPage"
             @go-prev-history-page="goToPrevHistoryPage" @refresh-records="loadHistoryRecords"
             @select-content-tab="handleSelectContentTab" @select-history-sign="handleSelectHistorySign"
@@ -116,7 +117,6 @@ interface FlatRuleItem {
 /** 定义排行榜展示结构。 */
 interface RankingDisplayItem {
     id: number
-    meta: string
     name: string
     rankClass: string
     rankLabel: string
@@ -183,7 +183,7 @@ const rankingTimeRange = ref<RankingTimeRange>(cacheStore.getPointsRankingTimeRa
 const historyKeyword = ref("")
 const historySign = ref<"all" | "plus" | "minus">("all")
 const historyPage = ref(1)
-const historyPageSize = 8
+const historyPageSize = 6
 const historyTotal = ref(0)
 const groupDialogMode = ref<"create" | "edit">("create")
 const ruleDialogMode = ref<"create" | "edit">("create")
@@ -286,7 +286,6 @@ const rankingItems = computed<RankingDisplayItem[]>(() => {
             return {
                 id: studentId || index + 1,
                 name: studentName,
-                meta: activeRankingTab.value === "item" ? "单项积分表现" : "综合积分表现",
                 rankLabel: String(rank),
                 rankClass: getRankingRankClass(rank),
                 scoreLabel: `${score} 分`

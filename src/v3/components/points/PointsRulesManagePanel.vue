@@ -96,14 +96,46 @@
 
                     <div class="rule-items-panel__toolbar">
                         <span class="rule-items-panel__hint">当前规则组下的积分项会直接用于课堂积分操作与单项榜展示。</span>
-                        <button
-                            type="button"
-                            class="primary-button primary-button--small"
-                            :disabled="!canMutatePoints || !selectedRuleGroup"
-                            @click="emit('create-rule')"
-                        >
-                            新增积分项
-                        </button>
+                        <div class="rule-items-panel__toolbar-actions">
+                            <div class="filter-button-group">
+                                <button
+                                    type="button"
+                                    class="filter-button"
+                                    :class="{ 'is-active': currentRuleViewFilter === 'all' }"
+                                    :disabled="!selectedRuleGroup"
+                                    @click="handleSelectRuleViewFilter('all')"
+                                >
+                                    全部
+                                </button>
+                                <button
+                                    type="button"
+                                    class="filter-button"
+                                    :class="{ 'is-active': currentRuleViewFilter === 'plus' }"
+                                    :disabled="!selectedRuleGroup"
+                                    @click="handleSelectRuleViewFilter('plus')"
+                                >
+                                    加分
+                                </button>
+                                <button
+                                    type="button"
+                                    class="filter-button"
+                                    :class="{ 'is-active': currentRuleViewFilter === 'minus' }"
+                                    :disabled="!selectedRuleGroup"
+                                    @click="handleSelectRuleViewFilter('minus')"
+                                >
+                                    减分
+                                </button>
+                            </div>
+
+                            <button
+                                type="button"
+                                class="primary-button primary-button--small"
+                                :disabled="!canMutatePoints || !selectedRuleGroup"
+                                @click="emit('create-rule')"
+                            >
+                                新增积分项
+                            </button>
+                        </div>
                     </div>
 
                     <div v-if="selectedRuleGroupRules.length === 0" class="empty-state">
@@ -111,8 +143,13 @@
                         <p>可以先新增一个积分项，作为课堂加分或扣分的标准动作。</p>
                     </div>
 
+                    <div v-else-if="filteredRuleItems.length === 0" class="empty-state">
+                        <strong>{{ filteredRuleEmptyTitle }}</strong>
+                        <p>{{ filteredRuleEmptyDescription }}</p>
+                    </div>
+
                     <div v-else class="rule-item-list">
-                        <article v-for="rule in selectedRuleGroupRules" :key="rule.id" class="rule-item-row">
+                        <article v-for="rule in filteredRuleItems" :key="rule.id" class="rule-item-row">
                             <div class="rule-item-row__main">
                                 <div class="rule-item-row__title">
                                     <strong>{{ rule.name || "未命名积分项" }}</strong>
@@ -155,6 +192,7 @@
 
 <script setup lang="ts">
 import type { Rule, RuleGroup } from "@/types/points";
+import { computed, ref } from "vue";
 
 defineOptions({ name: "PointsRulesManagePanel" })
 
@@ -169,7 +207,10 @@ interface PointsRulesManagePanelProps {
     selectedRuleGroupRules: Rule[]
 }
 
-defineProps<PointsRulesManagePanelProps>()
+/** 定义当前规则组的积分项筛选类型。 */
+type RuleViewFilter = "all" | "plus" | "minus"
+
+const props = defineProps<PointsRulesManagePanelProps>()
 
 const emit = defineEmits<{
     (e: "create-group"): void
@@ -183,6 +224,36 @@ const emit = defineEmits<{
     (e: "open-export"): void
     (e: "update:selectedRuleGroupId", value: number): void
 }>()
+
+const currentRuleViewFilter = ref<RuleViewFilter>("all")
+
+const filteredRuleItems = computed<Rule[]>(() => {
+    if (currentRuleViewFilter.value === "all") {
+        return props.selectedRuleGroupRules
+    }
+
+    return props.selectedRuleGroupRules.filter((rule) => inferRuleSign(rule) === currentRuleViewFilter.value)
+})
+
+const filteredRuleEmptyTitle = computed<string>(() => {
+    if (currentRuleViewFilter.value === "plus") {
+        return "当前规则组还没有加分项"
+    }
+    if (currentRuleViewFilter.value === "minus") {
+        return "当前规则组还没有扣分项"
+    }
+    return "当前规则组还没有积分项"
+})
+
+const filteredRuleEmptyDescription = computed<string>(() => {
+    if (currentRuleViewFilter.value === "plus") {
+        return "可以新增一个加分项，用于鼓励课堂表现优秀的学生。"
+    }
+    if (currentRuleViewFilter.value === "minus") {
+        return "可以新增一个扣分项，用于约束课堂纪律或作业规范。"
+    }
+    return "可以先新增一个积分项，作为课堂加分或扣分的标准动作。"
+})
 
 /** 安全地将任意值转换为数字。 */
 function toNumber(value: unknown, fallback = 0): number {
@@ -205,6 +276,11 @@ function inferRuleSign(rule: Rule): "plus" | "minus" {
 /** 切换当前选中的规则组。 */
 function handleSelectGroup(groupId: number): void {
     emit("update:selectedRuleGroupId", groupId)
+}
+
+/** 切换当前规则组的积分项筛选条件。 */
+function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
+    currentRuleViewFilter.value = filter
 }
 </script>
 
@@ -398,8 +474,12 @@ function handleSelectGroup(groupId: number): void {
     border-radius: 24px;
     background: rgba(255, 255, 255, 0.88);
     padding: 20px;
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 16px;
+    max-height: min(68vh, 620px);
+    min-height: 0;
+    overflow: hidden;
 }
 
 .rule-groups-panel__head,
@@ -423,6 +503,10 @@ function handleSelectGroup(groupId: number): void {
 .rule-item-list {
     display: grid;
     gap: 12px;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-gutter: stable;
 }
 
 .rule-group-card,
@@ -495,6 +579,53 @@ function handleSelectGroup(groupId: number): void {
     color: #627099;
     font-size: 14px;
     line-height: 1.7;
+}
+
+.rule-items-panel__toolbar-actions,
+.filter-button-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.rule-items-panel__toolbar-actions {
+    justify-content: flex-end;
+}
+
+.filter-button-group {
+    padding: 4px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(122, 141, 198, 0.16);
+}
+
+.filter-button {
+    min-height: 36px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    color: #627099;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.filter-button:hover {
+    transform: translateY(-1px);
+}
+
+.filter-button.is-active {
+    background: rgba(85, 104, 255, 0.12);
+    color: #5568ff;
+}
+
+.filter-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .rule-item-row {
@@ -571,6 +702,10 @@ function handleSelectGroup(groupId: number): void {
 
     .toolbar-action-button {
         width: 100%;
+    }
+
+    .rule-items-panel__toolbar-actions {
+        justify-content: flex-start;
     }
 }
 </style>

@@ -12,31 +12,69 @@
     >
         <div class="switch-dialog">
             <section class="surface-card">
-                <label class="field-block">
-                    <span class="field-block__label">当前班级</span>
-                    <el-select
-                        v-model="selectedClassId"
-                        class="switch-dialog__select"
-                        size="large"
-                        :loading="classesLoading"
-                        :disabled="classesLoading || classOptions.length === 0"
-                        :placeholder="classesLoading ? '加载班级中…' : '请选择班级'"
-                    >
-                        <el-option
-                            v-for="item in classOptions"
-                            :key="item.id"
-                            :label="item.name"
-                            :value="item.id"
-                        />
-                    </el-select>
-                </label>
+                <div class="tab-row">
+                    <button type="button" class="tab-button" :class="{ 'is-active': activeTab === 'switch' }" @click="activeTab = 'switch'">
+                        切换班级
+                    </button>
+                    <button type="button" class="tab-button" :class="{ 'is-active': activeTab === 'create' }" @click="activeTab = 'create'">
+                        创建班级
+                    </button>
+                </div>
+
+                <div v-if="activeTab === 'switch'" class="tab-panel">
+                    <label class="field-block">
+                        <span class="field-block__label">当前班级</span>
+                        <el-select
+                            v-model="selectedClassId"
+                            class="switch-dialog__select"
+                            size="large"
+                            :loading="classesLoading"
+                            :disabled="classesLoading || classOptions.length === 0"
+                            :placeholder="classesLoading ? '加载班级中…' : '请选择班级'"
+                        >
+                            <el-option
+                                v-for="item in classOptions"
+                                :key="item.id"
+                                :label="item.name"
+                                :value="item.id"
+                            />
+                        </el-select>
+                    </label>
+                </div>
+
+                <div v-else class="tab-panel">
+                    <div class="section-head">
+                        <div>
+                            <span class="field-block__label">快速新建班级</span>
+                            <p class="section-head__desc">创建完成后会自动切换到新班级，并同步进入你填写的学期。</p>
+                        </div>
+                    </div>
+
+                    <div class="create-form">
+                        <label class="field-block">
+                            <span class="field-block__label">班级名称</span>
+                            <el-input v-model="createClassName" placeholder="例如：一年级三班" />
+                        </label>
+
+                        <label class="field-block">
+                            <span class="field-block__label">学期名称</span>
+                            <el-input v-model="createSemesterName" placeholder="例如：2025-2026学年上学期" />
+                        </label>
+                    </div>
+
+                    <div class="create-actions">
+                        <button type="button" class="primary-button" :disabled="createClassLoading" @click="handleCreateClass">
+                            {{ createClassLoading ? "创建中..." : "创建" }}
+                        </button>
+                    </div>
+                </div>
             </section>
         </div>
 
         <template #footer>
             <div class="dialog-actions">
                 <button type="button" class="ghost-button" @click="dialogVisible = false">取消</button>
-                <button type="button" class="primary-button" @click="applyClassSwitch">应用切换</button>
+                <button v-if="activeTab === 'switch'" type="button" class="primary-button" @click="applyClassSwitch">应用切换</button>
             </div>
         </template>
     </AppDialogShell>
@@ -55,6 +93,8 @@ interface ClassOption {
     name: string
 }
 
+type ClassDialogTab = "switch" | "create"
+
 const props = defineProps<{
     activeClassId: number | null
 }>()
@@ -67,6 +107,10 @@ const dialogVisible = ref(false)
 const classes = ref<ClassDTO[]>([])
 const classesLoading = ref(false)
 const selectedClassId = ref<number | null>(null)
+const activeTab = ref<ClassDialogTab>("switch")
+const createClassName = ref("")
+const createSemesterName = ref("")
+const createClassLoading = ref(false)
 
 /** 返回可用于切换的班级列表。 */
 const classOptions = computed<ClassOption[]>(() => {
@@ -78,6 +122,13 @@ const classOptions = computed<ClassOption[]>(() => {
 /** 打开班级切换弹窗。 */
 function openDialog(): void {
     dialogVisible.value = true
+}
+
+/** 重置新建班级表单。 */
+function resetCreateClassForm(): void {
+    createClassName.value = ""
+    createSemesterName.value = ""
+    createClassLoading.value = false
 }
 
 /** 加载班级切换列表。 */
@@ -110,12 +161,56 @@ function applyClassSwitch(): void {
     dialogVisible.value = false
 }
 
-/** 在弹窗打开时同步班级列表和当前选中值。 */
-watch(dialogVisible, async (visible) => {
-    if (!visible) {
+/** 创建班级并自动切换到新班级。 */
+async function handleCreateClass(): Promise<void> {
+    if (createClassLoading.value) {
         return
     }
 
+    const className = createClassName.value.trim()
+    if (!className) {
+        ElMessage.warning("请输入班级名称")
+        return
+    }
+
+    const semesterName = createSemesterName.value.trim()
+    if (!semesterName) {
+        ElMessage.warning("请输入学期名称")
+        return
+    }
+
+    if (classes.value.some((item) => item.name?.trim() === className)) {
+        ElMessage.warning("班级名称已存在")
+        return
+    }
+
+    createClassLoading.value = true
+    try {
+        const created = await classManager.create(className, semesterName)
+        await loadClasses()
+        resetCreateClassForm()
+        ElMessage.success("已创建班级")
+
+        if (typeof created?.id === "number") {
+            selectedClassId.value = created.id
+        }
+
+        activeTab.value = "switch"
+        await loadClasses()
+    } finally {
+        createClassLoading.value = false
+    }
+}
+
+/** 在弹窗打开时同步班级列表和当前选中值。 */
+watch(dialogVisible, async (visible) => {
+    if (!visible) {
+        activeTab.value = "switch"
+        resetCreateClassForm()
+        return
+    }
+
+    activeTab.value = "switch"
     selectedClassId.value = props.activeClassId
     await loadClasses()
 })
@@ -158,6 +253,47 @@ watch(dialogVisible, async (visible) => {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
+.tab-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 8px;
+    border-radius: 20px;
+    background: rgba(85, 104, 255, 0.06);
+}
+
+.tab-button {
+    min-height: 44px;
+    border: none;
+    border-radius: 16px;
+    background: transparent;
+    color: #627099;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.16s ease, background-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.tab-button.is-active {
+    background: linear-gradient(135deg, rgba(85, 104, 255, 0.16), rgba(142, 108, 255, 0.18));
+    color: #16213e;
+    box-shadow: 0 10px 22px rgba(85, 104, 255, 0.12);
+}
+
+.tab-button:hover {
+    transform: translateY(-1px);
+}
+
+.tab-panel {
+    margin-top: 18px;
+}
+
+.section-head__desc {
+    margin: 8px 0 0;
+    color: #627099;
+    line-height: 1.7;
+}
+
 .field-block {
     display: grid;
     gap: 10px;
@@ -174,6 +310,18 @@ watch(dialogVisible, async (visible) => {
 
 .switch-dialog__select {
     width: 100%;
+}
+
+.create-form {
+    display: grid;
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.create-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
 }
 
 .dialog-actions {

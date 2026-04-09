@@ -235,6 +235,33 @@ async function loadClasses(): Promise<void> {
     }
 }
 
+/** 判断当前班级选项中是否包含指定班级。 */
+function hasClassOption(classId: number | null): boolean {
+    if (typeof classId !== "number") {
+        return false
+    }
+
+    return classOptions.value.some((item) => item.id === classId)
+}
+
+/** 等待一小段时间后继续执行。 */
+function waitForNextClassRefresh(delayMs: number): Promise<void> {
+    return new Promise((resolve) => {
+        window.setTimeout(resolve, delayMs)
+    })
+}
+
+/** 确保班级列表中已经包含指定班级。 */
+async function ensureClassOptionsReady(classId: number | null): Promise<void> {
+    await loadClasses()
+    if (!classId || hasClassOption(classId)) {
+        return
+    }
+
+    await waitForNextClassRefresh(180)
+    await loadClasses()
+}
+
 /** 重置当前学期缓存状态。 */
 function resetSemesterCacheState(): void {
     cacheStore.clearActiveSemesterId()
@@ -322,7 +349,7 @@ function writeSelectedSemesterToCache(semester: SemesterDTO): void {
 }
 
 /** 加载当前班级与学期信息。 */
-async function loadCurrentClassAndSemesterInfo(): Promise<void> {
+async function loadCurrentClassAndSemesterInfo(preferredClassId?: number | null): Promise<void> {
     if (!cacheStore.isAuthenticated) {
         classes.value = []
         activeClassId.value = null
@@ -332,7 +359,9 @@ async function loadCurrentClassAndSemesterInfo(): Promise<void> {
     }
 
     try {
-        await loadClasses()
+        await ensureClassOptionsReady(
+            typeof preferredClassId === "number" ? preferredClassId : activeClassId.value
+        )
         const validClassIds = new Set(classOptions.value.map((item) => item.id))
 
         if (activeClassId.value && !validClassIds.has(activeClassId.value)) {
@@ -359,7 +388,7 @@ async function loadCurrentClassAndSemesterInfo(): Promise<void> {
 async function handleClassSwitched(classId: number): Promise<void> {
     try {
         activeClassId.value = classId
-        await loadCurrentClassAndSemesterInfo()
+        await loadCurrentClassAndSemesterInfo(classId)
         ElMessage.success("已切换当前班级")
     } catch (error) {
         console.error("切换班级失败", error)

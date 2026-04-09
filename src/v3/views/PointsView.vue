@@ -15,8 +15,8 @@
 
             <article class="metric-card metric-card--green">
                 <span>积分记录</span>
-                <strong>{{ historyTotal }}</strong>
-                <small>{{ latestRecordSummary }}</small>
+                <strong>{{ hasLoadedHistoryRecords ? historyTotal : "--" }}</strong>
+                <small>{{ hasLoadedHistoryRecords ? latestRecordSummary : "点击历史记录后加载" }}</small>
             </article>
         </section>
 
@@ -26,149 +26,22 @@
             @create-group="openCreateGroupDialog" @create-rule="openCreateRuleDialog" @delete-group="requestDeleteGroup"
             @delete-rule="requestDeleteRule" @edit-group="openEditGroupDialog" @edit-rule="openEditRuleDialog"
             @import-items="importItemsDialogVisible = true" @import-records="handleOpenImportRecordsDialog"
-            @open-export="exportDialogVisible = true" @update:selected-rule-group-id="selectedRuleGroupId = $event" />
+            @open-export="handleOpenExportDialog" @update:selected-rule-group-id="selectedRuleGroupId = $event" />
 
-        <section class="content-grid">
-            <article class="panel-surface ranking-panel">
-                <div class="panel-head panel-head--stack">
-                    <div>
-                        <h3>积分排行榜</h3>
-                        <p>支持总榜、单项榜以及时间范围切换。</p>
-                    </div>
-                    <div class="toolbar-row toolbar-row--wrap">
-                        <div class="segmented-control">
-                            <button type="button" class="chip-button"
-                                :class="{ 'is-active': activeRankingTab === 'total' }"
-                                @click="activeRankingTab = 'total'">
-                                总榜
-                            </button>
-                            <button type="button" class="chip-button"
-                                :class="{ 'is-active': activeRankingTab === 'item' }"
-                                @click="activeRankingTab = 'item'">
-                                单项榜
-                            </button>
-                        </div>
-
-                        <div class="segmented-control">
-                            <button v-for="item in rankingRangeOptions" :key="item.value" type="button"
-                                class="chip-button" :class="{ 'is-active': rankingTimeRange === item.value }"
-                                @click="rankingTimeRange = item.value">
-                                {{ item.label }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-if="activeRankingTab === 'item'" class="ranking-select-row">
-                    <label class="field-block">
-                        <span class="field-label">积分项</span>
-                        <el-select v-model="selectedRankingRuleId" placeholder="请选择积分项" class="field-full">
-                            <el-option v-for="rule in flatRules" :key="rule.id"
-                                :label="`${rule.groupName ? `${rule.groupName} / ` : ''}${rule.name}`"
-                                :value="rule.id" />
-                        </el-select>
-                    </label>
-                </div>
-
-                <div v-if="rankingItems.length > 0" class="ranking-list" v-loading="rankingLoading">
-                    <article v-for="item in rankingItems" :key="item.id" class="ranking-item">
-                        <div class="ranking-item__rank" :class="item.rankClass">{{ item.rankLabel }}</div>
-                        <div class="ranking-item__content">
-                            <strong>{{ item.name }}</strong>
-                            <p>{{ item.meta }}</p>
-                        </div>
-                        <div class="ranking-item__score">
-                            <span>{{ item.scoreLabel }}</span>
-                        </div>
-                    </article>
-                </div>
-
-                <div v-else class="empty-state">
-                    <strong>暂无排行榜数据</strong>
-                    <p>{{ activeRankingTab === "item" ? "请先选择一个积分项，或等待该积分项产生记录。" : "当前范围内还没有可展示的积分排行。" }}</p>
-                </div>
-            </article>
-
-            <article class="panel-surface records-panel">
-                <div class="panel-head panel-head--stack">
-                    <div>
-                        <h3>积分规则记录</h3>
-                        <p>保留课堂最新操作记录，并支持在当前页快速撤回最近一次规则积分。</p>
-                    </div>
-                    <div class="toolbar-row toolbar-row--wrap">
-                        <button type="button" class="ghost-button ghost-button--small" :disabled="recordsLoading"
-                            @click="loadHistoryRecords">
-                            刷新记录
-                        </button>
-                        <button type="button" class="ghost-button ghost-button--small" :disabled="!canMutatePoints"
-                            @click="undoLatestRecord">
-                            撤回最近一次
-                        </button>
-                    </div>
-                </div>
-
-                <div class="records-filter-grid">
-                    <label class="field-block">
-                        <span class="field-label">学生搜索</span>
-                        <div class="search-box">
-                            <i-ep-search class="search-box__icon" />
-                            <input v-model="historyKeyword" type="search" class="search-box__input"
-                                placeholder="搜索学生姓名">
-                        </div>
-                    </label>
-
-                    <div class="field-block">
-                        <span class="field-label">记录类型</span>
-                        <div class="segmented-control">
-                            <button v-for="item in historySignOptions" :key="item.value" type="button"
-                                class="chip-button" :class="{ 'is-active': historySign === item.value }"
-                                @click="handleSelectHistorySign(item.value)">
-                                {{ item.label }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-if="historyRecords.length > 0" class="record-list" v-loading="recordsLoading">
-                    <article v-for="record in historyRecords" :key="record.id" class="record-item">
-                        <div class="record-item__score" :class="inferRecordDelta(record) < 0 ? 'is-minus' : 'is-plus'">
-                            {{ inferRecordDelta(record) > 0 ? "+" : "" }}{{ inferRecordDelta(record) }}
-                        </div>
-
-                        <div class="record-item__content">
-                            <strong>{{ record.rule_desc?.trim() || "未命名积分规则" }}</strong>
-                            <p>{{ record.student_name?.trim() || `学生 ${record.student_id || "-"}` }}</p>
-                            <div class="record-item__meta">
-                                <span>{{ getRecordSourceLabel(record) }}</span>
-                                <span>{{ getRecordTimeLabel(record) }}</span>
-                            </div>
-                        </div>
-
-                        <button type="button" class="text-button" :disabled="!canUndoRecord(record)"
-                            @click="undoRecord(record)">
-                            撤回
-                        </button>
-                    </article>
-                </div>
-
-                <div v-else class="empty-state">
-                    <strong>暂无积分记录</strong>
-                    <p>当课堂开始进行加减分、导入积分或商城兑换后，会在这里看到完整记录。</p>
-                </div>
-
-                <div v-if="historyPageCount > 1" class="pagination-row">
-                    <button type="button" class="ghost-button ghost-button--small"
-                        :disabled="historyPage <= 1 || recordsLoading" @click="goToPrevHistoryPage">
-                        上一页
-                    </button>
-                    <span class="pagination-row__label">{{ `第 ${historyPage} / ${historyPageCount} 页` }}</span>
-                    <button type="button" class="ghost-button ghost-button--small"
-                        :disabled="historyPage >= historyPageCount || recordsLoading" @click="goToNextHistoryPage">
-                        下一页
-                    </button>
-                </div>
-            </article>
-        </section>
+        <PointsContentPanel :active-content-tab="activeContentTab" :active-ranking-tab="activeRankingTab"
+            :can-mutate-points="canMutatePoints" :can-undo-record="canUndoRecord" :get-record-source-label="getRecordSourceLabel"
+            :get-record-time-label="getRecordTimeLabel" :history-keyword="historyKeyword" :history-page="historyPage"
+            :history-page-count="historyPageCount" :history-records="historyRecords" :history-sign="historySign"
+            :history-sign-options="historySignOptions" :infer-record-delta="inferRecordDelta" :ranking-items="rankingItems"
+            :ranking-loading="rankingLoading" :ranking-range-options="rankingRangeOptions"
+            :ranking-time-range="rankingTimeRange" :records-loading="recordsLoading" :rule-options="flatRules"
+            :selected-ranking-rule-id="selectedRankingRuleId" @go-next-history-page="goToNextHistoryPage"
+            @go-prev-history-page="goToPrevHistoryPage" @refresh-records="loadHistoryRecords"
+            @select-content-tab="handleSelectContentTab" @select-history-sign="handleSelectHistorySign"
+            @select-ranking-tab="handleSelectRankingTab" @undo-latest-record="undoLatestRecord"
+            @undo-record="undoRecord" @update:history-keyword="historyKeyword = $event"
+            @update:ranking-time-range="rankingTimeRange = $event"
+            @update:selected-ranking-rule-id="selectedRankingRuleId = $event" />
 
         <PointsImportItemsDialog v-model="importItemsDialogVisible" @changed="handleRulesChanged" />
 
@@ -178,8 +51,8 @@
         <PointsExportDialog v-model="exportDialogVisible" :active-class-id="activeClassId"
             :active-class-name="activeClassName" :group-options="studentGroupOptions" :rule-options="flatRules" />
 
-        <PointsRuleGroupDialog v-model="groupDialogVisible" :initial-name="groupForm.name" :loading="ruleMutationLoading"
-            :mode="groupDialogMode" @save="saveGroup" />
+        <PointsRuleGroupDialog v-model="groupDialogVisible" :initial-name="groupForm.name"
+            :loading="ruleMutationLoading" :mode="groupDialogMode" @save="saveGroup" />
 
         <PointsRuleItemDialog v-model="ruleDialogVisible" :initial-value="ruleForm" :loading="ruleMutationLoading"
             :mode="ruleDialogMode" @save="saveRule" />
@@ -200,11 +73,12 @@ import type {
     RuleGroup,
     StudentRankingItem
 } from "@/types/points";
-import type { StudentDTO, StudentGroupDTO } from "@/types/student";
+import type { StudentGroupDTO } from "@/types/student";
 import { formatChineseDateTime } from "@/utils/date";
 import { ElMessage } from "element-plus";
 import { computed, ref, watch } from "vue";
 import PointsDeleteConfirmDialog from "@/v3/components/points/PointsDeleteConfirmDialog.vue";
+import PointsContentPanel from "@/v3/components/points/PointsContentPanel.vue";
 import PointsExportDialog from "@/v3/components/points/PointsExportDialog.vue";
 import PointsImportItemsDialog from "@/v3/components/points/PointsImportItemsDialog.vue";
 import PointsImportRecordsDialog from "@/v3/components/points/PointsImportRecordsDialog.vue";
@@ -244,6 +118,9 @@ interface RankingDisplayItem {
     scoreLabel: string
 }
 
+/** 定义积分页底部内容区域页签。 */
+type PointsContentTab = "ranking" | "records"
+
 /** 定义规则组表单结构。 */
 interface RuleGroupFormState {
     id: number
@@ -267,7 +144,6 @@ interface RuleFormSubmitPayload {
 
 const cacheStore = useCacheStore()
 
-const students = ref<StudentDTO[]>([])
 const studentGroups = ref<StudentGroupDTO[]>([])
 const ruleGroups = ref<RuleGroup[]>([])
 const historyRecords = ref<PointsApplyRecord[]>([])
@@ -280,6 +156,12 @@ const rankingLoading = ref(false)
 const recordsLoading = ref(false)
 const ruleMutationLoading = ref(false)
 const recordMutationLoading = ref(false)
+const hasLoadedTotalRanking = ref(false)
+const hasLoadedRuleRanking = ref(false)
+const hasLoadedHistoryRecords = ref(false)
+const totalRankingDirty = ref(true)
+const ruleRankingDirty = ref(true)
+const historyRecordsDirty = ref(true)
 
 const importItemsDialogVisible = ref(false)
 const importRecordsDialogVisible = ref(false)
@@ -290,6 +172,7 @@ const deleteDialogVisible = ref(false)
 
 const selectedRuleGroupId = ref<number>(0)
 const selectedRankingRuleId = ref<number>(0)
+const activeContentTab = ref<PointsContentTab>(cacheStore.getPointsContentTab())
 const activeRankingTab = ref<"total" | "item">(cacheStore.getPointsRankingTab())
 const rankingTimeRange = ref<RankingTimeRange>(cacheStore.getPointsRankingTimeRange())
 const historyKeyword = ref("")
@@ -386,18 +269,6 @@ const studentGroupOptions = computed(() => {
         .filter((group) => group.id > 0)
 })
 
-const studentNameMap = computed<Record<number, string>>(() => {
-    const map: Record<number, string> = {}
-    students.value.forEach((student) => {
-        const studentId = toNumber(student.id, 0)
-        const studentName = student.name?.trim() || ""
-        if (studentId > 0 && studentName) {
-            map[studentId] = studentName
-        }
-    })
-    return map
-})
-
 const rankingItems = computed<RankingDisplayItem[]>(() => {
     const sourceItems = activeRankingTab.value === "item" ? ruleRankingItems.value : totalRankingItems.value
     if (sourceItems.length > 0) {
@@ -405,7 +276,7 @@ const rankingItems = computed<RankingDisplayItem[]>(() => {
             const studentId = toNumber(item.student_id, 0)
             const score = toNumber(item.score, 0)
             const rank = toNumber(item.rank, index + 1)
-            const studentName = studentNameMap.value[studentId] || `学生 ${rank}`
+            const studentName = item.student_name?.trim() || `学生 ${rank}`
 
             return {
                 id: studentId || index + 1,
@@ -418,25 +289,7 @@ const rankingItems = computed<RankingDisplayItem[]>(() => {
         })
     }
 
-    if (activeRankingTab.value === "item") {
-        return []
-    }
-
-    return [...students.value]
-        .filter((student) => toNumber(student.id, 0) > 0 && (student.name?.trim() || ""))
-        .sort((left, right) => toNumber(right.total_points, 0) - toNumber(left.total_points, 0))
-        .slice(0, 10)
-        .map((student, index) => {
-            const rank = index + 1
-            return {
-                id: toNumber(student.id, 0),
-                name: student.name?.trim() || `学生 ${rank}`,
-                meta: "综合积分表现",
-                rankLabel: String(rank),
-                rankClass: getRankingRankClass(rank),
-                scoreLabel: `${toNumber(student.total_points, 0)} 分`
-            }
-        })
+    return []
 })
 
 const latestRecordSummary = computed<string>(() => {
@@ -553,6 +406,31 @@ function canUndoRecord(record: PointsApplyRecord): boolean {
     return toNumber(record.from, 0) !== 1 && toNumber(record.id, 0) > 0
 }
 
+/** 重置积分页延迟加载状态。 */
+function resetDeferredLoadState(): void {
+    hasLoadedTotalRanking.value = false
+    hasLoadedRuleRanking.value = false
+    hasLoadedHistoryRecords.value = false
+    totalRankingDirty.value = true
+    ruleRankingDirty.value = true
+    historyRecordsDirty.value = true
+}
+
+/** 标记排行榜数据需要刷新。 */
+function markRankingDirty(target: "all" | "total" | "item" = "all"): void {
+    if (target === "all" || target === "total") {
+        totalRankingDirty.value = true
+    }
+    if (target === "all" || target === "item") {
+        ruleRankingDirty.value = true
+    }
+}
+
+/** 标记历史记录数据需要刷新。 */
+function markHistoryDirty(): void {
+    historyRecordsDirty.value = true
+}
+
 /** 同步规则组选中项与单项榜积分项选中值。 */
 function syncRuleSelections(): void {
     const groupIds = ruleGroups.value.map((group) => toNumber(group.id, 0)).filter((groupId) => groupId > 0)
@@ -566,20 +444,20 @@ function syncRuleSelections(): void {
     }
 }
 
-/** 加载当前班级的学生与分组数据。 */
-async function loadStudentData(): Promise<void> {
+/** 加载当前班级的学生分组数据。 */
+async function loadStudentGroups(): Promise<void> {
     if (!activeClassId.value) {
-        students.value = []
         studentGroups.value = []
         return
     }
 
-    const [studentList, groupList] = await Promise.all([
-        studentManager.list(activeClassId.value),
-        studentManager.listGroups(activeClassId.value)
-    ])
-    students.value = studentList
-    studentGroups.value = groupList
+    try {
+        studentGroups.value = await studentManager.listGroups(activeClassId.value)
+    } catch (error) {
+        console.error("加载学生分组失败", error)
+        studentGroups.value = []
+        ElMessage.error("加载学生分组失败")
+    }
 }
 
 /** 加载积分规则组数据。 */
@@ -622,6 +500,8 @@ async function loadRankingData(): Promise<void> {
                 limit: 10
             })
             ruleRankingItems.value = response.items ?? []
+            hasLoadedRuleRanking.value = true
+            ruleRankingDirty.value = false
             return
         }
 
@@ -631,6 +511,8 @@ async function loadRankingData(): Promise<void> {
             limit: 10
         })
         totalRankingItems.value = response.items ?? []
+        hasLoadedTotalRanking.value = true
+        totalRankingDirty.value = false
     } catch (error) {
         console.error("加载排行榜失败", error)
         if (activeRankingTab.value === "item") {
@@ -665,6 +547,8 @@ async function loadHistoryRecords(): Promise<void> {
             .slice()
             .sort((left, right) => getRecordTimestamp(right) - getRecordTimestamp(left))
         historyTotal.value = toNumber(response.total, 0)
+        hasLoadedHistoryRecords.value = true
+        historyRecordsDirty.value = false
     } catch (error) {
         console.error("加载积分记录失败", error)
         historyRecords.value = []
@@ -690,29 +574,54 @@ function getRecordTimestamp(record: PointsApplyRecord): number {
     return toNumber(record.id, 0)
 }
 
+/** 按当前激活的排行榜页签按需加载数据。 */
+async function ensureActiveRankingData(): Promise<void> {
+    if (activeRankingTab.value === "item") {
+        if (!selectedRankingRuleId.value) {
+            ruleRankingItems.value = []
+            return
+        }
+
+        if (!hasLoadedRuleRanking.value || ruleRankingDirty.value) {
+            await loadRankingData()
+        }
+        return
+    }
+
+    if (!hasLoadedTotalRanking.value || totalRankingDirty.value) {
+        await loadRankingData()
+    }
+}
+
+/** 按当前激活的内容页签按需加载数据。 */
+async function ensureActiveContentData(): Promise<void> {
+    if (activeContentTab.value === "records") {
+        if (!hasLoadedHistoryRecords.value || historyRecordsDirty.value) {
+            await loadHistoryRecords()
+        }
+        return
+    }
+
+    await ensureActiveRankingData()
+}
+
 /** 刷新积分页的全部基础数据。 */
 async function refreshPointsPage(): Promise<void> {
     if (!activeClassId.value) {
-        students.value = []
         studentGroups.value = []
         ruleGroups.value = []
         historyRecords.value = []
         historyTotal.value = 0
         totalRankingItems.value = []
         ruleRankingItems.value = []
+        resetDeferredLoadState()
         return
     }
 
     pageLoading.value = true
     try {
-        await Promise.all([
-            loadStudentData(),
-            loadRuleGroups()
-        ])
-        await Promise.all([
-            loadRankingData(),
-            loadHistoryRecords()
-        ])
+        await loadRuleGroups()
+        await ensureActiveContentData()
     } finally {
         pageLoading.value = false
     }
@@ -730,6 +639,35 @@ function handleOpenImportRecordsDialog(): void {
     }
 
     importRecordsDialogVisible.value = true
+}
+
+/** 打开积分导出弹窗，并按需加载学生分组。 */
+async function handleOpenExportDialog(): Promise<void> {
+    if (!hasActiveClass.value) {
+        ElMessage.warning("请先选择班级")
+        return
+    }
+
+    await loadStudentGroups()
+    exportDialogVisible.value = true
+}
+
+/** 切换积分页底部内容面板。 */
+function handleSelectContentTab(tab: PointsContentTab): void {
+    if (activeContentTab.value === tab) {
+        return
+    }
+
+    activeContentTab.value = tab
+}
+
+/** 切换排行榜展示类型。 */
+function handleSelectRankingTab(tab: "total" | "item"): void {
+    if (activeRankingTab.value === tab) {
+        return
+    }
+
+    activeRankingTab.value = tab
 }
 
 /** 打开新增规则组弹窗。 */
@@ -813,7 +751,10 @@ async function saveGroup(groupNameValue: string): Promise<void> {
 
         groupDialogVisible.value = false
         await loadRuleGroups()
-        await loadRankingData()
+        markRankingDirty("item")
+        if (activeContentTab.value === "ranking" && activeRankingTab.value === "item") {
+            await ensureActiveRankingData()
+        }
     } catch (error) {
         console.error("保存规则组失败", error)
         ElMessage.error("保存规则组失败")
@@ -865,7 +806,10 @@ async function saveRule(formValue: RuleFormSubmitPayload): Promise<void> {
 
         ruleDialogVisible.value = false
         await loadRuleGroups()
-        await loadRankingData()
+        markRankingDirty("item")
+        if (activeContentTab.value === "ranking" && activeRankingTab.value === "item") {
+            await ensureActiveRankingData()
+        }
     } catch (error) {
         console.error("保存积分项失败", error)
         ElMessage.error("保存积分项失败")
@@ -906,7 +850,10 @@ async function confirmDelete(): Promise<void> {
 
         deleteDialogVisible.value = false
         await loadRuleGroups()
-        await loadRankingData()
+        markRankingDirty("item")
+        if (activeContentTab.value === "ranking" && activeRankingTab.value === "item") {
+            await ensureActiveRankingData()
+        }
     } catch (error) {
         console.error("删除规则失败", error)
         ElMessage.error("删除失败")
@@ -918,16 +865,25 @@ async function confirmDelete(): Promise<void> {
 /** 处理积分规则变化后的刷新逻辑。 */
 async function handleRulesChanged(): Promise<void> {
     await loadRuleGroups()
-    await loadRankingData()
+    markRankingDirty("item")
+    if (activeContentTab.value === "ranking" && activeRankingTab.value === "item") {
+        await ensureActiveRankingData()
+    }
 }
 
 /** 处理积分记录变化后的刷新逻辑。 */
 async function handleRecordsChanged(): Promise<void> {
-    await Promise.all([
-        loadStudentData(),
-        loadRankingData(),
-        loadHistoryRecords()
-    ])
+    markRankingDirty()
+    markHistoryDirty()
+
+    const tasks: Promise<void>[] = []
+    if (activeContentTab.value === "ranking") {
+        tasks.push(ensureActiveRankingData())
+    }
+    if (activeContentTab.value === "records") {
+        tasks.push(loadHistoryRecords())
+    }
+    await Promise.all(tasks)
 }
 
 /** 处理积分记录类型切换。 */
@@ -1004,16 +960,46 @@ async function undoLatestRecord(): Promise<void> {
 }
 
 watch(activeClassId, async () => {
+    studentGroups.value = []
+    resetDeferredLoadState()
     historyKeyword.value = ""
     historySign.value = "all"
     historyPage.value = 1
     await refreshPointsPage()
 }, { immediate: true })
 
-watch([activeRankingTab, rankingTimeRange, selectedRankingRuleId], async () => {
+watch([activeRankingTab, rankingTimeRange], async () => {
     cacheStore.setPointsRankingTab(activeRankingTab.value)
     cacheStore.setPointsRankingTimeRange(rankingTimeRange.value)
-    await loadRankingData()
+    if (activeRankingTab.value === "item") {
+        ruleRankingDirty.value = true
+    } else {
+        totalRankingDirty.value = true
+    }
+
+    if (activeContentTab.value !== "ranking") {
+        return
+    }
+
+    await ensureActiveRankingData()
+})
+
+watch(selectedRankingRuleId, async () => {
+    if (activeRankingTab.value !== "item") {
+        return
+    }
+
+    ruleRankingDirty.value = true
+    if (activeContentTab.value !== "ranking") {
+        return
+    }
+
+    await ensureActiveRankingData()
+})
+
+watch(activeContentTab, async () => {
+    cacheStore.setPointsContentTab(activeContentTab.value)
+    await ensureActiveContentData()
 })
 
 let historyKeywordTimer: number | null = null
@@ -1024,11 +1010,19 @@ watch(historyKeyword, () => {
     }
 
     historyKeywordTimer = window.setTimeout(() => {
+        markHistoryDirty()
+        if (activeContentTab.value !== "records") {
+            return
+        }
         void loadHistoryRecords()
     }, 280)
 })
 
 watch([historySign, historyPage], async () => {
+    markHistoryDirty()
+    if (activeContentTab.value !== "records") {
+        return
+    }
     await loadHistoryRecords()
 })
 </script>
@@ -1540,6 +1534,21 @@ watch([historySign, historyPage], async () => {
 .content-grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: start;
+}
+
+.content-grid--single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.content-panel-enter-active,
+.content-panel-leave-active {
+    transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.content-panel-enter-from,
+.content-panel-leave-to {
+    opacity: 0;
+    transform: translateY(8px);
 }
 
 .ranking-select-row {

@@ -17,6 +17,7 @@ type UserScopedCache = {
     studentsSort?: StudentsSortOption | null
     classLayout?: 'card' | 'list' | null
     pointsSelectedGroupByClass?: Record<string, number | null> | null
+    pointsContentTab?: 'ranking' | 'records' | null
     pointsRankingTab?: 'total' | 'item' | null
     pointsRankingTimeRange?: 'all' | 'weekly' | 'monthly' | null
     pointsSortBy?: string | null
@@ -46,6 +47,7 @@ export const useCacheStore = defineStore('cache', () => {
     let studentsSort = ref<StudentsSortOption | null>(null)
     let classLayout = ref<'card' | 'list' | null>(null)
     let pointsSelectedGroupByClass = ref<Record<string, number | null>>({})
+    let pointsContentTab = ref<'ranking' | 'records'>('ranking')
     let pointsRankingTab = ref<'total' | 'item'>('total')
     let pointsRankingTimeRange = ref<'all' | 'weekly' | 'monthly'>('all')
     let pointsSortBy = ref<string>('default')
@@ -85,6 +87,7 @@ export const useCacheStore = defineStore('cache', () => {
         pointsSelectedGroupByClass.value = (obj.pointsSelectedGroupByClass && typeof obj.pointsSelectedGroupByClass === 'object')
             ? (obj.pointsSelectedGroupByClass as Record<string, number | null>)
             : {}
+        pointsContentTab.value = obj.pointsContentTab === 'records' ? 'records' : 'ranking'
         pointsRankingTab.value = obj.pointsRankingTab === 'item' ? 'item' : 'total'
         pointsRankingTimeRange.value = obj.pointsRankingTimeRange === 'weekly'
             ? 'weekly'
@@ -114,6 +117,7 @@ export const useCacheStore = defineStore('cache', () => {
             studentsSort: studentsSort.value,
             classLayout: classLayout.value,
             pointsSelectedGroupByClass: pointsSelectedGroupByClass.value,
+            pointsContentTab: pointsContentTab.value,
             pointsRankingTab: pointsRankingTab.value,
             pointsRankingTimeRange: pointsRankingTimeRange.value,
             pointsSortBy: pointsSortBy.value,
@@ -318,6 +322,16 @@ export const useCacheStore = defineStore('cache', () => {
         }
     }
 
+    /** 获取积分页面当前显示的内容页签。 */
+    function getPointsContentTab(): 'ranking' | 'records' {
+        return pointsContentTab.value
+    }
+
+    /** 设置积分页面当前显示的内容页签。 */
+    function setPointsContentTab(tab: 'ranking' | 'records'): void {
+        pointsContentTab.value = tab === 'records' ? 'records' : 'ranking'
+    }
+
     function getPointsRankingTab(): 'total' | 'item' {
         return pointsRankingTab.value
     }
@@ -361,6 +375,7 @@ export const useCacheStore = defineStore('cache', () => {
         studentsSort.value = null
         classLayout.value = null
         pointsSelectedGroupByClass.value = {}
+        pointsContentTab.value = 'ranking'
         pointsRankingTab.value = 'total'
         pointsRankingTimeRange.value = 'all'
         pointsSortBy.value = 'default'
@@ -486,6 +501,8 @@ export const useCacheStore = defineStore('cache', () => {
         clearClassLayout,
         getPointsSelectedGroupId,
         setPointsSelectedGroupId,
+        getPointsContentTab,
+        setPointsContentTab,
         getPointsRankingTab,
         setPointsRankingTab,
         getPointsRankingTimeRange,

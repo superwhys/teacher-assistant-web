@@ -150,6 +150,7 @@ export type ListRuleGroupsResp = {
 export type RankingTimeRange = 'all' | 'weekly' | 'monthly'
 
 export type StudentRankingItem = {
+    student_name?: string
     student_id?: number
     score?: number
     rank?: number

@@ -93,8 +93,9 @@
         <section class="students-layout">
             <StudentsListPanel class="student-panel" :has-active-class="hasActiveClass"
                 :is-all-selected="isAllFilteredStudentsSelected" :layout-mode="layoutMode" :loading="loading"
-                :selected-student-ids="selectedStudentIds" :students="filteredStudents" @edit-student="openEdit"
-                @remove-student="requestRemoveStudent" @select-student="handleSelectStudent"
+                :multi-select-enabled="multiSelectEnabled" :selected-student-ids="selectedStudentIds"
+                :students="filteredStudents" @edit-student="openEdit" @remove-student="requestRemoveStudent"
+                @select-student="handleSelectStudent" @toggle-multi-select="toggleMultiSelectEnabled"
                 @toggle-select-all="toggleSelectAllStudents" />
 
             <aside class="side-column">
@@ -179,6 +180,7 @@ const groups = ref<StudentGroupDTO[]>([])
 const keyword = ref("")
 const selectedGroupId = ref<number | null>(null)
 const selectedStudentIds = ref<number[]>([])
+const multiSelectEnabled = ref(false)
 const addStudentDialogVisible = ref(false)
 const addStudentDialogMode = ref<StudentAddMode>("single")
 const groupManageVisible = ref(false)
@@ -521,6 +523,10 @@ const uiGroups = computed<UiGroup[]>(() => {
 function syncSelectedStudents(): void {
     const visibleStudentIds = new Set(filteredStudents.value.map((student) => student.id))
     selectedStudentIds.value = selectedStudentIds.value.filter((studentId) => visibleStudentIds.has(studentId))
+
+    if (!multiSelectEnabled.value && selectedStudentIds.value.length > 1) {
+        selectedStudentIds.value = selectedStudentIds.value.slice(0, 1)
+    }
 }
 
 /** 加载当前班级的学生与分组数据。 */
@@ -669,6 +675,16 @@ async function handleSelectRule(rule: { id: number, name: string, sign: "plus" |
 
 /** 处理学生卡片选中。 */
 function handleSelectStudent(studentId: number): void {
+    if (!multiSelectEnabled.value) {
+        if (selectedStudentIds.value[0] === studentId && selectedStudentIds.value.length === 1) {
+            selectedStudentIds.value = []
+            return
+        }
+
+        selectedStudentIds.value = [studentId]
+        return
+    }
+
     if (selectedStudentIds.value.includes(studentId)) {
         selectedStudentIds.value = selectedStudentIds.value.filter((id) => id !== studentId)
         return
@@ -682,6 +698,14 @@ function handleRemoveSelectedStudent(studentId: number): void {
     selectedStudentIds.value = selectedStudentIds.value.filter((id) => id !== studentId)
 }
 
+/** 切换当前是否启用多选模式。 */
+function toggleMultiSelectEnabled(): void {
+    multiSelectEnabled.value = !multiSelectEnabled.value
+    if (!multiSelectEnabled.value && selectedStudentIds.value.length > 1) {
+        selectedStudentIds.value = selectedStudentIds.value.slice(0, 1)
+    }
+}
+
 /** 切换当前筛选结果的全选状态。 */
 function toggleSelectAllStudents(): void {
     if (isAllFilteredStudentsSelected.value) {
@@ -689,6 +713,7 @@ function toggleSelectAllStudents(): void {
         return
     }
 
+    multiSelectEnabled.value = true
     selectedStudentIds.value = filteredStudents.value.map((student) => student.id)
 }
 

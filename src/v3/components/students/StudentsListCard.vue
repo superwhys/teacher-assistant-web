@@ -33,8 +33,7 @@
         </div>
 
         <div class="student-score">
-            <span>总积分</span>
-            <strong>{{ student.totalPoints }}</strong>
+            <strong>{{ `可用 ${student.availablePoints} / 总分 ${student.totalPoints}` }}</strong>
         </div>
     </article>
 </template>
@@ -219,23 +218,16 @@ function getGenderLabel(gender: UiGender): string {
 .student-score {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
     margin-top: 14px;
     padding: 12px 14px;
     border-radius: 16px;
     background: rgba(85, 104, 255, 0.06);
 }
 
-.student-score span {
-    color: #627099;
-    font-size: 12px;
-    font-weight: 700;
-}
-
 .student-score strong {
-    font-size: 20px;
-    line-height: 1;
+    color: #16213e;
+    font-size: 15px;
+    line-height: 1.5;
 }
 
 .icon-button {

@@ -3,9 +3,18 @@
         <div class="panel-head">
             <div>
                 <h3>学生名册</h3>
-                <p class="panel-description">点击卡片可切换选中状态，支持多选高亮，卡片右上角保留编辑与删除入口。</p>
+                <p class="panel-description">点击卡片可切换选中状态，支持单选或多选高亮，卡片右上角保留编辑与删除入口。</p>
             </div>
             <div class="panel-head-actions">
+                <button
+                    type="button"
+                    class="ghost-button ghost-button--small"
+                    :class="{ 'is-active': multiSelectEnabled }"
+                    :disabled="students.length === 0"
+                    @click="emit('toggle-multi-select')"
+                >
+                    多选
+                </button>
                 <button type="button" class="ghost-button ghost-button--small" :class="{ 'is-active': isAllSelected }"
                     :disabled="students.length === 0" @click="emit('toggle-select-all')">
                     {{ isAllSelected ? "取消全选" : "全选" }}
@@ -78,6 +87,7 @@ interface StudentsListPanelProps {
     isAllSelected: boolean
     layoutMode: StudentsListPanelLayoutMode
     loading: boolean
+    multiSelectEnabled: boolean
     selectedStudentIds: number[]
     students: StudentsListPanelItem[]
 }
@@ -87,6 +97,7 @@ interface StudentsListPanelEmits {
     (event: "edit-student", student: StudentsListPanelItem): void
     (event: "remove-student", student: StudentsListPanelItem): void
     (event: "select-student", studentId: number): void
+    (event: "toggle-multi-select"): void
     (event: "toggle-select-all"): void
 }
 

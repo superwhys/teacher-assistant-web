@@ -30,18 +30,12 @@
                 </div>
 
                 <div class="header-actions">
-                    <button type="button" class="header-actions__button">
+                    <button type="button" class="header-actions__button" @click="lockNow">
                         立即锁屏
                     </button>
-                    <SemesterSwitchButton
-                        :active-class-id="activeClassId"
-                        :current-semester-id="currentSemesterId"
-                        @switched="handleSemesterSwitched"
-                    />
-                    <ClassSwitchButton
-                        :active-class-id="activeClassId"
-                        @switched="handleClassSwitched"
-                    />
+                    <SemesterSwitchButton :active-class-id="activeClassId" :current-semester-id="currentSemesterId"
+                        @switched="handleSemesterSwitched" />
+                    <ClassSwitchButton :active-class-id="activeClassId" @switched="handleClassSwitched" />
                     <RouterLink to="/v3/settings" class="header-actions__button">
                         进入设置
                     </RouterLink>
@@ -61,6 +55,19 @@
                     <RouterLink v-for="item in dockActions" :key="item.id" :to="item.to" class="dock-actions__button">
                         {{ item.label }}
                     </RouterLink>
+                </div>
+            </div>
+
+            <div v-if="cacheStore.isAuthenticated && unlockDialogVisible" class="lock-overlay">
+                <div class="lock-card">
+                    <div class="lock-title">已锁定</div>
+                    <div class="lock-sub">请输入锁屏密码以继续使用</div>
+                    <el-input v-model="unlockPassword" class="lock-input" type="password" show-password size="large"
+                        placeholder="输入锁屏密码" @keyup.enter="confirmUnlock" />
+                    <button type="button" class="header-actions__button is-primary lock-card__action"
+                        :disabled="unlocking" @click="confirmUnlock">
+                        {{ unlocking ? "解锁中..." : "立即解锁" }}
+                    </button>
                 </div>
             </div>
 
@@ -266,6 +273,9 @@ function syncActiveSemesterToCache(): void {
     cacheStore.setActiveSemesterStatus(
         typeof semesterStatus === "number" ? semesterStatus : null
     )
+    cacheStore.setActiveSemesterIsLatest(
+        typeof semesterStatus === "number" ? semesterStatus !== 2 : null
+    )
 }
 
 /** 将指定学期应用到当前班级。 */
@@ -305,6 +315,9 @@ function writeSelectedSemesterToCache(semester: SemesterDTO): void {
 
     cacheStore.setActiveSemesterStatus(
         typeof semester.status === "number" ? semester.status : null
+    )
+    cacheStore.setActiveSemesterIsLatest(
+        typeof semester.status === "number" ? semester.status !== 2 : null
     )
 }
 
@@ -361,6 +374,48 @@ function handleSemesterSwitched(semester: SemesterDTO): void {
     ElMessage.success("已切换当前学期")
 }
 
+const unlockDialogVisible = computed(() => cacheStore.isLocked)
+const unlockPassword = ref("")
+const unlocking = ref(false)
+
+/** 立即进入锁屏状态。 */
+function lockNow(): void {
+    if (!cacheStore.hasLockPassword()) {
+        ElMessage.error("请先在设置中配置锁屏密码")
+        return
+    }
+
+    cacheStore.lock()
+}
+
+/** 校验锁屏密码并解锁。 */
+async function confirmUnlock(): Promise<void> {
+    if (unlocking.value) {
+        return
+    }
+
+    const password = unlockPassword.value.trim()
+    if (!password) {
+        ElMessage.error("请输入锁屏密码")
+        return
+    }
+
+    unlocking.value = true
+    try {
+        const verified = await cacheStore.verifyLockPassword(password)
+        if (!verified) {
+            ElMessage.error("锁屏密码错误")
+            return
+        }
+
+        cacheStore.unlock()
+        unlockPassword.value = ""
+        ElMessage.success("已解锁")
+    } finally {
+        unlocking.value = false
+    }
+}
+
 /** 返回当前班级名称。 */
 const currentClassName = computed<string>(() => cacheStore.getActiveClassName()?.trim() || "未知班级")
 
@@ -391,6 +446,12 @@ watch(
     },
     { immediate: true }
 )
+
+watch(unlockDialogVisible, (visible) => {
+    if (visible) {
+        unlockPassword.value = ""
+    }
+})
 </script>
 
 <style scoped>
@@ -510,6 +571,11 @@ watch(
 
 .main-view__main {
     padding: 26px 26px 120px;
+    box-sizing: border-box;
+    min-height: 100vh;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .main-view__header {
@@ -585,6 +651,10 @@ watch(
     border: 1px solid rgba(122, 141, 198, 0.24);
     background: rgba(255, 255, 255, 0.82);
     color: #16213e;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
     text-decoration: none;
     transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
     cursor: pointer;
@@ -605,9 +675,18 @@ watch(
 .main-view__content {
     margin-top: 24px;
     padding: 24px;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
     border-radius: 32px;
     background: rgba(255, 255, 255, 0.66);
     backdrop-filter: blur(16px);
+}
+
+.main-view__content :deep(.tools-standalone-page-frame) {
+    flex: 1;
+    min-height: 0;
 }
 
 .main-view__dock {
@@ -638,6 +717,61 @@ watch(
     color: #ffffff;
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.08);
+}
+
+.lock-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(13, 18, 36, 0.54);
+    backdrop-filter: blur(8px);
+}
+
+.lock-card {
+    width: min(440px, 100%);
+    padding: 28px;
+    border: 1px solid rgba(122, 141, 198, 0.18);
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 30px 64px rgba(17, 25, 53, 0.24);
+    display: grid;
+    gap: 14px;
+}
+
+.lock-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #16213e;
+}
+
+.lock-sub {
+    color: #627099;
+    line-height: 1.7;
+}
+
+.lock-input {
+    margin-top: 6px;
+}
+
+.lock-card__action {
+    width: 100%;
+    min-height: 52px;
+}
+
+.lock-card :deep(.el-input__wrapper) {
+    min-height: 52px;
+    border-radius: 16px;
+    border: 1px solid rgba(122, 141, 198, 0.24);
+    box-shadow: none;
+}
+
+.lock-card :deep(.el-input__wrapper.is-focus) {
+    border-color: rgba(85, 104, 255, 0.36);
+    box-shadow: 0 0 0 4px rgba(85, 104, 255, 0.08);
 }
 
 @media (max-width: 1080px) {

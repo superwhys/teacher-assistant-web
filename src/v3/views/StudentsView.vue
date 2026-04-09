@@ -85,6 +85,11 @@
             </div>
         </section>
 
+        <div v-if="isArchivedSemester" class="students-view__notice">
+            <i-ep-warning-filled class="students-view__notice-icon" />
+            <span>当前为归档学期，可继续查看学生与分组信息，积分相关操作暂不可用。</span>
+        </div>
+
         <section class="students-layout">
             <StudentsListPanel class="student-panel" :has-active-class="hasActiveClass"
                 :is-all-selected="isAllFilteredStudentsSelected" :layout-mode="layoutMode" :loading="loading"
@@ -191,8 +196,8 @@ const ruleGroupsLoading = ref(false)
 
 const activeClassId = computed<number | null>(() => cacheStore.getActiveClassId())
 const hasActiveClass = computed<boolean>(() => typeof activeClassId.value === "number")
-const activeSemesterIsLatest = computed<boolean | null>(() => cacheStore.getActiveSemesterIsLatest())
-const isArchivedSemester = computed<boolean>(() => hasActiveClass.value && activeSemesterIsLatest.value === false)
+const activeSemesterStatus = computed<number | null>(() => cacheStore.getActiveSemesterStatus())
+const isArchivedSemester = computed<boolean>(() => hasActiveClass.value && activeSemesterStatus.value === 2)
 
 /** 返回当前学生页的布局缓存值。 */
 const layoutMode = computed<LayoutMode>({
@@ -893,6 +898,23 @@ watch(filteredStudents, () => {
 .students-view {
     display: grid;
     gap: 20px;
+}
+
+.students-view__notice {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 22px;
+    border: 1px solid rgba(247, 144, 9, 0.22);
+    background: rgba(255, 247, 230, 0.88);
+    color: #8a4b07;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.students-view__notice-icon {
+    font-size: 18px;
 }
 
 .panel-head,

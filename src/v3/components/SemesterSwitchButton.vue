@@ -185,6 +185,10 @@ watch(dialogVisible, async (visible) => {
     border: 1px solid rgba(122, 141, 198, 0.24);
     background: rgba(255, 255, 255, 0.82);
     color: #16213e;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
     text-decoration: none;
     transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
     cursor: pointer;

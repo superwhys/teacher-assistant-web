@@ -5,23 +5,26 @@
                 <h3>积分规则</h3>
             </div>
             <div class="toolbar-row toolbar-row--wrap">
-                <button type="button" class="ghost-button ghost-button--small" @click="emit('import-items')">
+                <button type="button" class="toolbar-action-button" :disabled="!canMutatePoints" @click="emit('import-items')">
+                    <i-ep-upload-filled />
                     导入积分项
                 </button>
                 <button
                     type="button"
-                    class="ghost-button ghost-button--small"
+                    class="toolbar-action-button"
                     :disabled="!canMutatePoints"
                     @click="emit('import-records')"
                 >
+                    <i-ep-upload-filled />
                     导入积分
                 </button>
                 <button
                     type="button"
-                    class="ghost-button ghost-button--small"
+                    class="toolbar-action-button"
                     :disabled="!hasActiveClass"
                     @click="emit('open-export')"
                 >
+                    <i-ep-download />
                     导出结果
                 </button>
             </div>
@@ -37,7 +40,12 @@
                         <span class="status-chip status-chip--sky">{{ `${ruleGroups.length} 个规则组` }}</span>
                     </div>
 
-                    <button type="button" class="primary-button primary-button--small rule-groups-panel__create" @click="emit('create-group')">
+                    <button
+                        type="button"
+                        class="primary-button primary-button--small rule-groups-panel__create"
+                        :disabled="!canMutatePoints"
+                        @click="emit('create-group')"
+                    >
                         <i-ep-plus />
                         <span>新增规则组</span>
                     </button>
@@ -62,7 +70,7 @@
                         <button
                             type="button"
                             class="ghost-button ghost-button--small"
-                            :disabled="!selectedRuleGroup"
+                            :disabled="!canMutatePoints || !selectedRuleGroup"
                             @click="emit('edit-group')"
                         >
                             编辑规则组
@@ -70,7 +78,7 @@
                         <button
                             type="button"
                             class="danger-button danger-button--small"
-                            :disabled="!selectedRuleGroup"
+                            :disabled="!canMutatePoints || !selectedRuleGroup"
                             @click="emit('delete-group')"
                         >
                             删除规则组
@@ -91,7 +99,7 @@
                         <button
                             type="button"
                             class="primary-button primary-button--small"
-                            :disabled="!selectedRuleGroup"
+                            :disabled="!canMutatePoints || !selectedRuleGroup"
                             @click="emit('create-rule')"
                         >
                             新增积分项
@@ -115,10 +123,20 @@
                             </div>
 
                             <div class="rule-item-row__actions">
-                                <button type="button" class="ghost-button ghost-button--small" @click="emit('edit-rule', rule)">
+                                <button
+                                    type="button"
+                                    class="ghost-button ghost-button--small"
+                                    :disabled="!canMutatePoints"
+                                    @click="emit('edit-rule', rule)"
+                                >
                                     编辑
                                 </button>
-                                <button type="button" class="danger-button danger-button--small" @click="emit('delete-rule', rule)">
+                                <button
+                                    type="button"
+                                    class="danger-button danger-button--small"
+                                    :disabled="!canMutatePoints"
+                                    @click="emit('delete-rule', rule)"
+                                >
                                     删除
                                 </button>
                             </div>
@@ -237,6 +255,35 @@ function handleSelectGroup(groupId: number): void {
 
 .toolbar-row--wrap {
     justify-content: flex-end;
+}
+
+.toolbar-action-button {
+    min-height: 48px;
+    padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid rgba(122, 141, 198, 0.24);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.78);
+    color: #16213e;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+.toolbar-action-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(85, 104, 255, 0.12);
+}
+
+.toolbar-action-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 
 .summary-eyebrow {
@@ -520,6 +567,10 @@ function handleSelectGroup(groupId: number): void {
 
     .toolbar-row--wrap {
         justify-content: flex-start;
+    }
+
+    .toolbar-action-button {
+        width: 100%;
     }
 }
 </style>

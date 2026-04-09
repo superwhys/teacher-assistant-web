@@ -20,12 +20,17 @@
             </article>
         </section>
 
+        <div v-if="isArchivedSemester" class="points-view__notice">
+            <i-ep-warning-filled class="points-view__notice-icon" />
+            <span>当前为归档学期，仅支持查看积分数据，不支持继续加分、扣分、导入和规则维护。</span>
+        </div>
+
         <PointsRulesManagePanel :can-mutate-points="canMutatePoints" :has-active-class="hasActiveClass"
             :rule-groups="ruleGroups" :rule-groups-loading="ruleGroupsLoading" :selected-rule-group="selectedRuleGroup"
             :selected-rule-group-id="selectedRuleGroupId" :selected-rule-group-rules="selectedRuleGroupRules"
             @create-group="openCreateGroupDialog" @create-rule="openCreateRuleDialog" @delete-group="requestDeleteGroup"
             @delete-rule="requestDeleteRule" @edit-group="openEditGroupDialog" @edit-rule="openEditRuleDialog"
-            @import-items="importItemsDialogVisible = true" @import-records="handleOpenImportRecordsDialog"
+            @import-items="handleOpenImportItemsDialog" @import-records="handleOpenImportRecordsDialog"
             @open-export="handleOpenExportDialog" @update:selected-rule-group-id="selectedRuleGroupId = $event" />
 
         <PointsContentPanel :active-content-tab="activeContentTab" :active-ranking-tab="activeRankingTab"
@@ -212,9 +217,9 @@ const historySignOptions: HistorySignOption[] = [
 
 const activeClassId = computed<number | null>(() => cacheStore.getActiveClassId())
 const activeClassName = computed<string>(() => cacheStore.getActiveClassName()?.trim() || "未选择班级")
-const activeSemesterIsLatest = computed<boolean | null>(() => cacheStore.getActiveSemesterIsLatest())
+const activeSemesterStatus = computed<number | null>(() => cacheStore.getActiveSemesterStatus())
 const hasActiveClass = computed<boolean>(() => typeof activeClassId.value === "number")
-const isArchivedSemester = computed<boolean>(() => hasActiveClass.value && activeSemesterIsLatest.value === false)
+const isArchivedSemester = computed<boolean>(() => hasActiveClass.value && activeSemesterStatus.value === 2)
 const canMutatePoints = computed<boolean>(() => hasActiveClass.value && !isArchivedSemester.value)
 
 const flatRules = computed<FlatRuleItem[]>(() => {
@@ -628,6 +633,20 @@ async function refreshPointsPage(): Promise<void> {
 }
 
 /** 打开积分导入弹窗，并在归档学期下进行提示。 */
+function handleOpenImportItemsDialog(): void {
+    if (!hasActiveClass.value) {
+        ElMessage.warning("请先选择班级")
+        return
+    }
+    if (isArchivedSemester.value) {
+        ElMessage.warning("归档学期不支持继续导入积分项")
+        return
+    }
+
+    importItemsDialogVisible.value = true
+}
+
+/** 打开积分导入弹窗，并在归档学期下进行提示。 */
 function handleOpenImportRecordsDialog(): void {
     if (!hasActiveClass.value) {
         ElMessage.warning("请先选择班级")
@@ -672,6 +691,11 @@ function handleSelectRankingTab(tab: "total" | "item"): void {
 
 /** 打开新增规则组弹窗。 */
 function openCreateGroupDialog(): void {
+    if (isArchivedSemester.value) {
+        ElMessage.warning("归档学期不支持新增规则组")
+        return
+    }
+
     groupDialogMode.value = "create"
     groupForm.value = {
         id: 0,
@@ -682,6 +706,11 @@ function openCreateGroupDialog(): void {
 
 /** 打开编辑规则组弹窗。 */
 function openEditGroupDialog(): void {
+    if (isArchivedSemester.value) {
+        ElMessage.warning("归档学期不支持编辑规则组")
+        return
+    }
+
     if (!selectedRuleGroup.value) {
         ElMessage.warning("请先选择一个规则组")
         return
@@ -697,6 +726,11 @@ function openEditGroupDialog(): void {
 
 /** 打开新增积分项弹窗。 */
 function openCreateRuleDialog(): void {
+    if (isArchivedSemester.value) {
+        ElMessage.warning("归档学期不支持新增积分项")
+        return
+    }
+
     if (!selectedRuleGroup.value) {
         ElMessage.warning("请先创建一个规则组")
         return
@@ -714,6 +748,11 @@ function openCreateRuleDialog(): void {
 
 /** 打开编辑积分项弹窗。 */
 function openEditRuleDialog(rule: Rule): void {
+    if (isArchivedSemester.value) {
+        ElMessage.warning("归档学期不支持编辑积分项")
+        return
+    }
+
     ruleDialogMode.value = "edit"
     ruleForm.value = {
         id: toNumber(rule.id, 0),
@@ -726,6 +765,11 @@ function openEditRuleDialog(rule: Rule): void {
 
 /** 保存规则组。 */
 async function saveGroup(groupNameValue: string): Promise<void> {
+    if (isArchivedSemester.value) {
+        ElMessage.warning("归档学期不支持保存规则组")
+        return
+    }
+
     const groupName = groupNameValue.trim()
     if (!groupName) {
         ElMessage.warning("请输入规则组名称")
@@ -765,6 +809,11 @@ async function saveGroup(groupNameValue: string): Promise<void> {
 
 /** 保存积分项。 */
 async function saveRule(formValue: RuleFormSubmitPayload): Promise<void> {
+    if (isArchivedSemester.value) {
+        ElMessage.warning("归档学期不支持保存积分项")
+        return
+    }
+
     if (!selectedRuleGroup.value && ruleDialogMode.value === "create") {
         ElMessage.warning("请先选择规则组")
         return
@@ -820,6 +869,11 @@ async function saveRule(formValue: RuleFormSubmitPayload): Promise<void> {
 
 /** 请求删除当前规则组。 */
 function requestDeleteGroup(): void {
+    if (isArchivedSemester.value) {
+        ElMessage.warning("归档学期不支持删除规则组")
+        return
+    }
+
     if (!selectedRuleGroup.value) {
         return
     }
@@ -831,6 +885,11 @@ function requestDeleteGroup(): void {
 
 /** 请求删除指定积分项。 */
 function requestDeleteRule(rule: Rule): void {
+    if (isArchivedSemester.value) {
+        ElMessage.warning("归档学期不支持删除积分项")
+        return
+    }
+
     deleteTargetType.value = "rule"
     pendingDeleteRuleId.value = toNumber(rule.id, 0)
     deleteDialogVisible.value = true
@@ -838,6 +897,11 @@ function requestDeleteRule(rule: Rule): void {
 
 /** 确认执行删除动作。 */
 async function confirmDelete(): Promise<void> {
+    if (isArchivedSemester.value) {
+        ElMessage.warning("归档学期不支持删除积分规则")
+        return
+    }
+
     ruleMutationLoading.value = true
     try {
         if (deleteTargetType.value === "group") {
@@ -1031,6 +1095,23 @@ watch([historySign, historyPage], async () => {
 .points-view {
     display: grid;
     gap: 20px;
+}
+
+.points-view__notice {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 22px;
+    border: 1px solid rgba(247, 144, 9, 0.22);
+    background: rgba(255, 247, 230, 0.88);
+    color: #8a4b07;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.points-view__notice-icon {
+    font-size: 18px;
 }
 
 .panel-surface {

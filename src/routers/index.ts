@@ -32,6 +32,18 @@ const routes = [
         component: () => import('@/v3/views/ToolsView.vue'),
       },
       {
+        path: 'tools/timer',
+        component: () => import('@/v3/views/ToolsTimerPage.vue'),
+      },
+      {
+        path: 'tools/rollcall',
+        component: () => import('@/v3/views/ToolsRollCallPage.vue'),
+      },
+      {
+        path: 'tools/lottery',
+        component: () => import('@/v3/views/ToolsLotteryPage.vue'),
+      },
+      {
         path: 'settings',
         component: () => import('@/v3/views/SettingsView.vue'),
       },

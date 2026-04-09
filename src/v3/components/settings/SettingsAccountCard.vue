@@ -1,7 +1,7 @@
 <template>
     <article class="hero-card account-card">
-        <div class="hero-banner">
-            <div class="account-hero-layout">
+        <div v-if="hasProfile" class="account-card__layout">
+            <div class="hero-banner">
                 <div class="account-summary">
                     <el-avatar class="account-summary__avatar" :size="72" :src="userAvatar || undefined">
                         {{ userInitial }}
@@ -21,28 +21,28 @@
                         <p>{{ userEmail || "当前账号未绑定邮箱" }}</p>
                     </div>
                 </div>
+            </div>
 
-                <div class="account-context-card">
-                    <span class="account-context-card__label">当前班级上下文</span>
-                    <div class="hero-status-stack">
+            <div class="summary-item account-context-card">
+                <span class="account-context-card__label">班级与学期</span>
+                <div class="account-context-card__grid">
+                    <div class="context-inline-item">
+                        <span class="context-inline-item__label">班级</span>
                         <span class="status-chip status-chip--sky">{{ currentClassName || "未选择班级" }}</span>
+                    </div>
+                    <div class="context-inline-item">
+                        <span class="context-inline-item__label">学期</span>
                         <span class="status-chip" :class="semesterStatusToneClass">
                             {{ currentSemesterName || "未设置学期" }}
                         </span>
                     </div>
-                    <p>{{ semesterNoticeText }}</p>
                 </div>
+                <p>{{ semesterNoticeText }}</p>
             </div>
-        </div>
 
-        <div v-if="hasProfile" class="summary-grid summary-grid--account">
             <div class="summary-item summary-item--soft-blue">
                 <span>用户 ID</span>
                 <strong class="mono-text">{{ userId || "-" }}</strong>
-            </div>
-            <div class="summary-item summary-item--soft-purple">
-                <span>角色标识</span>
-                <strong>{{ roleId ?? "-" }}</strong>
             </div>
             <div class="summary-item summary-item--soft-gold">
                 <span>账号状态</span>
@@ -71,7 +71,6 @@ interface SettingsAccountCardProps {
     hasPwd: boolean
     isLoginExpired: boolean
     isTrial: boolean
-    roleId: number | null
     semesterNoticeText: string
     semesterStatusToneClass: string
     trialStatusText: string
@@ -101,6 +100,13 @@ defineProps<SettingsAccountCardProps>()
         rgba(255, 255, 255, 0.8);
 }
 
+.account-card__layout {
+    display: grid;
+    gap: 18px 14px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+}
+
 .hero-banner,
 .account-summary,
 .account-summary__name-row {
@@ -109,16 +115,10 @@ defineProps<SettingsAccountCardProps>()
 }
 
 .hero-banner {
-    justify-content: space-between;
-    gap: 16px;
-}
-
-.account-hero-layout {
     width: 100%;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+    min-width: 0;
+    grid-column: 1 / span 3;
     gap: 18px;
-    align-items: start;
 }
 
 .account-summary {
@@ -169,40 +169,52 @@ defineProps<SettingsAccountCardProps>()
 }
 
 .account-context-card {
-    padding: 16px 18px;
+    padding: 18px;
     border-radius: 24px;
     border: 1px solid rgba(122, 141, 198, 0.14);
-    background: rgba(255, 255, 255, 0.72);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    background: linear-gradient(180deg, rgba(98, 112, 153, 0.08), rgba(255, 255, 255, 0.94));
+    display: grid;
+    gap: 10px;
 }
 
 .account-context-card__label {
     display: block;
-    margin-bottom: 10px;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
     color: #627099;
 }
 
-.summary-grid {
+.account-context-card__grid {
     display: grid;
-    gap: 14px;
-    margin-top: 22px;
+    grid-template-columns: 1fr;
+    gap: 8px;
 }
 
-.summary-grid--account {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+.context-inline-item {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.context-inline-item__label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #7a86a8;
+    line-height: 1.4;
+    white-space: nowrap;
 }
 
 .summary-item {
+    min-width: 0;
     padding: 18px;
     border-radius: 24px;
     background: rgba(85, 104, 255, 0.06);
 }
 
-.summary-item span {
+.summary-item > span {
     display: block;
     font-size: 13px;
     color: #627099;
@@ -220,10 +232,6 @@ defineProps<SettingsAccountCardProps>()
     background: linear-gradient(180deg, rgba(85, 104, 255, 0.1), rgba(255, 255, 255, 0.94));
 }
 
-.summary-item--soft-purple {
-    background: linear-gradient(180deg, rgba(142, 108, 255, 0.12), rgba(255, 255, 255, 0.94));
-}
-
 .summary-item--soft-gold {
     background: linear-gradient(180deg, rgba(255, 182, 72, 0.14), rgba(255, 255, 255, 0.94));
 }
@@ -232,9 +240,16 @@ defineProps<SettingsAccountCardProps>()
     background: linear-gradient(180deg, rgba(18, 185, 129, 0.12), rgba(255, 255, 255, 0.94));
 }
 
+.account-context-card {
+    grid-column: 4;
+    grid-row: 1 / span 2;
+    align-self: stretch;
+}
+
 .status-chip {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     min-height: 36px;
     padding: 0 12px;
     border-radius: 999px;
@@ -242,6 +257,7 @@ defineProps<SettingsAccountCardProps>()
     color: #627099;
     font-size: 13px;
     font-weight: 700;
+    line-height: 1;
     white-space: nowrap;
 }
 
@@ -289,25 +305,29 @@ defineProps<SettingsAccountCardProps>()
 }
 
 @media (max-width: 1280px) {
-    .summary-grid--account {
+    .account-card__layout {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-}
 
-@media (max-width: 1080px) {
-    .account-hero-layout {
-        grid-template-columns: 1fr;
+    .hero-banner,
+    .account-context-card {
+        grid-column: 1 / -1;
+    }
+
+    .account-context-card {
+        grid-row: auto;
     }
 }
 
 @media (max-width: 768px) {
-    .hero-banner {
-        flex-direction: column;
-        align-items: stretch;
+    .account-card__layout {
+        grid-template-columns: 1fr;
     }
 
-    .summary-grid--account {
-        grid-template-columns: 1fr;
+    .hero-banner {
+        grid-column: 1 / -1;
+        flex-direction: column;
+        align-items: stretch;
     }
 
     .account-summary {

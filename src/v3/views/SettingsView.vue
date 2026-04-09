@@ -6,25 +6,13 @@
                 <h2>账号、学期、锁屏与反馈设置</h2>
                 <p>可在这里查看账号信息、切换学期、设置锁屏密码并提交使用反馈。</p>
             </div>
-
-            <div class="toolbar">
-                <button type="button" class="ghost-button" :disabled="!activeClassId || classesLoading"
-                    @click="openNextSemesterDialog">
-                    <i-ep-refresh-right />
-                    <span>{{ classesLoading ? "加载中..." : "开启新学期" }}</span>
-                </button>
-                <button type="button" class="primary-button" @click="onLockNow">
-                    <i-ep-lock />
-                    <span>立即锁屏</span>
-                </button>
-            </div>
         </section>
 
         <section class="settings-columns">
             <div class="settings-column">
                 <SettingsAccountCard :current-class-name="currentClassName" :current-semester-name="currentSemesterName"
                     :display-name="displayName" :has-profile="Boolean(profile)" :has-pwd="hasPwd"
-                    :is-login-expired="isLoginExpired" :is-trial="isTrial" :role-id="roleId"
+                    :is-login-expired="isLoginExpired" :is-trial="isTrial"
                     :semester-notice-text="semesterNoticeText" :semester-status-tone-class="semesterStatusToneClass"
                     :trial-status-text="trialStatusText" :user-avatar="userAvatar" :user-email="userEmail"
                     :user-id="userId" :user-initial="userInitial" />
@@ -88,7 +76,6 @@ const displayName = computed(() => cacheStore.displayName || "未登录")
 const userEmail = computed(() => profile.value?.email ?? "")
 const userAvatar = computed(() => profile.value?.avatar ?? null)
 const userId = computed(() => profile.value?.id ?? "")
-const roleId = computed(() => profile.value?.roleId ?? null)
 const isTrial = computed(() => cacheStore.isTrial)
 const isLoginExpired = computed(() => cacheStore.isExpired)
 const isAuthenticated = computed(() => cacheStore.isAuthenticated)
@@ -457,8 +444,7 @@ watch(
     gap: 20px;
 }
 
-.section-head,
-.toolbar {
+.section-head {
     display: flex;
     align-items: center;
 }
@@ -492,61 +478,16 @@ watch(
     color: #627099;
 }
 
-.toolbar {
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
 .settings-columns {
     display: grid;
     gap: 20px;
-    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.95fr);
+    grid-template-columns: minmax(0, 1.12fr) minmax(320px, 1fr);
 }
 
 .settings-column {
     display: grid;
     gap: 20px;
     align-content: start;
-}
-
-.ghost-button,
-.primary-button {
-    min-height: 46px;
-    padding: 0 18px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    border: none;
-    border-radius: 16px;
-    font: inherit;
-    cursor: pointer;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
-}
-
-.ghost-button {
-    border: 1px solid rgba(122, 141, 198, 0.24);
-    background: rgba(255, 255, 255, 0.82);
-    color: #16213e;
-}
-
-.primary-button {
-    background: linear-gradient(135deg, #5568ff, #8e6cff);
-    color: #ffffff;
-    box-shadow: 0 12px 24px rgba(85, 104, 255, 0.26);
-}
-
-.ghost-button:hover,
-.primary-button:hover {
-    transform: translateY(-2px);
-}
-
-.ghost-button:disabled,
-.primary-button:disabled {
-    opacity: 0.56;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
 }
 
 @media (max-width: 1080px) {

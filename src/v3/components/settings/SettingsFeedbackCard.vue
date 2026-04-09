@@ -11,39 +11,24 @@
         <div class="settings-form-grid">
             <label class="field-block">
                 <span class="field-block__label">反馈内容</span>
-                <el-input
-                    v-model="feedbackContentModel"
-                    type="textarea"
-                    :rows="8"
-                    resize="none"
-                    maxlength="1000"
-                    show-word-limit
-                    placeholder="例如：希望设置页支持更明显的学期权限提示，或者锁屏页展示当前班级信息。"
-                />
+                <el-input v-model="feedbackContentModel" type="textarea" :rows="8" resize="none" maxlength="1000"
+                    show-word-limit placeholder="例如：希望设置页支持更明显的学期权限提示，或者锁屏页展示当前班级信息。" />
             </label>
         </div>
 
         <div class="toolbar compact-toolbar">
-            <button
-                type="button"
-                class="primary-button primary-button--small"
-                :disabled="feedbackSubmitting"
-                @click="emit('submit')"
-            >
+            <button type="button" class="primary-button primary-button--small" :disabled="feedbackSubmitting"
+                @click="emit('submit')">
                 {{ feedbackSubmitting ? "提交中..." : "提交反馈" }}
             </button>
-            <button
-                type="button"
-                class="ghost-button ghost-button--small"
-                :disabled="feedbackSubmitting || !feedbackContent.trim()"
-                @click="emit('clear')"
-            >
+            <button type="button" class="ghost-button ghost-button--small"
+                :disabled="feedbackSubmitting || !feedbackContent.trim()" @click="emit('clear')">
                 清空内容
             </button>
         </div>
 
         <div class="helper-note">
-            反馈会通过现有接口提交到后台，建议尽量描述具体场景、期望效果和复现步骤。
+            建议尽量描述具体场景、期望效果和复现步骤。
         </div>
     </article>
 </template>

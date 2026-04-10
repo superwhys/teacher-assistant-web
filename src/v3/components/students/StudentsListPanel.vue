@@ -52,9 +52,9 @@
                 <section v-for="group in studentsGroupedByLetter" :key="group.letter"
                     :id="`student-letter-group-${group.letter}`" class="letter-group">
                     <div class="letter-header">{{ group.letter }}</div>
-                    <div class="student-group-stack">
+                    <div class="student-group-stack" :class="{ 'is-single': group.students.length === 1 }">
                         <StudentsListCard v-for="student in group.students" :key="student.id"
-                            :selected="isStudentSelected(student.id)" :student="student"
+                            :display-mode="layoutMode" :selected="isStudentSelected(student.id)" :student="student"
                             @edit="emit('edit-student', $event)" @remove="emit('remove-student', $event)"
                             @select="emit('select-student', $event)" />
                     </div>
@@ -63,9 +63,9 @@
         </div>
 
         <div v-else class="student-grid">
-            <StudentsListCard v-for="student in students" :key="student.id" :selected="isStudentSelected(student.id)"
-                :student="student" @edit="emit('edit-student', $event)" @remove="emit('remove-student', $event)"
-                @select="emit('select-student', $event)" />
+            <StudentsListCard v-for="student in students" :key="student.id" :display-mode="layoutMode"
+                :selected="isStudentSelected(student.id)" :student="student" @edit="emit('edit-student', $event)"
+                @remove="emit('remove-student', $event)" @select="emit('select-student', $event)" />
         </div>
     </article>
 </template>
@@ -327,7 +327,8 @@ function scrollToLetter(letter: string): void {
 
 .student-group-stack {
     display: grid;
-    gap: 12px;
+    gap: 14px;
+    grid-template-columns: 1fr;
 }
 
 .ghost-button {
@@ -406,6 +407,10 @@ function scrollToLetter(letter: string): void {
     }
 
     .student-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .student-group-stack {
         grid-template-columns: 1fr;
     }
 }

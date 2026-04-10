@@ -5,6 +5,14 @@
                 <h3>{{ title }}</h3>
             </div>
             <div class="panel-head__actions">
+                <button
+                    v-if="selectedStudents.length > 1"
+                    type="button"
+                    class="clear-action-button"
+                    @click="emit('clear-selected-students')"
+                >
+                    清空
+                </button>
                 <button v-if="selectedStudent" type="button" class="icon-action-button" title="定位到学生位置"
                     @click="emit('locate-student', selectedStudent.id)">
                     <i-ep-location />
@@ -158,6 +166,7 @@ interface StudentsSelectionPanelProps {
 
 /** 定义学生选择面板事件结构。 */
 interface StudentsSelectionPanelEmits {
+    (event: "clear-selected-students"): void
     (event: "locate-student", studentId: number): void
     (event: "open-points", payload: { tab: "plus" | "minus" }): void
     (event: "remove-selected-student", studentId: number): void
@@ -320,6 +329,28 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.clear-action-button {
+    min-height: 36px;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 107, 129, 0.18);
+    border-radius: 12px;
+    background: rgba(255, 107, 129, 0.12);
+    color: #d92d20;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.clear-action-button:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 107, 129, 0.28);
+    background: rgba(255, 107, 129, 0.18);
 }
 
 .selection-panel__body {

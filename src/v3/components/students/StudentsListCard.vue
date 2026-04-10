@@ -1,5 +1,10 @@
 <template>
-    <article :id="`student-card-${student.id}`" class="student-card" :class="{ 'is-selected': selected }" @click="emit('select', student.id)">
+    <article
+        :id="`student-card-${student.id}`"
+        class="student-card"
+        :class="{ 'is-list': displayMode === 'list', 'is-selected': selected }"
+        @click="emit('select', student.id)"
+    >
         <div v-if="selected" class="student-card__selected-badge">
             <i-ep-check />
         </div>
@@ -26,12 +31,6 @@
             </div>
         </div>
 
-        <div class="student-tags">
-            <span v-for="tag in student.tags" :key="tag" class="student-tag">
-                {{ tag }}
-            </span>
-        </div>
-
         <div class="student-score">
             <strong>{{ `可用 ${student.availablePoints} / 总分 ${student.totalPoints}` }}</strong>
         </div>
@@ -54,6 +53,7 @@ export type StudentsListCardItem = UiStudent & {
 
 /** 定义学生卡片属性结构。 */
 interface StudentsListCardProps {
+    displayMode?: "card" | "list"
     selected: boolean
     student: StudentsListCardItem
 }
@@ -65,7 +65,9 @@ interface StudentsListCardEmits {
     (event: "select", studentId: number): void
 }
 
-defineProps<StudentsListCardProps>()
+withDefaults(defineProps<StudentsListCardProps>(), {
+    displayMode: "card"
+})
 const emit = defineEmits<StudentsListCardEmits>()
 
 /** 返回性别显示文案。 */
@@ -95,6 +97,15 @@ function getGenderLabel(gender: UiGender): string {
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
+.student-card.is-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    min-height: 74px;
+    padding: 14px 16px;
+}
+
 .student-card:hover,
 .student-card.is-selected {
     transform: translateY(-2px);
@@ -103,11 +114,24 @@ function getGenderLabel(gender: UiGender): string {
 }
 
 .student-card.is-selected {
-    border-color: rgba(85, 104, 255, 0.5);
-    background: linear-gradient(180deg, rgba(85, 104, 255, 0.12), rgba(255, 255, 255, 0.96));
+    border-color: rgba(85, 104, 255, 0.72);
+    background: linear-gradient(180deg, rgba(85, 104, 255, 0.18), rgba(255, 255, 255, 0.98));
     box-shadow:
-        0 0 0 2px rgba(85, 104, 255, 0.16),
-        0 18px 36px rgba(85, 104, 255, 0.18);
+        0 0 0 3px rgba(85, 104, 255, 0.18),
+        0 18px 36px rgba(85, 104, 255, 0.22);
+}
+
+.student-card.is-selected .student-card__accent {
+    height: 5px;
+    background: linear-gradient(90deg, #3f5cff, #8e6cff);
+}
+
+.student-card.is-selected .student-avatar {
+    box-shadow: 0 0 0 3px rgba(85, 104, 255, 0.16);
+}
+
+.student-card.is-selected .student-score {
+    background: rgba(85, 104, 255, 0.14);
 }
 
 .student-card__selected-badge {
@@ -139,6 +163,10 @@ function getGenderLabel(gender: UiGender): string {
     gap: 12px;
 }
 
+.student-card.is-list .student-card__head {
+    min-width: 0;
+}
+
 .student-profile {
     min-width: 0;
     display: flex;
@@ -156,6 +184,13 @@ function getGenderLabel(gender: UiGender): string {
     font-weight: 800;
     border-radius: 14px;
     flex-shrink: 0;
+}
+
+.student-card.is-list .student-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    font-size: 16px;
 }
 
 .tone-blue {
@@ -184,6 +219,11 @@ function getGenderLabel(gender: UiGender): string {
     font-size: 18px;
 }
 
+.student-card.is-list .student-profile__body strong {
+    font-size: 16px;
+    line-height: 1.4;
+}
+
 .student-profile__body p {
     margin: 4px 0 0;
     color: #627099;
@@ -191,28 +231,16 @@ function getGenderLabel(gender: UiGender): string {
     line-height: 1.6;
 }
 
+.student-card.is-list .student-profile__body p {
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
 .student-card__actions {
     display: flex;
     gap: 6px;
-}
-
-.student-tags {
-    margin-top: 12px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.student-tag {
-    display: inline-flex;
-    align-items: center;
-    min-height: 28px;
-    padding: 0 10px;
-    border-radius: 999px;
-    background: rgba(85, 104, 255, 0.08);
-    color: #5568ff;
-    font-size: 11px;
-    font-weight: 700;
+    flex-shrink: 0;
 }
 
 .student-score {
@@ -224,10 +252,26 @@ function getGenderLabel(gender: UiGender): string {
     background: rgba(85, 104, 255, 0.06);
 }
 
+.student-card.is-list .student-score {
+    margin-top: 0;
+    justify-self: end;
+    padding: 6px 10px;
+    border-radius: 999px;
+    justify-content: center;
+    background: rgba(85, 104, 255, 0.08);
+}
+
 .student-score strong {
     color: #16213e;
     font-size: 15px;
     line-height: 1.5;
+}
+
+.student-card.is-list .student-score strong {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.3;
+    white-space: nowrap;
 }
 
 .icon-button {
@@ -249,6 +293,21 @@ function getGenderLabel(gender: UiGender): string {
 .icon-button--danger {
     background: rgba(255, 107, 129, 0.12);
     color: #d92d20;
+}
+
+@media (max-width: 1200px) {
+    .student-card.is-list {
+        grid-template-columns: minmax(0, 1fr);
+        align-items: stretch;
+    }
+
+    .student-card.is-list .student-score {
+        margin-top: 0;
+    }
+
+    .student-card.is-list .student-score {
+        justify-content: flex-start;
+    }
 }
 
 @media (max-width: 768px) {

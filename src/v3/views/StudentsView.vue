@@ -7,7 +7,7 @@
                     <div class="search-box">
                         <i-ep-search class="search-box__icon" />
                         <input v-model="keyword" type="search" class="search-box__input"
-                            placeholder="搜索学生姓名；多个姓名可用逗号隔开">
+                            placeholder="支持姓名、拼音首字母；可用逗号隔开">
                     </div>
                 </label>
 
@@ -103,7 +103,7 @@
                     :points-applying="pointsApplying" :selected-student="selectedStudent"
                     :selected-students="selectedStudents" :status-label="selectionStatusLabel"
                     :title="selectedPanelTitle" @locate-student="handleLocateStudent"
-                    @open-points="openPointsSelectorForSelected"
+                    @clear-selected-students="handleClearSelectedStudents" @open-points="openPointsSelectorForSelected"
                     @remove-selected-student="handleRemoveSelectedStudent" />
             </aside>
         </section>
@@ -144,6 +144,7 @@ import type {
     StudentsSortOption
 } from "@/types/student";
 import { ElMessage } from "element-plus";
+import { pinyin } from "pinyin-pro";
 import StudentsAddDialog, { type StudentAddMode } from "@/v3/components/students/StudentsAddDialog.vue";
 import StudentsConfirmDialog from "@/v3/components/students/StudentsConfirmDialog.vue";
 import StudentsEditDialog from "@/v3/components/students/StudentsEditDialog.vue";
@@ -173,6 +174,14 @@ type StudentCardItem = StudentsListPanelItem
 /** 定义积分规则选择弹窗页签。 */
 type PointsSelectorTab = "all" | "plus" | "minus"
 
+/** 定义学生搜索索引结构。 */
+interface StudentSearchIndexItem {
+    groupNameLower: string
+    initialsLower: string
+    nameLower: string
+    tagsLower: string
+}
+
 const cacheStore = useCacheStore()
 const loading = ref(false)
 const students = ref<StudentDTO[]>([])
@@ -181,6 +190,7 @@ const keyword = ref("")
 const selectedGroupId = ref<number | null>(null)
 const selectedStudentIds = ref<number[]>([])
 const multiSelectEnabled = ref(false)
+const studentSearchIndexMap = ref<Map<number, StudentSearchIndexItem>>(new Map())
 const addStudentDialogVisible = ref(false)
 const addStudentDialogMode = ref<StudentAddMode>("single")
 const groupManageVisible = ref(false)
@@ -295,6 +305,24 @@ function getStudentInitials(name?: string): string {
     return safeName.slice(0, 1)
 }
 
+/** 返回学生姓名的拼音首字母串。 */
+function getStudentPinyinInitials(name?: string): string {
+    const safeName = name?.trim() || ""
+    if (!safeName) {
+        return ""
+    }
+
+    try {
+        return pinyin(safeName, {
+            pattern: "first",
+            toneType: "none",
+            type: "string"
+        }).replace(/\s+/g, "").toLowerCase()
+    } catch {
+        return ""
+    }
+}
+
 /** 返回学生卡片的渐变色类名。 */
 function getStudentToneClass(studentId?: number): string {
     const toneClasses = ["tone-blue", "tone-purple", "tone-rose", "tone-green"]
@@ -325,6 +353,48 @@ function getStudentTags(student: StudentDTO, groupName: string): string[] {
     }
 
     return Array.from(tags)
+}
+
+/** 重建学生姓名与拼音的搜索索引表。 */
+function rebuildStudentSearchIndexMap(): void {
+    const nextSearchIndexMap = new Map<number, StudentSearchIndexItem>()
+
+    students.value.forEach((student) => {
+        const studentId = typeof student.id === "number" ? student.id : 0
+        const studentName = student.name?.trim() || ""
+        if (!studentId || !studentName) {
+            return
+        }
+
+        const groupInfo = getGroupInfo(student)
+        const tags = getStudentTags(student, groupInfo.groupName)
+        nextSearchIndexMap.set(studentId, {
+            nameLower: studentName.toLowerCase(),
+            initialsLower: getStudentPinyinInitials(studentName),
+            groupNameLower: groupInfo.groupName.toLowerCase(),
+            tagsLower: tags.join(" ").toLowerCase()
+        })
+    })
+
+    studentSearchIndexMap.value = nextSearchIndexMap
+}
+
+/** 判断指定学生是否匹配当前搜索关键字。 */
+function matchesStudentKeyword(studentId: number, token: string): boolean {
+    const normalizedToken = token.trim().toLowerCase()
+    if (!normalizedToken) {
+        return true
+    }
+
+    const searchIndex = studentSearchIndexMap.value.get(studentId)
+    if (!searchIndex) {
+        return false
+    }
+
+    return searchIndex.nameLower.includes(normalizedToken)
+        || searchIndex.initialsLower.includes(normalizedToken)
+        || searchIndex.groupNameLower.includes(normalizedToken)
+        || searchIndex.tagsLower.includes(normalizedToken)
 }
 
 /** 将接口学生数据转换为页面卡片结构。 */
@@ -388,12 +458,8 @@ const filteredStudents = computed<StudentCardItem[]>(() => {
         const matchGroup = selectedGroupId.value === null || student.groupId === selectedGroupId.value
         const matchKeyword = !normalizedKeyword
             || (useMultiNameSearch
-                ? keywordTokens.some((token) => student.name.toLowerCase().includes(token))
-                : (
-                    student.name.toLowerCase().includes(normalizedKeyword)
-                    || student.groupName.toLowerCase().includes(normalizedKeyword)
-                    || student.tags.join(" ").toLowerCase().includes(normalizedKeyword)
-                ))
+                ? keywordTokens.some((token) => matchesStudentKeyword(student.id, token))
+                : matchesStudentKeyword(student.id, normalizedKeyword))
 
         return matchGroup && matchKeyword
     })
@@ -523,10 +589,6 @@ const uiGroups = computed<UiGroup[]>(() => {
 function syncSelectedStudents(): void {
     const visibleStudentIds = new Set(filteredStudents.value.map((student) => student.id))
     selectedStudentIds.value = selectedStudentIds.value.filter((studentId) => visibleStudentIds.has(studentId))
-
-    if (!multiSelectEnabled.value && selectedStudentIds.value.length > 1) {
-        selectedStudentIds.value = selectedStudentIds.value.slice(0, 1)
-    }
 }
 
 /** 加载当前班级的学生与分组数据。 */
@@ -535,6 +597,7 @@ async function loadStudentData(): Promise<void> {
         students.value = []
         groups.value = []
         selectedStudentIds.value = []
+        studentSearchIndexMap.value = new Map()
         return
     }
 
@@ -555,6 +618,7 @@ async function loadStudentData(): Promise<void> {
             }
         }
 
+        rebuildStudentSearchIndexMap()
         syncSelectedStudents()
     } catch (error) {
         console.error("加载学生管理数据失败", error)
@@ -698,11 +762,16 @@ function handleRemoveSelectedStudent(studentId: number): void {
     selectedStudentIds.value = selectedStudentIds.value.filter((id) => id !== studentId)
 }
 
+/** 清空当前已选中的学生列表。 */
+function handleClearSelectedStudents(): void {
+    selectedStudentIds.value = []
+}
+
 /** 切换当前是否启用多选模式。 */
 function toggleMultiSelectEnabled(): void {
     multiSelectEnabled.value = !multiSelectEnabled.value
-    if (!multiSelectEnabled.value && selectedStudentIds.value.length > 1) {
-        selectedStudentIds.value = selectedStudentIds.value.slice(0, 1)
+    if (!multiSelectEnabled.value) {
+        selectedStudentIds.value = []
     }
 }
 

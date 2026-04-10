@@ -28,6 +28,12 @@
                             <p>支持总榜、单项榜以及时间范围切换。</p>
                         </div>
                         <div class="toolbar-row toolbar-row--wrap">
+                            <button type="button" class="ghost-button ghost-button--small" @click="toggleRankingMask">
+                                {{ isRankingMasked ? "显示" : "隐藏" }}
+                            </button>
+
+                            <span class="toolbar-divider" aria-hidden="true"></span>
+
                             <div class="segmented-control">
                                 <button type="button" class="chip-button"
                                     :class="{ 'is-active': activeRankingTab === 'total' }"
@@ -40,6 +46,8 @@
                                     单项榜
                                 </button>
                             </div>
+
+                            <span class="toolbar-divider" aria-hidden="true"></span>
 
                             <div class="segmented-control">
                                 <button v-for="item in rankingRangeOptions" :key="item.value" type="button"
@@ -74,11 +82,11 @@
                                         :class="item.rankClass" />
                                     <i-ep-star-filled v-else-if="item.rankClass === 'is-top-3'"
                                         class="ranking-item__icon" :class="item.rankClass" />
-                                    <strong>{{ item.name }}</strong>
+                                    <strong>{{ getRankingNameLabel(item.name) }}</strong>
                                 </div>
                             </div>
                             <div class="ranking-item__score">
-                                <span>{{ item.scoreLabel }}</span>
+                                <span>{{ getRankingScoreLabel(item.scoreLabel) }}</span>
                             </div>
                         </article>
                     </div>
@@ -180,7 +188,8 @@
 
 <script setup lang="ts">
 import type { RankingTimeRange, Record as PointsApplyRecord } from "@/types/points";
-import { computed } from "vue";
+import { useCacheStore } from "@/stores/cacheStore";
+import { computed, ref } from "vue";
 
 defineOptions({ name: "PointsContentPanel" })
 
@@ -241,6 +250,8 @@ interface PointsContentPanelProps {
 }
 
 const props = defineProps<PointsContentPanelProps>()
+const cacheStore = useCacheStore()
+const isRankingMasked = ref<boolean>(cacheStore.getDashboardRankingPreviewMasked())
 
 const emit = defineEmits<{
     (e: "go-next-history-page"): void
@@ -279,6 +290,27 @@ function handleSelectContentTab(tab: PointsContentTab): void {
 /** 切换当前显示的排行榜类型。 */
 function handleSelectRankingTab(tab: "total" | "item"): void {
     emit("select-ranking-tab", tab)
+}
+
+/** 返回排行榜脱敏后的展示文本。 */
+function getMaskedRankingText(): string {
+    return "***"
+}
+
+/** 返回排行榜姓名展示文本。 */
+function getRankingNameLabel(name: string): string {
+    return isRankingMasked.value ? getMaskedRankingText() : name
+}
+
+/** 返回排行榜积分展示文本。 */
+function getRankingScoreLabel(scoreLabel: string): string {
+    return isRankingMasked.value ? getMaskedRankingText() : scoreLabel
+}
+
+/** 切换排行榜脱敏显示状态。 */
+function toggleRankingMask(): void {
+    isRankingMasked.value = !isRankingMasked.value
+    cacheStore.setDashboardRankingPreviewMasked(isRankingMasked.value)
 }
 </script>
 
@@ -341,6 +373,15 @@ function handleSelectRankingTab(tab: "total" | "item"): void {
 .record-item__meta {
     flex-wrap: wrap;
     gap: 10px;
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 26px;
+    margin: 0 6px;
+    background: rgba(122, 141, 198, 0.26);
+    border-radius: 999px;
+    flex: 0 0 auto;
 }
 
 .ghost-button,
@@ -725,6 +766,10 @@ function handleSelectRankingTab(tab: "total" | "item"): void {
 @media (max-width: 768px) {
     .records-filter-grid {
         grid-template-columns: 1fr;
+    }
+
+    .toolbar-divider {
+        display: none;
     }
 
     .panel-head,

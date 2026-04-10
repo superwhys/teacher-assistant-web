@@ -11,7 +11,7 @@
                     </div>
                 </label>
 
-                <div class="control-block">
+                <div class="control-block control-block--display">
                     <span class="control-label">展示方式</span>
                     <div class="segmented-control">
                         <button type="button" class="chip-button" :class="{ 'is-active': layoutMode === 'card' }"
@@ -25,7 +25,7 @@
                     </div>
                 </div>
 
-                <div class="control-block">
+                <div class="control-block control-block--sort">
                     <span class="control-label">排序方式</span>
                     <div class="segmented-control segmented-control--wrap sort-control">
                         <button type="button" class="chip-button" :class="{ 'is-active': isSortFieldActive('points') }"
@@ -44,7 +44,7 @@
                     </div>
                 </div>
 
-                <div class="control-block">
+                <div class="control-block control-block--group">
                     <span class="control-label">分组入口</span>
                     <div class="toolbar-row">
                         <button type="button" class="ghost-button ghost-button--small" :disabled="!hasActiveClass"
@@ -58,7 +58,7 @@
                     </div>
                 </div>
 
-                <div class="control-block">
+                <div class="control-block control-block--action">
                     <span class="control-label">学生操作</span>
                     <div class="toolbar-row">
                         <button type="button" class="primary-button primary-button--small" :disabled="!hasActiveClass"
@@ -323,11 +323,35 @@ function getStudentPinyinInitials(name?: string): string {
     }
 }
 
-/** 返回学生卡片的渐变色类名。 */
-function getStudentToneClass(studentId?: number): string {
-    const toneClasses = ["tone-blue", "tone-purple", "tone-rose", "tone-green"]
-    const safeStudentId = typeof studentId === "number" ? studentId : 0
-    return toneClasses[Math.abs(safeStudentId) % toneClasses.length]!
+/** 返回学生姓名对应的姓氏字符。 */
+function getStudentSurname(name?: string): string {
+    const safeName = name?.trim() || ""
+    if (!safeName) {
+        return "#"
+    }
+
+    return safeName.charAt(0) || "#"
+}
+
+/** 返回姓氏用于排序的拼音键。 */
+function getStudentSurnameSortKey(surname: string): string {
+    const safeSurname = surname.trim()
+    if (!safeSurname || safeSurname === "#") {
+        return "#"
+    }
+
+    if (/[a-zA-Z]/.test(safeSurname)) {
+        return safeSurname.toLowerCase()
+    }
+
+    try {
+        return pinyin(safeSurname, {
+            toneType: "none",
+            type: "string"
+        }).replace(/\s+/g, "").toLowerCase() || "#"
+    } catch {
+        return "#"
+    }
 }
 
 /** 返回学生的标签集合。 */
@@ -397,6 +421,39 @@ function matchesStudentKeyword(studentId: number, token: string): boolean {
         || searchIndex.tagsLower.includes(normalizedToken)
 }
 
+/** 返回当前学生姓氏到卡片颜色的映射表。 */
+const surnameToneClassMap = computed<Map<string, string>>(() => {
+    const palette = ["tone-blue", "tone-orange", "tone-emerald", "tone-violet"] as const
+    const uniqueSurnames = Array.from(new Set(
+        students.value
+            .map((student) => getStudentSurname(student.name))
+            .filter((surname) => Boolean(surname))
+    ))
+        .sort((left, right) => {
+            const leftKey = getStudentSurnameSortKey(left)
+            const rightKey = getStudentSurnameSortKey(right)
+
+            if (leftKey === rightKey) {
+                return left.localeCompare(right, "zh-CN")
+            }
+
+            if (leftKey === "#") {
+                return 1
+            }
+
+            if (rightKey === "#") {
+                return -1
+            }
+
+            return leftKey.localeCompare(rightKey, "en")
+        })
+
+    return new Map(uniqueSurnames.map((surname, index) => [
+        surname,
+        palette[index % palette.length] ?? "tone-slate"
+    ]))
+})
+
 /** 将接口学生数据转换为页面卡片结构。 */
 function createStudentCardItem(student: StudentDTO): StudentCardItem | null {
     const studentId = typeof student.id === "number" ? student.id : 0
@@ -407,6 +464,7 @@ function createStudentCardItem(student: StudentDTO): StudentCardItem | null {
     }
 
     const groupInfo = getGroupInfo(student)
+    const surname = getStudentSurname(studentName)
 
     return {
         id: studentId,
@@ -417,7 +475,7 @@ function createStudentCardItem(student: StudentDTO): StudentCardItem | null {
         groupName: groupInfo.groupName,
         initials: getStudentInitials(studentName),
         tags: getStudentTags(student, groupInfo.groupName),
-        toneClass: getStudentToneClass(studentId),
+        toneClass: surnameToneClassMap.value.get(surname) ?? "tone-slate",
         totalPoints: typeof student.total_points === "number" ? student.total_points : 0
     }
 }
@@ -1119,14 +1177,36 @@ watch(filteredStudents, () => {
 
 .control-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.3fr) repeat(4, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1.5fr) repeat(4, minmax(0, 0.9fr));
+    grid-template-areas: "search display sort group action";
     gap: 16px;
-    align-items: end;
+    align-items: start;
 }
 
 .control-block {
     display: grid;
     gap: 10px;
+    min-width: 0;
+}
+
+.control-block--search {
+    grid-area: search;
+}
+
+.control-block--display {
+    grid-area: display;
+}
+
+.control-block--sort {
+    grid-area: sort;
+}
+
+.control-block--group {
+    grid-area: group;
+}
+
+.control-block--action {
+    grid-area: action;
 }
 
 .control-label {
@@ -1140,7 +1220,8 @@ watch(filteredStudents, () => {
 
 .search-box {
     position: relative;
-    max-width: 420px;
+    width: min(100%, 360px);
+    max-width: 360px;
 }
 
 .search-box__icon {
@@ -1171,7 +1252,9 @@ watch(filteredStudents, () => {
 .segmented-control,
 .group-chip-row,
 .toolbar-row {
+    display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 10px;
 }
 
@@ -1249,7 +1332,25 @@ watch(filteredStudents, () => {
 
 @media (max-width: 1560px) {
     .control-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-areas:
+            "search search display sort"
+            "search search group action";
+    }
+}
+
+@media (max-width: 1180px) {
+    .control-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-areas:
+            "search search"
+            "display sort"
+            "group action";
+    }
+
+    .segmented-control,
+    .toolbar-row {
+        width: 100%;
     }
 }
 
@@ -1266,6 +1367,45 @@ watch(filteredStudents, () => {
 @media (max-width: 768px) {
     .control-grid {
         grid-template-columns: 1fr;
+        grid-template-areas:
+            "search"
+            "display"
+            "sort"
+            "group"
+            "action";
+    }
+
+    .segmented-control,
+    .toolbar-row {
+        gap: 8px;
+    }
+
+    .segmented-control .chip-button,
+    .toolbar-row .ghost-button,
+    .toolbar-row .primary-button {
+        flex: 1 1 calc(50% - 8px);
+        min-width: 0;
+    }
+
+    .sort-divider {
+        display: none;
+    }
+}
+
+@media (max-width: 560px) {
+    .panel-surface {
+        padding: 18px;
+    }
+
+    .search-box__input {
+        min-height: 48px;
+    }
+
+    .segmented-control .chip-button,
+    .toolbar-row .ghost-button,
+    .toolbar-row .primary-button,
+    .group-chip-row .group-chip {
+        width: 100%;
     }
 }
 </style>

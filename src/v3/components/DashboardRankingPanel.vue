@@ -73,7 +73,7 @@ const router = useRouter()
 const rankingTimeRange = ref<RankingTimeRange>(cacheStore.getPointsRankingTimeRange())
 const rankingStudents = ref<StudentDTO[]>([])
 const rankingPreviewResponse = ref<StudentRankingItem[]>([])
-const isRankingPreviewMasked = ref(false)
+const isRankingPreviewMasked = ref<boolean>(cacheStore.getDashboardRankingPreviewMasked())
 const rankingTimeRangeOptions: RankingTimeRangeOption[] = [
     { value: "all", label: "全部" },
     { value: "weekly", label: "周榜" },
@@ -125,6 +125,7 @@ function getMaskedRankingText(): string {
 /** 切换排行榜预览的脱敏状态。 */
 function toggleRankingPreviewMask(): void {
     isRankingPreviewMasked.value = !isRankingPreviewMasked.value
+    cacheStore.setDashboardRankingPreviewMasked(isRankingPreviewMasked.value)
 }
 
 /** 跳转到积分主页面查看完整排行榜。 */

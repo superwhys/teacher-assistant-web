@@ -303,6 +303,8 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
     height: calc(100vh - 40px);
     max-height: calc(100vh - 40px);
     overflow: hidden;
+    container-type: inline-size;
+    container-name: selection-panel;
 }
 
 .side-card--selected {
@@ -328,6 +330,8 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
 .panel-head__actions {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 10px;
 }
 
@@ -375,6 +379,7 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
     font-weight: 700;
     background: rgba(59, 130, 246, 0.12);
     color: #2563eb;
+    white-space: nowrap;
 }
 
 .status-chip--sky {
@@ -426,16 +431,20 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
     background: linear-gradient(135deg, #5568ff, #7c8cff);
 }
 
-.tone-purple {
-    background: linear-gradient(135deg, #8e6cff, #b084ff);
+.tone-orange {
+    background: linear-gradient(135deg, #ff9b4a, #ff7a59);
 }
 
-.tone-rose {
-    background: linear-gradient(135deg, #ff8f6b, #ff6b81);
+.tone-emerald {
+    background: linear-gradient(135deg, #18b979, #34d399);
 }
 
-.tone-green {
-    background: linear-gradient(135deg, #14b8a6, #12b981);
+.tone-violet {
+    background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+}
+
+.tone-slate {
+    background: linear-gradient(135deg, #94a3b8, #7b8aa6);
 }
 
 .selected-student__body {
@@ -445,6 +454,8 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
 .selected-student__body strong {
     display: block;
     font-size: 20px;
+    line-height: 1.4;
+    word-break: break-word;
 }
 
 .selected-student__body p {
@@ -639,6 +650,7 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
     display: block;
     font-size: 16px;
     line-height: 1.5;
+    word-break: break-word;
 }
 
 .selected-name-item__body p {
@@ -646,6 +658,7 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
     color: #627099;
     font-size: 13px;
     line-height: 1.5;
+    word-break: break-word;
 }
 
 .selected-name-item__badge {
@@ -725,6 +738,99 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
     margin-top: 10px;
     color: #627099;
     line-height: 1.7;
+}
+
+@container selection-panel (max-width: 360px) {
+    .panel-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .panel-head__actions {
+        justify-content: flex-start;
+    }
+
+    .selected-student {
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+    }
+
+    .selected-student__avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: 18px;
+        font-size: 20px;
+    }
+
+    .selected-student__body strong {
+        font-size: 18px;
+    }
+
+    .selected-student__body p {
+        margin-top: 4px;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .points-actions-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .selected-name-item {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .selected-name-item__main {
+        align-items: flex-start;
+    }
+
+    .selected-name-item__actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .selected-name-item__badge {
+        align-self: flex-start;
+    }
+}
+
+@container selection-panel (max-width: 300px) {
+    .panel-surface {
+        padding: 18px;
+    }
+
+    .selected-student {
+        gap: 10px;
+        padding: 12px 14px;
+    }
+
+    .selected-student__avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        font-size: 18px;
+    }
+
+    .selected-student__body strong {
+        font-size: 16px;
+    }
+
+    .selected-student__body p {
+        font-size: 13px;
+    }
+
+    .selected-name-item__main {
+        flex-direction: column;
+    }
+
+    .selected-name-item__avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 14px;
+        font-size: 16px;
+    }
 }
 
 @media (max-width: 768px) {

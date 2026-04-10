@@ -19,6 +19,7 @@
                     <strong>{{ student.name }}</strong>
                     <p>{{ getGenderLabel(student.gender) }}</p>
                 </div>
+                <span class="student-profile__score">{{ `可用 ${student.availablePoints} / 总分 ${student.totalPoints}` }}</span>
             </div>
 
             <div class="student-card__actions">
@@ -30,10 +31,6 @@
                 </button>
             </div>
         </div>
-
-        <div class="student-score">
-            <strong>{{ `可用 ${student.availablePoints} / 总分 ${student.totalPoints}` }}</strong>
-        </div>
     </article>
 </template>
 
@@ -42,12 +39,19 @@ import type { UiGender, UiStudent } from "@/components/class/ClassStudentList.vu
 
 /** 定义学生卡片展示结构。 */
 export type StudentsListCardItem = UiStudent & {
+    /** 表示学生当前可用于兑换或消费的可用积分。 */
     availablePoints: number
+    /** 表示学生当前所属分组的 ID，未分组时为空。 */
     groupId: number | null
+    /** 表示学生当前所属分组的名称，用于列表和详情展示。 */
     groupName: string
+    /** 表示学生头像中展示的姓名首字。 */
     initials: string
+    /** 表示学生当前卡片附带的业务标签集合。 */
     tags: string[]
+    /** 表示学生卡片头像和顶部色条使用的配色类名。 */
     toneClass: string
+    /** 表示学生累计获得的总积分。 */
     totalPoints: number
 }
 
@@ -82,6 +86,7 @@ function getGenderLabel(gender: UiGender): string {
 
     return "性别未知"
 }
+
 </script>
 
 <style scoped>
@@ -128,10 +133,6 @@ function getGenderLabel(gender: UiGender): string {
 
 .student-card.is-selected .student-avatar {
     box-shadow: 0 0 0 3px rgba(85, 104, 255, 0.16);
-}
-
-.student-card.is-selected .student-score {
-    background: rgba(85, 104, 255, 0.14);
 }
 
 .student-card__selected-badge {
@@ -194,19 +195,31 @@ function getGenderLabel(gender: UiGender): string {
 }
 
 .tone-blue {
-    background: linear-gradient(135deg, #5568ff, #7c8cff);
+    background: linear-gradient(135deg, #4f7cff, #6f8dff);
 }
 
-.tone-purple {
-    background: linear-gradient(135deg, #8e6cff, #b084ff);
+.tone-orange {
+    background: linear-gradient(135deg, #ff9b4a, #ff7a59);
+}
+
+.tone-emerald {
+    background: linear-gradient(135deg, #18b979, #34d399);
 }
 
 .tone-rose {
-    background: linear-gradient(135deg, #ff8f6b, #ff6b81);
+    background: linear-gradient(135deg, #ff6f91, #ff8fab);
 }
 
-.tone-green {
-    background: linear-gradient(135deg, #14b8a6, #12b981);
+.tone-violet {
+    background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+}
+
+.tone-cyan {
+    background: linear-gradient(135deg, #06b6d4, #38bdf8);
+}
+
+.tone-slate {
+    background: linear-gradient(135deg, #94a3b8, #7b8aa6);
 }
 
 .student-profile__body {
@@ -215,13 +228,35 @@ function getGenderLabel(gender: UiGender): string {
 
 .student-profile__body strong {
     display: block;
-    margin: 0;
     font-size: 18px;
+    line-height: 1.4;
 }
 
 .student-card.is-list .student-profile__body strong {
     font-size: 16px;
     line-height: 1.4;
+}
+
+.student-profile__score {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(85, 104, 255, 0.08);
+    color: #5568ff;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.student-card.is-selected .student-profile__score {
+    background: rgba(85, 104, 255, 0.14);
+}
+
+.student-card.is-list .student-profile__score {
+    font-size: 12px;
 }
 
 .student-profile__body p {
@@ -241,37 +276,6 @@ function getGenderLabel(gender: UiGender): string {
     display: flex;
     gap: 6px;
     flex-shrink: 0;
-}
-
-.student-score {
-    display: flex;
-    align-items: center;
-    margin-top: 14px;
-    padding: 12px 14px;
-    border-radius: 16px;
-    background: rgba(85, 104, 255, 0.06);
-}
-
-.student-card.is-list .student-score {
-    margin-top: 0;
-    justify-self: end;
-    padding: 6px 10px;
-    border-radius: 999px;
-    justify-content: center;
-    background: rgba(85, 104, 255, 0.08);
-}
-
-.student-score strong {
-    color: #16213e;
-    font-size: 15px;
-    line-height: 1.5;
-}
-
-.student-card.is-list .student-score strong {
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.3;
-    white-space: nowrap;
 }
 
 .icon-button {
@@ -299,14 +303,6 @@ function getGenderLabel(gender: UiGender): string {
     .student-card.is-list {
         grid-template-columns: minmax(0, 1fr);
         align-items: stretch;
-    }
-
-    .student-card.is-list .student-score {
-        margin-top: 0;
-    }
-
-    .student-card.is-list .student-score {
-        justify-content: flex-start;
     }
 }
 

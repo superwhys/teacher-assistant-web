@@ -170,7 +170,7 @@ const studentsGroupedByLetter = computed<StudentLetterGroup[]>(() => {
         })
         .map(([letter, students]) => ({
             letter,
-            students
+            students: [...students].sort((left, right) => left.name.localeCompare(right.name, "zh-CN"))
         }))
 })
 

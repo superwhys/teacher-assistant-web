@@ -20,6 +20,7 @@ type UserScopedCache = {
     pointsContentTab?: 'ranking' | 'records' | null
     pointsRankingTab?: 'total' | 'item' | null
     pointsRankingTimeRange?: 'all' | 'weekly' | 'monthly' | null
+    dashboardRankingPreviewMasked?: boolean
     pointsSortBy?: string | null
     pointsLayoutMode?: 'card' | 'list' | null
     isLocked?: boolean
@@ -50,6 +51,7 @@ export const useCacheStore = defineStore('cache', () => {
     let pointsContentTab = ref<'ranking' | 'records'>('ranking')
     let pointsRankingTab = ref<'total' | 'item'>('total')
     let pointsRankingTimeRange = ref<'all' | 'weekly' | 'monthly'>('all')
+    let dashboardRankingPreviewMasked = ref<boolean>(false)
     let pointsSortBy = ref<string>('default')
     let pointsLayoutMode = ref<'card' | 'list'>('card')
 
@@ -92,6 +94,7 @@ export const useCacheStore = defineStore('cache', () => {
         pointsRankingTimeRange.value = obj.pointsRankingTimeRange === 'weekly'
             ? 'weekly'
             : (obj.pointsRankingTimeRange === 'monthly' ? 'monthly' : 'all')
+        dashboardRankingPreviewMasked.value = Boolean(obj.dashboardRankingPreviewMasked)
         pointsSortBy.value = typeof obj.pointsSortBy === 'string' && obj.pointsSortBy.trim()
             ? obj.pointsSortBy
             : 'default'
@@ -120,6 +123,7 @@ export const useCacheStore = defineStore('cache', () => {
             pointsContentTab: pointsContentTab.value,
             pointsRankingTab: pointsRankingTab.value,
             pointsRankingTimeRange: pointsRankingTimeRange.value,
+            dashboardRankingPreviewMasked: dashboardRankingPreviewMasked.value,
             pointsSortBy: pointsSortBy.value,
             pointsLayoutMode: pointsLayoutMode.value,
             isLocked: isLocked.value,
@@ -348,6 +352,16 @@ export const useCacheStore = defineStore('cache', () => {
         pointsRankingTimeRange.value = range === 'weekly' ? 'weekly' : (range === 'monthly' ? 'monthly' : 'all')
     }
 
+    /** 获取首页排行榜预览的脱敏状态。 */
+    function getDashboardRankingPreviewMasked(): boolean {
+        return dashboardRankingPreviewMasked.value
+    }
+
+    /** 设置首页排行榜预览的脱敏状态。 */
+    function setDashboardRankingPreviewMasked(masked: boolean): void {
+        dashboardRankingPreviewMasked.value = Boolean(masked)
+    }
+
     function getPointsSortBy(): string {
         return pointsSortBy.value
     }
@@ -378,6 +392,7 @@ export const useCacheStore = defineStore('cache', () => {
         pointsContentTab.value = 'ranking'
         pointsRankingTab.value = 'total'
         pointsRankingTimeRange.value = 'all'
+        dashboardRankingPreviewMasked.value = false
         pointsSortBy.value = 'default'
         pointsLayoutMode.value = 'card'
         isLocked.value = false
@@ -454,6 +469,7 @@ export const useCacheStore = defineStore('cache', () => {
             pointsSelectedGroupByClass,
             pointsRankingTab,
             pointsRankingTimeRange,
+            dashboardRankingPreviewMasked,
             pointsSortBy,
             pointsLayoutMode,
             isLocked,
@@ -507,6 +523,8 @@ export const useCacheStore = defineStore('cache', () => {
         setPointsRankingTab,
         getPointsRankingTimeRange,
         setPointsRankingTimeRange,
+        getDashboardRankingPreviewMasked,
+        setDashboardRankingPreviewMasked,
         getPointsSortBy,
         setPointsSortBy,
         getPointsLayoutMode,

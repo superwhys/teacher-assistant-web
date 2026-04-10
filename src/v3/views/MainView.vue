@@ -15,6 +15,29 @@
                     <span>{{ item.label }}</span>
                 </RouterLink>
             </nav>
+
+            <div ref="userMenuContainerRef" class="aside-user-dropdown">
+                <button type="button" class="aside-user" :class="{ 'is-open': userMenuVisible }"
+                    @click="toggleUserMenu">
+                    <el-avatar class="aside-user__avatar" :size="48" :src="userAvatar || undefined">
+                        {{ userInitial }}
+                    </el-avatar>
+                    <div class="aside-user__content">
+                        <span class="aside-user__label">当前用户</span>
+                        <strong class="aside-user__name">{{ userDisplayName }}</strong>
+                    </div>
+                    <div class="aside-user__hint">
+                        <span class="aside-user__hint-text">{{ userMenuVisible ? "点击收起" : "点击展开" }}</span>
+                        <span class="aside-user__arrow" aria-hidden="true" />
+                    </div>
+                </button>
+
+                <div v-show="userMenuVisible" class="aside-user-menu">
+                    <button type="button" class="aside-user-menu__item" @click="handleUserMenuCommand('logout')">
+                        退出登录
+                    </button>
+                </div>
+            </div>
         </aside>
 
         <main class="main-view__main">
@@ -49,14 +72,24 @@
                 <RouterView />
             </section>
 
-            <div class="main-view__dock">
-                <span class="dock-label">课堂高频操作</span>
+            <div v-if="!dockCollapsed" class="main-view__dock">
+                <div class="dock-meta">
+                    <span class="dock-label">课堂高频操作</span>
+                    <button type="button" class="dock-collapse-button" @click="toggleDockCollapsed">
+                        收起
+                    </button>
+                </div>
                 <div class="dock-actions">
                     <RouterLink v-for="item in dockActions" :key="item.id" :to="item.to" class="dock-actions__button">
                         {{ item.label }}
                     </RouterLink>
                 </div>
             </div>
+
+            <button v-else type="button" class="main-view__dock-fab" @click="toggleDockCollapsed">
+                <i class="i-ep-arrow-up-bold main-view__dock-fab-icon" />
+                <span>快捷操作</span>
+            </button>
 
             <div v-if="cacheStore.isAuthenticated && unlockDialogVisible" class="lock-overlay">
                 <div class="lock-card">
@@ -79,11 +112,14 @@
 import ClassSwitchButton from "@/v3/components/ClassSwitchButton.vue";
 import SemesterSwitchButton from "@/v3/components/SemesterSwitchButton.vue";
 import { classManager } from "@/managers/class";
+import { userApi } from "@/api/user";
 import { useCacheStore } from "@/stores/cacheStore";
 import type { ClassDTO, SemesterDTO } from "@/types/class";
+import { isApiRequestError } from "@/types/api";
+import { computeTrialFromProfile, normalizeUserProfile } from "@/utils/userProfile";
 import { ElMessage } from "element-plus";
-import { computed, ref, watch } from "vue";
-import { RouterLink, RouterView, useRoute } from "vue-router";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 
 /** 定义左侧导航项结构。 */
 interface NavItem {
@@ -109,9 +145,14 @@ interface ChipItem {
 }
 
 const route = useRoute();
+const router = useRouter()
 const cacheStore = useCacheStore()
 const classes = ref<ClassDTO[]>([])
 const classesLoading = ref(false)
+const userMenuVisible = ref(false)
+const userMenuContainerRef = ref<HTMLElement | null>(null)
+const userProfileRefreshing = ref(false)
+const dockCollapsed = ref(false)
 
 const navItems: NavItem[] = [
     {
@@ -220,6 +261,28 @@ const statusChips = computed<ChipItem[]>(() => {
         { id: "blocked", label: "不允许积分操作", toneClass: "status-chip--amber" },
     ]
 })
+
+/** 刷新当前登录用户信息。 */
+async function refreshUserProfile(): Promise<void> {
+    if (!cacheStore.token || cacheStore.isExpired || userProfileRefreshing.value) {
+        return
+    }
+
+    userProfileRefreshing.value = true
+    try {
+        const response = await userApi.getUserProfile()
+        const profile = normalizeUserProfile(response.data, cacheStore.profile?.email ?? "")
+        const { trial, expiresAt } = computeTrialFromProfile(profile)
+        cacheStore.setAuth(cacheStore.token, profile, trial, expiresAt)
+    } catch (error) {
+        if (!isApiRequestError(error)) {
+            console.error("获取当前用户信息失败", error)
+            ElMessage.error("获取当前用户信息失败")
+        }
+    } finally {
+        userProfileRefreshing.value = false
+    }
+}
 
 /** 加载班级列表。 */
 async function loadClasses(): Promise<void> {
@@ -448,6 +511,18 @@ async function confirmUnlock(): Promise<void> {
 /** 返回当前班级名称。 */
 const currentClassName = computed<string>(() => cacheStore.getActiveClassName()?.trim() || "未知班级")
 
+/** 返回当前用户展示名称。 */
+const userDisplayName = computed<string>(() => cacheStore.displayName?.trim() || "未登录用户")
+
+/** 返回当前用户头像地址。 */
+const userAvatar = computed<string | null>(() => cacheStore.profile?.avatar ?? null)
+
+/** 返回当前用户头像占位首字。 */
+const userInitial = computed<string>(() => {
+    const name = userDisplayName.value.trim()
+    return name.charAt(0).toUpperCase() || "用"
+})
+
 /** 返回当前学期名称。 */
 const currentSemesterName = computed<string>(() => cacheStore.getActiveSemesterName()?.trim() || "未知学期")
 
@@ -468,6 +543,49 @@ const currentPageTitle = computed<string>(() => {
     return currentNavItem.value.heading
 })
 
+/** 处理当前用户菜单点击事件。 */
+async function handleUserMenuCommand(command: string): Promise<void> {
+    if (command !== "logout") {
+        return
+    }
+
+    userMenuVisible.value = false
+    cacheStore.logout()
+    ElMessage.success("已退出登录")
+    await router.replace("/auth")
+}
+
+/** 切换当前用户菜单的展开状态。 */
+function toggleUserMenu(): void {
+    userMenuVisible.value = !userMenuVisible.value
+}
+
+/** 在点击外部区域时关闭当前用户菜单。 */
+function handleDocumentPointerDown(event: PointerEvent): void {
+    const container = userMenuContainerRef.value
+    const target = event.target
+    if (!container || !(target instanceof Node) || container.contains(target)) {
+        return
+    }
+
+    userMenuVisible.value = false
+}
+
+/** 根据登录状态同步当前用户资料。 */
+function syncUserProfileByAuthState(token: string | null, expired: boolean): void {
+    if (token && !expired) {
+        void refreshUserProfile()
+        return
+    }
+
+    userMenuVisible.value = false
+}
+
+/** 切换底部高频操作栏的展开状态。 */
+function toggleDockCollapsed(): void {
+    dockCollapsed.value = !dockCollapsed.value
+}
+
 watch(
     [() => cacheStore.profile?.id, () => cacheStore.getActiveClassId()],
     () => {
@@ -480,6 +598,26 @@ watch(unlockDialogVisible, (visible) => {
     if (visible) {
         unlockPassword.value = ""
     }
+})
+
+watch(
+    [() => cacheStore.token, () => cacheStore.isExpired],
+    ([token, expired], [previousToken]) => {
+        if (token !== previousToken) {
+            userMenuVisible.value = false
+        }
+
+        syncUserProfileByAuthState(token, expired)
+    },
+    { immediate: true }
+)
+
+onMounted(() => {
+    document.addEventListener("pointerdown", handleDocumentPointerDown)
+})
+
+onBeforeUnmount(() => {
+    document.removeEventListener("pointerdown", handleDocumentPointerDown)
 })
 </script>
 
@@ -562,6 +700,7 @@ watch(unlockDialogVisible, (visible) => {
 .aside-nav {
     display: flex;
     flex-direction: column;
+    flex: 1;
     gap: 10px;
 }
 
@@ -596,6 +735,143 @@ watch(unlockDialogVisible, (visible) => {
     background: rgba(255, 255, 255, 0.14);
     font-size: 12px;
     font-weight: 700;
+}
+
+.aside-user {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.aside-user-dropdown {
+    position: relative;
+    width: 100%;
+}
+
+.aside-user:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+.aside-user.is-open {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+.aside-user:hover .aside-user__arrow {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.32);
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.aside-user__avatar {
+    flex-shrink: 0;
+    border: 2px solid rgba(255, 255, 255, 0.14);
+}
+
+.aside-user__content {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+    flex: 1;
+}
+
+.aside-user__label {
+    color: rgba(238, 243, 255, 0.68);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.aside-user__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.aside-user__hint {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.aside-user__hint-text {
+    color: rgba(238, 243, 255, 0.68);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.aside-user__arrow {
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    transition: transform 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.aside-user__arrow::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-top: 2px solid rgba(255, 255, 255, 0.84);
+    border-right: 2px solid rgba(255, 255, 255, 0.84);
+    transform: rotate(-45deg) translateY(1px);
+}
+
+.aside-user.is-open .aside-user__arrow::before {
+    transform: rotate(135deg) translateX(-1px);
+}
+
+.aside-user-menu {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 10px);
+    padding: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    background: rgba(57, 67, 103, 0.96);
+    box-shadow: 0 18px 36px rgba(10, 16, 34, 0.28);
+    overflow: hidden;
+}
+
+.aside-user-menu__item {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.16s ease;
+}
+
+.aside-user-menu__item:hover {
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .main-view__main {
@@ -735,6 +1011,12 @@ watch(unlockDialogVisible, (visible) => {
     backdrop-filter: blur(24px);
 }
 
+.dock-meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
 .dock-label {
     color: rgba(255, 255, 255, 0.72);
     font-size: 13px;
@@ -742,10 +1024,62 @@ watch(unlockDialogVisible, (visible) => {
     white-space: nowrap;
 }
 
+.dock-collapse-button {
+    min-height: 36px;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.16s ease, background-color 0.16s ease;
+}
+
+.dock-collapse-button:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.14);
+}
+
 .dock-actions__button {
     color: #ffffff;
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.08);
+}
+
+.main-view__dock-fab {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 20;
+    min-height: 58px;
+    padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #5568ff, #8e6cff);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 18px 40px rgba(85, 104, 255, 0.3);
+    cursor: pointer;
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.main-view__dock-fab:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 44px rgba(85, 104, 255, 0.34);
+}
+
+.main-view__dock-fab-icon {
+    font-size: 16px;
 }
 
 .lock-overlay {
@@ -819,10 +1153,18 @@ watch(unlockDialogVisible, (visible) => {
         padding: 18px 14px 140px;
     }
 
+    .main-view__aside {
+        min-height: auto;
+    }
+
     .main-view__header,
     .main-view__dock {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .dock-meta {
+        justify-content: space-between;
     }
 
     .header-actions {
@@ -839,6 +1181,13 @@ watch(unlockDialogVisible, (visible) => {
         bottom: 8px;
         width: auto;
         transform: none;
+    }
+
+    .main-view__dock-fab {
+        right: 12px;
+        bottom: 12px;
+        min-height: 52px;
+        padding: 0 16px;
     }
 
     .dock-label {

@@ -16,10 +16,16 @@
                     {{ student.initials }}
                 </div>
                 <div class="student-profile__body">
-                    <strong>{{ student.name }}</strong>
+                    <strong class="student-profile__name">{{ student.name }}</strong>
                     <p>{{ getGenderLabel(student.gender) }}</p>
                 </div>
-                <span class="student-profile__score">{{ `可用 ${student.availablePoints} / 总分 ${student.totalPoints}` }}</span>
+                <span class="student-profile__score" :style="getScoreStyle(student.toneClass)">
+                    <span class="student-profile__score-label">可用</span>
+                    <span class="student-profile__score-value">{{ student.availablePoints }}</span>
+                    <span class="student-profile__score-separator">/</span>
+                    <span class="student-profile__score-label">总分</span>
+                    <span class="student-profile__score-value">{{ student.totalPoints }}</span>
+                </span>
             </div>
 
             <div class="student-card__actions">
@@ -74,6 +80,51 @@ withDefaults(defineProps<StudentsListCardProps>(), {
 })
 const emit = defineEmits<StudentsListCardEmits>()
 
+/** 定义学生积分标签的配色结构。 */
+interface StudentScoreToneStyle {
+    background: string
+    backgroundSelected: string
+    color: string
+}
+
+const STUDENT_SCORE_TONE_STYLE_MAP: Record<string, StudentScoreToneStyle> = {
+    "tone-blue": {
+        color: "#4f7cff",
+        background: "rgba(79, 124, 255, 0.1)",
+        backgroundSelected: "rgba(79, 124, 255, 0.18)"
+    },
+    "tone-orange": {
+        color: "#ff8a3d",
+        background: "rgba(255, 138, 61, 0.12)",
+        backgroundSelected: "rgba(255, 138, 61, 0.2)"
+    },
+    "tone-emerald": {
+        color: "#18b979",
+        background: "rgba(24, 185, 121, 0.12)",
+        backgroundSelected: "rgba(24, 185, 121, 0.2)"
+    },
+    "tone-rose": {
+        color: "#ff6f91",
+        background: "rgba(255, 111, 145, 0.12)",
+        backgroundSelected: "rgba(255, 111, 145, 0.2)"
+    },
+    "tone-violet": {
+        color: "#8b5cf6",
+        background: "rgba(139, 92, 246, 0.12)",
+        backgroundSelected: "rgba(139, 92, 246, 0.2)"
+    },
+    "tone-cyan": {
+        color: "#06b6d4",
+        background: "rgba(6, 182, 212, 0.12)",
+        backgroundSelected: "rgba(6, 182, 212, 0.2)"
+    },
+    "tone-slate": {
+        color: "#64748b",
+        background: "rgba(100, 116, 139, 0.12)",
+        backgroundSelected: "rgba(100, 116, 139, 0.2)"
+    }
+}
+
 /** 返回性别显示文案。 */
 function getGenderLabel(gender: UiGender): string {
     if (gender === "male") {
@@ -85,6 +136,18 @@ function getGenderLabel(gender: UiGender): string {
     }
 
     return "性别未知"
+}
+
+/** 返回学生积分标签使用的动态样式。 */
+function getScoreStyle(toneClass: string): Record<string, string> {
+    const defaultToneStyle = STUDENT_SCORE_TONE_STYLE_MAP["tone-blue"] as StudentScoreToneStyle
+    const toneStyle = STUDENT_SCORE_TONE_STYLE_MAP[toneClass] ?? defaultToneStyle
+
+    return {
+        "--student-score-background": toneStyle.background,
+        "--student-score-background-selected": toneStyle.backgroundSelected,
+        "--student-score-color": toneStyle.color
+    }
 }
 
 </script>
@@ -226,13 +289,15 @@ function getGenderLabel(gender: UiGender): string {
     min-width: 0;
 }
 
-.student-profile__body strong {
+.student-profile__name {
     display: block;
+    min-width: 5em;
+    max-width: 100%;
     font-size: 18px;
     line-height: 1.4;
 }
 
-.student-card.is-list .student-profile__body strong {
+.student-card.is-list .student-profile__name {
     font-size: 16px;
     line-height: 1.4;
 }
@@ -240,19 +305,31 @@ function getGenderLabel(gender: UiGender): string {
 .student-profile__score {
     display: inline-flex;
     align-items: center;
+    gap: 4px;
     flex-shrink: 0;
     padding: 6px 12px;
     border-radius: 999px;
-    background: rgba(85, 104, 255, 0.08);
-    color: #5568ff;
+    background: var(--student-score-background, rgba(85, 104, 255, 0.08));
+    color: var(--student-score-color, #5568ff);
     font-size: 13px;
     font-weight: 700;
     line-height: 1.2;
     white-space: nowrap;
 }
 
+.student-profile__score-label,
+.student-profile__score-separator {
+    flex-shrink: 0;
+}
+
+.student-profile__score-value {
+    min-width: 4ch;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
 .student-card.is-selected .student-profile__score {
-    background: rgba(85, 104, 255, 0.14);
+    background: var(--student-score-background-selected, rgba(85, 104, 255, 0.14));
 }
 
 .student-card.is-list .student-profile__score {

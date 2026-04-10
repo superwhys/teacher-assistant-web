@@ -1,10 +1,6 @@
 <template>
-    <article
-        :id="`student-card-${student.id}`"
-        class="student-card"
-        :class="{ 'is-list': displayMode === 'list', 'is-selected': selected }"
-        @click="emit('select', student.id)"
-    >
+    <article :id="`student-card-${student.id}`" class="student-card"
+        :class="{ 'is-list': displayMode === 'list', 'is-selected': selected }" @click="emit('select', student.id)">
         <div v-if="selected" class="student-card__selected-badge">
             <i-ep-check />
         </div>
@@ -156,7 +152,7 @@ function getScoreStyle(toneClass: string): Record<string, string> {
 .student-card {
     position: relative;
     overflow: hidden;
-    padding: 20px 16px 16px;
+    padding: 24px 16px 20px;
     border: 1px solid rgba(122, 141, 198, 0.18);
     border-radius: 22px;
     background: rgba(255, 255, 255, 0.88);
@@ -323,7 +319,7 @@ function getScoreStyle(toneClass: string): Record<string, string> {
 }
 
 .student-profile__score-value {
-    min-width: 4ch;
+    min-width: 3ch;
     text-align: right;
     font-variant-numeric: tabular-nums;
 }

@@ -7,7 +7,11 @@
         width="860px"
     >
         <div class="group-import-dialog">
-            <section class="surface-card">
+            <section
+                v-loading="importing"
+                class="surface-card"
+                element-loading-text="正在解析分组文件..."
+            >
                 <el-upload
                     ref="uploadRef"
                     drag
@@ -16,12 +20,16 @@
                     :show-file-list="false"
                     :before-upload="beforeUpload"
                     :on-change="handleChange"
-                    :disabled="!active"
+                    :disabled="!active || importing"
                     class="v3-upload"
                 >
                     <i-ep-upload-filled class="v3-upload__icon" />
-                    <strong class="v3-upload__title">{{ excelFileName || "拖拽或点击选择分组 Excel 文件" }}</strong>
-                    <p class="v3-upload__hint">支持 `.xls`、`.xlsx`，表头需包含“分组名称”和“学生姓名”。</p>
+                    <strong class="v3-upload__title">
+                        {{ importing ? "正在解析分组文件..." : (excelFileName || "拖拽或点击选择分组 Excel 文件") }}
+                    </strong>
+                    <p class="v3-upload__hint">
+                        {{ importing ? "请稍候，系统正在读取 Excel 并校验分组成员。" : "支持 `.xls`、`.xlsx`，表头需包含“分组名称”和“学生姓名”。" }}
+                    </p>
                 </el-upload>
             </section>
 
@@ -69,14 +77,20 @@
                     <el-table-column label="成员" min-width="360">
                         <template #default="{ row }">
                             <div class="member-tags">
-                                <span
+                                <el-tooltip
                                     v-for="member in row.members"
                                     :key="`${row.groupName}-${member.name}`"
-                                    class="member-status"
-                                    :class="getMemberStatusClass(member)"
+                                    :content="getMemberTooltipContent(member)"
+                                    :disabled="!member.isInvalid"
+                                    placement="top"
                                 >
-                                    {{ member.name }}
-                                </span>
+                                    <span
+                                        class="member-status"
+                                        :class="getMemberStatusClass(member)"
+                                    >
+                                        {{ member.name }}
+                                    </span>
+                                </el-tooltip>
                             </div>
                         </template>
                     </el-table-column>
@@ -90,17 +104,17 @@
 
         <template #footer>
             <div class="dialog-actions">
-                <button type="button" class="ghost-button" @click="visible = false">
+                    <button type="button" class="ghost-button" :disabled="importing" @click="visible = false">
                     取消
                 </button>
                 <div class="dialog-actions__group">
-                    <button type="button" class="ghost-button" :disabled="!active" @click="clearPreview">
+                    <button type="button" class="ghost-button" :disabled="!active || importing" @click="clearPreview">
                         清空
                     </button>
                     <button
                         type="button"
                         class="primary-button"
-                        :disabled="!active || parsedGroups.length === 0"
+                        :disabled="!active || importing || parsedGroups.length === 0"
                         @click="confirmImport"
                     >
                         确认导入
@@ -314,6 +328,15 @@ function getMemberStatusClass(member: ParsedGroupMember): string {
     }
 
     return "member-status--normal"
+}
+
+/** 返回成员标签的悬浮提示文案。 */
+function getMemberTooltipContent(member: ParsedGroupMember): string {
+    if (member.isInvalid) {
+        return "学生不存在"
+    }
+
+    return ""
 }
 
 /** 确认提交当前解析后的分组导入结果。 */

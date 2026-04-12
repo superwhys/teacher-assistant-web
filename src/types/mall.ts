@@ -13,6 +13,7 @@ export type Prize = {
 
 export type PrizeRecord = {
     count?: number
+    created_at?: string | number
     description?: string
     id?: number
     points?: number

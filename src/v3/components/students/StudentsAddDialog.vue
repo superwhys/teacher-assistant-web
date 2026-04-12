@@ -4,14 +4,17 @@
         <div class="students-add-dialog">
             <div class="mode-switch">
                 <button type="button" class="mode-switch__button" :class="{ 'is-active': addMode === 'single' }"
+                    :disabled="excelImporting"
                     @click="addMode = 'single'">
                     单个添加
                 </button>
                 <button type="button" class="mode-switch__button" :class="{ 'is-active': addMode === 'batch' }"
+                    :disabled="excelImporting"
                     @click="addMode = 'batch'">
                     批量添加
                 </button>
                 <button type="button" class="mode-switch__button" :class="{ 'is-active': addMode === 'excel' }"
+                    :disabled="excelImporting"
                     @click="addMode = 'excel'">
                     Excel 导入
                 </button>
@@ -91,13 +94,22 @@
                 </div>
             </section>
 
-            <section v-else class="surface-card excel-card">
+            <section
+                v-else
+                v-loading="excelImporting"
+                class="surface-card excel-card"
+                element-loading-text="正在解析学生文件..."
+            >
                 <el-upload ref="uploadRef" drag accept=".xls,.xlsx" :auto-upload="false" :show-file-list="false"
-                    :before-upload="beforeExcelUpload" :on-change="handleExcelChange" :disabled="disabled"
+                    :before-upload="beforeExcelUpload" :on-change="handleExcelChange" :disabled="disabled || excelImporting"
                     class="v3-upload">
                     <i-ep-upload-filled class="v3-upload__icon" />
-                    <strong class="v3-upload__title">{{ excelFileName || "拖拽或点击选择 Excel 文件" }}</strong>
-                    <p class="v3-upload__hint">支持 `.xls`、`.xlsx`，表头包含“姓名”，性别列可选。</p>
+                    <strong class="v3-upload__title">
+                        {{ excelImporting ? "正在解析学生文件..." : (excelFileName || "拖拽或点击选择 Excel 文件") }}
+                    </strong>
+                    <p class="v3-upload__hint">
+                        {{ excelImporting ? "请稍候，系统正在读取 Excel 并整理学生名单。" : "支持 `.xls`、`.xlsx`，表头包含“姓名”，性别列可选。" }}
+                    </p>
                 </el-upload>
 
                 <div class="guide-list-card">
@@ -106,7 +118,7 @@
                             <h4>导入说明</h4>
                             <p>推荐先下载模板再批量整理学生名单。</p>
                         </div>
-                        <button type="button" class="text-button" :disabled="disabled" @click="downloadTemplate">
+                        <button type="button" class="text-button" :disabled="disabled || excelImporting" @click="downloadTemplate">
                             下载模板
                         </button>
                     </div>
@@ -145,7 +157,7 @@
 
         <template #footer>
             <div class="dialog-actions">
-                <button type="button" class="ghost-button" @click="visible = false">
+                <button type="button" class="ghost-button" :disabled="excelImporting" @click="visible = false">
                     取消
                 </button>
 
@@ -160,11 +172,11 @@
                 </button>
 
                 <div v-else class="dialog-actions__group">
-                    <button type="button" class="ghost-button" :disabled="disabled" @click="clearExcelPreview">
+                    <button type="button" class="ghost-button" :disabled="disabled || excelImporting" @click="clearExcelPreview">
                         清空
                     </button>
                     <button type="button" class="primary-button"
-                        :disabled="disabled || excelParsedStudents.length === 0" @click="confirmExcelImport">
+                        :disabled="disabled || excelImporting || excelParsedStudents.length === 0" @click="confirmExcelImport">
                         确认导入
                     </button>
                 </div>

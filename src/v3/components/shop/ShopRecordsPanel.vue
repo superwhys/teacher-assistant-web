@@ -27,14 +27,20 @@
                         <div class="record-card__avatar">
                             {{ getStudentInitial(record) }}
                         </div>
-                        <div class="record-card__content">
-                            <div class="record-card__title-row">
+                        <div class="record-card__info">
+                            <div class="record-card__meta">
                                 <strong>{{ getStudentName(record) }}</strong>
+                                <span class="record-card__time">
+                                    <i-ep-clock />
+                                    {{ getRecordTimeLabel(record) }}
+                                </span>
+                            </div>
+                            <div class="record-card__content">
                                 <span class="record-card__badge">
                                     {{ getPrizeName(record) }}
                                 </span>
+                                <p>{{ getRecordSummary(record) }}</p>
                             </div>
-                            <p>{{ getRecordSummary(record) }}</p>
                         </div>
                     </div>
 
@@ -69,6 +75,7 @@
 
 <script setup lang="ts">
 import type { Prize, PrizeRecord } from "@/types/mall"
+import { formatChineseDateTime } from "@/utils/date"
 
 defineOptions({ name: "ShopRecordsPanel" })
 
@@ -130,7 +137,26 @@ function getRecordPoints(record: PrizeRecord): number {
 /** 返回记录摘要说明。 */
 function getRecordSummary(record: PrizeRecord): string {
     const count = toNumber(record.count, 0)
-    return `兑换了 ${count} 个 ${getPrizeName(record)}，共消耗 ${getRecordPoints(record)} 积分。`
+    return `兑换了 ${count} 个奖品，共消耗 ${getRecordPoints(record)} 积分。`
+}
+
+/** 返回记录对应的兑换时间文案。 */
+function getRecordTimeLabel(record: PrizeRecord): string {
+    const rawValue = record.created_at
+    if (!rawValue) {
+        return "时间未知"
+    }
+
+    if (typeof rawValue === "number") {
+        return formatChineseDateTime(new Date(rawValue))
+    }
+
+    const parsedTimestamp = Date.parse(String(rawValue))
+    if (!Number.isFinite(parsedTimestamp)) {
+        return "时间未知"
+    }
+
+    return formatChineseDateTime(new Date(parsedTimestamp))
 }
 </script>
 
@@ -151,7 +177,8 @@ function getRecordSummary(record: PrizeRecord): string {
 .panel-head,
 .record-card,
 .record-card__main,
-.record-card__title-row,
+.record-card__info,
+.record-card__content,
 .record-card__aside,
 .shop-records-panel__pagination {
     display: flex;
@@ -238,6 +265,21 @@ function getRecordSummary(record: PrizeRecord): string {
     flex: 1;
 }
 
+.record-card__info {
+    min-width: 0;
+    gap: 18px;
+    flex: 1;
+    align-items: stretch;
+}
+
+.record-card__meta {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    min-width: 148px;
+}
+
 .record-card__avatar {
     width: 48px;
     height: 48px;
@@ -253,34 +295,46 @@ function getRecordSummary(record: PrizeRecord): string {
 
 .record-card__content {
     min-width: 0;
-}
-
-.record-card__title-row {
+    flex: 1;
+    padding: 12px 14px;
+    border: 1px solid rgba(85, 104, 255, 0.08);
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(85, 104, 255, 0.05), rgba(142, 108, 255, 0.04));
+    align-items: flex-start;
     gap: 10px;
-    flex-wrap: wrap;
 }
 
-.record-card__content strong {
+.record-card__meta strong {
     color: #16213e;
     font-size: 17px;
     line-height: 1.4;
 }
 
 .record-card__content p {
-    margin-top: 6px;
+    margin: 0;
     color: #627099;
-    line-height: 1.7;
+    font-size: 14px;
+    line-height: 1.75;
+}
+
+.record-card__time {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #8a94b3;
+    font-size: 12px;
+    line-height: 1.6;
 }
 
 .record-card__badge {
     display: inline-flex;
     align-items: center;
-    min-height: 32px;
+    min-height: 28px;
     padding: 0 10px;
     border-radius: 999px;
-    background: rgba(85, 104, 255, 0.1);
-    color: #5568ff;
-    font-size: 12px;
+    background: rgba(85, 104, 255, 0.12);
+    color: #5b63f6;
+    font-size: 11px;
     font-weight: 700;
 }
 
@@ -341,10 +395,16 @@ function getRecordSummary(record: PrizeRecord): string {
     .panel-head,
     .record-card,
     .record-card__main,
+    .record-card__info,
+    .record-card__content,
     .record-card__aside,
     .shop-records-panel__pagination {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .record-card__meta {
+        min-width: 0;
     }
 
     .panel-head__link {

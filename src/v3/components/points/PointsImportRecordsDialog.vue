@@ -25,9 +25,12 @@
                     :disabled="loading"
                 >
                     <i-ep-upload-filled class="upload-panel__icon" />
-                    <p v-if="!fileName" class="upload-panel__title">将 Excel 拖到此处，或点击选择文件</p>
-                    <p v-else class="upload-panel__title">{{ fileName }}</p>
-                    <p class="upload-panel__hint">表头支持“姓名 / 分值”，可选“项目”列</p>
+                    <p class="upload-panel__title">
+                        {{ loading ? loadingText : (fileName || "将 Excel 拖到此处，或点击选择文件") }}
+                    </p>
+                    <p class="upload-panel__hint">
+                        {{ loading ? "请稍候，系统正在读取并校验积分记录。" : "表头支持“姓名 / 分值”，可选“项目”列" }}
+                    </p>
                 </el-upload>
             </section>
 

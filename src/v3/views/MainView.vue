@@ -59,10 +59,10 @@
                     <SemesterSwitchButton :active-class-id="activeClassId" :current-semester-id="currentSemesterId"
                         @switched="handleSemesterSwitched" />
                     <ClassSwitchButton :active-class-id="activeClassId" @switched="handleClassSwitched" />
-                    <RouterLink to="/v3/settings" class="header-actions__button">
+                    <RouterLink to="/settings" class="header-actions__button">
                         进入设置
                     </RouterLink>
-                    <RouterLink to="/v3/points" class="header-actions__button is-primary">
+                    <RouterLink to="/points" class="header-actions__button is-primary">
                         进入积分中心
                     </RouterLink>
                 </div>
@@ -159,53 +159,53 @@ const navItems: NavItem[] = [
         id: "dashboard",
         label: "班级总览",
         icon: "01",
-        to: "/v3/dashboard",
+        to: "/dashboard",
         heading: "高一（2）班课堂工作台"
     },
     {
         id: "students",
         label: "学生管理",
         icon: "02",
-        to: "/v3/students",
+        to: "/students",
         heading: "学生与分组管理"
     },
     {
         id: "points",
         label: "积分中心",
         icon: "03",
-        to: "/v3/points",
+        to: "/points",
         heading: "课堂积分中心"
     },
     {
         id: "shop",
         label: "积分商城",
         icon: "04",
-        to: "/v3/shop",
+        to: "/shop",
         heading: "积分商城管理"
     },
     {
         id: "tools",
         label: "课堂工具",
         icon: "05",
-        to: "/v3/tools",
+        to: "/tools",
         heading: "课堂工具箱"
     },
     {
         id: "settings",
         label: "设置中心",
         icon: "06",
-        to: "/v3/settings",
+        to: "/settings",
         heading: "设置与辅助功能"
     }
 ]
 
 /** 提供底部快捷入口的静态数据。 */
 const dockActions: LinkActionItem[] = [
-    { id: "dock-students", label: "学生管理", to: "/v3/students" },
-    { id: "dock-points", label: "积分中心", to: "/v3/points" },
-    { id: "dock-shop", label: "积分商城", to: "/v3/shop" },
-    { id: "dock-tools", label: "打开工具箱", to: "/v3/tools" },
-    { id: "dock-settings", label: "设置中心", to: "/v3/settings" }
+    { id: "dock-students", label: "学生管理", to: "/students" },
+    { id: "dock-points", label: "积分中心", to: "/points" },
+    { id: "dock-shop", label: "积分商城", to: "/shop" },
+    { id: "dock-tools", label: "打开工具箱", to: "/tools" },
+    { id: "dock-settings", label: "设置中心", to: "/settings" }
 ]
 
 /** 返回当前激活的班级 ID。 */

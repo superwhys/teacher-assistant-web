@@ -4,12 +4,16 @@ import { useMainLoadingStore } from '@/stores/mainLoadingStore'
 
 const routes = [
   {
-    path: '/v3',
+    path: '/v3/:pathMatch(.*)*',
+    redirect: '/'
+  },
+  {
+    path: '/',
     component: () => import('@/v3/views/MainView.vue'),
     children: [
       {
         path: '',
-        redirect: '/v3/dashboard',
+        redirect: '/dashboard',
       },
       {
         path: 'dashboard',
@@ -49,66 +53,66 @@ const routes = [
       },
     ]
   },
-  {
-    path: '/',
-    component: () => import('@/layouts/AppLayout.vue'),
-    children: [
-      {
-        path: '',
-        redirect: '/points',
-      },
-      {
-        path: 'students',
-        component: () => import('@/views/ClassView.vue'),
-        meta: { keepAlive: false },
-      },
-      {
-        path: 'points',
-        component: () => import('@/views/PointsView.vue'),
-        meta: { keepAlive: false },
-      },
-      {
-        path: 'points/history',
-        component: () => import('@/views/PointsHistoryView.vue'),
-        meta: { keepAlive: false },
-      },
-      {
-        path: 'points/shop',
-        component: () => import('@/views/ShopView.vue'),
-        meta: { keepAlive: false },
-      },
-      {
-        path: 'tools',
-        component: () => import('@/views/ToolsView.vue'),
-        meta: { keepAlive: true },
-      },
-      {
-        path: 'tools/timer',
-        component: () => import('@/components/tools/TimerView.vue'),
-        meta: { keepAlive: true },
-      },
-      {
-        path: 'tools/rollcall',
-        component: () => import('@/components/tools/RollCallView.vue'),
-        meta: { keepAlive: true },
-      },
-      {
-        path: 'tools/lottery',
-        component: () => import('@/components/tools/LotteryView.vue'),
-        meta: { keepAlive: true },
-      },
-      {
-        path: 'settings',
-        component: () => import('@/views/SettingsView.vue'),
-        meta: { keepAlive: false },
-      },
-      {
-        path: 'opinion',
-        component: () => import('@/views/OpinionView.vue'),
-        meta: { keepAlive: false },
-      },
-    ],
-  },
+  // {
+  //   path: '/',
+  //   component: () => import('@/layouts/AppLayout.vue'),
+  //   // children: [
+  //   //   {
+  //   //     path: '',
+  //   //     redirect: '/points',
+  //   //   },
+  //   //   {
+  //   //     path: 'students',
+  //   //     component: () => import('@/views/ClassView.vue'),
+  //   //     meta: { keepAlive: false },
+  //   //   },
+  //   //   {
+  //   //     path: 'points',
+  //   //     component: () => import('@/views/PointsView.vue'),
+  //   //     meta: { keepAlive: false },
+  //   //   },
+  //   //   {
+  //   //     path: 'points/history',
+  //   //     component: () => import('@/views/PointsHistoryView.vue'),
+  //   //     meta: { keepAlive: false },
+  //   //   },
+  //   //   {
+  //   //     path: 'points/shop',
+  //   //     component: () => import('@/views/ShopView.vue'),
+  //   //     meta: { keepAlive: false },
+  //   //   },
+  //   //   {
+  //   //     path: 'tools',
+  //   //     component: () => import('@/views/ToolsView.vue'),
+  //   //     meta: { keepAlive: true },
+  //   //   },
+  //   //   {
+  //   //     path: 'tools/timer',
+  //   //     component: () => import('@/components/tools/TimerView.vue'),
+  //   //     meta: { keepAlive: true },
+  //   //   },
+  //   //   {
+  //   //     path: 'tools/rollcall',
+  //   //     component: () => import('@/components/tools/RollCallView.vue'),
+  //   //     meta: { keepAlive: true },
+  //   //   },
+  //   //   {
+  //   //     path: 'tools/lottery',
+  //   //     component: () => import('@/components/tools/LotteryView.vue'),
+  //   //     meta: { keepAlive: true },
+  //   //   },
+  //   //   {
+  //   //     path: 'settings',
+  //   //     component: () => import('@/views/SettingsView.vue'),
+  //   //     meta: { keepAlive: false },
+  //   //   },
+  //   //   {
+  //   //     path: 'opinion',
+  //   //     component: () => import('@/views/OpinionView.vue'),
+  //   //     meta: { keepAlive: false },
+  //   //   },
+  //   // ],
+  // },
   {
     path: '/auth',
     component: () => import('@/views/AuthView.vue'),
@@ -132,7 +136,7 @@ router.beforeEach((to) => {
   }
   if (cache.isAuthenticated && to.path === '/auth') {
     mainLoading.endRoute(token)
-    return { path: '/points' }
+    return { path: '/dashboard' }
   }
   return true
 })

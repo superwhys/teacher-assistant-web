@@ -16,14 +16,6 @@ interface RollCallPreviewStudent {
     totalPoints: number
 }
 
-/** 定义抽奖器预览项结构。 */
-interface LotteryPreviewItem {
-    description: string
-    id: string
-    name: string
-    sourceLabel: string
-}
-
 /** 定义计时器状态结构。 */
 interface TimerState {
     intervalId: number | null
@@ -203,37 +195,6 @@ export function useToolsWorkspace() {
         }, 0)
     })
 
-    /** 返回抽奖器预览奖品列表。 */
-    const lotteryPreviewItems = computed<LotteryPreviewItem[]>(() => {
-        const shopPrizeNames = new Set(
-            shopPrizes.value
-                .map((item) => item.name?.trim() ?? "")
-                .filter((item) => item.length > 0)
-        )
-        const poolPrizeItems = lotteryPools.value.flatMap((pool) => {
-            return pool.prizes.map((item) => ({
-                id: `${pool.id}-${item.name}`,
-                name: item.name,
-                description: `${pool.name} · 权重 ${item.weight} · ${item.enabled ? "已启用" : "已停用"}`,
-                sourceLabel: shopPrizeNames.has(item.name) ? "商城同步" : "自定义奖池"
-            }))
-        })
-
-        if (poolPrizeItems.length > 0) {
-            return poolPrizeItems.slice(0, 3)
-        }
-
-        return shopPrizes.value
-            .filter((item) => typeof item.id === "number" && typeof item.name === "string" && item.name.trim().length > 0)
-            .slice(0, 3)
-            .map((item) => ({
-                id: `shop-${item.id}`,
-                name: item.name!.trim(),
-                description: `商城库存 ${item.stock ?? 0} · 兑换积分 ${item.points ?? 0}`,
-                sourceLabel: "商城奖品"
-            }))
-    })
-
     /** 同步当前点名学生到可用学生列表。 */
     function syncCurrentRollCallStudent(): void {
         if (students.value.length === 0) {
@@ -318,7 +279,6 @@ export function useToolsWorkspace() {
         currentRollCallName,
         drawRandomStudent,
         lotteryPools,
-        lotteryPreviewItems,
         resetTimer,
         shopPrizes,
         students,

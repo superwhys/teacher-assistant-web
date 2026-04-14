@@ -1,38 +1,20 @@
 <template>
     <div class="tools-view">
         <section class="tools-view__grid">
-            <ToolsTimerCard
-                :display-time="timerDisplayTime"
-                :is-running="timerState.isRunning"
-                :preset-minutes="timerState.presetMinutes"
-                :preset-options="timerPresetOptions"
-                :status-label="timerStatusLabel"
-                :status-tone-class="timerStatusToneClass"
-                @open-timer="openToolRoute('/v3/tools/timer')"
-                @reset="resetTimer"
-                @select-preset="applyTimerPreset"
-                @toggle="toggleTimer"
-            />
+            <ToolsTimerCard :display-time="timerDisplayTime" :is-running="timerState.isRunning"
+                :preset-minutes="timerState.presetMinutes" :preset-options="timerPresetOptions"
+                :status-label="timerStatusLabel" :status-tone-class="timerStatusToneClass"
+                @open-timer="openToolRoute('/tools/timer')" @reset="resetTimer" @select-preset="applyTimerPreset"
+                @toggle="toggleTimer" />
 
-            <ToolsRollCallCard
-                :disabled="students.length === 0"
-                :initials="currentRollCallInitials"
-                :student-count="students.length"
-                :student-meta="currentRollCallMeta"
-                :student-name="currentRollCallName"
-                @open-roll-call="openToolRoute('/v3/tools/rollcall')"
-                @open-students="openToolRoute('/v3/students')"
-                @random="drawRandomStudent"
-            />
+            <ToolsRollCallCard :disabled="students.length === 0" :initials="currentRollCallInitials"
+                :student-count="students.length" :student-meta="currentRollCallMeta" :student-name="currentRollCallName"
+                @open-roll-call="openToolRoute('/tools/rollcall')" @open-students="openToolRoute('/students')"
+                @random="drawRandomStudent" />
 
-            <ToolsLotteryCard
-                :pool-count="lotteryPools.length"
-                :prize-count="activeLotteryPrizeCount"
-                :prize-items="lotteryPreviewItems"
+            <ToolsLotteryCard :pool-count="lotteryPools.length" :prize-count="activeLotteryPrizeCount"
                 :shop-prize-count="shopPrizes.length"
-                @open-lottery="openToolRoute('/v3/tools/lottery')"
-                @open-shop="openToolRoute('/v3/shop')"
-            />
+                @open-lottery="openToolRoute('/tools/lottery')" @open-shop="openToolRoute('/shop')" />
         </section>
     </div>
 </template>
@@ -55,7 +37,6 @@ const {
     currentRollCallName,
     drawRandomStudent,
     lotteryPools,
-    lotteryPreviewItems,
     resetTimer,
     shopPrizes,
     students,

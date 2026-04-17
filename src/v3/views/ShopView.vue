@@ -1,16 +1,9 @@
 <template>
     <div class="shop-view">
-        <ShopOverviewBanner
-            :active-class-name="activeClassName"
-            :active-semester-name="activeSemesterName"
-            :can-mutate-shop="canMutateShop"
-            :is-archived-semester="isArchivedSemester"
-            :metric-items="overviewMetrics"
-            :prize-count="prizes.length"
-            @add-prize="openAddPrizeDialog"
-            @open-import="importDialogVisible = true"
-            @view-records="handleViewRecords"
-        />
+        <ShopOverviewBanner :active-class-name="activeClassName" :active-semester-name="activeSemesterName"
+            :can-mutate-shop="canMutateShop" :is-archived-semester="isArchivedSemester" :metric-items="overviewMetrics"
+            :prize-count="prizes.length" @add-prize="openAddPrizeDialog" @open-import="importDialogVisible = true"
+            @view-records="handleViewRecords" />
 
         <div v-if="isArchivedSemester" class="shop-view__notice">
             <i-ep-warning-filled class="shop-view__notice-icon" />
@@ -18,105 +11,47 @@
         </div>
 
         <section class="shop-view__tabs">
-            <button
-                type="button"
-                class="shop-view__tab-button"
-                :class="{ 'is-active': activeTab === 'overview' }"
-                @click="activeTab = 'overview'"
-            >
+            <button type="button" class="shop-view__tab-button" :class="{ 'is-active': activeTab === 'overview' }"
+                @click="activeTab = 'overview'">
                 商品总览
             </button>
-            <button
-                type="button"
-                class="shop-view__tab-button"
-                :class="{ 'is-active': activeTab === 'records' }"
-                @click="activeTab = 'records'"
-            >
+            <button type="button" class="shop-view__tab-button" :class="{ 'is-active': activeTab === 'records' }"
+                @click="activeTab = 'records'">
                 兑换记录
             </button>
         </section>
 
         <Transition name="content-panel" mode="out-in">
             <div v-if="activeTab === 'overview'" key="overview" class="shop-view__content-grid">
-                <ShopPrizeShelf
-                    :items="prizes"
-                    :can-exchange="canMutateShop"
-                    @delete="requestDeletePrize"
-                    @edit="openEditPrizeDialog"
-                    @exchange="openExchangeDialog"
-                />
+                <ShopPrizeShelf :items="prizes" :can-exchange="canMutateShop" @delete="requestDeletePrize"
+                    @edit="openEditPrizeDialog" @exchange="openExchangeDialog" />
 
-                <ShopRecordsPanel
-                    :records="recentRecords"
-                    :loading="recordsLoading"
-                    :total="recordsTotal"
-                    :page-size="recordsPageSize"
-                    :current-page="recordsCurrentPage"
-                    :student-id-name-map="studentIdNameMap"
-                    :prize-id-map="prizeIdMap"
-                    preview
-                    @open-full="handleViewRecords"
-                    @undo="requestUndoExchange"
-                />
+                <ShopRecordsPanel :records="recentRecords" :loading="recordsLoading" :total="recordsTotal"
+                    :page-size="recordsPageSize" :current-page="recordsCurrentPage"
+                    :student-id-name-map="studentIdNameMap" :prize-id-map="prizeIdMap" preview
+                    @open-full="handleViewRecords" @undo="requestUndoExchange" />
             </div>
 
-            <ShopRecordsPanel
-                v-else
-                key="records"
-                :records="records"
-                :loading="recordsLoading"
-                :total="recordsTotal"
-                :page-size="recordsPageSize"
-                :current-page="recordsCurrentPage"
-                :student-id-name-map="studentIdNameMap"
-                :prize-id-map="prizeIdMap"
-                @page-change="handleRecordsPageChange"
-                @undo="requestUndoExchange"
-            />
+            <ShopRecordsPanel v-else key="records" :records="records" :loading="recordsLoading" :total="recordsTotal"
+                :page-size="recordsPageSize" :current-page="recordsCurrentPage" :student-id-name-map="studentIdNameMap"
+                :prize-id-map="prizeIdMap" @page-change="handleRecordsPageChange" @undo="requestUndoExchange" />
         </Transition>
 
-        <ShopPrizeEditorDialog
-            v-model="itemDialogVisible"
-            :form="itemForm"
-            :mode="itemDialogMode"
-            @save="savePrize"
-        />
+        <ShopPrizeEditorDialog v-model="itemDialogVisible" :form="itemForm" :mode="itemDialogMode" @save="savePrize" />
 
-        <ShopExchangeDialog
-            v-model="exchangeDialogVisible"
-            :available-points-by-student-id="availablePointsByStudentId"
-            :form="exchangeForm"
-            :max-count="Math.max(1, selectedPrizeInfo.stock)"
-            :prize="selectedPrizeInfo"
-            :required-points="requiredPoints"
-            :students="studentsForExchange"
-            @confirm="confirmExchange"
-        />
+        <ShopExchangeDialog v-model="exchangeDialogVisible" :available-points-by-student-id="availablePointsByStudentId"
+            :form="exchangeForm" :max-count="Math.max(1, selectedPrizeInfo.stock)" :prize="selectedPrizeInfo"
+            :required-points="requiredPoints" :students="studentsForExchange" @confirm="confirmExchange" />
 
-        <ShopImportDialog
-            v-model="importDialogVisible"
-            @confirm="confirmImport"
-        />
+        <ShopImportDialog v-model="importDialogVisible" @confirm="confirmImport" />
 
-        <StudentsConfirmDialog
-            v-model="deleteDialogVisible"
-            title="删除商品"
-            eyebrow="风险操作"
-            description="删除后该商品会从当前商城中移除，已有兑换记录不会被自动删除，请确认后再执行。"
-            :message="deleteDialogMessage"
-            confirm-text="确认删除"
-            @confirm="confirmDeletePrize"
-        />
+        <StudentsConfirmDialog v-model="deleteDialogVisible" title="删除商品" eyebrow="风险操作"
+            description="删除后该商品会从当前商城中移除，已有兑换记录不会被自动删除，请确认后再执行。" :message="deleteDialogMessage" confirm-text="确认删除"
+            @confirm="confirmDeletePrize" />
 
-        <StudentsConfirmDialog
-            v-model="undoDialogVisible"
-            title="撤销兑换"
-            eyebrow="风险操作"
-            description="撤销后会回退本次兑换产生的库存和积分变更，请确认这条记录确实需要撤销。"
-            :message="undoDialogMessage"
-            confirm-text="确认撤销"
-            @confirm="confirmUndoExchange"
-        />
+        <StudentsConfirmDialog v-model="undoDialogVisible" title="撤销兑换" eyebrow="风险操作"
+            description="撤销后会回退本次兑换产生的库存和积分变更，请确认这条记录确实需要撤销。" :message="undoDialogMessage" confirm-text="确认撤销"
+            @confirm="confirmUndoExchange" />
     </div>
 </template>
 
@@ -845,6 +780,12 @@ watch(activeTab, async (tab) => {
 .content-panel-leave-to {
     opacity: 0;
     transform: translateY(8px);
+}
+
+@media (max-width: 1460px) {
+    .shop-view__content-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 1200px) {

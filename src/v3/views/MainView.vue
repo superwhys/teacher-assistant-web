@@ -41,7 +41,7 @@
         </aside>
 
         <main class="main-view__main">
-            <header class="main-view__header">
+            <header class="main-view__header" :class="{ 'has-floating-timer': showHeaderTimerBubble }">
                 <div class="page-heading">
                     <p class="page-heading__caption">{{ pageHeadingCaption }}</p>
                     <h1 class="page-heading__title">{{ currentPageTitle }}</h1>
@@ -51,6 +51,15 @@
                         </span>
                     </div>
                 </div>
+
+                <button v-if="showHeaderTimerBubble" type="button" class="header-timer-bubble" @click="openTimerPage">
+                    <span class="header-timer-bubble__eyebrow">课堂计时进行中</span>
+                    <strong class="header-timer-bubble__time">{{ timerDisplayTime }}</strong>
+                    <span class="header-timer-bubble__meta">当前进度 {{ timerProgressPercent }}%</span>
+                    <span class="header-timer-bubble__track">
+                        <span class="header-timer-bubble__fill" :style="{ width: `${timerProgressPercent}%` }" />
+                    </span>
+                </button>
 
                 <div class="header-actions">
                     <button type="button" class="header-actions__button" @click="lockNow">
@@ -104,16 +113,46 @@
                 </div>
             </div>
 
+            <AppDialogShell
+                v-model="timerFinishedDialogVisible"
+                title="计时结束"
+                eyebrow="课堂提醒"
+                description="本轮课堂计时已经结束，请及时查看当前教学节奏。"
+                width="560px"
+            >
+                <div class="timer-finished-dialog">
+                    <div class="timer-finished-dialog__icon">
+                        <el-icon><Timer /></el-icon>
+                    </div>
+                    <div class="timer-finished-dialog__time">{{ timerDisplayTime }}</div>
+                    <p class="timer-finished-dialog__summary">倒计时已到，当前计时器已自动停止。</p>
+                </div>
+
+                <template #footer>
+                    <div class="timer-finished-dialog__actions">
+                        <button type="button" class="header-actions__button" @click="openTimerPage">
+                            查看计时器
+                        </button>
+                        <button type="button" class="header-actions__button is-primary" @click="closeTimerFinishedDialog">
+                            我知道了
+                        </button>
+                    </div>
+                </template>
+            </AppDialogShell>
+
         </main>
     </div>
 </template>
 
 <script setup lang="ts">
+import { Timer } from "@element-plus/icons-vue";
+import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import ClassSwitchButton from "@/v3/components/ClassSwitchButton.vue";
 import SemesterSwitchButton from "@/v3/components/SemesterSwitchButton.vue";
 import { classManager } from "@/managers/class";
 import { userApi } from "@/api/user";
 import { useCacheStore } from "@/stores/cacheStore";
+import { useSharedTimer } from "@/v3/composables/useToolsWorkspace";
 import type { ClassDTO, SemesterDTO } from "@/types/class";
 import { isApiRequestError } from "@/types/api";
 import { computeTrialFromProfile, normalizeUserProfile } from "@/utils/userProfile";
@@ -147,6 +186,7 @@ interface ChipItem {
 const route = useRoute();
 const router = useRouter()
 const cacheStore = useCacheStore()
+const { closeTimerFinishedDialog, timerDisplayTime, timerFinishedDialogVisible, timerProgressPercent, timerState } = useSharedTimer()
 const classes = ref<ClassDTO[]>([])
 const classesLoading = ref(false)
 const userMenuVisible = ref(false)
@@ -543,6 +583,15 @@ const currentPageTitle = computed<string>(() => {
     return currentNavItem.value.heading
 })
 
+/** 返回是否展示顶部计时气泡。 */
+const showHeaderTimerBubble = computed<boolean>(() => {
+    if (!timerState.isRunning) {
+        return false
+    }
+
+    return route.path !== "/tools" && route.path !== "/tools/timer"
+})
+
 /** 处理当前用户菜单点击事件。 */
 async function handleUserMenuCommand(command: string): Promise<void> {
     if (command !== "logout") {
@@ -584,6 +633,12 @@ function syncUserProfileByAuthState(token: string | null, expired: boolean): voi
 /** 切换底部高频操作栏的展开状态。 */
 function toggleDockCollapsed(): void {
     dockCollapsed.value = !dockCollapsed.value
+}
+
+/** 打开完整计时器页面。 */
+function openTimerPage(): void {
+    closeTimerFinishedDialog()
+    void router.push("/tools/timer")
 }
 
 watch(
@@ -884,6 +939,7 @@ onBeforeUnmount(() => {
 }
 
 .main-view__header {
+    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -943,6 +999,66 @@ onBeforeUnmount(() => {
 .header-actions {
     align-self: flex-end;
     justify-content: flex-end;
+}
+
+.header-timer-bubble {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(320px, calc(100% - 380px));
+    padding: 14px 18px;
+    display: grid;
+    gap: 8px;
+    border: 1px solid rgba(85, 104, 255, 0.16);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 16px 36px rgba(85, 104, 255, 0.16);
+    backdrop-filter: blur(16px);
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.header-timer-bubble:hover {
+    transform: translate(-50%, calc(-50% - 2px));
+    box-shadow: 0 20px 42px rgba(85, 104, 255, 0.2);
+}
+
+.header-timer-bubble__eyebrow {
+    color: #5568ff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.header-timer-bubble__time {
+    color: #16213e;
+    font-size: 26px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.header-timer-bubble__meta {
+    color: #627099;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.header-timer-bubble__track {
+    height: 8px;
+    display: block;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(85, 104, 255, 0.12);
+}
+
+.header-timer-bubble__fill {
+    height: 100%;
+    display: block;
+    border-radius: inherit;
+    background: linear-gradient(135deg, #5568ff, #8e6cff);
+    transition: width 0.24s ease;
 }
 
 .header-actions__button,
@@ -1125,6 +1241,47 @@ onBeforeUnmount(() => {
     min-height: 52px;
 }
 
+.timer-finished-dialog {
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+    padding: 12px 0 4px;
+    text-align: center;
+}
+
+.timer-finished-dialog__icon {
+    width: 72px;
+    height: 72px;
+    display: grid;
+    place-items: center;
+    border-radius: 24px;
+    background: linear-gradient(135deg, rgba(85, 104, 255, 0.14), rgba(142, 108, 255, 0.18));
+    color: #5568ff;
+    font-size: 32px;
+}
+
+.timer-finished-dialog__time {
+    color: #16213e;
+    font-size: clamp(42px, 7vw, 64px);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.04em;
+}
+
+.timer-finished-dialog__summary {
+    margin: 0;
+    color: #627099;
+    font-size: 15px;
+    line-height: 1.7;
+}
+
+.timer-finished-dialog__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+}
+
 .lock-card :deep(.el-input__wrapper) {
     min-height: 52px;
     border-radius: 16px;
@@ -1171,8 +1328,27 @@ onBeforeUnmount(() => {
         align-self: stretch;
     }
 
+    .header-timer-bubble {
+        position: static;
+        order: 3;
+        width: 100%;
+        transform: none;
+    }
+
+    .header-timer-bubble:hover {
+        transform: translateY(-2px);
+    }
+
     .main-view__content {
         padding: 18px;
+    }
+
+    .timer-finished-dialog__actions {
+        width: 100%;
+    }
+
+    .timer-finished-dialog__actions .header-actions__button {
+        flex: 1;
     }
 
     .main-view__dock {

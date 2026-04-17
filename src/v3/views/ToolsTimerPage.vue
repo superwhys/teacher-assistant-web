@@ -3,8 +3,10 @@
         <section class="tools-timer-page__content">
             <ToolsTimerCard :display-time="timerDisplayTime" :is-running="timerState.isRunning"
                 :preset-minutes="timerState.presetMinutes" :preset-options="timerPresetOptions"
+                :preset-unit="timerState.presetUnit" :preset-unit-label="timerPresetUnitLabel"
                 :show-open-page-action="false" :status-label="timerStatusLabel" :status-tone-class="timerStatusToneClass"
-                @reset="resetTimer" @select-preset="applyTimerPreset" @toggle="toggleTimer" />
+                @reset="resetTimer" @select-preset="applyTimerPreset" @toggle="toggleTimer"
+                @toggle-unit="toggleTimerPresetUnit" />
         </section>
     </ToolsStandalonePageFrame>
 </template>
@@ -21,9 +23,11 @@ const {
     resetTimer,
     timerDisplayTime,
     timerPresetOptions,
+    timerPresetUnitLabel,
     timerState,
     timerStatusLabel,
     timerStatusToneClass,
+    toggleTimerPresetUnit,
     toggleTimer
 } = useToolsWorkspace()
 </script>

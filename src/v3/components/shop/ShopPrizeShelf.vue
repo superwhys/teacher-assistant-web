@@ -4,21 +4,13 @@
             <div>
                 <span class="panel-head__eyebrow">商品列表</span>
                 <h3>课堂奖品卡片</h3>
-                <p>保留原有接口能力，使用更适合大屏展示的卡片布局。</p>
             </div>
             <span class="panel-head__meta">共 {{ items.length }} 个奖品</span>
         </div>
 
         <div v-if="items.length > 0" class="shop-prize-shelf__grid">
-            <ShopPrizeCard
-                v-for="item in items"
-                :key="item.id ?? item.name"
-                :item="item"
-                :can-exchange="canExchange"
-                @delete="emit('delete', $event)"
-                @edit="emit('edit', $event)"
-                @exchange="emit('exchange', $event)"
-            />
+            <ShopPrizeCard v-for="item in items" :key="item.id ?? item.name" :item="item" :can-exchange="canExchange"
+                @delete="emit('delete', $event)" @edit="emit('edit', $event)" @exchange="emit('exchange', $event)" />
         </div>
 
         <div v-else class="shop-prize-shelf__empty">

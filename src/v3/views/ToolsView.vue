@@ -3,9 +3,10 @@
         <section class="tools-view__grid">
             <ToolsTimerCard :display-time="timerDisplayTime" :is-running="timerState.isRunning"
                 :preset-minutes="timerState.presetMinutes" :preset-options="timerPresetOptions"
+                :preset-unit="timerState.presetUnit" :preset-unit-label="timerPresetUnitLabel" :show-custom-minutes="false"
                 :status-label="timerStatusLabel" :status-tone-class="timerStatusToneClass"
                 @open-timer="openToolRoute('/tools/timer')" @reset="resetTimer" @select-preset="applyTimerPreset"
-                @toggle="toggleTimer" />
+                @toggle="toggleTimer" @toggle-unit="toggleTimerPresetUnit" />
 
             <ToolsRollCallCard :disabled="students.length === 0" :initials="currentRollCallInitials"
                 :student-count="students.length" :student-meta="currentRollCallMeta" :student-name="currentRollCallName"
@@ -42,9 +43,11 @@ const {
     students,
     timerDisplayTime,
     timerPresetOptions,
+    timerPresetUnitLabel,
     timerState,
     timerStatusLabel,
     timerStatusToneClass,
+    toggleTimerPresetUnit,
     toggleTimer
 } = useToolsWorkspace()
 

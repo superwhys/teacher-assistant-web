@@ -1,11 +1,7 @@
 <template>
-    <AppDialogShell
-        v-model="visible"
-        :eyebrow="mode === 'add' ? '新增奖品' : '编辑奖品'"
-        :title="mode === 'add' ? '配置新的课堂奖励商品' : '更新当前商品信息'"
-        description="支持设置商品名称、所需积分、库存和展示图标，方便在大屏和移动端统一呈现。"
-        width="720px"
-    >
+    <AppDialogShell v-model="visible" :eyebrow="mode === 'add' ? '新增奖品' : '编辑奖品'"
+        :title="mode === 'add' ? '配置新的课堂奖励商品' : '更新当前商品信息'" description="支持设置商品名称、所需积分、库存和展示图标，方便在大屏和移动端统一呈现。"
+        width="720px">
         <div class="editor-layout">
             <section class="editor-form">
                 <el-form :model="form" label-position="top">
@@ -25,12 +21,8 @@
 
                     <el-form-item label="商品图标">
                         <el-select v-model="form.icon" placeholder="请选择图标" style="width: 100%;">
-                            <el-option
-                                v-for="option in shopIconOptions"
-                                :key="option.value"
-                                :label="option.label"
-                                :value="option.value"
-                            >
+                            <el-option v-for="option in shopIconOptions" :key="option.value" :label="option.label"
+                                :value="option.value">
                                 <div class="icon-option">
                                     <component :is="option.icon" />
                                     <span>{{ option.label }}</span>
@@ -40,12 +32,8 @@
                     </el-form-item>
 
                     <el-form-item label="商品描述">
-                        <el-input
-                            v-model="form.description"
-                            type="textarea"
-                            :rows="4"
-                            placeholder="例如：可用于奖励课堂表现优异的同学。"
-                        />
+                        <el-input v-model="form.description" type="textarea" :rows="4"
+                            placeholder="例如：可用于奖励课堂表现优异的同学。" />
                     </el-form-item>
                 </el-form>
             </section>
@@ -53,7 +41,6 @@
             <aside class="editor-preview">
                 <div class="editor-preview__visual" :class="visualClass">
                     <component :is="iconComponent" />
-                    <span>{{ previewName }}</span>
                 </div>
 
                 <div class="editor-preview__meta">
@@ -131,7 +118,7 @@ const visible = computed({
 const previewName = computed<string>(() => props.form.name.trim() || "课堂奖励")
 
 /** 返回商品预览描述。 */
-const previewDescription = computed<string>(() => props.form.description.trim() || "这里会展示商品说明，帮助老师在课堂上快速介绍奖品内容。")
+const previewDescription = computed<string>(() => props.form.description.trim() || "")
 
 /** 返回商品预览积分。 */
 const previewPoints = computed<number>(() => normalizePositiveNumber(props.form.points))
@@ -179,7 +166,7 @@ function normalizePositiveNumber(value: number, allowZero = false): number {
     gap: 12px;
 }
 
-.editor-form__grid > * {
+.editor-form__grid>* {
     flex: 1;
 }
 
@@ -199,21 +186,15 @@ function normalizePositiveNumber(value: number, allowZero = false): number {
 .editor-preview__visual {
     height: 180px;
     border-radius: 24px;
-    display: grid;
-    place-items: center;
-    gap: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: #ffffff;
 }
 
 .editor-preview__visual :deep(svg) {
-    width: 34px;
-    height: 34px;
-}
-
-.editor-preview__visual span {
-    font-size: 26px;
-    font-weight: 800;
-    text-align: center;
+    width: 40px;
+    height: 40px;
 }
 
 .shop-card__visual--violet {
@@ -264,7 +245,7 @@ function normalizePositiveNumber(value: number, allowZero = false): number {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.editor-preview__summary > div {
+.editor-preview__summary>div {
     padding: 18px;
     border-radius: 22px;
     background: rgba(22, 33, 62, 0.05);

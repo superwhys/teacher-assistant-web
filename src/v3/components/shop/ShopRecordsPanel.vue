@@ -4,51 +4,45 @@
             <div>
                 <span class="panel-head__eyebrow">{{ preview ? "兑换信息" : "兑换记录" }}</span>
                 <h3>{{ preview ? "最近兑换动态" : "班级兑换历史" }}</h3>
-                <p>{{ preview ? "适合大屏快速播报兑换结果，也方便教师确认库存变化。" : "支持分页查看和撤销兑换记录，便于课堂奖励追踪。" }}</p>
             </div>
-            <button
-                v-if="preview"
-                type="button"
-                class="panel-head__link"
-                @click="emit('openFull')"
-            >
+            <button v-if="preview" type="button" class="panel-head__link" @click="emit('openFull')">
                 查看全部
             </button>
         </div>
 
         <div v-loading="loading" class="shop-records-panel__body">
             <div v-if="records.length > 0" class="shop-records-panel__list">
-                <article
-                    v-for="(record, index) in records"
-                    :key="record.id ?? `${record.student_id}-${record.prize_id}-${index}`"
-                    class="record-card"
-                >
-                    <div class="record-card__main">
+                <article v-for="(record, index) in records"
+                    :key="record.id ?? `${record.student_id}-${record.prize_id}-${index}`" class="record-card">
+                    <div class="record-card__identity">
                         <div class="record-card__avatar">
                             {{ getStudentInitial(record) }}
                         </div>
-                        <div class="record-card__info">
-                            <div class="record-card__meta">
-                                <strong>{{ getStudentName(record) }}</strong>
-                                <span class="record-card__time">
-                                    <i-ep-clock />
-                                    {{ getRecordTimeLabel(record) }}
-                                </span>
-                            </div>
-                            <div class="record-card__content">
-                                <span class="record-card__badge">
-                                    {{ getPrizeName(record) }}
-                                </span>
-                                <p>{{ getRecordSummary(record) }}</p>
-                            </div>
+                        <div class="record-card__meta">
+                            <strong>{{ getStudentName(record) }}</strong>
+                            <span class="record-card__time">
+                                <i-ep-clock />
+                                {{ getRecordTimeLabel(record) }}
+                            </span>
                         </div>
                     </div>
 
-                    <div class="record-card__aside">
-                        <span class="record-card__points">{{ getRecordPoints(record) }} 积分</span>
-                        <button type="button" class="record-card__undo" @click="emit('undo', record)">
-                            撤销
-                        </button>
+                    <div class="record-card__footer">
+                        <div class="record-card__content">
+                            <el-tooltip :content="getRecordBadgeLabel(record)" placement="top">
+                                <span class="record-card__badge">
+                                    <span class="record-card__badge-name">{{ getPrizeName(record) }}</span>
+                                    <span class="record-card__badge-count">X {{ getRecordCount(record) }}</span>
+                                </span>
+                            </el-tooltip>
+                        </div>
+
+                        <div class="record-card__aside">
+                            <span class="record-card__points">{{ getRecordPoints(record) }} 积分</span>
+                            <button type="button" class="record-card__undo" @click="emit('undo', record)">
+                                撤销
+                            </button>
+                        </div>
                     </div>
                 </article>
             </div>
@@ -61,14 +55,8 @@
         </div>
 
         <div v-if="!preview && total > pageSize" class="shop-records-panel__pagination">
-            <el-pagination
-                background
-                layout="prev, pager, next, jumper, total"
-                :current-page="currentPage"
-                :page-size="pageSize"
-                :total="total"
-                @current-change="emit('pageChange', $event)"
-            />
+            <el-pagination background layout="prev, pager, next, jumper, total" :current-page="currentPage"
+                :page-size="pageSize" :total="total" @current-change="emit('pageChange', $event)" />
         </div>
     </section>
 </template>
@@ -134,10 +122,14 @@ function getRecordPoints(record: PrizeRecord): number {
     return toNumber(record.points, 0)
 }
 
-/** 返回记录摘要说明。 */
-function getRecordSummary(record: PrizeRecord): string {
-    const count = toNumber(record.count, 0)
-    return `兑换了 ${count} 个奖品，共消耗 ${getRecordPoints(record)} 积分。`
+/** 返回记录对应的兑换数量。 */
+function getRecordCount(record: PrizeRecord): number {
+    return toNumber(record.count, 0)
+}
+
+/** 返回记录气泡展示文案。 */
+function getRecordBadgeLabel(record: PrizeRecord): string {
+    return `${getPrizeName(record)} X ${getRecordCount(record)}`
 }
 
 /** 返回记录对应的兑换时间文案。 */
@@ -147,16 +139,24 @@ function getRecordTimeLabel(record: PrizeRecord): string {
         return "时间未知"
     }
 
-    if (typeof rawValue === "number") {
-        return formatChineseDateTime(new Date(rawValue))
-    }
-
-    const parsedTimestamp = Date.parse(String(rawValue))
+    const parsedTimestamp = typeof rawValue === "number"
+        ? rawValue
+        : Date.parse(String(rawValue))
     if (!Number.isFinite(parsedTimestamp)) {
         return "时间未知"
     }
 
-    return formatChineseDateTime(new Date(parsedTimestamp))
+    const recordDate = new Date(parsedTimestamp)
+    return props.preview ? getCompactRecordTimeLabel(recordDate) : formatChineseDateTime(recordDate)
+}
+
+/** 返回预览态使用的紧凑时间文案。 */
+function getCompactRecordTimeLabel(date: Date): string {
+    const month = String(date.getMonth() + 1).padStart(2, "0")
+    const day = String(date.getDate()).padStart(2, "0")
+    const hour = String(date.getHours()).padStart(2, "0")
+    const minute = String(date.getMinutes()).padStart(2, "0")
+    return `${month}-${day} ${hour}:${minute}`
 }
 </script>
 
@@ -176,7 +176,7 @@ function getRecordTimeLabel(record: PrizeRecord): string {
 
 .panel-head,
 .record-card,
-.record-card__main,
+.record-card__footer,
 .record-card__info,
 .record-card__content,
 .record-card__aside,
@@ -239,6 +239,8 @@ function getRecordTimeLabel(record: PrizeRecord): string {
     font: inherit;
     font-weight: 700;
     cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .shop-records-panel__body {
@@ -257,27 +259,30 @@ function getRecordTimeLabel(record: PrizeRecord): string {
     border-radius: 24px;
     background: rgba(255, 255, 255, 0.82);
     gap: 14px;
-}
-
-.record-card__main {
-    min-width: 0;
-    gap: 14px;
-    flex: 1;
-}
-
-.record-card__info {
-    min-width: 0;
-    gap: 18px;
-    flex: 1;
+    flex-direction: column;
     align-items: stretch;
+}
+
+.record-card__footer {
+    min-width: 0;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.record-card__identity {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
 }
 
 .record-card__meta {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-end;
     gap: 6px;
-    min-width: 148px;
+    min-width: 0;
 }
 
 .record-card__avatar {
@@ -296,25 +301,14 @@ function getRecordTimeLabel(record: PrizeRecord): string {
 .record-card__content {
     min-width: 0;
     flex: 1;
-    padding: 12px 14px;
-    border: 1px solid rgba(85, 104, 255, 0.08);
-    border-radius: 18px;
-    background: linear-gradient(135deg, rgba(85, 104, 255, 0.05), rgba(142, 108, 255, 0.04));
-    align-items: flex-start;
-    gap: 10px;
+    align-items: center;
 }
 
 .record-card__meta strong {
     color: #16213e;
     font-size: 17px;
     line-height: 1.4;
-}
-
-.record-card__content p {
-    margin: 0;
-    color: #627099;
-    font-size: 14px;
-    line-height: 1.75;
+    word-break: break-all;
 }
 
 .record-card__time {
@@ -324,18 +318,34 @@ function getRecordTimeLabel(record: PrizeRecord): string {
     color: #8a94b3;
     font-size: 12px;
     line-height: 1.6;
+    flex-wrap: wrap;
 }
 
 .record-card__badge {
     display: inline-flex;
     align-items: center;
-    min-height: 28px;
-    padding: 0 10px;
-    border-radius: 999px;
-    background: rgba(85, 104, 255, 0.12);
+    max-width: 100%;
+    min-width: 0;
+    padding: 8px 14px;
+    border-radius: 12px;
+    background: rgba(85, 104, 255, 0.08);
     color: #5b63f6;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 700;
+    line-height: 1.4;
+    gap: 8px;
+}
+
+.record-card__badge-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.record-card__badge-count {
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .record-card__aside {
@@ -386,6 +396,18 @@ function getRecordTimeLabel(record: PrizeRecord): string {
     color: #5568ff;
 }
 
+@media (max-width: 1200px) {
+    .record-card__footer {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .record-card__aside {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
 @media (max-width: 768px) {
     .shop-records-panel {
         padding: 18px;
@@ -394,17 +416,13 @@ function getRecordTimeLabel(record: PrizeRecord): string {
 
     .panel-head,
     .record-card,
-    .record-card__main,
+    .record-card__footer,
     .record-card__info,
     .record-card__content,
     .record-card__aside,
     .shop-records-panel__pagination {
         align-items: stretch;
         flex-direction: column;
-    }
-
-    .record-card__meta {
-        min-width: 0;
     }
 
     .panel-head__link {

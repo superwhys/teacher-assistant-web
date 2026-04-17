@@ -4,14 +4,14 @@
             <button type="button" class="icon-button" aria-label="编辑商品" @click="emit('edit', item)">
                 <i-ep-edit />
             </button>
-            <button type="button" class="icon-button icon-button--danger" aria-label="删除商品" @click="emit('delete', item)">
+            <button type="button" class="icon-button icon-button--danger" aria-label="删除商品"
+                @click="emit('delete', item)">
                 <i-ep-delete />
             </button>
         </div>
 
         <div class="shop-card__visual" :class="visualClass">
             <component :is="iconComponent" />
-            <span>{{ itemName }}</span>
         </div>
 
         <div class="shop-card__title">
@@ -27,16 +27,10 @@
 
             <div class="shop-card__meta">
                 <span class="shop-card__stock" :class="{ 'is-empty': itemStock <= 0 }">
-                    {{ itemStock <= 0 ? "库存不足" : `库存 ${itemStock}` }}
-                </span>
-                <button
-                    type="button"
-                    class="exchange-button"
-                    :disabled="itemStock <= 0 || !canExchange"
-                    @click="emit('exchange', item)"
-                >
-                    {{ itemStock <= 0 ? "已兑完" : "立即兑换" }}
-                </button>
+                    {{ itemStock <= 0 ? "库存不足" : `库存 ${itemStock}` }} </span>
+                        <button type="button" class="exchange-button" :disabled="itemStock <= 0 || !canExchange"
+                            @click="emit('exchange', item)">
+                            {{ itemStock <= 0 ? "已兑完" : "兑换" }} </button>
             </div>
         </div>
     </article>
@@ -67,7 +61,7 @@ const emit = defineEmits<{
 const itemName = computed<string>(() => props.item.name?.trim() || "未命名商品")
 
 /** 返回商品描述。 */
-const itemDescription = computed<string>(() => props.item.description?.trim() || "可作为课堂激励或阶段奖励发放。")
+const itemDescription = computed<string>(() => props.item.description?.trim() || "")
 
 /** 返回商品所需积分。 */
 const itemPoints = computed<number>(() => toNumber(props.item.points, 0))
@@ -164,22 +158,16 @@ function toNumber(value: unknown, fallback = 0): number {
 .shop-card__visual {
     height: 126px;
     border-radius: 18px;
-    display: grid;
-    place-items: center;
-    gap: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: #ffffff;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .shop-card__visual :deep(svg) {
-    width: 26px;
-    height: 26px;
-}
-
-.shop-card__visual span {
-    font-size: 22px;
-    font-weight: 800;
-    text-align: center;
+    width: 40px;
+    height: 40px;
 }
 
 .shop-card__visual--violet {
@@ -223,6 +211,7 @@ function toNumber(value: unknown, fallback = 0): number {
     color: #16213e;
     font-size: 18px;
     line-height: 1.3;
+    min-height: 48px;
 }
 
 .shop-card__title p {
@@ -241,6 +230,7 @@ function toNumber(value: unknown, fallback = 0): number {
     display: block;
     color: #627099;
     font-size: 12px;
+    white-space: nowrap;
 }
 
 .shop-card__points strong {
@@ -309,10 +299,6 @@ function toNumber(value: unknown, fallback = 0): number {
 
     .shop-card__visual {
         height: 112px;
-    }
-
-    .shop-card__visual span {
-        font-size: 20px;
     }
 
     .shop-card__footer {

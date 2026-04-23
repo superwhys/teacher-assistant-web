@@ -7,14 +7,43 @@
         <div class="student-card__accent" :class="student.toneClass" />
 
         <div class="student-card__head">
-            <div class="student-profile">
-                <div class="student-avatar" :class="student.toneClass">
-                    {{ student.initials }}
+            <div class="student-card__main">
+                <div class="student-profile">
+                    <div class="student-avatar" :class="student.toneClass">
+                        {{ student.initials }}
+                    </div>
+                    <div class="student-profile__body">
+                        <div v-if="displayMode === 'list'" class="student-profile__inline">
+                            <strong class="student-profile__name">{{ student.name }}</strong>
+                            <p>{{ getGenderLabel(student.gender) }}</p>
+                            <span class="student-profile__score" :style="getScoreStyle(student.toneClass)">
+                                <span class="student-profile__score-label">可用</span>
+                                <span class="student-profile__score-value">{{ student.availablePoints }}</span>
+                                <span class="student-profile__score-separator">/</span>
+                                <span class="student-profile__score-label">总分</span>
+                                <span class="student-profile__score-value">{{ student.totalPoints }}</span>
+                            </span>
+                        </div>
+                        <div v-else>
+                            <strong class="student-profile__name">{{ student.name }}</strong>
+                            <div class="student-profile__meta">
+                                <p>{{ getGenderLabel(student.gender) }}</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="student-profile__body">
-                    <strong class="student-profile__name">{{ student.name }}</strong>
-                    <p>{{ getGenderLabel(student.gender) }}</p>
+
+                <div class="student-card__actions">
+                    <button type="button" class="icon-button" @click.stop="emit('edit', student)">
+                        <i-ep-edit-pen />
+                    </button>
+                    <button type="button" class="icon-button icon-button--danger" @click.stop="emit('remove', student)">
+                        <i-ep-delete />
+                    </button>
                 </div>
+            </div>
+
+            <div v-if="displayMode !== 'list'" class="student-card__score-row">
                 <span class="student-profile__score" :style="getScoreStyle(student.toneClass)">
                     <span class="student-profile__score-label">可用</span>
                     <span class="student-profile__score-value">{{ student.availablePoints }}</span>
@@ -22,15 +51,6 @@
                     <span class="student-profile__score-label">总分</span>
                     <span class="student-profile__score-value">{{ student.totalPoints }}</span>
                 </span>
-            </div>
-
-            <div class="student-card__actions">
-                <button type="button" class="icon-button" @click.stop="emit('edit', student)">
-                    <i-ep-edit-pen />
-                </button>
-                <button type="button" class="icon-button icon-button--danger" @click.stop="emit('remove', student)">
-                    <i-ep-delete />
-                </button>
             </div>
         </div>
     </article>
@@ -217,13 +237,20 @@ function getScoreStyle(toneClass: string): Record<string, string> {
 }
 
 .student-card__head {
-    display: flex;
+    display: grid;
+    gap: 10px;
+}
+
+.student-card__main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
 }
 
-.student-card.is-list .student-card__head {
+.student-card.is-list .student-card__head,
+.student-card.is-list .student-card__main {
     min-width: 0;
 }
 
@@ -283,26 +310,47 @@ function getScoreStyle(toneClass: string): Record<string, string> {
 
 .student-profile__body {
     min-width: 0;
+    flex: 1;
+}
+
+.student-profile__inline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.student-profile__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
 }
 
 .student-profile__name {
     display: block;
-    min-width: 5em;
     max-width: 100%;
     font-size: 18px;
     line-height: 1.4;
+    word-break: break-word;
 }
 
 .student-card.is-list .student-profile__name {
     font-size: 16px;
     line-height: 1.4;
+    max-width: none;
+    flex-shrink: 0;
+    word-break: normal;
 }
 
 .student-profile__score {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 4px;
-    flex-shrink: 0;
+    align-self: flex-start;
+    flex: 0 0 auto;
+    min-width: max-content;
     padding: 6px 12px;
     border-radius: 999px;
     background: var(--student-score-background, rgba(85, 104, 255, 0.08));
@@ -319,6 +367,7 @@ function getScoreStyle(toneClass: string): Record<string, string> {
 }
 
 .student-profile__score-value {
+    flex-shrink: 0;
     min-width: 3ch;
     text-align: right;
     font-variant-numeric: tabular-nums;
@@ -330,25 +379,33 @@ function getScoreStyle(toneClass: string): Record<string, string> {
 
 .student-card.is-list .student-profile__score {
     font-size: 12px;
+    padding: 4px 10px;
+}
+
+.student-card__score-row {
+    display: flex;
+    padding-left: 54px;
 }
 
 .student-profile__body p {
-    margin: 4px 0 0;
+    margin: 0;
     color: #627099;
     font-size: 13px;
     line-height: 1.6;
 }
 
 .student-card.is-list .student-profile__body p {
-    margin-top: 2px;
+    margin-top: 0;
     font-size: 12px;
     line-height: 1.4;
+    flex-shrink: 0;
 }
 
 .student-card__actions {
     display: flex;
     gap: 6px;
     flex-shrink: 0;
+    align-self: center;
 }
 
 .icon-button {
@@ -380,13 +437,56 @@ function getScoreStyle(toneClass: string): Record<string, string> {
 }
 
 @media (max-width: 768px) {
-    .student-card__head {
-        flex-direction: column;
+    .student-card__main {
+        grid-template-columns: minmax(0, 1fr);
         align-items: stretch;
+    }
+
+    .student-profile {
+        align-items: flex-start;
+    }
+
+    .student-card__score-row {
+        padding-left: 48px;
     }
 
     .student-card__actions {
         justify-content: flex-end;
+        align-self: stretch;
+    }
+
+    .student-card.is-list .student-profile__meta {
+        gap: 6px;
+    }
+}
+
+@media (max-width: 520px) {
+    .student-card {
+        padding: 18px 14px 16px;
+    }
+
+    .student-card.is-list {
+        padding: 12px 14px;
+    }
+
+    .student-profile {
+        gap: 8px;
+    }
+
+    .student-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        font-size: 16px;
+    }
+
+    .student-card__score-row {
+        padding-left: 0;
+    }
+
+    .student-profile__score {
+        padding: 5px 10px;
+        font-size: 12px;
     }
 }
 </style>

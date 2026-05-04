@@ -343,7 +343,7 @@ const panelDesc = computed(() => {
         return "请输入邮箱验证码并设置新密码。";
     }
     return activeTab.value === "login"
-        ? "首次登录可免费试用 7 天，登录后将自动跳转到原目标页面。"
+        ? "首次登录可免费试用 7 天。"
         : "注册成功后即可使用邮箱密码登录系统。";
 });
 

@@ -94,7 +94,7 @@
             <StudentsListPanel class="student-panel" :has-active-class="hasActiveClass"
                 :is-all-selected="isAllFilteredStudentsSelected" :layout-mode="layoutMode" :loading="loading"
                 :multi-select-enabled="multiSelectEnabled" :selected-student-ids="selectedStudentIds"
-                :students="filteredStudents" @edit-student="openEdit" @remove-student="requestRemoveStudent"
+                :sort-by="sortBy" :students="filteredStudents" @edit-student="openEdit" @remove-student="requestRemoveStudent"
                 @select-student="handleSelectStudent" @toggle-multi-select="toggleMultiSelectEnabled"
                 @toggle-select-all="toggleSelectAllStudents" />
 

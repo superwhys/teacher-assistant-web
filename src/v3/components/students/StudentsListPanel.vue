@@ -39,7 +39,7 @@
         </div>
 
         <div v-else-if="layoutMode === 'list'" class="list-column">
-            <div v-if="studentsGroupedByLetter.length > 0" class="index-container">
+            <div v-if="shouldUseLetterGroups && studentsGroupedByLetter.length > 0" class="index-container">
                 <div class="letter-index">
                     <button v-for="letter in availableLetters" :key="letter" type="button" class="index-item"
                         @click="scrollToLetter(letter)">
@@ -48,17 +48,26 @@
                 </div>
             </div>
 
-            <div class="list-content">
-                <section v-for="group in studentsGroupedByLetter" :key="group.letter"
-                    :id="`student-letter-group-${group.letter}`" class="letter-group">
-                    <div class="letter-header">{{ group.letter }}</div>
-                    <div class="student-group-stack" :class="{ 'is-single': group.students.length === 1 }">
-                        <StudentsListCard v-for="student in group.students" :key="student.id"
-                            :display-mode="layoutMode" :selected="isStudentSelected(student.id)" :student="student"
-                            @edit="emit('edit-student', $event)" @remove="emit('remove-student', $event)"
-                            @select="emit('select-student', $event)" />
-                    </div>
-                </section>
+            <div class="list-content" :class="{ 'is-full-width': !shouldUseLetterGroups }">
+                <template v-if="shouldUseLetterGroups">
+                    <section v-for="group in studentsGroupedByLetter" :key="group.letter"
+                        :id="`student-letter-group-${group.letter}`" class="letter-group">
+                        <div class="letter-header">{{ group.letter }}</div>
+                        <div class="student-group-stack" :class="{ 'is-single': group.students.length === 1 }">
+                            <StudentsListCard v-for="student in group.students" :key="student.id"
+                                :display-mode="layoutMode" :selected="isStudentSelected(student.id)" :student="student"
+                                @edit="emit('edit-student', $event)" @remove="emit('remove-student', $event)"
+                                @select="emit('select-student', $event)" />
+                        </div>
+                    </section>
+                </template>
+
+                <div v-else class="student-group-stack">
+                    <StudentsListCard v-for="student in students" :key="student.id" :display-mode="layoutMode"
+                        :selected="isStudentSelected(student.id)" :student="student"
+                        @edit="emit('edit-student', $event)" @remove="emit('remove-student', $event)"
+                        @select="emit('select-student', $event)" />
+                </div>
             </div>
         </div>
 
@@ -73,6 +82,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { pinyin } from "pinyin-pro";
+import type { StudentsSortOption } from "@/types/student";
 import StudentsListCard, { type StudentsListCardItem } from "@/v3/components/students/StudentsListCard.vue";
 
 /** 定义学生列表面板布局模式。 */
@@ -89,6 +99,7 @@ interface StudentsListPanelProps {
     loading: boolean
     multiSelectEnabled: boolean
     selectedStudentIds: number[]
+    sortBy: StudentsSortOption
     students: StudentsListPanelItem[]
 }
 
@@ -141,8 +152,17 @@ function getFirstLetter(name: string): string {
     return "#"
 }
 
+/** 判断当前列表视图是否需要展示姓名首字母分组。 */
+const shouldUseLetterGroups = computed<boolean>(() => {
+    return props.sortBy === "name-asc" || props.sortBy === "name-desc"
+})
+
 /** 返回列表视图下按首字母分组后的学生列表。 */
 const studentsGroupedByLetter = computed<StudentLetterGroup[]>(() => {
+    if (!shouldUseLetterGroups.value) {
+        return []
+    }
+
     const groups = new Map<string, StudentsListPanelItem[]>()
 
     props.students.forEach((student) => {
@@ -153,24 +173,9 @@ const studentsGroupedByLetter = computed<StudentLetterGroup[]>(() => {
     })
 
     return Array.from(groups.entries())
-        .sort(([left], [right]) => {
-            if (left === right) {
-                return 0
-            }
-
-            if (left === "#") {
-                return 1
-            }
-
-            if (right === "#") {
-                return -1
-            }
-
-            return left.localeCompare(right)
-        })
         .map(([letter, students]) => ({
             letter,
-            students: [...students].sort((left, right) => left.name.localeCompare(right.name, "zh-CN"))
+            students
         }))
 })
 
@@ -312,6 +317,10 @@ function scrollToLetter(letter: string): void {
 
 .list-content {
     min-width: 0;
+}
+
+.list-content.is-full-width {
+    grid-column: 1 / -1;
 }
 
 .letter-group+.letter-group {

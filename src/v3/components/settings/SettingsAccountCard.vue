@@ -98,6 +98,8 @@ defineProps<SettingsAccountCardProps>()
         radial-gradient(circle at top right, rgba(142, 108, 255, 0.16), transparent 28%),
         radial-gradient(circle at bottom left, rgba(85, 104, 255, 0.12), transparent 26%),
         rgba(255, 255, 255, 0.8);
+    container-type: inline-size;
+    container-name: account-card;
 }
 
 .account-card__layout {
@@ -197,6 +199,19 @@ defineProps<SettingsAccountCardProps>()
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+}
+
+.context-inline-item .status-chip {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.35;
+    height: auto;
+    padding: 8px 12px;
+    overflow-wrap: anywhere;
 }
 
 .context-inline-item__label {
@@ -304,22 +319,22 @@ defineProps<SettingsAccountCardProps>()
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-@media (max-width: 1280px) {
+@container account-card (max-width: 1080px) {
     .account-card__layout {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .hero-banner,
-    .account-context-card {
+    .hero-banner {
         grid-column: 1 / -1;
     }
 
     .account-context-card {
+        grid-column: auto;
         grid-row: auto;
     }
 }
 
-@media (max-width: 768px) {
+@container account-card (max-width: 420px) {
     .account-card__layout {
         grid-template-columns: 1fr;
     }
@@ -337,7 +352,9 @@ defineProps<SettingsAccountCardProps>()
     .account-summary__name-row {
         flex-direction: column;
     }
+}
 
+@media (max-width: 768px) {
     .hero-card {
         padding: 20px;
         border-radius: 26px;

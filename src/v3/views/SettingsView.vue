@@ -3,8 +3,8 @@
         <section class="section-head">
             <div class="section-head__body">
                 <div class="eyebrow">设置中心</div>
-                <h2>账号、学期、锁屏与反馈设置</h2>
-                <p>可在这里查看账号信息、切换学期、设置锁屏密码并提交使用反馈。</p>
+                <h2>账号、班级、锁屏与反馈设置</h2>
+                <p>可在这里查看账号信息、修改班级名称、切换学期、设置锁屏密码并提交使用反馈。</p>
             </div>
         </section>
 
@@ -28,12 +28,16 @@
                     :semester-notice-text="semesterNoticeText" :semester-permission-text="semesterPermissionText"
                     :semester-permission-tone-class="semesterPermissionToneClass"
                     :semester-status-text="semesterStatusText" @go-dashboard="navigateTo('/v3/dashboard')"
-                    @open-next-semester="openNextSemesterDialog" />
+                    @open-next-semester="openNextSemesterDialog" @open-rename-class="openRenameClassDialog" />
 
                 <SettingsFeedbackCard v-model:feedback-content="feedbackContent"
                     :feedback-submitting="feedbackSubmitting" @clear="onClearFeedback" @submit="onSubmitFeedback" />
             </div>
         </section>
+
+        <SettingsRenameClassDialog v-model="renameClassDialogVisible" v-model:name="renameClassName"
+            :current-class-name="currentClassName" :loading="renameClassLoading" @closed="onRenameClassDialogClosed"
+            @confirm="confirmRenameClass" />
 
         <SettingsNextSemesterDialog v-model="nextSemesterDialogVisible" v-model:clear-points="nextSemesterClearPoints"
             v-model:name="nextSemesterName" :loading="nextSemesterLoading" @closed="onNextSemesterDialogClosed"
@@ -51,6 +55,7 @@ import SettingsClassStatusCard from "@/v3/components/settings/SettingsClassStatu
 import SettingsFeedbackCard from "@/v3/components/settings/SettingsFeedbackCard.vue";
 import SettingsLockCard from "@/v3/components/settings/SettingsLockCard.vue";
 import SettingsNextSemesterDialog from "@/v3/components/settings/SettingsNextSemesterDialog.vue";
+import SettingsRenameClassDialog from "@/v3/components/settings/SettingsRenameClassDialog.vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
@@ -60,6 +65,9 @@ const router = useRouter()
 
 const classes = ref<ClassDTO[]>([])
 const classesLoading = ref(false)
+const renameClassDialogVisible = ref(false)
+const renameClassName = ref("")
+const renameClassLoading = ref(false)
 const nextSemesterDialogVisible = ref(false)
 const nextSemesterName = ref("")
 const nextSemesterClearPoints = ref(false)
@@ -242,6 +250,57 @@ async function loadClassesFromApi(): Promise<void> {
         syncCurrentClassContextToCache()
     } finally {
         classesLoading.value = false
+    }
+}
+
+/** 打开修改班级名称弹窗。 */
+function openRenameClassDialog(): void {
+    if (!activeClassId.value) {
+        ElMessage.warning("当前没有可操作的班级")
+        return
+    }
+
+    renameClassName.value = currentClassName.value
+    renameClassDialogVisible.value = true
+}
+
+/** 在修改班级名称弹窗关闭时重置表单状态。 */
+function onRenameClassDialogClosed(): void {
+    renameClassName.value = ""
+    renameClassLoading.value = false
+}
+
+/** 提交修改班级名称的请求。 */
+async function confirmRenameClass(): Promise<void> {
+    if (!activeClassId.value || renameClassLoading.value) {
+        return
+    }
+
+    const className = renameClassName.value.trim()
+    if (!className) {
+        ElMessage.error("请输入班级名称")
+        return
+    }
+
+    if (className === currentClassName.value) {
+        renameClassDialogVisible.value = false
+        ElMessage.success("班级名称未发生变化")
+        return
+    }
+
+    if (classes.value.some((item) => item.name?.trim() === className && item.id !== activeClassId.value)) {
+        ElMessage.error("班级名称已存在")
+        return
+    }
+
+    renameClassLoading.value = true
+    try {
+        await classManager.update(activeClassId.value, className)
+        renameClassDialogVisible.value = false
+        ElMessage.success("已修改班级名称")
+        await loadClassesFromApi()
+    } finally {
+        renameClassLoading.value = false
     }
 }
 

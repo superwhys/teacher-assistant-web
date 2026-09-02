@@ -3,7 +3,7 @@
         <div class="panel-head panel-head--stack">
             <div>
                 <h3>班级状态概览</h3>
-                <p>查看当前班级、当前学期和课堂操作权限。</p>
+                <p>查看当前班级、当前学期和课堂操作权限，也可以在这里修改班级名称。</p>
             </div>
             <span class="status-chip" :class="semesterPermissionToneClass">
                 {{ semesterPermissionText }}
@@ -30,6 +30,14 @@
         </div>
 
         <div class="toolbar compact-toolbar">
+            <button
+                type="button"
+                class="ghost-button ghost-button--small"
+                :disabled="!activeClassId || classesLoading"
+                @click="emit('open-rename-class')"
+            >
+                修改班级名称
+            </button>
             <button
                 type="button"
                 class="ghost-button ghost-button--small"
@@ -62,6 +70,7 @@ interface SettingsClassStatusCardProps {
 interface SettingsClassStatusCardEmits {
     (event: "go-dashboard"): void
     (event: "open-next-semester"): void
+    (event: "open-rename-class"): void
 }
 
 defineProps<SettingsClassStatusCardProps>()

@@ -17,6 +17,7 @@ export const classApi = {
     list(): Promise<ApiResponse<ListClassesResp>> {
         return get<ListClassesResp>('/class/list')
     },
+    /** 修改指定班级的名称。 */
     update(classId: number, data: UpdateClassReq): Promise<ApiResponse<null>> {
         return put<null>(`/class/${classId}`, data)
     },

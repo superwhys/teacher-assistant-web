@@ -10,6 +10,7 @@ export const classManager = {
         const resp = await classApi.list()
         return resp.data?.classes ?? []
     },
+    /** 修改指定班级的名称。 */
     async update(classId: number, name: string): Promise<void> {
         await classApi.update(classId, { id: classId, name })
     },

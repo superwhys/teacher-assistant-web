@@ -34,6 +34,14 @@ defineOptions({ name: "ToolsLotteryPage" })
 
 @media (max-width: 1080px) {
     .tools-lottery-page__content {
+        flex: none;
+        height: auto;
+        max-height: none;
+        min-height: auto;
+        overflow: visible;
+    }
+
+    .tools-lottery-page__content :deep(.tools-lottery-workspace) {
         height: auto;
         max-height: none;
         overflow: visible;

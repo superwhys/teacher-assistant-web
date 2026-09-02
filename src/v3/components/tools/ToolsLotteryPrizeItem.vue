@@ -11,11 +11,8 @@
         <div class="prize-item__content">
             <strong>{{ item.name }}</strong>
             <div class="prize-item__tags">
-                <span v-if="item.source === 'shop'" class="tag tag--sky">商城商品</span>
+                <span v-if="item.source === 'shop'" class="tag tag--sky">商城</span>
                 <span class="tag tag--amber">权重 {{ item.weight }}</span>
-                <span class="tag" :class="item.enabled ? 'tag--green' : 'tag--slate'">
-                    {{ item.enabled ? "已启用" : "已停用" }}
-                </span>
             </div>
         </div>
         <el-switch
@@ -58,16 +55,17 @@ function handleToggleEnabled(): void {
 <style scoped>
 .prize-item {
     width: 100%;
-    height: 112px;
-    padding: 16px;
+    min-height: 56px;
+    padding: 8px 10px;
     flex: 0 0 auto;
     display: flex;
     align-items: center;
-    gap: 12px;
-    border: 1px solid rgba(122, 141, 198, 0.14);
-    border-radius: 22px;
+    gap: 10px;
+    border: 1px solid rgba(122, 141, 198, 0.12);
+    border-radius: 14px;
     background: #ffffff;
     text-align: left;
+    cursor: pointer;
 }
 
 .prize-item.is-disabled {
@@ -76,11 +74,11 @@ function handleToggleEnabled(): void {
 
 .prize-item__icon {
     flex-shrink: 0;
-    width: 46px;
-    height: 46px;
+    width: 34px;
+    height: 34px;
     display: grid;
     place-items: center;
-    border-radius: 16px;
+    border-radius: 12px;
     background: linear-gradient(135deg, #14b8a6, #12b981);
     color: #ffffff;
 }
@@ -91,7 +89,7 @@ function handleToggleEnabled(): void {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 8px;
+    gap: 5px;
     overflow: hidden;
 }
 
@@ -102,7 +100,7 @@ function handleToggleEnabled(): void {
 
 .prize-item__content strong {
     color: #16213e;
-    font-size: 16px;
+    font-size: 15px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -111,7 +109,7 @@ function handleToggleEnabled(): void {
 .prize-item__tags {
     display: flex;
     flex-wrap: nowrap;
-    gap: 8px;
+    gap: 6px;
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
@@ -126,10 +124,10 @@ function handleToggleEnabled(): void {
     align-items: center;
     justify-content: center;
     margin: 0;
-    min-height: 28px;
-    padding: 0 10px;
+    min-height: 20px;
+    padding: 0 7px;
     border-radius: 999px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     line-height: 1;
     text-align: center;
@@ -146,19 +144,15 @@ function handleToggleEnabled(): void {
     background: rgba(245, 158, 11, 0.16);
 }
 
-.tag--green {
-    color: #067647;
-    background: rgba(18, 185, 129, 0.12);
-}
-
-.tag--slate {
-    color: #475467;
-    background: rgba(71, 84, 103, 0.12);
-}
-
-@media (max-width: 768px) {
+@media (max-width: 768px), (max-height: 820px) {
     .prize-item {
-        height: 104px;
+        height: 60px;
+        padding: 8px 10px;
+    }
+
+    .prize-item__icon {
+        width: 32px;
+        height: 32px;
     }
 }
 </style>

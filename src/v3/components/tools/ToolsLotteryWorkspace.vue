@@ -1,18 +1,48 @@
 <template>
     <section class="tools-lottery-workspace" v-loading="isLoading">
-        <ToolsLotteryPoolPanel v-model:current-pool-id="currentPoolId" :has-current-pool="currentPool !== null"
-            :pools="pools" :prizes="prizes" @add-pool="openAddPoolDialog" @edit-current-pool="openCurrentPoolDialog"
-            @add-prize="openAddDialog" @import-prize="openImportDialog" @clear-all="openClearAllDialog"
-            @edit-prize="openEditDialog" @toggle-prize="toggleEnabled" />
+        <div class="tools-lottery-workspace__toolbar">
+            <div class="lottery-toolbar__pool">
+                <span class="lottery-toolbar__eyebrow">奖池</span>
+                <el-select v-model="currentPoolId" placeholder="选择奖池" size="large" class="lottery-toolbar__select">
+                    <el-option v-for="pool in pools" :key="pool.id" :label="pool.name" :value="pool.id" />
+                    <template #empty>
+                        <div class="lottery-toolbar__empty">
+                            <button type="button" class="text-button" @click="openAddPoolDialog">新建奖池</button>
+                        </div>
+                    </template>
+                </el-select>
+                <button type="button" class="icon-button" title="新建奖池" @click="openAddPoolDialog">
+                    <i-ep-plus />
+                </button>
+                <button type="button" class="icon-button" title="编辑奖池" :disabled="currentPool === null" @click="openCurrentPoolDialog">
+                    <i-ep-edit />
+                </button>
+            </div>
 
-        <main class="tools-lottery-workspace__main">
+            <div class="lottery-toolbar__actions">
+                <button type="button" class="ghost-button" @click="openAddDialog">
+                    添加奖品
+                </button>
+                <button type="button" class="ghost-button" @click="openImportDialog">
+                    商城导入
+                </button>
+                <button type="button" class="ghost-button danger" :disabled="prizes.length === 0"
+                    @click="openClearAllDialog">
+                    清空奖池
+                </button>
+            </div>
+        </div>
+
+        <div class="tools-lottery-workspace__stage">
             <ToolsLotteryDisplayPanel :current-name="currentName" :current-pool-name="currentPool?.name ?? ''"
                 :enabled-prize-count="enabledPrizes.length" :is-rolling="isRolling" :is-selected="isSelected"
-                :record-count="records.length" @toggle-rolling="toggleRolling" @draw-once="drawOnce"
-                @clear-records="openClearRecordsDialog" />
+                @toggle-rolling="toggleRolling" @draw-once="drawOnce" />
 
-            <ToolsLotteryHistoryPanel :records="records" />
-        </main>
+            <div class="tools-lottery-workspace__side">
+                <ToolsLotteryPoolPanel :prizes="prizes" @edit-prize="openEditDialog" @toggle-prize="toggleEnabled" />
+                <ToolsLotteryHistoryPanel :records="records" @clear-records="openClearRecordsDialog" />
+            </div>
+        </div>
 
         <ToolsLotteryPrizeDialog
             v-model="prizeDialogVisible"
@@ -692,39 +722,217 @@ onBeforeUnmount(() => {
 <style scoped>
 .tools-lottery-workspace {
     display: grid;
-    grid-template-columns: minmax(360px, 420px) minmax(0, 1fr);
-    gap: 20px;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 16px;
     height: 100%;
     min-height: 0;
-    background: #ffffff;
-    border-radius: 32px;
+    min-width: 0;
     overflow: hidden;
 }
 
-.tools-lottery-workspace__main {
-    display: grid;
-    grid-template-rows: minmax(320px, 0.82fr) minmax(260px, 1fr);
-    gap: 20px;
-    height: 100%;
+.tools-lottery-workspace__toolbar {
+    min-width: 0;
+    padding: 12px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid rgba(122, 141, 198, 0.16);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.82);
+}
+
+.lottery-toolbar__pool {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 280px;
+}
+
+.lottery-toolbar__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(18, 185, 129, 0.12);
+    color: #067647;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.lottery-toolbar__select {
+    flex: 1 1 180px;
+    max-width: 280px;
+    min-width: 140px;
+}
+
+.lottery-toolbar__empty {
+    padding: 10px;
+    text-align: center;
+}
+
+.lottery-toolbar__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.icon-button,
+.ghost-button,
+.text-button {
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+    border: 1px solid rgba(122, 141, 198, 0.24);
+    background: #ffffff;
+    color: #16213e;
+}
+
+.icon-button {
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    flex-shrink: 0;
+}
+
+.ghost-button,
+.text-button {
+    min-height: 42px;
+    padding: 0 14px;
+    border-radius: 14px;
+}
+
+.ghost-button.danger {
+    color: #c2410c;
+    background: rgba(255, 237, 213, 0.82);
+    border-color: rgba(251, 146, 60, 0.24);
+}
+
+.icon-button:hover,
+.ghost-button:hover,
+.text-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(18, 185, 129, 0.14);
+}
+
+.icon-button:disabled,
+.ghost-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.tools-lottery-workspace__stage {
     min-height: 0;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.82fr);
+    gap: 16px;
+}
+
+.tools-lottery-workspace__side {
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tools-lottery-workspace__side :deep(.tools-lottery-pool-panel) {
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+.tools-lottery-workspace__side :deep(.tools-lottery-history-panel) {
+    flex: 0 1 auto;
+    max-height: min(280px, 42%);
 }
 
 @media (max-width: 1080px) {
     .tools-lottery-workspace {
-        grid-template-columns: 1fr;
         height: auto;
         overflow: visible;
     }
 
-    .tools-lottery-workspace__main {
-        grid-template-rows: minmax(340px, 0.82fr) minmax(260px, 1fr);
-        height: auto;
+    .tools-lottery-workspace__stage {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(420px, auto) auto;
+    }
+
+    .tools-lottery-workspace__side {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+        grid-template-rows: minmax(280px, 360px);
+        gap: 12px;
+    }
+
+    .tools-lottery-workspace__side :deep(.tools-lottery-pool-panel),
+    .tools-lottery-workspace__side :deep(.tools-lottery-history-panel) {
+        flex: none;
+        max-height: none;
+        min-height: 280px;
     }
 }
 
-@media (max-width: 768px) {
-    .tools-lottery-workspace__main {
-        grid-template-rows: auto auto;
+@media (max-width: 820px) {
+    .tools-lottery-workspace__toolbar {
+        padding: 12px;
+        border-radius: 20px;
+    }
+
+    .lottery-toolbar__pool,
+    .lottery-toolbar__actions {
+        flex: 1 1 100%;
+    }
+
+    .lottery-toolbar__select {
+        max-width: none;
+    }
+
+    .lottery-toolbar__actions {
+        justify-content: flex-start;
+    }
+
+    .lottery-toolbar__actions .ghost-button {
+        flex: 1 1 120px;
+        padding: 0 8px;
+    }
+
+    .tools-lottery-workspace__stage {
+        grid-template-rows: minmax(360px, auto) auto;
+    }
+
+    .tools-lottery-workspace__side {
+        display: flex;
+        flex-direction: column;
+        grid-template-columns: none;
+        grid-template-rows: none;
+    }
+
+    .tools-lottery-workspace__side :deep(.tools-lottery-pool-panel),
+    .tools-lottery-workspace__side :deep(.tools-lottery-history-panel) {
+        min-height: 220px;
+    }
+}
+
+@media (max-width: 480px) {
+    .lottery-toolbar__actions .ghost-button {
+        flex-basis: calc(50% - 4px);
+        min-width: 0;
+    }
+
+    .lottery-toolbar__actions .ghost-button.danger {
+        flex-basis: 100%;
     }
 }
 </style>

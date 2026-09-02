@@ -1,25 +1,34 @@
 <template>
-    <div class="main-view">
-        <aside class="main-view__aside">
+    <div class="main-view" :class="{ 'is-aside-collapsed': asideCollapsed }">
+        <aside class="main-view__aside" :class="{ 'is-collapsed': asideCollapsed }">
             <section class="brand-card">
                 <div class="brand-card__badge">TA</div>
                 <div class="brand-card__content">
                     <h2 class="brand-card__title">教师助手</h2>
                 </div>
+                <button type="button" class="aside-collapse-button"
+                    :aria-expanded="!asideCollapsed"
+                    :aria-label="asideCollapsed ? '展开侧边栏' : '收起侧边栏'"
+                    :title="asideCollapsed ? '展开侧边栏' : '收起侧边栏'"
+                    @click="toggleAsideCollapsed">
+                    <i-ep-d-arrow-right v-if="asideCollapsed" />
+                    <i-ep-d-arrow-left v-else />
+                </button>
             </section>
 
             <nav class="aside-nav" aria-label="主导航">
                 <RouterLink v-for="item in navItems" :key="item.id" :to="item.to" class="aside-nav__item"
-                    :class="{ 'is-active': currentNavItem.id === item.id }">
+                    :class="{ 'is-active': currentNavItem.id === item.id }" :title="item.label">
                     <span class="aside-nav__icon">{{ item.icon }}</span>
-                    <span>{{ item.label }}</span>
+                    <span class="aside-nav__label">{{ item.label }}</span>
                 </RouterLink>
             </nav>
 
             <div ref="userMenuContainerRef" class="aside-user-dropdown">
                 <button type="button" class="aside-user" :class="{ 'is-open': userMenuVisible }"
+                    :title="asideCollapsed ? userDisplayName : undefined"
                     @click="toggleUserMenu">
-                    <el-avatar class="aside-user__avatar" :size="48" :src="userAvatar || undefined">
+                    <el-avatar class="aside-user__avatar" :size="asideCollapsed ? 40 : 48" :src="userAvatar || undefined">
                         {{ userInitial }}
                     </el-avatar>
                     <div class="aside-user__content">
@@ -189,10 +198,12 @@ const cacheStore = useCacheStore()
 const { closeTimerFinishedDialog, timerDisplayTime, timerFinishedDialogVisible, timerProgressPercent, timerState } = useSharedTimer()
 const classes = ref<ClassDTO[]>([])
 const classesLoading = ref(false)
+const ASIDE_COLLAPSED_STORAGE_KEY = "teacher-assistant-aside-collapsed"
 const userMenuVisible = ref(false)
 const userMenuContainerRef = ref<HTMLElement | null>(null)
 const userProfileRefreshing = ref(false)
 const dockCollapsed = ref(false)
+const asideCollapsed = ref(readAsideCollapsed())
 
 const navItems: NavItem[] = [
     {
@@ -630,6 +641,31 @@ function syncUserProfileByAuthState(token: string | null, expired: boolean): voi
     userMenuVisible.value = false
 }
 
+/** 读取本地保存的侧边栏收起状态。 */
+function readAsideCollapsed(): boolean {
+    try {
+        return window.localStorage.getItem(ASIDE_COLLAPSED_STORAGE_KEY) === "1"
+    } catch {
+        return false
+    }
+}
+
+/** 将当前侧边栏收起状态写入本地。 */
+function persistAsideCollapsed(collapsed: boolean): void {
+    try {
+        window.localStorage.setItem(ASIDE_COLLAPSED_STORAGE_KEY, collapsed ? "1" : "0")
+    } catch {
+        return
+    }
+}
+
+/** 切换左侧导航栏的收起状态。 */
+function toggleAsideCollapsed(): void {
+    asideCollapsed.value = !asideCollapsed.value
+    userMenuVisible.value = false
+    persistAsideCollapsed(asideCollapsed.value)
+}
+
 /** 切换底部高频操作栏的展开状态。 */
 function toggleDockCollapsed(): void {
     dockCollapsed.value = !dockCollapsed.value
@@ -686,6 +722,11 @@ onBeforeUnmount(() => {
         radial-gradient(circle at top right, rgba(85, 104, 255, 0.12), transparent 26%),
         linear-gradient(180deg, #f8faff 0%, #eef3ff 100%);
     color: #16213e;
+    transition: grid-template-columns 0.22s ease;
+}
+
+.main-view.is-aside-collapsed {
+    grid-template-columns: 88px minmax(0, 1fr);
 }
 
 .main-view__aside {
@@ -699,6 +740,13 @@ onBeforeUnmount(() => {
     background: rgba(17, 25, 53, 0.9);
     color: #eef3ff;
     backdrop-filter: blur(18px);
+    z-index: 20;
+    transition: padding 0.22s ease, gap 0.22s ease;
+}
+
+.main-view__aside.is-collapsed {
+    padding: 18px 12px;
+    gap: 16px;
 }
 
 .brand-card,
@@ -714,6 +762,46 @@ onBeforeUnmount(() => {
     padding: 18px;
     border-radius: 24px;
     background: linear-gradient(135deg, rgba(85, 104, 255, 0.28), rgba(142, 108, 255, 0.12));
+}
+
+.aside-collapse-button {
+    width: 36px;
+    height: 36px;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #eef3ff;
+    font-size: 16px;
+    cursor: pointer;
+    transition: transform 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.aside-collapse-button:hover {
+    transform: translateY(-1px);
+    border-color: rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.main-view.is-aside-collapsed .brand-card {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 8px;
+}
+
+.main-view.is-aside-collapsed .brand-card__content,
+.main-view.is-aside-collapsed .aside-nav__label,
+.main-view.is-aside-collapsed .aside-user__content,
+.main-view.is-aside-collapsed .aside-user__hint {
+    display: none;
+}
+
+.main-view.is-aside-collapsed .aside-collapse-button {
+    margin-left: 0;
 }
 
 .brand-card__badge {
@@ -779,6 +867,24 @@ onBeforeUnmount(() => {
     background: rgba(255, 255, 255, 0.12);
     color: #ffffff;
     transform: translateX(4px);
+}
+
+.main-view.is-aside-collapsed .aside-nav__item {
+    justify-content: center;
+    padding: 12px 8px;
+    transform: none;
+}
+
+.main-view.is-aside-collapsed .aside-nav__item:hover,
+.main-view.is-aside-collapsed .aside-nav__item.is-active {
+    transform: none;
+}
+
+.aside-nav__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .aside-nav__icon {
@@ -927,6 +1033,18 @@ onBeforeUnmount(() => {
 
 .aside-user-menu__item:hover {
     background: rgba(255, 255, 255, 0.12);
+}
+
+.main-view.is-aside-collapsed .aside-user {
+    justify-content: center;
+    padding: 10px;
+}
+
+.main-view.is-aside-collapsed .aside-user-menu {
+    left: calc(100% + 10px);
+    right: auto;
+    bottom: 0;
+    width: 180px;
 }
 
 .main-view__main {
@@ -1295,13 +1413,46 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 1080px) {
-    .main-view {
+    .main-view,
+    .main-view.is-aside-collapsed {
         grid-template-columns: 1fr;
     }
 
     .main-view__aside {
         position: static;
         height: auto;
+    }
+
+    .main-view.is-aside-collapsed .main-view__aside {
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+    }
+
+    .main-view.is-aside-collapsed .brand-card {
+        flex-direction: row;
+        padding: 8px 10px;
+    }
+
+    .main-view.is-aside-collapsed .aside-nav {
+        flex-direction: row;
+        flex: 1;
+        gap: 6px;
+        overflow-x: auto;
+    }
+
+    .main-view.is-aside-collapsed .aside-nav__item {
+        width: auto;
+        flex-shrink: 0;
+        padding: 8px;
+    }
+
+    .main-view.is-aside-collapsed .aside-user-menu {
+        left: auto;
+        right: 0;
+        bottom: auto;
+        top: calc(100% + 8px);
     }
 }
 

@@ -1,7 +1,7 @@
 <template>
     <div class="students-view">
         <section class="panel-surface control-panel">
-            <div class="control-grid">
+            <div class="control-toolbar">
                 <label class="control-block control-block--search">
                     <span class="control-label">快速搜索</span>
                     <div class="search-box">
@@ -11,77 +11,81 @@
                     </div>
                 </label>
 
-                <div class="control-block control-block--display">
-                    <span class="control-label">展示方式</span>
-                    <div class="segmented-control">
-                        <button type="button" class="chip-button" :class="{ 'is-active': layoutMode === 'card' }"
-                            @click="layoutMode = 'card'">
-                            卡片视图
-                        </button>
-                        <button type="button" class="chip-button" :class="{ 'is-active': layoutMode === 'list' }"
-                            @click="layoutMode = 'list'">
-                            列表视图
-                        </button>
+                <div class="control-actions">
+                    <div class="control-block">
+                        <span class="control-label">展示方式</span>
+                        <div class="segmented-control">
+                            <button type="button" class="chip-button" :class="{ 'is-active': layoutMode === 'card' }"
+                                @click="layoutMode = 'card'">
+                                卡片视图
+                            </button>
+                            <button type="button" class="chip-button" :class="{ 'is-active': layoutMode === 'list' }"
+                                @click="layoutMode = 'list'">
+                                列表视图
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="control-block">
+                        <span class="control-label">排序方式</span>
+                        <div class="segmented-control sort-control">
+                            <button type="button" class="chip-button" :class="{ 'is-active': isSortFieldActive('points') }"
+                                @click="handleSelectSortField('points')">
+                                按积分
+                            </button>
+                            <button type="button" class="chip-button" :class="{ 'is-active': isSortFieldActive('name') }"
+                                @click="handleSelectSortField('name')">
+                                按姓名
+                            </button>
+                            <span class="sort-divider" aria-hidden="true" />
+                            <button type="button" class="chip-button" :class="{ 'is-active': isSortDescending }"
+                                @click="toggleSortDirection">
+                                倒序
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="control-block">
+                        <span class="control-label">分组入口</span>
+                        <div class="toolbar-row">
+                            <button type="button" class="ghost-button ghost-button--small" :disabled="!hasActiveClass"
+                                @click="openGroupManageDialog">
+                                管理分组
+                            </button>
+                            <button type="button" class="ghost-button ghost-button--small" :disabled="!hasActiveClass"
+                                @click="openGroupImportDialog">
+                                Excel 导入分组
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="control-block">
+                        <span class="control-label">学生操作</span>
+                        <div class="toolbar-row">
+                            <button type="button" class="primary-button primary-button--small" :disabled="!hasActiveClass"
+                                @click="openAddStudentDialog('single')">
+                                <i-ep-plus />
+                                <span>添加学生</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
-
-                <div class="control-block control-block--sort">
-                    <span class="control-label">排序方式</span>
-                    <div class="segmented-control segmented-control--wrap sort-control">
-                        <button type="button" class="chip-button" :class="{ 'is-active': isSortFieldActive('points') }"
-                            @click="handleSelectSortField('points')">
-                            按积分
-                        </button>
-                        <button type="button" class="chip-button" :class="{ 'is-active': isSortFieldActive('name') }"
-                            @click="handleSelectSortField('name')">
-                            按姓名
-                        </button>
-                        <span class="sort-divider" aria-hidden="true" />
-                        <button type="button" class="chip-button" :class="{ 'is-active': isSortDescending }"
-                            @click="toggleSortDirection">
-                            倒序
-                        </button>
-                    </div>
-                </div>
-
-                <div class="control-block control-block--group">
-                    <span class="control-label">分组入口</span>
-                    <div class="toolbar-row">
-                        <button type="button" class="ghost-button ghost-button--small" :disabled="!hasActiveClass"
-                            @click="openGroupManageDialog">
-                            管理分组
-                        </button>
-                        <button type="button" class="ghost-button ghost-button--small" :disabled="!hasActiveClass"
-                            @click="openGroupImportDialog">
-                            Excel 导入分组
-                        </button>
-                    </div>
-                </div>
-
-                <div class="control-block control-block--action">
-                    <span class="control-label">学生操作</span>
-                    <div class="toolbar-row">
-                        <button type="button" class="primary-button primary-button--small" :disabled="!hasActiveClass"
-                            @click="openAddStudentDialog('single')">
-                            <i-ep-plus />
-                            <span>添加学生</span>
-                        </button>
-                    </div>
-                </div>
-
             </div>
 
-            <div class="group-chip-row">
-                <button type="button" class="chip-button group-chip" :class="{ 'is-active': selectedGroupId === null }"
-                    @click="handleSelectGroup(null)">
-                    全部学生
-                    <span>{{ studentCards.length }}</span>
-                </button>
-                <button v-for="group in groupChips" :key="group.id" type="button" class="chip-button group-chip"
-                    :class="{ 'is-active': selectedGroupId === group.id }" @click="handleSelectGroup(group.id)">
-                    {{ group.name }}
-                    <span>{{ group.count }}</span>
-                </button>
+            <div class="group-filter">
+                <span class="control-label">筛选分组</span>
+                <div class="group-chip-row">
+                    <button type="button" class="chip-button group-chip" :class="{ 'is-active': selectedGroupId === null }"
+                        @click="handleSelectGroup(null)">
+                        全部学生
+                        <span>{{ studentCards.length }}</span>
+                    </button>
+                    <button v-for="group in groupChips" :key="group.id" type="button" class="chip-button group-chip"
+                        :class="{ 'is-active': selectedGroupId === group.id }" @click="handleSelectGroup(group.id)">
+                        {{ group.name }}
+                        <span>{{ group.count }}</span>
+                    </button>
+                </div>
             </div>
         </section>
 
@@ -1108,17 +1112,13 @@ watch(filteredStudents, () => {
 .primary-button,
 .ghost-button,
 .chip-button {
-    min-height: 46px;
-    padding: 0 18px;
-    border-radius: 16px;
-}
-
-.primary-button,
-.ghost-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    min-height: 46px;
+    padding: 0 18px;
+    border-radius: 16px;
 }
 
 .primary-button {
@@ -1149,14 +1149,9 @@ watch(filteredStudents, () => {
     transform: none;
 }
 
-.ghost-button--small {
-    min-height: 42px;
-    padding: 0 14px;
-    border-radius: 14px;
-}
-
+.ghost-button--small,
 .primary-button--small {
-    min-height: 42px;
+    min-height: 46px;
     padding: 0 14px;
     border-radius: 14px;
 }
@@ -1173,40 +1168,35 @@ watch(filteredStudents, () => {
 .control-panel {
     display: grid;
     gap: 18px;
+    container-type: inline-size;
+    container-name: student-controls;
 }
 
-.control-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.5fr) repeat(4, minmax(0, 0.9fr));
-    grid-template-areas: "search display sort group action";
-    gap: 16px;
-    align-items: start;
+.control-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 16px 24px;
+}
+
+.control-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 16px 20px;
+    flex: 0 1 auto;
+    min-width: 0;
 }
 
 .control-block {
     display: grid;
-    gap: 10px;
+    gap: 8px;
     min-width: 0;
 }
 
 .control-block--search {
-    grid-area: search;
-}
-
-.control-block--display {
-    grid-area: display;
-}
-
-.control-block--sort {
-    grid-area: sort;
-}
-
-.control-block--group {
-    grid-area: group;
-}
-
-.control-block--action {
-    grid-area: action;
+    flex: 1 1 280px;
+    min-width: 0;
 }
 
 .control-label {
@@ -1220,8 +1210,7 @@ watch(filteredStudents, () => {
 
 .search-box {
     position: relative;
-    width: min(100%, 360px);
-    max-width: 360px;
+    width: 100%;
 }
 
 .search-box__icon {
@@ -1234,7 +1223,7 @@ watch(filteredStudents, () => {
 
 .search-box__input {
     width: 100%;
-    min-height: 52px;
+    min-height: 46px;
     padding: 0 16px 0 44px;
     border: 1px solid rgba(122, 141, 198, 0.24);
     border-radius: 16px;
@@ -1250,26 +1239,41 @@ watch(filteredStudents, () => {
 }
 
 .segmented-control,
-.group-chip-row,
 .toolbar-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.group-chip-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 10px;
 }
 
-.segmented-control--wrap {
-    gap: 8px;
-}
-
 .sort-control {
     align-items: center;
 }
 
+.sort-control .chip-button,
+.segmented-control .chip-button {
+    white-space: nowrap;
+}
+
 .sort-divider {
+    flex-shrink: 0;
     width: 1px;
     height: 24px;
     background: rgba(122, 141, 198, 0.24);
+}
+
+.group-filter {
+    display: grid;
+    gap: 10px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(122, 141, 198, 0.16);
 }
 
 .chip-button.is-active {
@@ -1330,30 +1334,6 @@ watch(filteredStudents, () => {
     background: linear-gradient(135deg, #14b8a6, #12b981);
 }
 
-@media (max-width: 1560px) {
-    .control-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        grid-template-areas:
-            "search search display sort"
-            "search search group action";
-    }
-}
-
-@media (max-width: 1180px) {
-    .control-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        grid-template-areas:
-            "search search"
-            "display sort"
-            "group action";
-    }
-
-    .segmented-control,
-    .toolbar-row {
-        width: 100%;
-    }
-}
-
 @media (max-width: 1080px) {
     .students-layout {
         grid-template-columns: 1fr;
@@ -1365,18 +1345,10 @@ watch(filteredStudents, () => {
 }
 
 @media (max-width: 768px) {
-    .control-grid {
-        grid-template-columns: 1fr;
-        grid-template-areas:
-            "search"
-            "display"
-            "sort"
-            "group"
-            "action";
-    }
-
     .segmented-control,
-    .toolbar-row {
+    .toolbar-row,
+    .group-chip-row {
+        flex-wrap: wrap;
         gap: 8px;
     }
 
@@ -1406,6 +1378,37 @@ watch(filteredStudents, () => {
     .toolbar-row .primary-button,
     .group-chip-row .group-chip {
         width: 100%;
+        flex: 1 1 100%;
+    }
+}
+
+@container student-controls (max-width: 1020px) {
+    .control-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+        flex: 1 1 100%;
+        align-items: start;
+        gap: 16px;
+    }
+
+    .segmented-control,
+    .toolbar-row {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .segmented-control .chip-button,
+    .toolbar-row .ghost-button,
+    .toolbar-row .primary-button {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+}
+
+@container student-controls (max-width: 560px) {
+    .control-actions {
+        grid-template-columns: 1fr;
     }
 }
 </style>

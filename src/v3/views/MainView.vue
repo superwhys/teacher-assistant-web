@@ -127,6 +127,52 @@
                 </div>
             </div>
 
+            <AppDialogShell v-model="welcomeDialogVisible" title="欢迎使用全新的教师助手" eyebrow="v4 新体验"
+                description="界面已经针对办公电脑和手机重新设计，你原有的班级与课堂数据不会受到影响。" width="640px">
+                <div class="welcome-dialog">
+                    <div class="welcome-dialog__lead">
+                        <div class="welcome-dialog__mark" aria-hidden="true">
+                            <i-ep-chat-dot-square />
+                        </div>
+                        <div>
+                            <strong>更轻、更清晰，也更适合日常使用</strong>
+                            <p>主要功能入口保持不变，你可以继续按照熟悉的方式管理学生、积分、商城和课堂工具。</p>
+                        </div>
+                    </div>
+
+                    <div class="welcome-dialog__highlights">
+                        <article class="welcome-highlight">
+                            <span class="welcome-highlight__icon"><i-ep-monitor /></span>
+                            <strong>办公电脑更高效</strong>
+                            <p>内容区域会充分利用屏幕宽度，减少无意义留白。</p>
+                        </article>
+                        <article class="welcome-highlight">
+                            <span class="welcome-highlight__icon"><i-ep-cellphone /></span>
+                            <strong>手机操作更顺手</strong>
+                            <p>常用页面、按钮和弹窗均已重新适配窄屏使用。</p>
+                        </article>
+                        <article class="welcome-highlight">
+                            <span class="welcome-highlight__icon"><i-ep-circle-check /></span>
+                            <strong>功能和数据都保留</strong>
+                            <p>班级、学生、积分规则、记录和商城数据保持原样。</p>
+                        </article>
+                    </div>
+
+                    <div class="welcome-dialog__note">
+                        <i-ep-info-filled aria-hidden="true" />
+                        <span>桌面端使用左侧导航，手机端使用底部导航，即可进入全部功能。</span>
+                    </div>
+                </div>
+
+                <template #footer>
+                    <div class="welcome-dialog__actions">
+                        <button type="button" class="primary-button" @click="welcomeDialogVisible = false">
+                            开始使用
+                        </button>
+                    </div>
+                </template>
+            </AppDialogShell>
+
             <AppDialogShell v-model="timerFinishedDialogVisible" title="计时结束" eyebrow="课堂提醒"
                 description="本轮课堂计时已经结束，请及时查看当前教学节奏。" width="560px">
                 <div class="timer-finished-dialog">
@@ -191,6 +237,9 @@ const { closeTimerFinishedDialog, timerDisplayTime, timerFinishedDialogVisible, 
 const classes = ref<ClassDTO[]>([])
 const classesLoading = ref(false)
 const ASIDE_COLLAPSED_STORAGE_KEY = "teacher-assistant-aside-collapsed"
+const V4_WELCOME_STORAGE_KEY_PREFIX = "teacher-assistant-v4-welcome-seen"
+const welcomeDialogVisible = ref(false)
+const welcomeDialogOpened = ref(false)
 const userMenuVisible = ref(false)
 const userMenuContainerRef = ref<HTMLElement | null>(null)
 const userProfileRefreshing = ref(false)
@@ -575,6 +624,40 @@ function syncUserProfileByAuthState(token: string | null, expired: boolean): voi
     userMenuVisible.value = false
 }
 
+/** 返回当前用户对应的 v4 欢迎弹窗本地标记。 */
+function getV4WelcomeStorageKey(): string {
+    const userId = cacheStore.profile?.id
+    return `${V4_WELCOME_STORAGE_KEY_PREFIX}:${userId ?? "default"}`
+}
+
+/** 判断当前用户是否已经展示过 v4 欢迎弹窗。 */
+function hasSeenV4Welcome(): boolean {
+    try {
+        return window.localStorage.getItem(getV4WelcomeStorageKey()) === "1"
+    } catch {
+        return false
+    }
+}
+
+/** 记录当前用户已经看过 v4 欢迎弹窗。 */
+function persistV4WelcomeSeen(): void {
+    try {
+        window.localStorage.setItem(getV4WelcomeStorageKey(), "1")
+    } catch {
+        return
+    }
+}
+
+/** 在首次进入 v4 工作区时展示欢迎弹窗。 */
+function openV4WelcomeOnFirstVisit(): void {
+    if (hasSeenV4Welcome()) {
+        return
+    }
+
+    welcomeDialogOpened.value = true
+    welcomeDialogVisible.value = true
+}
+
 /** 读取本地保存的侧边栏收起状态。 */
 function readAsideCollapsed(): boolean {
     try {
@@ -620,6 +703,15 @@ watch(unlockDialogVisible, (visible) => {
     }
 })
 
+watch(welcomeDialogVisible, (visible) => {
+    if (visible || !welcomeDialogOpened.value) {
+        return
+    }
+
+    persistV4WelcomeSeen()
+    welcomeDialogOpened.value = false
+})
+
 watch(
     [() => cacheStore.token, () => cacheStore.isExpired],
     ([token, expired], [previousToken]) => {
@@ -634,6 +726,7 @@ watch(
 
 onMounted(() => {
     document.addEventListener("pointerdown", handleDocumentPointerDown)
+    openV4WelcomeOnFirstVisit()
 })
 
 onBeforeUnmount(() => {
@@ -1182,6 +1275,113 @@ onBeforeUnmount(() => {
     margin-top: 4px;
 }
 
+.welcome-dialog {
+    display: grid;
+    gap: 14px;
+}
+
+.welcome-dialog__lead {
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid var(--ta-line);
+    border-radius: 14px;
+    background: #f7f7f8;
+}
+
+.welcome-dialog__mark {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    color: #ffffff;
+    background: var(--ta-blue);
+    box-shadow: 0 7px 18px rgba(0, 122, 255, 0.2);
+}
+
+.welcome-dialog__mark svg {
+    width: 21px;
+    height: 21px;
+}
+
+.welcome-dialog__lead strong {
+    font-size: 14px;
+}
+
+.welcome-dialog__lead p,
+.welcome-highlight p {
+    margin: 4px 0 0;
+    color: var(--ta-text-tertiary);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.welcome-dialog__highlights {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.welcome-highlight {
+    min-width: 0;
+    padding: 13px;
+    border: 1px solid var(--ta-line);
+    border-radius: 13px;
+    background: #ffffff;
+}
+
+.welcome-highlight__icon {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+}
+
+.welcome-highlight__icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.welcome-highlight strong {
+    display: block;
+    margin-top: 10px;
+    font-size: 13px;
+}
+
+.welcome-dialog__note {
+    min-height: 40px;
+    padding: 9px 11px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 11px;
+    color: #0064cf;
+    background: #eaf4ff;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.welcome-dialog__note svg {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+}
+
+.welcome-dialog__actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.welcome-dialog__actions .primary-button {
+    min-width: 112px;
+}
+
 .timer-finished-dialog {
     padding: 8px 0 2px;
     display: grid;
@@ -1372,6 +1572,21 @@ onBeforeUnmount(() => {
         color: #006edc;
         background: var(--ta-blue-soft);
         font-weight: 650;
+    }
+}
+
+@media (max-width: 660px) {
+    .welcome-dialog__lead {
+        align-items: flex-start;
+    }
+
+    .welcome-dialog__highlights {
+        grid-template-columns: 1fr;
+    }
+
+    .welcome-dialog__actions,
+    .welcome-dialog__actions .primary-button {
+        width: 100%;
     }
 }
 

@@ -30,20 +30,25 @@
             </div>
 
             <div v-if="showCustomMinutes" class="tools-timer-card__custom">
-                <div class="tools-timer-card__custom-input" :class="{ 'is-active': isCustomPresetActive }">
+                <label class="tools-timer-card__custom-input" :class="{ 'is-active': isCustomPresetActive }">
                     <span class="tools-timer-card__custom-label">自定义时长</span>
-                    <el-input-number
-                        v-model="customPresetValue"
-                        :min="1"
-                        :max="customPresetMax"
-                        :step="1"
-                        :controls="true"
-                        size="large"
-                        class="custom-minutes-input"
-                        @change="handleCustomPresetChange"
-                    />
-                    <span class="tools-timer-card__custom-unit">{{ presetUnitLabel }}</span>
-                </div>
+                    <span class="tools-timer-card__custom-stepper">
+                        <button type="button" class="custom-stepper__button" aria-label="减少自定义时长"
+                            @click="adjustCustomPreset(-1)">
+                            <i-ep-minus />
+                        </button>
+                        <span class="custom-stepper__value">
+                            <input v-model.number="customPresetValue" type="number" :min="1" :max="customPresetMax"
+                                inputmode="numeric" aria-label="自定义时长" @change="handleCustomPresetChange"
+                                @blur="handleCustomPresetChange" @keyup.enter="handleCustomPresetChange">
+                            <span>{{ presetUnitLabel }}</span>
+                        </span>
+                        <button type="button" class="custom-stepper__button" aria-label="增加自定义时长"
+                            @click="adjustCustomPreset(1)">
+                            <i-ep-plus />
+                        </button>
+                    </span>
+                </label>
             </div>
         </div>
 
@@ -119,147 +124,196 @@ watch(() => props.presetMinutes, (value) => {
 
 /** 应用当前输入的自定义时长。 */
 function handleCustomPresetChange(): void {
-    emit("selectPreset", Math.max(1, Math.floor(customPresetValue.value)))
+    const normalizedValue = Math.min(
+        customPresetMax.value,
+        Math.max(1, Math.floor(Number(customPresetValue.value) || 1))
+    )
+    customPresetValue.value = normalizedValue
+    emit("selectPreset", normalizedValue)
+}
+
+/** 按固定步长调整自定义时长。 */
+function adjustCustomPreset(delta: number): void {
+    customPresetValue.value = Math.min(
+        customPresetMax.value,
+        Math.max(1, customPresetValue.value + delta)
+    )
+    handleCustomPresetChange()
 }
 </script>
 
 <style scoped>
-.tools-timer-card__content,
-.tools-timer-card__unit-switch,
-.tools-timer-card__presets,
-.tools-timer-card__custom,
-.tools-timer-card__custom-input {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
 .tools-timer-card__content {
-    flex: 1;
-    flex-direction: column;
-    justify-content: center;
-    align-content: center;
+    width: 100%;
+    display: grid;
+    justify-items: center;
 }
 
 .tools-timer-card__display {
-    margin: 0;
-    color: #16213e;
-    font-size: clamp(52px, 6vw, 84px);
-    font-weight: 900;
-    text-align: center;
-    letter-spacing: 0.04em;
-}
-
-.tools-timer-card__presets {
-    justify-content: center;
+    font-size: clamp(42px, 5vw, 66px);
+    font-weight: 650;
+    line-height: 1;
+    letter-spacing: -0.055em;
+    font-variant-numeric: tabular-nums;
 }
 
 .tools-timer-card__unit-switch {
+    margin-top: 14px;
+    display: flex;
     align-items: center;
     justify-content: center;
+    gap: 7px;
+    flex-wrap: wrap;
 }
 
 .tools-timer-card__unit-label {
-    color: #475467;
-    font-size: 14px;
-    font-weight: 700;
+    color: var(--ta-text-tertiary);
+    font-size: 11px;
+}
+
+.tools-timer-card__presets {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 
 .tools-timer-card__custom {
-    align-items: center;
-    justify-content: center;
+    width: 100%;
+    margin-top: 18px;
+    display: grid;
+    place-items: center;
 }
 
 .tools-timer-card__custom-input {
-    align-items: center;
-    justify-content: center;
-    padding: 12px 14px;
-    border: 1px solid rgba(122, 141, 198, 0.18);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.72);
+    width: min(220px, 100%);
+    display: grid;
+    justify-items: center;
+    gap: 6px;
 }
 
-.tools-timer-card__custom-input.is-active {
-    border-color: rgba(85, 104, 255, 0.22);
-    background: rgba(85, 104, 255, 0.08);
-}
-
-.tools-timer-card__custom-label,
-.tools-timer-card__custom-unit {
-    color: #475467;
-    font-size: 14px;
-    font-weight: 700;
-}
-
-.custom-minutes-input {
-    width: 132px;
-}
-
-.custom-minutes-input :deep(.el-input-number) {
+.tools-timer-card__custom-label {
     width: 100%;
+    color: var(--ta-text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
 }
 
-.custom-minutes-input :deep(.el-input__wrapper) {
-    border-radius: 14px;
-    box-shadow: 0 0 0 1px rgba(122, 141, 198, 0.18) inset;
+.tools-timer-card__custom-stepper {
+    width: 100%;
+    justify-self: center;
+    min-height: 44px;
+    padding: 4px;
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 36px;
+    align-items: center;
+    gap: 4px;
+    border-radius: 12px;
+    background: #e9e9ed;
+    transition: box-shadow 140ms ease, background-color 140ms ease;
 }
 
-.custom-minutes-input :deep(.el-input__wrapper.is-focus) {
-    box-shadow: 0 0 0 1px rgba(85, 104, 255, 0.42) inset;
+.tools-timer-card__custom-stepper:focus-within,
+.tools-timer-card__custom-input.is-active .tools-timer-card__custom-stepper {
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1), inset 0 0 0 1px rgba(0, 122, 255, 0.45);
+}
+
+.custom-stepper__button {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 9px;
+    color: var(--ta-text-secondary);
+    background: rgba(255, 255, 255, 0.72);
+    cursor: pointer;
+    transition: color 140ms ease, background-color 140ms ease, transform 100ms ease;
+}
+
+.custom-stepper__button:hover {
+    color: var(--ta-blue);
+    background: #ffffff;
+}
+
+.custom-stepper__button:active {
+    transform: scale(0.94);
+}
+
+.custom-stepper__button svg {
+    width: 15px;
+    height: 15px;
+}
+
+.custom-stepper__value {
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 4px;
+    color: var(--ta-text);
+}
+
+.custom-stepper__value input {
+    width: 48px;
+    padding: 0;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    font-size: 15px;
+    font-weight: 650;
+    line-height: 1;
+    text-align: right;
+    outline: 0;
+    appearance: textfield;
+}
+
+.custom-stepper__value input::-webkit-inner-spin-button,
+.custom-stepper__value input::-webkit-outer-spin-button {
+    margin: 0;
+    appearance: none;
+}
+
+.custom-stepper__value span {
+    color: var(--ta-text-tertiary);
+    font-size: 11px;
 }
 
 .preset-button,
 .action-button {
-    min-height: 46px;
-    padding: 0 16px;
-    border: 1px solid rgba(122, 141, 198, 0.24);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.82);
-    color: #16213e;
-    font: inherit;
-    font-weight: 700;
+    min-height: 38px;
+    padding: 0 13px;
+    border: 0;
+    border-radius: 10px;
+    color: var(--ta-text-secondary);
+    background: #ffffff;
+    box-shadow: inset 0 0 0 1px var(--ta-line-strong);
+    font-size: 12px;
+    font-weight: 620;
+    white-space: nowrap;
     cursor: pointer;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
 }
 
-.preset-button:hover,
-.action-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(85, 104, 255, 0.12);
+.preset-button {
+    min-height: 32px;
+    padding-inline: 10px;
+    font-size: 11px;
 }
 
 .preset-button.is-active {
-    background: rgba(85, 104, 255, 0.12);
-    color: #5568ff;
-    border-color: rgba(85, 104, 255, 0.22);
+    color: #0065d1;
+    background: #eaf4ff;
+    box-shadow: inset 0 0 0 1px rgba(0, 122, 255, 0.18);
 }
 
 .action-button--primary {
-    border: none;
-    background: linear-gradient(135deg, #5568ff, #8e6cff);
     color: #ffffff;
-    box-shadow: 0 12px 24px rgba(85, 104, 255, 0.24);
-}
-
-@media (max-width: 768px) {
-    .tools-timer-card__display {
-        font-size: 52px;
-    }
-
-    .tools-timer-card__custom-input {
-        width: 100%;
-        justify-content: space-between;
-    }
-
-    .custom-minutes-input {
-        flex: 1;
-        width: auto;
-        min-width: 120px;
-    }
-
-    .preset-button,
-    .action-button {
-        width: 100%;
-    }
+    background: var(--ta-blue);
+    box-shadow: 0 5px 14px rgba(0, 122, 255, 0.18);
 }
 </style>

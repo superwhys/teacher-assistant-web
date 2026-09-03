@@ -60,14 +60,8 @@ const emit = defineEmits<{
 </script>
 
 <style scoped>
-.summary-pill span,
-.summary-pill strong,
-.tools-lottery-card__empty strong,
-.tools-lottery-card__empty p {
-    margin: 0;
-}
-
 .tools-lottery-card__content {
+    min-height: 0;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -76,80 +70,56 @@ const emit = defineEmits<{
 .tools-lottery-card__summary {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    gap: 8px;
 }
 
 .summary-pill {
-    padding: 16px 18px;
-    border-radius: 22px;
-    background: rgba(255, 255, 255, 0.72);
-    border: 1px solid rgba(122, 141, 198, 0.14);
+    padding: 14px;
+    border-radius: 14px;
+    background: var(--ta-surface-muted);
 }
 
 .summary-pill span {
-    display: block;
-    color: #627099;
-    font-size: 13px;
+    color: var(--ta-text-tertiary);
+    font-size: 11px;
 }
 
 .summary-pill strong {
     display: block;
-    margin-top: 10px;
-    color: #16213e;
-    font-size: 28px;
+    margin-top: 5px;
+    font-size: 23px;
 }
 
 .tools-lottery-card__empty {
+    min-height: 120px;
     flex: 1;
-    margin-top: 16px;
     display: grid;
     place-items: center;
-    text-align: center;
-    gap: 10px;
-    color: #627099;
 }
 
 .tools-lottery-card__empty :deep(svg) {
-    font-size: 52px;
-    color: #12b981;
-}
-
-.tools-lottery-card__empty p {
-    line-height: 1.7;
+    width: 58px;
+    height: 58px;
+    color: var(--ta-purple);
 }
 
 .action-button {
-    min-height: 46px;
-    padding: 0 16px;
-    border: 1px solid rgba(122, 141, 198, 0.24);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.82);
-    color: #16213e;
-    font: inherit;
-    font-weight: 700;
+    min-height: 38px;
+    padding: 0 13px;
+    border: 0;
+    border-radius: 10px;
+    color: var(--ta-text-secondary);
+    background: #ffffff;
+    box-shadow: inset 0 0 0 1px var(--ta-line-strong);
+    font-size: 12px;
+    font-weight: 620;
+    white-space: nowrap;
     cursor: pointer;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
-}
-
-.action-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(18, 185, 129, 0.14);
 }
 
 .action-button--primary {
-    border: none;
-    background: linear-gradient(135deg, #14b8a6, #12b981);
     color: #ffffff;
-    box-shadow: 0 12px 24px rgba(18, 185, 129, 0.24);
-}
-
-@media (max-width: 768px) {
-    .tools-lottery-card__summary {
-        grid-template-columns: 1fr;
-    }
-
-    .action-button {
-        width: 100%;
-    }
+    background: var(--ta-purple);
+    box-shadow: 0 5px 14px rgba(137, 68, 171, 0.18);
 }
 </style>

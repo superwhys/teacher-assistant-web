@@ -1,6 +1,8 @@
 <template>
     <button type="button" class="switch-trigger" @click="openDialog">
-        切换班级
+        <i-ep-user-filled aria-hidden="true" />
+        <span>{{ triggerLabel || "切换班级" }}</span>
+        <i-ep-arrow-down aria-hidden="true" />
     </button>
 
     <AppDialogShell
@@ -97,6 +99,7 @@ type ClassDialogTab = "switch" | "create"
 
 const props = defineProps<{
     activeClassId: number | null
+    triggerLabel?: string
 }>()
 
 const emit = defineEmits<{

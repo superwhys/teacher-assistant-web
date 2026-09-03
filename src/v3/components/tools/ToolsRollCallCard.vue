@@ -53,88 +53,57 @@ const emit = defineEmits<{
 </script>
 
 <style scoped>
-.rollcall-display__name,
-.rollcall-display p {
-    margin: 0;
-}
-
 .rollcall-display {
-    flex: 1;
-    min-height: 0;
-    padding: 24px;
-    border-radius: 28px;
     display: grid;
     place-items: center;
     text-align: center;
-    background: rgba(255, 255, 255, 0.72);
 }
 
 .rollcall-display__avatar {
-    width: 92px;
-    height: 92px;
+    width: 94px;
+    height: 94px;
     display: grid;
     place-items: center;
-    border-radius: 28px;
-    background: linear-gradient(135deg, #ff8f6b, #ff6b81);
-    color: #ffffff;
-    font-size: 34px;
-    font-weight: 900;
+    border-radius: 30px;
+    color: #2c6740;
+    background: linear-gradient(145deg, #effaf2, #d8efdf);
+    font-size: 27px;
+    font-weight: 700;
 }
 
 .rollcall-display__name {
-    margin-top: 18px;
-    color: #16213e;
-    font-size: 34px;
-    font-weight: 900;
+    margin-top: 13px;
+    font-size: 23px;
+    font-weight: 700;
 }
 
 .rollcall-display p {
-    margin-top: 10px;
-    color: #627099;
-    line-height: 1.7;
+    margin: 4px 0 0;
+    color: var(--ta-text-tertiary);
+    font-size: 12px;
 }
 
 .action-button {
-    min-height: 46px;
-    padding: 0 16px;
-    border: 1px solid rgba(122, 141, 198, 0.24);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.82);
-    color: #16213e;
-    font: inherit;
-    font-weight: 700;
+    min-height: 38px;
+    padding: 0 13px;
+    border: 0;
+    border-radius: 10px;
+    color: var(--ta-text-secondary);
+    background: #ffffff;
+    box-shadow: inset 0 0 0 1px var(--ta-line-strong);
+    font-size: 12px;
+    font-weight: 620;
+    white-space: nowrap;
     cursor: pointer;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
-}
-
-.action-button:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(255, 107, 129, 0.14);
-}
-
-.action-button:disabled {
-    cursor: not-allowed;
-    opacity: 0.55;
 }
 
 .action-button--primary {
-    border: none;
-    background: linear-gradient(135deg, #ff8f6b, #ff6b81);
     color: #ffffff;
-    box-shadow: 0 12px 24px rgba(255, 107, 129, 0.24);
+    background: var(--ta-green);
+    box-shadow: 0 5px 14px rgba(36, 138, 61, 0.18);
 }
 
-@media (max-width: 768px) {
-    .rollcall-display {
-        min-height: 220px;
-    }
-
-    .rollcall-display__name {
-        font-size: 28px;
-    }
-
-    .action-button {
-        width: 100%;
-    }
+.action-button:disabled {
+    opacity: 0.42;
 }
 </style>

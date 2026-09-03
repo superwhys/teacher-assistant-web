@@ -1,34 +1,24 @@
 <template>
-    <article class="panel-surface">
-        <div class="panel-head panel-head--stack">
-            <div>
-                <h3>意见反馈</h3>
-                <p>提交功能建议、问题反馈或课堂使用中的实际情况。</p>
-            </div>
+    <article class="settings-section settings-feedback">
+        <div class="settings-section__intro">
+            <h3>意见反馈</h3>
+            <p>提交功能建议、问题反馈或课堂使用中的实际情况。</p>
             <span class="status-chip status-chip--slate">在线提交</span>
         </div>
-
-        <div class="settings-form-grid">
+        <div class="settings-section__body">
             <label class="field-block">
                 <span class="field-block__label">反馈内容</span>
-                <el-input v-model="feedbackContentModel" type="textarea" :rows="8" resize="none" maxlength="1000"
+                <el-input v-model="feedbackContentModel" type="textarea" :rows="6" resize="vertical" maxlength="1000"
                     show-word-limit placeholder="例如：希望设置页支持更明显的学期权限提示，或者锁屏页展示当前班级信息。" />
             </label>
-        </div>
-
-        <div class="toolbar compact-toolbar">
-            <button type="button" class="primary-button primary-button--small" :disabled="feedbackSubmitting"
-                @click="emit('submit')">
-                {{ feedbackSubmitting ? "提交中..." : "提交反馈" }}
-            </button>
-            <button type="button" class="ghost-button ghost-button--small"
-                :disabled="feedbackSubmitting || !feedbackContent.trim()" @click="emit('clear')">
-                清空内容
-            </button>
-        </div>
-
-        <div class="helper-note">
-            建议尽量描述具体场景、期望效果和复现步骤。
+            <div class="toolbar compact-toolbar">
+                <button type="button" class="primary-button" :disabled="feedbackSubmitting" @click="emit('submit')">
+                    {{ feedbackSubmitting ? "提交中..." : "提交反馈" }}
+                </button>
+                <button type="button" class="ghost-button" :disabled="feedbackSubmitting || !feedbackContent.trim()"
+                    @click="emit('clear')">清空内容</button>
+            </div>
+            <div class="helper-note">建议尽量描述具体场景、期望效果和复现步骤。</div>
         </div>
     </article>
 </template>
@@ -60,160 +50,124 @@ const feedbackContentModel = computed({
 </script>
 
 <style scoped>
-.panel-surface {
-    padding: 24px;
-    border: 1px solid rgba(122, 141, 198, 0.18);
-    border-radius: 32px;
-    background: rgba(255, 255, 255, 0.72);
-    box-shadow: 0 14px 30px rgba(71, 90, 150, 0.12);
-    backdrop-filter: blur(16px);
+.settings-section {
+    padding: 28px 4px;
+    display: grid;
+    grid-template-columns: minmax(180px, 230px) minmax(0, 1fr);
+    gap: clamp(28px, 5vw, 72px);
 }
 
-.panel-head,
-.toolbar {
-    display: flex;
-    align-items: center;
-}
-
-.panel-head {
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 18px;
-}
-
-.panel-head--stack {
-    align-items: flex-start;
-}
-
-.panel-head h3 {
+.settings-section__intro h3 {
     margin: 0;
-    font-size: 24px;
-    color: #16213e;
+    font-size: 17px;
+    letter-spacing: -0.015em;
 }
 
-.panel-head p,
+.settings-section__intro p,
 .helper-note {
-    margin: 0;
-    color: #627099;
-    line-height: 1.7;
+    color: var(--ta-text-tertiary);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.settings-section__intro p {
+    margin: 7px 0 0;
+}
+
+.settings-section__body {
+    min-width: 0;
 }
 
 .status-chip {
+    min-height: 26px;
+    margin-top: 12px;
+    padding: 0 9px;
     display: inline-flex;
     align-items: center;
-    min-height: 36px;
-    padding: 0 12px;
     border-radius: 999px;
-    background: rgba(22, 33, 62, 0.06);
-    color: #627099;
-    font-size: 13px;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-.status-chip--slate {
-    color: #475467;
-    background: rgba(71, 84, 103, 0.12);
-}
-
-.settings-form-grid {
-    display: grid;
-    gap: 14px;
+    color: var(--ta-text-secondary);
+    background: var(--ta-surface-muted);
+    font-size: 11px;
+    font-weight: 600;
 }
 
 .field-block {
     display: grid;
-    gap: 10px;
+    gap: 6px;
 }
 
 .field-block__label {
+    color: var(--ta-text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.settings-section :deep(.el-textarea__inner) {
+    min-height: 150px !important;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.62);
     font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #627099;
+    line-height: 1.55;
 }
 
 .toolbar {
-    gap: 12px;
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     flex-wrap: wrap;
-    margin-top: 16px;
-}
-
-.compact-toolbar {
-    gap: 10px;
-}
-
-.helper-note {
-    margin-top: 16px;
-    padding: 14px 16px;
-    border-radius: 20px;
-    background: rgba(22, 33, 62, 0.04);
 }
 
 .ghost-button,
 .primary-button {
-    min-height: 46px;
-    padding: 0 18px;
+    min-height: 38px;
+    padding: 0 13px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    border: none;
-    border-radius: 16px;
-    font: inherit;
+    border: 0;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 620;
+    white-space: nowrap;
     cursor: pointer;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
 }
 
 .ghost-button {
-    border: 1px solid rgba(122, 141, 198, 0.24);
-    background: rgba(255, 255, 255, 0.82);
-    color: #16213e;
+    color: var(--ta-text-secondary);
+    background: #ffffff;
+    box-shadow: inset 0 0 0 1px var(--ta-line-strong);
 }
 
 .primary-button {
-    background: linear-gradient(135deg, #5568ff, #8e6cff);
     color: #ffffff;
-    box-shadow: 0 12px 24px rgba(85, 104, 255, 0.26);
+    background: var(--ta-blue);
+    box-shadow: 0 5px 14px rgba(0, 122, 255, 0.18);
 }
 
-.ghost-button--small,
-.primary-button--small {
-    min-height: 42px;
-    padding: 0 14px;
-    border-radius: 14px;
+.helper-note {
+    margin-top: 11px;
 }
 
-.ghost-button:hover,
-.primary-button:hover {
-    transform: translateY(-2px);
+@media (min-width: 1800px) {
+    .settings-section {
+        grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+        gap: clamp(60px, 5vw, 100px);
+    }
 }
 
-.ghost-button:disabled,
-.primary-button:disabled {
-    opacity: 0.56;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+@media (max-width: 920px) {
+    .settings-section {
+        grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);
+        gap: 28px;
+    }
 }
 
-.panel-surface :deep(.el-textarea__inner) {
-    border-radius: 16px;
-    box-shadow: none;
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
-}
-
-.panel-surface :deep(.el-textarea__inner:focus) {
-    border-color: rgba(85, 104, 255, 0.36);
-    box-shadow: 0 0 0 4px rgba(85, 104, 255, 0.08);
-}
-
-@media (max-width: 768px) {
-    .panel-surface {
-        padding: 20px;
-        border-radius: 26px;
+@media (max-width: 660px) {
+    .settings-section {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding-block: 22px;
     }
 }
 </style>

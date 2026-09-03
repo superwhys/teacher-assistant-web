@@ -710,97 +710,91 @@ watch(activeTab, async (tab) => {
 <style scoped>
 .shop-view {
     display: grid;
-    gap: 18px;
-}
-
-.shop-view__notice,
-.shop-view__tabs,
-.shop-view__content-grid {
-    display: flex;
-    gap: 12px;
+    gap: 14px;
 }
 
 .shop-view__notice {
+    min-height: 44px;
+    padding: 10px 12px;
+    display: flex;
     align-items: center;
-    padding: 14px 16px;
-    border-radius: 22px;
-    border: 1px solid rgba(247, 144, 9, 0.22);
-    background: rgba(255, 247, 230, 0.88);
-    color: #8a4b07;
-    font-size: 14px;
-    font-weight: 600;
+    gap: 9px;
+    border: 1px solid #ffd8be;
+    border-radius: 12px;
+    color: #a53400;
+    background: var(--ta-orange-soft);
+    font-size: 12px;
 }
 
 .shop-view__notice-icon {
-    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
 }
 
 .shop-view__tabs {
-    padding: 8px;
-    border: 1px solid rgba(122, 141, 198, 0.18);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.72);
-    box-shadow: 0 14px 30px rgba(71, 90, 150, 0.12);
+    width: fit-content;
+    min-height: 34px;
+    padding: 3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    border-radius: 10px;
+    background: #e9e9ed;
 }
 
 .shop-view__tab-button {
-    min-height: 46px;
-    padding: 0 18px;
-    border: none;
-    border-radius: 18px;
+    min-height: 28px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    color: var(--ta-text-secondary);
     background: transparent;
-    color: #627099;
-    font: inherit;
-    font-weight: 700;
+    font-size: 12px;
     cursor: pointer;
-    transition: background-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
 }
 
 .shop-view__tab-button.is-active {
-    background: linear-gradient(135deg, rgba(85, 104, 255, 0.14), rgba(142, 108, 255, 0.16));
-    color: #16213e;
-}
-
-.shop-view__tab-button:hover {
-    transform: translateY(-1px);
+    color: var(--ta-text);
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+    font-weight: 620;
 }
 
 .shop-view__content-grid {
-    align-items: stretch;
+    min-width: 0;
     display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
+    grid-template-columns: minmax(0, 1fr) 350px;
+    gap: 14px;
+    align-items: stretch;
 }
 
 .content-panel-enter-active,
 .content-panel-leave-active {
-    transition: opacity 0.22s ease, transform 0.22s ease;
+    transition: opacity 180ms ease, transform 210ms cubic-bezier(.2, .8, .2, 1);
 }
 
 .content-panel-enter-from,
 .content-panel-leave-to {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(5px);
 }
 
-@media (max-width: 1460px) {
+@media (min-width: 1800px) {
+    .shop-view__content-grid {
+        grid-template-columns: minmax(0, 1fr) 400px;
+    }
+}
+
+@media (min-width: 2300px) {
+    .shop-view__content-grid {
+        grid-template-columns: minmax(0, 1fr) 450px;
+    }
+}
+
+@media (max-width: 1180px) {
     .shop-view__content-grid {
         grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 1200px) {
-    .shop-view__content-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 768px) {
-    .shop-view__tabs {
-        flex-direction: column;
-    }
-
-    .shop-view__tab-button {
-        width: 100%;
     }
 }
 </style>

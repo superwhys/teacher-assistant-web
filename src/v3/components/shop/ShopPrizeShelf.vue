@@ -44,19 +44,13 @@ const emit = defineEmits<{
 
 <style scoped>
 .shop-prize-shelf {
-    padding: 22px;
-    border: 1px solid rgba(122, 141, 198, 0.18);
-    border-radius: 32px;
-    background: rgba(255, 255, 255, 0.72);
-    box-shadow: 0 14px 30px rgba(71, 90, 150, 0.12);
-    backdrop-filter: blur(16px);
-}
-
-.panel-head h3,
-.panel-head p,
-.shop-prize-shelf__empty strong,
-.shop-prize-shelf__empty p {
-    margin: 0;
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface);
+    box-shadow: var(--ta-shadow-1);
+    backdrop-filter: blur(18px) saturate(150%);
 }
 
 .panel-head {
@@ -67,83 +61,97 @@ const emit = defineEmits<{
 }
 
 .panel-head__eyebrow {
-    display: inline-flex;
-    align-items: center;
-    min-height: 30px;
-    padding: 0 10px;
-    border-radius: 999px;
-    background: rgba(85, 104, 255, 0.1);
-    color: #5568ff;
-    font-size: 12px;
-    font-weight: 700;
+    color: var(--ta-blue);
+    font-size: 11px;
+    font-weight: 650;
 }
 
 .panel-head h3 {
-    margin-top: 12px;
-    color: #16213e;
-    font-size: 24px;
-}
-
-.panel-head p {
-    margin-top: 8px;
-    color: #627099;
-    line-height: 1.7;
+    margin: 5px 0 0;
+    font-size: 17px;
+    letter-spacing: -0.015em;
 }
 
 .panel-head__meta {
+    min-height: 26px;
+    padding: 0 9px;
     display: inline-flex;
     align-items: center;
-    min-height: 40px;
-    padding: 0 14px;
     border-radius: 999px;
-    background: rgba(22, 33, 62, 0.06);
-    color: #627099;
-    font-size: 13px;
-    font-weight: 700;
+    color: var(--ta-text-secondary);
+    background: var(--ta-surface-muted);
+    font-size: 11px;
+    font-weight: 600;
     white-space: nowrap;
 }
 
 .shop-prize-shelf__grid {
-    margin-top: 18px;
+    margin-top: 14px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
 }
 
 .shop-prize-shelf__empty {
-    min-height: 320px;
-    margin-top: 18px;
+    min-height: 280px;
+    margin-top: 14px;
+    padding: 24px;
     display: grid;
     place-items: center;
+    align-content: center;
+    gap: 8px;
+    border-radius: 14px;
+    color: var(--ta-text-tertiary);
+    background: var(--ta-surface-muted);
     text-align: center;
-    gap: 10px;
-    color: #627099;
 }
 
 .shop-prize-shelf__empty-icon {
-    font-size: 54px;
-    color: #8e6cff;
+    width: 42px;
+    height: 42px;
+    color: var(--ta-blue);
 }
 
-@media (max-width: 1280px) {
+.shop-prize-shelf__empty strong {
+    color: var(--ta-text);
+    font-size: 14px;
+}
+
+.shop-prize-shelf__empty p {
+    margin: 0;
+    font-size: 12px;
+}
+
+@media (min-width: 1800px) {
     .shop-prize-shelf__grid {
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 }
 
-@media (max-width: 768px) {
+@media (min-width: 2300px) {
+    .shop-prize-shelf__grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1180px) {
+    .shop-prize-shelf__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 660px) {
     .shop-prize-shelf {
         padding: 16px;
-        border-radius: 28px;
     }
 
     .panel-head {
+        align-items: stretch;
         flex-direction: column;
     }
 
     .shop-prize-shelf__grid {
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 12px;
+        grid-template-columns: 1fr;
     }
 }
 </style>

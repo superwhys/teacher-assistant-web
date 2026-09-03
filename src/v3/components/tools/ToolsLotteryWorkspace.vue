@@ -721,53 +721,48 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .tools-lottery-workspace {
+    min-width: 0;
+    min-height: 0;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
-    gap: 16px;
-    height: 100%;
-    min-height: 0;
-    min-width: 0;
-    overflow: hidden;
+    gap: 14px;
 }
 
 .tools-lottery-workspace__toolbar {
     min-width: 0;
     padding: 12px 14px;
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    border: 1px solid rgba(122, 141, 198, 0.16);
-    border-radius: 22px;
-    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid var(--ta-line);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.76);
+    box-shadow: var(--ta-shadow-1);
 }
 
-.lottery-toolbar__pool {
+.lottery-toolbar__pool,
+.lottery-toolbar__actions {
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 8px;
-    flex: 1 1 280px;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+
+.lottery-toolbar__pool {
+    flex: 1 1 300px;
 }
 
 .lottery-toolbar__eyebrow {
-    display: inline-flex;
-    align-items: center;
-    flex-shrink: 0;
-    min-height: 26px;
-    padding: 0 10px;
-    border-radius: 999px;
-    background: rgba(18, 185, 129, 0.12);
-    color: #067647;
-    font-size: 12px;
-    font-weight: 700;
+    color: var(--ta-text-tertiary);
+    font-size: 11px;
 }
 
 .lottery-toolbar__select {
-    flex: 1 1 180px;
-    max-width: 280px;
-    min-width: 140px;
+    min-width: 150px;
+    max-width: 300px;
+    flex: 1;
 }
 
 .lottery-toolbar__empty {
@@ -775,124 +770,93 @@ onBeforeUnmount(() => {
     text-align: center;
 }
 
-.lottery-toolbar__actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 8px;
-}
-
 .icon-button,
 .ghost-button,
 .text-button {
-    font: inherit;
-    font-weight: 700;
-    cursor: pointer;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
-    border: 1px solid rgba(122, 141, 198, 0.24);
+    border: 0;
+    color: var(--ta-text-secondary);
     background: #ffffff;
-    color: #16213e;
+    box-shadow: inset 0 0 0 1px var(--ta-line-strong);
+    font-size: 12px;
+    font-weight: 620;
+    cursor: pointer;
 }
 
 .icon-button {
-    width: 42px;
-    height: 42px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 14px;
-    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
 }
 
 .ghost-button,
 .text-button {
-    min-height: 42px;
-    padding: 0 14px;
-    border-radius: 14px;
+    min-height: 38px;
+    padding: 0 13px;
+    border-radius: 10px;
+}
+
+.text-button {
+    color: var(--ta-blue);
+    background: transparent;
+    box-shadow: none;
 }
 
 .ghost-button.danger {
-    color: #c2410c;
-    background: rgba(255, 237, 213, 0.82);
-    border-color: rgba(251, 146, 60, 0.24);
-}
-
-.icon-button:hover,
-.ghost-button:hover,
-.text-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(18, 185, 129, 0.14);
+    color: var(--ta-red);
+    background: var(--ta-red-soft);
+    box-shadow: none;
 }
 
 .icon-button:disabled,
 .ghost-button:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+    opacity: 0.42;
 }
 
 .tools-lottery-workspace__stage {
-    min-height: 0;
     min-width: 0;
+    min-height: 0;
     display: grid;
-    grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.82fr);
-    gap: 16px;
+    grid-template-columns: minmax(0, 1.7fr) minmax(360px, 0.65fr);
+    gap: 14px;
 }
 
 .tools-lottery-workspace__side {
-    min-height: 0;
     min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.tools-lottery-workspace__side :deep(.tools-lottery-pool-panel) {
-    flex: 1 1 0;
     min-height: 0;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) minmax(180px, 0.6fr);
+    gap: 14px;
 }
 
-.tools-lottery-workspace__side :deep(.tools-lottery-history-panel) {
-    flex: 0 1 auto;
-    max-height: min(280px, 42%);
+@media (min-width: 2300px) {
+    .tools-lottery-workspace__stage {
+        grid-template-columns: minmax(0, 1.85fr) 430px;
+    }
 }
 
 @media (max-width: 1080px) {
-    .tools-lottery-workspace {
-        height: auto;
-        overflow: visible;
-    }
-
     .tools-lottery-workspace__stage {
         grid-template-columns: 1fr;
-        grid-template-rows: minmax(420px, auto) auto;
     }
 
     .tools-lottery-workspace__side {
-        display: grid;
-        grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-        grid-template-rows: minmax(280px, 360px);
-        gap: 12px;
-    }
-
-    .tools-lottery-workspace__side :deep(.tools-lottery-pool-panel),
-    .tools-lottery-workspace__side :deep(.tools-lottery-history-panel) {
-        flex: none;
-        max-height: none;
-        min-height: 280px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: none;
     }
 }
 
-@media (max-width: 820px) {
+@media (max-width: 660px) {
     .tools-lottery-workspace__toolbar {
-        padding: 12px;
-        border-radius: 20px;
+        align-items: stretch;
+        flex-direction: column;
     }
 
     .lottery-toolbar__pool,
     .lottery-toolbar__actions {
-        flex: 1 1 100%;
+        flex: 0 0 auto;
     }
 
     .lottery-toolbar__select {
@@ -900,39 +864,19 @@ onBeforeUnmount(() => {
     }
 
     .lottery-toolbar__actions {
-        justify-content: flex-start;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .lottery-toolbar__actions .ghost-button {
-        flex: 1 1 120px;
-        padding: 0 8px;
-    }
-
-    .tools-lottery-workspace__stage {
-        grid-template-rows: minmax(360px, auto) auto;
+        min-width: 0;
+        width: 100%;
+        padding-inline: 7px;
+        font-size: 11px;
     }
 
     .tools-lottery-workspace__side {
-        display: flex;
-        flex-direction: column;
-        grid-template-columns: none;
-        grid-template-rows: none;
-    }
-
-    .tools-lottery-workspace__side :deep(.tools-lottery-pool-panel),
-    .tools-lottery-workspace__side :deep(.tools-lottery-history-panel) {
-        min-height: 220px;
-    }
-}
-
-@media (max-width: 480px) {
-    .lottery-toolbar__actions .ghost-button {
-        flex-basis: calc(50% - 4px);
-        min-width: 0;
-    }
-
-    .lottery-toolbar__actions .ghost-button.danger {
-        flex-basis: 100%;
+        grid-template-columns: 1fr;
     }
 }
 </style>

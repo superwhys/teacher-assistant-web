@@ -1,39 +1,26 @@
 <template>
     <div class="dashboard-view">
-        <section class="hero-grid">
-            <article class="hero-card">
-                <div class="hero-card__head">
-                    <div class="hero-intro">
-                        <span class="section-eyebrow">班级总览</span>
-                        <p class="hero-intro__hint">当前班级的课堂核心数据与状态摘要</p>
-                    </div>
-                    <div class="hero-status">
-                        <span v-for="item in heroStatusChips" :key="item.id" class="status-chip"
-                            :class="item.toneClass">
-                            {{ item.label }}
-                        </span>
-                    </div>
-                </div>
+        <section class="dashboard-context" aria-label="班级总览">
+            <p>当前班级的课堂核心数据与状态摘要</p>
+            <div class="hero-status">
+                <span v-for="item in heroStatusChips" :key="item.id" class="status-chip" :class="item.toneClass">
+                    {{ item.label }}
+                </span>
+            </div>
+        </section>
 
-                <div class="summary-grid">
-                    <article v-for="item in summaryItems" :key="item.id" class="summary-card" :class="item.toneClass">
-                        <span>{{ item.label }}</span>
-                        <strong>{{ item.value }}</strong>
-                        <small>{{ item.helper }}</small>
-                    </article>
-                </div>
+        <section class="summary-grid">
+            <article v-for="item in summaryItems" :key="item.id" class="summary-card" :class="item.toneClass">
+                <span>{{ item.label }}</span>
+                <strong>{{ item.value }}</strong>
+                <small>{{ item.helper }}</small>
             </article>
         </section>
 
         <section class="panel-grid">
-            <DashboardRankingPanel
-                :active-class-id="currentClassId"
-                :current-semester-id="currentSemesterId"
-            />
-            <DashboardRecentRecordsPanel
-                :active-class-id="currentClassId"
-                :current-semester-id="currentSemesterId"
-            />
+            <DashboardRankingPanel :active-class-id="currentClassId" :current-semester-id="currentSemesterId" />
+            <DashboardRecentRecordsPanel :active-class-id="currentClassId"
+                :current-semester-id="currentSemesterId" />
         </section>
     </div>
 </template>
@@ -172,204 +159,148 @@ watch([currentClassId, currentSemesterId], async () => {
 <style scoped>
 .dashboard-view {
     display: grid;
-    gap: 20px;
+    gap: 14px;
 }
 
-.hero-grid,
-.panel-grid {
-    display: grid;
-    gap: 20px;
-}
-
-.hero-grid {
-    grid-template-columns: minmax(0, 1fr);
-}
-
-.hero-card {
-    border: 1px solid rgba(122, 141, 198, 0.18);
-    box-shadow: 0 18px 36px rgba(71, 90, 150, 0.12);
-}
-
-.hero-card {
-    padding: 24px;
-    border-radius: 32px;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(16px);
-}
-
-.hero-card {
-    position: relative;
-    overflow: hidden;
-    background:
-        radial-gradient(circle at top right, rgba(142, 108, 255, 0.12), transparent 24%),
-        radial-gradient(circle at bottom left, rgba(85, 104, 255, 0.08), transparent 28%),
-        rgba(255, 255, 255, 0.92);
-}
-
-.hero-card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), transparent 45%);
-    pointer-events: none;
-}
-
-.hero-card__head {
-    position: relative;
+.dashboard-context {
+    min-height: 28px;
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-    margin-bottom: 18px;
-}
-
-.hero-intro {
-    max-width: 520px;
-}
-
-.section-eyebrow {
-    display: inline-flex;
     align-items: center;
-    min-height: 34px;
-    padding: 0 14px;
-    border-radius: 999px;
-    border: 1px solid rgba(85, 104, 255, 0.16);
-    background: rgba(85, 104, 255, 0.1);
-    font-size: 13px;
-    font-weight: 700;
-    color: #5568ff;
+    justify-content: space-between;
+    gap: 14px;
 }
 
-.hero-intro__hint {
-    margin: 10px 0 0;
-    color: #627099;
-    font-size: 14px;
-    line-height: 1.7;
-}
-
-.summary-card small {
+.dashboard-context p {
     margin: 0;
-    color: #627099;
-    line-height: 1.7;
+    color: var(--ta-text-tertiary);
+    font-size: 12px;
 }
 
 .hero-status {
     display: flex;
-    flex-wrap: wrap;
+    align-items: center;
     justify-content: flex-end;
-    gap: 12px;
+    gap: 7px;
+    flex-wrap: wrap;
 }
 
 .status-chip {
+    min-height: 26px;
+    padding: 0 9px;
     display: inline-flex;
     align-items: center;
-    min-height: 36px;
-    padding: 0 12px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.82);
-    border: 1px solid rgba(122, 141, 198, 0.16);
-    color: #627099;
-    font-size: 13px;
-    font-weight: 700;
-    box-shadow: 0 10px 18px rgba(71, 90, 150, 0.08);
+    color: var(--ta-text-secondary);
+    background: var(--ta-surface-muted);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 .status-chip--sky {
-    color: #2563eb;
-    background: rgba(59, 130, 246, 0.12);
+    color: #0064cf;
+    background: #e6f2ff;
 }
 
 .status-chip--green {
-    color: #067647;
-    background: rgba(18, 185, 129, 0.12);
+    color: #1b7133;
+    background: var(--ta-green-soft);
 }
 
 .summary-grid {
-    position: relative;
-    margin-top: 20px;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
+    gap: 12px;
 }
 
 .summary-card {
-    min-height: 124px;
-    padding: 18px 20px;
-    border: 1px solid rgba(122, 141, 198, 0.14);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.72);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    min-height: 112px;
+    padding: 17px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--ta-line);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.84);
+    box-shadow: var(--ta-shadow-1);
+}
+
+.summary-card::after {
+    content: "";
+    position: absolute;
+    width: 74px;
+    height: 74px;
+    right: -24px;
+    bottom: -30px;
+    border-radius: 50%;
+    background: var(--metric-soft, var(--ta-blue-soft));
+}
+
+.summary-card span,
+.summary-card small {
+    display: block;
+    position: relative;
+    z-index: 1;
 }
 
 .summary-card span {
-    display: block;
-    font-size: 13px;
-    color: #627099;
+    color: var(--ta-text-tertiary);
+    font-size: 12px;
 }
 
 .summary-card strong {
     display: block;
-    margin-top: 10px;
-    font-size: 20px;
+    position: relative;
+    z-index: 1;
+    margin-top: 8px;
+    font-size: 27px;
+    line-height: 1;
+    letter-spacing: -0.025em;
+    font-variant-numeric: tabular-nums;
+}
+
+.summary-card small {
+    margin-top: 9px;
+    color: var(--ta-text-secondary);
+    font-size: 12px;
+    line-height: 1.4;
 }
 
 .summary-card--blue {
-    background: linear-gradient(180deg, rgba(85, 104, 255, 0.08), rgba(255, 255, 255, 0.96));
+    --metric-soft: #dceeff;
 }
 
 .summary-card--purple {
-    background: linear-gradient(180deg, rgba(142, 108, 255, 0.16), rgba(255, 255, 255, 0.92));
+    --metric-soft: #eee1f6;
 }
 
 .summary-card--gold {
-    background: linear-gradient(180deg, rgba(255, 182, 72, 0.18), rgba(255, 255, 255, 0.92));
+    --metric-soft: #ffe6d6;
 }
 
 .summary-card--green {
-    background: linear-gradient(180deg, rgba(18, 185, 129, 0.14), rgba(255, 255, 255, 0.92));
-}
-
-.summary-card {
-    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-}
-
-.summary-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 20px 34px rgba(71, 90, 150, 0.14);
+    --metric-soft: #dcf2e1;
 }
 
 .panel-grid {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-top: 4px;
-}
-
-@media (max-width: 1280px) {
-
-    .summary-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+    gap: 14px;
 }
 
 @media (max-width: 1080px) {
-
-    .hero-grid,
     .panel-grid {
         grid-template-columns: 1fr;
     }
 }
 
-@media (max-width: 768px) {
-    .hero-card__head {
+@media (max-width: 760px) {
+    .dashboard-context {
+        align-items: flex-start;
         flex-direction: column;
-        align-items: stretch;
-    }
-
-    .hero-status {
-        justify-content: flex-start;
     }
 
     .summary-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 </style>

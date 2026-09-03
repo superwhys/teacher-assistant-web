@@ -58,25 +58,20 @@ function openToolRoute(path: string): void {
 </script>
 
 <style scoped>
-.tools-view {
-    display: grid;
-    gap: 20px;
-}
-
 .tools-view__grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px;
+    gap: 14px;
     align-items: stretch;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1180px) {
     .tools-view__grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 920px) {
     .tools-view__grid {
         grid-template-columns: 1fr;
     }

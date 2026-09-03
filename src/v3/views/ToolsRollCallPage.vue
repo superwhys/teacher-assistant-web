@@ -27,7 +27,7 @@ const {
 
 /** 跳转到学生管理页。 */
 function goToStudents(): void {
-    void router.push("/v3/students")
+    void router.push("/students")
 }
 </script>
 

@@ -35,123 +35,98 @@ defineProps<ToolsCardPanelProps>()
 
 <style scoped>
 .tools-card-panel {
+    min-width: 0;
+    min-height: 360px;
     height: 100%;
-    min-height: 476px;
-    padding: 22px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    border: 1px solid rgba(122, 141, 198, 0.18);
-    border-radius: 32px;
-    box-shadow: 0 14px 30px rgba(71, 90, 150, 0.12);
-    backdrop-filter: blur(16px);
-}
-
-.tools-card-panel--timer {
-    background: linear-gradient(180deg, rgba(85, 104, 255, 0.12), rgba(255, 255, 255, 0.95));
-}
-
-.tools-card-panel--rollcall {
-    background: linear-gradient(180deg, rgba(255, 107, 129, 0.12), rgba(255, 255, 255, 0.95));
-}
-
-.tools-card-panel--lottery {
-    background: linear-gradient(180deg, rgba(18, 185, 129, 0.12), rgba(255, 255, 255, 0.95));
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface);
+    box-shadow: var(--ta-shadow-1);
+    backdrop-filter: blur(18px) saturate(150%);
 }
 
 .tools-card-panel__head,
 .tools-card-panel__actions {
     display: flex;
+    align-items: center;
+    gap: 7px;
     flex-wrap: wrap;
-    gap: 12px;
 }
 
 .tools-card-panel__head {
     align-items: flex-start;
     justify-content: space-between;
-    margin-bottom: 12px;
 }
 
 .tools-card-panel__eyebrow {
-    display: inline-flex;
-    align-items: center;
-    min-height: 30px;
-    padding: 0 10px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.62);
-    color: #5568ff;
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.tools-card-panel__head h3,
-.tools-card-panel__body {
-    margin: 0;
+    color: var(--ta-blue);
+    font-size: 11px;
+    font-weight: 650;
 }
 
 .tools-card-panel__head h3 {
-    margin-top: 12px;
-    color: #16213e;
-    font-size: 24px;
+    margin: 5px 0 0;
+    font-size: 19px;
+    letter-spacing: -0.015em;
 }
 
 .status-chip {
+    min-height: 26px;
+    padding: 0 9px;
     display: inline-flex;
     align-items: center;
-    min-height: 38px;
-    padding: 0 14px;
     border-radius: 999px;
-    background: rgba(22, 33, 62, 0.06);
-    color: #627099;
-    font-size: 13px;
-    font-weight: 700;
+    color: var(--ta-text-secondary);
+    background: var(--ta-surface-muted);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 .status-chip--amber {
-    color: #b54708;
-    background: rgba(247, 144, 9, 0.14);
+    color: #a53400;
+    background: var(--ta-orange-soft);
 }
 
 .status-chip--green {
-    color: #067647;
-    background: rgba(18, 185, 129, 0.12);
-}
-
-.status-chip--slate {
-    color: #475467;
-    background: rgba(71, 84, 103, 0.12);
+    color: #1b7133;
+    background: var(--ta-green-soft);
 }
 
 .status-chip--rose {
-    color: #be123c;
-    background: rgba(255, 107, 129, 0.16);
+    color: #bb0012;
+    background: var(--ta-red-soft);
 }
 
 .status-chip--violet {
-    color: #6d28d9;
-    background: rgba(142, 108, 255, 0.16);
+    color: #733593;
+    background: var(--ta-purple-soft);
 }
 
 .tools-card-panel__body {
+    min-height: 0;
     flex: 1;
+    margin-top: 18px;
     display: flex;
     flex-direction: column;
-    min-height: 0;
+    justify-content: center;
 }
 
 .tools-card-panel__actions {
     margin-top: 18px;
-    justify-content: center;
 }
 
-@media (max-width: 768px) {
-    .tools-card-panel {
-        min-height: auto;
-        padding: 18px;
-        border-radius: 28px;
-    }
+.tools-card-panel__actions :deep(button) {
+    flex: 1 1 0;
+}
 
-    .tools-card-panel__head {
-        flex-direction: column;
+@media (max-width: 660px) {
+    .tools-card-panel {
+        min-height: 330px;
+        padding: 16px;
     }
 }
 </style>

@@ -1,23 +1,51 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
+  color-scheme: light;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Segoe UI", sans-serif;
+  color: #1d1d1f;
+  background: #f5f5f7;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --bg-white: #ffffff;
-  --bg-light-gray: #f5f5f5;
-  --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
-  --shadow-medium: 0 2px 8px rgba(0, 0, 0, 0.1);
-  --border-radius: 8px;
-  --spacing-medium: 16px;
+  --ta-bg: #f5f5f7;
+  --ta-surface: rgba(255, 255, 255, 0.82);
+  --ta-surface-solid: #ffffff;
+  --ta-surface-muted: #f2f2f7;
+  --ta-text: #1d1d1f;
+  --ta-text-secondary: #515154;
+  --ta-text-tertiary: #86868b;
+  --ta-line: rgba(60, 60, 67, 0.12);
+  --ta-line-strong: rgba(60, 60, 67, 0.2);
+  --ta-blue: #007aff;
+  --ta-blue-hover: #006ee6;
+  --ta-blue-soft: rgba(0, 122, 255, 0.1);
+  --ta-green: #248a3d;
+  --ta-green-soft: #eaf7ed;
+  --ta-orange: #c93400;
+  --ta-orange-soft: #fff1e7;
+  --ta-red: #d70015;
+  --ta-red-soft: #fff0f1;
+  --ta-purple: #8944ab;
+  --ta-purple-soft: #f7effb;
+  --ta-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 30px rgba(0, 0, 0, 0.04);
+  --ta-shadow-2: 0 18px 50px rgba(0, 0, 0, 0.14);
+  --ta-radius-small: 10px;
+  --ta-radius-medium: 16px;
+  --ta-radius-large: 22px;
+
+  --el-color-primary: #007aff;
+  --el-color-primary-light-3: #4da2ff;
+  --el-color-primary-light-5: #80bdff;
+  --el-color-primary-light-7: #b3d7ff;
+  --el-color-primary-light-8: #cce5ff;
+  --el-color-primary-light-9: #e6f2ff;
+  --el-color-primary-dark-2: #0062cc;
+  --el-border-radius-base: 10px;
+  --el-border-color: rgba(60, 60, 67, 0.16);
+  --el-text-color-primary: #1d1d1f;
+  --el-text-color-regular: #515154;
+  --el-fill-color-light: #f5f5f7;
 }
 
 *,
@@ -26,22 +54,552 @@
   box-sizing: border-box;
 }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-  min-width: 390px;
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: var(--ta-bg);
 }
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #333;
-  background-color: var(--bg-light-gray);
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--ta-text);
+  background: var(--ta-bg);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 3px solid rgba(0, 122, 255, 0.28);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  cursor: not-allowed;
 }
 
 #app {
+  min-width: 320px;
   min-height: 100vh;
-  margin: 0;
+}
+
+.el-message {
+  border: 1px solid rgba(255, 255, 255, 0.72) !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  box-shadow: var(--ta-shadow-2) !important;
+  backdrop-filter: blur(20px) saturate(160%);
+}
+
+.el-overlay {
+  backdrop-filter: blur(8px);
+}
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner,
+.el-input-number {
+  box-shadow: inset 0 0 0 1px var(--ta-line-strong) !important;
+}
+
+.el-input__wrapper:hover,
+.el-select__wrapper:hover,
+.el-textarea__inner:hover,
+.el-input-number:hover {
+  box-shadow: inset 0 0 0 1px rgba(0, 122, 255, 0.3) !important;
+}
+
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused,
+.el-textarea__inner:focus,
+.el-input-number.is-controls-right:focus-within {
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1), inset 0 0 0 1px rgba(0, 122, 255, 0.62) !important;
+}
+
+.el-button {
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --ta-surface: #ffffff;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --ta-line: rgba(0, 0, 0, 0.28);
+    --ta-line-strong: rgba(0, 0, 0, 0.48);
+  }
+}
+
+/* v4 shared control language */
+#app .main-view :is(
+  .primary-button,
+  .ghost-button,
+  .secondary-button,
+  .danger-button,
+  .toolbar-action-button,
+  .banner-button,
+  .action-button,
+  .dialog-button,
+  .exchange-button
+),
+body .app-dialog-shell :is(
+  .primary-button,
+  .ghost-button,
+  .secondary-button,
+  .danger-button,
+  .toolbar-action-button,
+  .banner-button,
+  .action-button,
+  .dialog-button,
+  .exchange-button
+) {
+  min-height: 38px;
+  padding: 0 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--ta-line-strong);
+  border-radius: 10px;
+  color: var(--ta-text-secondary);
+  background: #ffffff;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 620;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 100ms ease;
+}
+
+#app .main-view :is(
+  .primary-button,
+  .banner-button--primary,
+  .action-button--primary,
+  .dialog-button--primary,
+  .exchange-button
+),
+body .app-dialog-shell :is(
+  .primary-button,
+  .banner-button--primary,
+  .action-button--primary,
+  .dialog-button--primary,
+  .exchange-button
+) {
+  border-color: var(--ta-blue);
+  color: #ffffff;
+  background: var(--ta-blue);
+  box-shadow: 0 5px 14px rgba(0, 122, 255, 0.18);
+}
+
+#app .main-view :is(
+  .primary-button,
+  .banner-button--primary,
+  .action-button--primary,
+  .dialog-button--primary,
+  .exchange-button
+):hover,
+body .app-dialog-shell :is(
+  .primary-button,
+  .banner-button--primary,
+  .action-button--primary,
+  .dialog-button--primary,
+  .exchange-button
+):hover {
+  border-color: var(--ta-blue-hover);
+  color: #ffffff;
+  background: var(--ta-blue-hover);
+}
+
+#app .main-view :is(.danger-button, .ghost-button.danger),
+body .app-dialog-shell :is(.danger-button, .ghost-button.danger) {
+  border-color: transparent;
+  color: var(--ta-red);
+  background: var(--ta-red-soft);
+}
+
+#app .main-view :is(.action-button--plus),
+body .app-dialog-shell :is(.action-button--plus) {
+  border-color: var(--ta-green);
+  color: #ffffff;
+  background: var(--ta-green);
+}
+
+#app .main-view :is(.action-button--minus),
+body .app-dialog-shell :is(.action-button--minus) {
+  border-color: var(--ta-red);
+  color: #ffffff;
+  background: var(--ta-red);
+}
+
+#app .main-view :is(
+  .primary-button,
+  .ghost-button,
+  .secondary-button,
+  .danger-button,
+  .toolbar-action-button,
+  .banner-button,
+  .action-button,
+  .dialog-button,
+  .exchange-button
+):not(:disabled):active,
+body .app-dialog-shell :is(
+  .primary-button,
+  .ghost-button,
+  .secondary-button,
+  .danger-button,
+  .toolbar-action-button,
+  .banner-button,
+  .action-button,
+  .dialog-button,
+  .exchange-button
+):not(:disabled):active {
+  transform: scale(0.97);
+}
+
+#app .main-view :is(
+  .primary-button,
+  .ghost-button,
+  .secondary-button,
+  .danger-button,
+  .toolbar-action-button,
+  .banner-button,
+  .action-button,
+  .dialog-button,
+  .exchange-button
+):disabled,
+body .app-dialog-shell :is(
+  .primary-button,
+  .ghost-button,
+  .secondary-button,
+  .danger-button,
+  .toolbar-action-button,
+  .banner-button,
+  .action-button,
+  .dialog-button,
+  .exchange-button
+):disabled {
+  opacity: 0.42;
+  box-shadow: none;
+  transform: none;
+}
+
+#app .main-view :is(.icon-button, .icon-action-button),
+body .app-dialog-shell :is(.icon-button, .icon-action-button) {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
   padding: 0;
-  min-width: 390px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--ta-line);
+  border-radius: 10px;
+  color: var(--ta-text-secondary);
+  background: #ffffff;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+#app .main-view :is(.icon-button, .icon-action-button):hover,
+body .app-dialog-shell :is(.icon-button, .icon-action-button):hover {
+  border-color: var(--ta-line-strong);
+  color: var(--ta-text);
+  background: #fafafa;
+}
+
+#app .main-view :is(.icon-button--danger, .icon-button.danger),
+body .app-dialog-shell :is(.icon-button--danger, .icon-button.danger) {
+  color: var(--ta-red);
+}
+
+#app .main-view .text-button,
+body .app-dialog-shell .text-button {
+  min-height: 28px;
+  padding: 0 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--ta-blue);
+  background: transparent;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#app .main-view :is(
+  .segmented-control,
+  .filter-button-group,
+  .tab-row,
+  .mode-switch,
+  .gender-switch,
+  .status-switch,
+  .points-sign-switch,
+  .shop-view__tabs,
+  .ranking-filter__group
+),
+body .app-dialog-shell :is(
+  .segmented-control,
+  .filter-button-group,
+  .tab-row,
+  .mode-switch,
+  .gender-switch,
+  .status-switch,
+  .points-sign-switch,
+  .shop-view__tabs,
+  .ranking-filter__group
+) {
+  min-height: 34px;
+  padding: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  border-radius: 10px;
+  background: #e9e9ed;
+  box-shadow: none;
+}
+
+#app .main-view :is(
+  .chip-button,
+  .filter-button,
+  .tab-button,
+  .mode-switch__button,
+  .gender-switch__button,
+  .status-switch__button,
+  .points-sign-switch__button,
+  .shop-view__tab-button,
+  .ranking-filter__button
+),
+body .app-dialog-shell :is(
+  .chip-button,
+  .filter-button,
+  .tab-button,
+  .mode-switch__button,
+  .gender-switch__button,
+  .status-switch__button,
+  .points-sign-switch__button,
+  .shop-view__tab-button,
+  .ranking-filter__button
+) {
+  min-height: 28px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--ta-text-secondary);
+  background: transparent;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+#app .main-view :is(
+  .chip-button,
+  .filter-button,
+  .tab-button,
+  .mode-switch__button,
+  .gender-switch__button,
+  .status-switch__button,
+  .points-sign-switch__button,
+  .shop-view__tab-button,
+  .ranking-filter__button
+).is-active,
+body .app-dialog-shell :is(
+  .chip-button,
+  .filter-button,
+  .tab-button,
+  .mode-switch__button,
+  .gender-switch__button,
+  .status-switch__button,
+  .points-sign-switch__button,
+  .shop-view__tab-button,
+  .ranking-filter__button
+).is-active {
+  color: var(--ta-text);
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  font-weight: 620;
+}
+
+/* Dialogs use the same surfaces and controls as the workspace. */
+body .el-dialog.app-dialog-shell {
+  height: auto !important;
+  padding: 0 !important;
+  align-self: center;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 20px;
+  color: var(--ta-text);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(24px) saturate(160%);
+}
+
+body .app-dialog-shell :is(
+  .surface-card,
+  .dialog-surface-card,
+  .filters-card,
+  .preview-card,
+  .guide-card,
+  .guide-list-card,
+  .upload-panel,
+  .batch-card,
+  .confirm-card,
+  .notice-card,
+  .empty-card,
+  .editor-preview,
+  .exchange-preview,
+  .import-preview,
+  .import-guide
+) {
+  border: 1px solid var(--ta-line);
+  border-radius: 14px;
+  color: var(--ta-text);
+  background: #f7f7f8;
+  box-shadow: none;
+}
+
+body .app-dialog-shell .surface-card--nested {
+  background: #ffffff;
+}
+
+body .app-dialog-shell .surface-card--warning {
+  border-color: #ffd8be;
+  background: var(--ta-orange-soft);
+}
+
+body .app-dialog-shell :is(.field-block__label, .field-label) {
+  color: var(--ta-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body .app-dialog-shell :is(.el-input__wrapper, .el-select__wrapper) {
+  min-height: 40px;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+body .app-dialog-shell .el-textarea__inner {
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+body .app-dialog-shell .dialog-actions {
+  gap: 8px;
+}
+
+body .app-dialog-shell .dialog-actions__group {
+  gap: 8px;
+}
+
+body .app-dialog-shell :is(.meta-tag, .preview-tag, .status-chip) {
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+body .app-dialog-shell .el-radio-button__inner {
+  min-height: 34px;
+  padding: 8px 12px;
+  border-color: var(--ta-line-strong);
+  color: var(--ta-text-secondary);
+  background: #ffffff;
+  box-shadow: none;
+}
+
+body .app-dialog-shell .el-radio-button__original-radio:checked + .el-radio-button__inner {
+  border-color: var(--ta-blue);
+  color: #ffffff;
+  background: var(--ta-blue);
+  box-shadow: -1px 0 0 0 var(--ta-blue);
+}
+
+body .app-dialog-shell .el-upload-dragger {
+  border-color: var(--ta-line-strong);
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+body .app-dialog-shell .el-upload-dragger:hover {
+  border-color: rgba(0, 122, 255, 0.5);
+  background: #fbfdff;
+}
+
+@media (max-width: 660px) {
+  #app .main-view :is(
+    .primary-button,
+    .ghost-button,
+    .secondary-button,
+    .danger-button,
+    .toolbar-action-button,
+    .banner-button,
+    .action-button,
+    .dialog-button,
+    .exchange-button
+  ),
+  body .app-dialog-shell :is(
+    .primary-button,
+    .ghost-button,
+    .secondary-button,
+    .danger-button,
+    .toolbar-action-button,
+    .banner-button,
+    .action-button,
+    .dialog-button,
+    .exchange-button
+  ) {
+    min-height: 36px;
+    padding-inline: 10px;
+    font-size: 12px;
+  }
+}
+
+body .app-dialog-shell :is(.upload-panel__icon, .v3-upload__icon) {
+  color: #ffffff;
+  background: var(--ta-blue);
+  box-shadow: 0 8px 20px rgba(0, 122, 255, 0.18);
 }

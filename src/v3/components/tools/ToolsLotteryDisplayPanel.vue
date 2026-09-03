@@ -83,68 +83,65 @@ const statusMeta = computed<string>(() => {
 
 <style scoped>
 .tools-lottery-display-panel {
-    height: 100%;
-    min-height: 0;
-    padding: 18px;
+    min-width: 0;
+    min-height: 430px;
+    padding: 20px;
     display: grid;
     grid-template-rows: minmax(0, 1fr) auto;
-    gap: 16px;
-    border: 1px solid rgba(18, 185, 129, 0.16);
-    border-radius: 28px;
-    background: linear-gradient(180deg, rgba(18, 185, 129, 0.14), rgba(255, 255, 255, 0.94));
-    box-sizing: border-box;
-    overflow: hidden;
+    gap: 14px;
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface);
+    box-shadow: var(--ta-shadow-1);
 }
 
 .display-stage {
     position: relative;
-    min-height: 0;
-    padding: 28px 24px;
-    border-radius: 24px;
+    min-height: 320px;
+    padding: 24px;
+    overflow: hidden;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
+    flex-direction: column;
+    border-radius: 17px;
+    background: var(--ta-surface-muted);
     text-align: center;
-    background: rgba(255, 255, 255, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.7);
-    overflow: hidden;
 }
 
 .display-stage.is-rolling {
-    box-shadow: inset 0 0 0 2px rgba(18, 185, 129, 0.18);
-}
-
-.display-stage.is-selected {
-    animation: pulse-gold 1s ease-in-out infinite;
+    box-shadow: inset 0 0 0 2px rgba(0, 122, 255, 0.14);
 }
 
 .display-stage__badge {
     position: absolute;
-    top: 16px;
-    left: 16px;
+    top: 13px;
+    left: 13px;
+    min-height: 26px;
+    padding: 0 9px;
     display: inline-flex;
     align-items: center;
-    min-height: 28px;
-    padding: 0 10px;
     border-radius: 999px;
-    background: rgba(18, 185, 129, 0.12);
-    color: #067647;
-    font-size: 12px;
-    font-weight: 700;
+    color: #0064cf;
+    background: #e6f2ff;
+    font-size: 11px;
+    font-weight: 600;
 }
 
 .display-stage__icon {
-    width: 72px;
-    height: 72px;
-    margin-bottom: 16px;
+    width: 74px;
+    height: 74px;
     display: grid;
     place-items: center;
-    border-radius: 22px;
-    background: linear-gradient(135deg, #14b8a6, #12b981);
-    color: #ffffff;
-    font-size: 32px;
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    border-radius: 24px;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+    transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.display-stage__icon svg {
+    width: 32px;
+    height: 32px;
 }
 
 .display-stage__icon.is-hidden {
@@ -155,22 +152,23 @@ const statusMeta = computed<string>(() => {
 }
 
 .display-name {
-    color: #16213e;
-    font-size: clamp(40px, 4.8vw, 84px);
-    font-weight: 900;
-    line-height: 1.12;
+    min-height: 1.1em;
+    margin-top: 22px;
+    font-size: clamp(38px, 5vw, 64px);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.045em;
     word-break: break-word;
 }
 
 .display-name.is-placeholder {
-    color: #98a2b3;
+    color: var(--ta-text-tertiary);
 }
 
 .display-meta {
-    margin: 12px 0 0;
-    color: #627099;
-    font-size: 14px;
-    line-height: 1.6;
+    margin: 9px 0 0;
+    color: var(--ta-text-tertiary);
+    font-size: 13px;
 }
 
 .selected-overlay {
@@ -182,108 +180,58 @@ const statusMeta = computed<string>(() => {
 }
 
 .celebrate-icon {
-    font-size: 88px;
-    animation: celebrate-spin 1s ease-in-out infinite;
+    font-size: 72px;
 }
 
 .display-actions {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
     align-items: center;
-    gap: 12px;
+    justify-content: center;
+    gap: 9px;
+    flex-wrap: wrap;
 }
 
 .ghost-button,
 .primary-button {
-    min-height: 56px;
-    min-width: 168px;
-    padding: 0 22px;
-    border-radius: 18px;
-    font: inherit;
-    font-size: 16px;
-    font-weight: 700;
+    min-width: 120px;
+    min-height: 38px;
+    padding: 0 13px;
+    border: 0;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 620;
     cursor: pointer;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
 }
 
 .ghost-button {
-    border: 1px solid rgba(122, 141, 198, 0.24);
-    background: rgba(255, 255, 255, 0.9);
-    color: #16213e;
+    color: var(--ta-text-secondary);
+    background: #ffffff;
+    box-shadow: inset 0 0 0 1px var(--ta-line-strong);
 }
 
 .primary-button {
-    border: none;
-    background: linear-gradient(135deg, #14b8a6, #12b981);
     color: #ffffff;
-    box-shadow: 0 12px 24px rgba(18, 185, 129, 0.24);
-}
-
-.ghost-button:hover,
-.primary-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(18, 185, 129, 0.14);
+    background: var(--ta-blue);
+    box-shadow: 0 5px 14px rgba(0, 122, 255, 0.18);
 }
 
 .ghost-button:disabled,
 .primary-button:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+    opacity: 0.42;
 }
 
-@keyframes celebrate-spin {
-    0% {
-        transform: rotate(0deg) scale(1);
-    }
-
-    25% {
-        transform: rotate(-15deg) scale(1.2);
-    }
-
-    50% {
-        transform: rotate(15deg) scale(1);
-    }
-
-    75% {
-        transform: rotate(-10deg) scale(1.2);
-    }
-
-    100% {
-        transform: rotate(0deg) scale(1);
-    }
-}
-
-@keyframes pulse-gold {
-
-    0%,
-    100% {
-        box-shadow: 0 8px 32px rgba(255, 215, 0, 0.36), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
-        transform: scale(1);
-    }
-
-    50% {
-        box-shadow: 0 12px 40px rgba(255, 237, 78, 0.54), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-        transform: scale(1.02);
-    }
-}
-
-@media (max-width: 820px) {
+@media (max-width: 660px) {
     .tools-lottery-display-panel {
-        padding: 14px;
-        border-radius: 24px;
         min-height: 360px;
+        padding: 16px;
     }
 
-    .display-actions {
-        flex-direction: column;
+    .display-stage {
+        min-height: 260px;
     }
 
-    .ghost-button,
-    .primary-button {
-        width: 100%;
+    .display-actions button {
+        flex: 1 1 0;
         min-width: 0;
     }
 }

@@ -55,104 +55,105 @@ function handleToggleEnabled(): void {
 <style scoped>
 .prize-item {
     width: 100%;
-    min-height: 56px;
-    padding: 8px 10px;
-    flex: 0 0 auto;
+    min-height: 54px;
+    padding: 9px 2px;
     display: flex;
     align-items: center;
     gap: 10px;
-    border: 1px solid rgba(122, 141, 198, 0.12);
-    border-radius: 14px;
-    background: #ffffff;
+    border: 0;
+    border-top: 1px solid var(--ta-line);
+    border-radius: 0;
+    color: var(--ta-text);
+    background: transparent;
     text-align: left;
     cursor: pointer;
+    transition: background-color 140ms ease, opacity 140ms ease;
+}
+
+.prize-item:first-child {
+    border-top: 0;
+}
+
+.prize-item:hover {
+    background: #f7f7f8;
 }
 
 .prize-item.is-disabled {
-    opacity: 0.62;
+    opacity: 0.52;
 }
 
 .prize-item__icon {
-    flex-shrink: 0;
     width: 34px;
     height: 34px;
+    flex: 0 0 auto;
     display: grid;
     place-items: center;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #14b8a6, #12b981);
-    color: #ffffff;
+    border-radius: 10px;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+}
+
+.prize-item__icon svg {
+    width: 17px;
+    height: 17px;
 }
 
 .prize-item__content {
-    flex: 1;
     min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 5px;
-    overflow: hidden;
+    flex: 1;
+    display: grid;
+    gap: 4px;
 }
 
 .prize-item__content strong {
     display: block;
-    margin: 0;
-}
-
-.prize-item__content strong {
-    color: #16213e;
-    font-size: 15px;
-    white-space: nowrap;
     overflow: hidden;
+    color: var(--ta-text);
+    font-size: 13px;
+    font-weight: 650;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .prize-item__tags {
+    min-width: 0;
     display: flex;
-    flex-wrap: nowrap;
-    gap: 6px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none;
-}
-
-.prize-item__tags::-webkit-scrollbar {
-    display: none;
+    align-items: center;
+    gap: 5px;
+    overflow: hidden;
 }
 
 .tag {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0;
     min-height: 20px;
     padding: 0 7px;
+    display: inline-flex;
+    align-items: center;
     border-radius: 999px;
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 10px;
+    font-weight: 600;
     line-height: 1;
-    text-align: center;
     white-space: nowrap;
 }
 
 .tag--sky {
-    color: #2563eb;
-    background: rgba(59, 130, 246, 0.12);
+    color: #0064cf;
+    background: #e6f2ff;
 }
 
 .tag--amber {
-    color: #b45309;
-    background: rgba(245, 158, 11, 0.16);
+    color: #a34a00;
+    background: var(--ta-orange-soft);
 }
 
-@media (max-width: 768px), (max-height: 820px) {
-    .prize-item {
-        height: 60px;
-        padding: 8px 10px;
-    }
+.prize-item :deep(.el-switch) {
+    --el-switch-on-color: var(--ta-blue);
+    --el-switch-off-color: #c7c7cc;
+    flex: 0 0 auto;
+}
 
-    .prize-item__icon {
-        width: 32px;
-        height: 32px;
+@media (max-width: 660px) {
+    .prize-item {
+        min-height: 52px;
     }
 }
 </style>

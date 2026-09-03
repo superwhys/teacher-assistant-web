@@ -63,72 +63,65 @@ const visible = computed({
 
 <style scoped>
 :global(.app-dialog-shell__overlay) {
-    background: rgba(18, 27, 54, 0.46);
-    backdrop-filter: blur(16px);
+    background: rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(12px) saturate(130%);
 }
 
 :global(.app-dialog-shell__overlay .el-overlay-dialog) {
-    padding: 24px;
+    padding: 20px;
+    align-items: center;
+    justify-content: center;
 }
 
-.app-dialog-shell :deep(.el-dialog) {
+:global(.el-dialog.app-dialog-shell) {
     margin: 0 auto;
+    padding: 0 !important;
+    align-self: center;
     max-width: calc(100vw - 24px);
-    max-height: calc(100vh - 48px);
+    height: auto !important;
+    min-height: 0;
+    max-height: calc(100vh - 40px);
     overflow: hidden;
-    border: 1px solid rgba(122, 141, 198, 0.18);
-    border-radius: 32px;
-    background:
-        radial-gradient(circle at top right, rgba(142, 108, 255, 0.16), transparent 28%),
-        radial-gradient(circle at bottom left, rgba(85, 104, 255, 0.1), transparent 24%),
-        rgba(255, 255, 255, 0.94);
-    box-shadow: 0 24px 60px rgba(40, 56, 105, 0.24);
     display: flex;
     flex-direction: column;
+    border: 1px solid rgba(255, 255, 255, 0.78);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
+    backdrop-filter: blur(24px) saturate(160%);
 }
 
-.app-dialog-shell :deep(.el-dialog__header) {
+:global(.app-dialog-shell .el-dialog__header),
+:global(.app-dialog-shell .el-dialog__body),
+:global(.app-dialog-shell .el-dialog__footer) {
     margin: 0;
     padding: 0;
 }
 
-.app-dialog-shell :deep(.el-dialog__body),
-.app-dialog-shell :deep(.el-dialog__footer) {
-    padding: 0;
+:global(.app-dialog-shell .el-dialog__headerbtn) {
+    top: 14px;
+    right: 14px;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    color: var(--ta-text-tertiary);
+    background: var(--ta-surface-muted);
 }
 
-.app-dialog-shell :deep(.el-dialog__headerbtn) {
-    top: 20px;
-    right: 20px;
-    width: 40px;
-    height: 40px;
-    border-radius: 14px;
-    background: rgba(85, 104, 255, 0.1);
-    color: #5568ff;
-    transition: transform 0.16s ease, background-color 0.16s ease;
-}
-
-.app-dialog-shell :deep(.el-dialog__headerbtn:hover) {
-    transform: translateY(-2px);
-    background: rgba(85, 104, 255, 0.16);
+:global(.app-dialog-shell .el-dialog__headerbtn:hover) {
+    color: var(--ta-text);
+    background: #e9e9ed;
 }
 
 .app-dialog-shell__header {
-    padding: 24px 24px 0;
+    padding: 20px 52px 0 20px;
 }
 
 .app-dialog-shell__eyebrow {
-    display: inline-flex;
-    align-items: center;
-    min-height: 32px;
-    padding: 0 12px;
-    border-radius: 999px;
-    background: rgba(85, 104, 255, 0.1);
-    color: #5568ff;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    color: var(--ta-blue);
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.02em;
 }
 
 .app-dialog-shell__title,
@@ -137,57 +130,56 @@ const visible = computed({
 }
 
 .app-dialog-shell__title {
-    margin-top: 12px;
-    color: #16213e;
-    font-size: 28px;
-    font-weight: 800;
-    line-height: 1.2;
+    margin-top: 5px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
 }
 
 .app-dialog-shell__description {
-    margin-top: 8px;
-    color: #627099;
-    line-height: 1.7;
+    margin-top: 6px;
+    color: var(--ta-text-tertiary);
+    font-size: 12px;
+    line-height: 1.55;
 }
 
 .app-dialog-shell__body {
-    flex: 1;
     min-height: 0;
+    max-height: calc(100vh - 180px);
+    flex: 0 1 auto;
     overflow-y: auto;
-    padding: 20px 24px 24px;
+    padding: 16px 20px 20px;
 }
 
 .app-dialog-shell__footer {
-    padding: 0 24px 24px;
+    padding: 14px 20px 20px;
+    border-top: 1px solid var(--ta-line);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 660px) {
     :global(.app-dialog-shell__overlay .el-overlay-dialog) {
-        padding: 10px;
+        align-items: flex-end;
+        padding: 8px;
     }
 
-    .app-dialog-shell__header,
-    .app-dialog-shell__body,
-    .app-dialog-shell__footer {
-        padding-left: 16px;
-        padding-right: 16px;
+    :global(.el-dialog.app-dialog-shell) {
+        width: 100% !important;
+        max-width: none;
+        max-height: calc(100vh - 16px);
+        border-radius: 20px;
     }
 
     .app-dialog-shell__header {
-        padding-top: 16px;
+        padding: 18px 48px 0 16px;
     }
 
     .app-dialog-shell__body {
-        padding-top: 16px;
-        padding-bottom: 16px;
+        padding: 14px 16px 16px;
     }
 
     .app-dialog-shell__footer {
-        padding-bottom: 16px;
-    }
-
-    .app-dialog-shell__title {
-        font-size: 24px;
+        padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
     }
 }
 </style>

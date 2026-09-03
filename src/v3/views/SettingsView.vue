@@ -1,34 +1,24 @@
 <template>
     <div class="settings-view">
-        <section class="section-head">
-            <div class="section-head__body">
-                <div class="eyebrow">设置中心</div>
-                <h2>账号、班级、锁屏与反馈设置</h2>
-                <p>可在这里查看账号信息、修改班级名称、切换学期、设置锁屏密码并提交使用反馈。</p>
-            </div>
-        </section>
+        <section class="settings-content">
+            <SettingsAccountCard :current-class-name="currentClassName" :current-semester-name="currentSemesterName"
+                :display-name="displayName" :has-profile="Boolean(profile)" :has-pwd="hasPwd"
+                :is-login-expired="isLoginExpired" :is-trial="isTrial"
+                :semester-notice-text="semesterNoticeText" :semester-status-tone-class="semesterStatusToneClass"
+                :trial-status-text="trialStatusText" :user-avatar="userAvatar" :user-email="userEmail"
+                :user-id="userId" :user-initial="userInitial" />
 
-        <section class="settings-columns">
-            <div class="settings-column">
-                <SettingsAccountCard :current-class-name="currentClassName" :current-semester-name="currentSemesterName"
-                    :display-name="displayName" :has-profile="Boolean(profile)" :has-pwd="hasPwd"
-                    :is-login-expired="isLoginExpired" :is-trial="isTrial"
-                    :semester-notice-text="semesterNoticeText" :semester-status-tone-class="semesterStatusToneClass"
-                    :trial-status-text="trialStatusText" :user-avatar="userAvatar" :user-email="userEmail"
-                    :user-id="userId" :user-initial="userInitial" />
-
-                <SettingsLockCard v-model:confirm-password="confirmPwd" v-model:new-password="newPwd"
-                    v-model:old-password="oldPwd" :has-pwd="hasPwd" :saving-pwd="savingPwd"
-                    @clear-password="onClearLockPassword" @lock-now="onLockNow" @save-password="onSaveLockPassword" />
-            </div>
-
-            <div class="settings-column">
+            <div class="settings-flow">
                 <SettingsClassStatusCard :active-class-id="activeClassId" :classes-loading="classesLoading"
                     :current-class-name="currentClassName" :current-semester-name="currentSemesterName"
                     :semester-notice-text="semesterNoticeText" :semester-permission-text="semesterPermissionText"
                     :semester-permission-tone-class="semesterPermissionToneClass"
-                    :semester-status-text="semesterStatusText" @go-dashboard="navigateTo('/v3/dashboard')"
+                    :semester-status-text="semesterStatusText" @go-dashboard="navigateTo('/dashboard')"
                     @open-next-semester="openNextSemesterDialog" @open-rename-class="openRenameClassDialog" />
+
+                <SettingsLockCard v-model:confirm-password="confirmPwd" v-model:new-password="newPwd"
+                    v-model:old-password="oldPwd" :has-pwd="hasPwd" :saving-pwd="savingPwd"
+                    @clear-password="onClearLockPassword" @lock-now="onLockNow" @save-password="onSaveLockPassword" />
 
                 <SettingsFeedbackCard v-model:feedback-content="feedbackContent"
                     :feedback-submitting="feedbackSubmitting" @clear="onClearFeedback" @submit="onSubmitFeedback" />
@@ -498,67 +488,8 @@ watch(
 </script>
 
 <style scoped>
-.settings-view {
+.settings-content,
+.settings-flow {
     display: grid;
-    gap: 20px;
-}
-
-.section-head {
-    display: flex;
-    align-items: center;
-}
-
-.section-head {
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-}
-
-.section-head__body {
-    display: grid;
-    gap: 8px;
-}
-
-.section-head__body h2 {
-    margin: 0;
-}
-
-.section-head__body p {
-    margin: 0;
-    color: #627099;
-    line-height: 1.7;
-}
-
-.eyebrow {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #627099;
-}
-
-.settings-columns {
-    display: grid;
-    gap: 20px;
-    grid-template-columns: minmax(0, 1.12fr) minmax(320px, 1fr);
-}
-
-.settings-column {
-    display: grid;
-    gap: 20px;
-    align-content: start;
-}
-
-@media (max-width: 1080px) {
-    .settings-columns {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 768px) {
-    .section-head {
-        flex-direction: column;
-        align-items: stretch;
-    }
 }
 </style>

@@ -1,6 +1,8 @@
 <template>
     <button type="button" class="switch-trigger" @click="openDialog">
-        切换学期
+        <i-ep-clock aria-hidden="true" />
+        <span>{{ triggerLabel || "切换学期" }}</span>
+        <i-ep-arrow-down aria-hidden="true" />
     </button>
 
     <AppDialogShell
@@ -74,6 +76,7 @@ interface SemesterOption {
 const props = defineProps<{
     activeClassId: number | null
     currentSemesterId: number | null
+    triggerLabel?: string
 }>()
 
 const emit = defineEmits<{

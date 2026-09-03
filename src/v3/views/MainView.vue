@@ -1,48 +1,50 @@
 <template>
     <div class="main-view" :class="{ 'is-aside-collapsed': asideCollapsed }">
-        <aside class="main-view__aside" :class="{ 'is-collapsed': asideCollapsed }">
+        <aside class="main-view__aside">
             <section class="brand-card">
-                <div class="brand-card__badge">TA</div>
-                <div class="brand-card__content">
-                    <h2 class="brand-card__title">教师助手</h2>
+                <div class="brand-card__badge" aria-hidden="true">
+                    <i-ep-chat-dot-square />
                 </div>
-                <button type="button" class="aside-collapse-button"
-                    :aria-expanded="!asideCollapsed"
+                <div class="brand-card__content">
+                    <strong class="brand-card__title">教师助手</strong>
+                    <span>Teacher Assistant</span>
+                </div>
+                <button type="button" class="aside-collapse-button" :aria-expanded="!asideCollapsed"
                     :aria-label="asideCollapsed ? '展开侧边栏' : '收起侧边栏'"
-                    :title="asideCollapsed ? '展开侧边栏' : '收起侧边栏'"
-                    @click="toggleAsideCollapsed">
-                    <i-ep-d-arrow-right v-if="asideCollapsed" />
-                    <i-ep-d-arrow-left v-else />
+                    :title="asideCollapsed ? '展开侧边栏' : '收起侧边栏'" @click="toggleAsideCollapsed">
+                    <component :is="asideCollapsed ? Expand : Fold" />
                 </button>
             </section>
 
             <nav class="aside-nav" aria-label="主导航">
                 <RouterLink v-for="item in navItems" :key="item.id" :to="item.to" class="aside-nav__item"
                     :class="{ 'is-active': currentNavItem.id === item.id }" :title="item.label">
-                    <span class="aside-nav__icon">{{ item.icon }}</span>
+                    <component :is="item.icon" class="aside-nav__icon" aria-hidden="true" />
                     <span class="aside-nav__label">{{ item.label }}</span>
                 </RouterLink>
             </nav>
 
+            <div class="sidebar-spacer" />
+
             <div ref="userMenuContainerRef" class="aside-user-dropdown">
                 <button type="button" class="aside-user" :class="{ 'is-open': userMenuVisible }"
-                    :title="asideCollapsed ? userDisplayName : undefined"
-                    @click="toggleUserMenu">
-                    <el-avatar class="aside-user__avatar" :size="asideCollapsed ? 40 : 48" :src="userAvatar || undefined">
+                    :title="asideCollapsed ? userDisplayName : undefined" @click="toggleUserMenu">
+                    <el-avatar class="aside-user__avatar" :size="36" :src="userAvatar || undefined">
                         {{ userInitial }}
                     </el-avatar>
                     <div class="aside-user__content">
-                        <span class="aside-user__label">当前用户</span>
                         <strong class="aside-user__name">{{ userDisplayName }}</strong>
+                        <span class="aside-user__label">当前用户</span>
                     </div>
-                    <div class="aside-user__hint">
-                        <span class="aside-user__hint-text">{{ userMenuVisible ? "点击收起" : "点击展开" }}</span>
-                        <span class="aside-user__arrow" aria-hidden="true" />
-                    </div>
+                    <ArrowDown class="aside-user__arrow" aria-hidden="true" />
                 </button>
 
                 <div v-show="userMenuVisible" class="aside-user-menu">
-                    <button type="button" class="aside-user-menu__item" @click="handleUserMenuCommand('logout')">
+                    <RouterLink to="/settings" class="aside-user-menu__item" @click="userMenuVisible = false">
+                        进入设置
+                    </RouterLink>
+                    <button type="button" class="aside-user-menu__item is-danger"
+                        @click="handleUserMenuCommand('logout')">
                         退出登录
                     </button>
                 </div>
@@ -50,70 +52,73 @@
         </aside>
 
         <main class="main-view__main">
-            <header class="main-view__header" :class="{ 'has-floating-timer': showHeaderTimerBubble }">
-                <div class="page-heading">
-                    <p class="page-heading__caption">{{ pageHeadingCaption }}</p>
-                    <h1 class="page-heading__title">{{ currentPageTitle }}</h1>
-                    <div class="status-chips">
-                        <span v-for="item in statusChips" :key="item.id" class="status-chip" :class="item.toneClass">
-                            {{ item.label }}
-                        </span>
-                    </div>
+            <div class="mobile-topbar">
+                <div class="mobile-brand">
+                    <span class="brand-card__badge" aria-hidden="true"><i-ep-chat-dot-square /></span>
+                    <strong>教师助手</strong>
                 </div>
-
-                <button v-if="showHeaderTimerBubble" type="button" class="header-timer-bubble" @click="openTimerPage">
-                    <span class="header-timer-bubble__eyebrow">课堂计时进行中</span>
-                    <strong class="header-timer-bubble__time">{{ timerDisplayTime }}</strong>
-                    <span class="header-timer-bubble__meta">当前进度 {{ timerProgressPercent }}%</span>
-                    <span class="header-timer-bubble__track">
-                        <span class="header-timer-bubble__fill" :style="{ width: `${timerProgressPercent}%` }" />
-                    </span>
-                </button>
-
-                <div class="header-actions">
-                    <button type="button" class="header-actions__button" @click="lockNow">
-                        立即锁屏
+                <div class="mobile-actions">
+                    <button v-if="showHeaderTimerBubble" type="button" class="mobile-timer-pill"
+                        @click="openTimerPage">
+                        {{ timerDisplayTime }}
                     </button>
-                    <SemesterSwitchButton :active-class-id="activeClassId" :current-semester-id="currentSemesterId"
-                        @switched="handleSemesterSwitched" />
-                    <ClassSwitchButton :active-class-id="activeClassId" @switched="handleClassSwitched" />
-                    <RouterLink to="/settings" class="header-actions__button">
-                        进入设置
-                    </RouterLink>
-                    <RouterLink to="/points" class="header-actions__button is-primary">
-                        进入积分中心
-                    </RouterLink>
-                </div>
-            </header>
-
-            <section class="main-view__content">
-                <RouterView />
-            </section>
-
-            <div v-if="!dockCollapsed" class="main-view__dock">
-                <div class="dock-meta">
-                    <span class="dock-label">课堂高频操作</span>
-                    <button type="button" class="dock-collapse-button" @click="toggleDockCollapsed">
-                        收起
-                    </button>
-                </div>
-                <div class="dock-actions">
-                    <RouterLink v-for="item in dockActions" :key="item.id" :to="item.to" class="dock-actions__button">
-                        {{ item.label }}
+                    <RouterLink to="/settings" class="mobile-account" aria-label="进入设置">
+                        {{ userInitial }}
                     </RouterLink>
                 </div>
             </div>
 
-            <button v-else type="button" class="main-view__dock-fab" @click="toggleDockCollapsed">
-                <i class="i-ep-arrow-up-bold main-view__dock-fab-icon" />
-                <span>快捷操作</span>
-            </button>
+            <header class="main-view__header">
+                <div class="context-bar">
+                    <ClassSwitchButton :active-class-id="activeClassId" :trigger-label="currentClassName"
+                        @switched="handleClassSwitched" />
+                    <SemesterSwitchButton :active-class-id="activeClassId" :current-semester-id="currentSemesterId"
+                        :trigger-label="currentSemesterName" @switched="handleSemesterSwitched" />
+                    <span class="context-divider" aria-hidden="true" />
+                    <span v-for="item in statusChips" :key="item.id" class="context-status"
+                        :class="item.toneClass">
+                        {{ item.label }}
+                    </span>
+                </div>
+
+                <div class="header-actions">
+                    <button v-if="showHeaderTimerBubble" type="button" class="timer-pill" @click="openTimerPage">
+                        <Clock aria-hidden="true" />
+                        <strong>{{ timerDisplayTime }}</strong>
+                    </button>
+                    <button type="button" class="header-actions__button is-icon" aria-label="立即锁屏"
+                        title="立即锁屏" @click="lockNow">
+                        <Lock aria-hidden="true" />
+                    </button>
+                    <RouterLink to="/settings" class="header-actions__button header-settings-link">
+                        <Setting aria-hidden="true" />
+                        <span>进入设置</span>
+                    </RouterLink>
+                    <RouterLink to="/points" class="header-actions__button is-primary">
+                        <StarFilled aria-hidden="true" />
+                        <span>进入积分中心</span>
+                    </RouterLink>
+                </div>
+            </header>
+
+            <section class="main-view__content" :aria-label="currentNavItem.label">
+                <RouterView />
+            </section>
+
+            <nav class="mobile-nav" aria-label="手机主导航">
+                <RouterLink v-for="item in navItems" :key="`mobile-${item.id}`" :to="item.to"
+                    class="mobile-nav__item" :class="{ 'is-active': currentNavItem.id === item.id }">
+                    <component :is="item.icon" aria-hidden="true" />
+                    <span>{{ item.mobileLabel }}</span>
+                </RouterLink>
+            </nav>
 
             <div v-if="cacheStore.isAuthenticated && unlockDialogVisible" class="lock-overlay">
                 <div class="lock-card">
+                    <div class="lock-card__icon"><Lock /></div>
                     <div class="lock-title">已锁定</div>
                     <div class="lock-sub">请输入锁屏密码以继续使用</div>
-                    <el-input v-model="unlockPassword" class="lock-input" type="password" show-password size="large"
+                    <el-input v-model="unlockPassword" class="lock-input" type="password" show-password
                         placeholder="输入锁屏密码" @keyup.enter="confirmUnlock" />
                     <button type="button" class="header-actions__button is-primary lock-card__action"
                         :disabled="unlocking" @click="confirmUnlock">
@@ -122,13 +127,8 @@
                 </div>
             </div>
 
-            <AppDialogShell
-                v-model="timerFinishedDialogVisible"
-                title="计时结束"
-                eyebrow="课堂提醒"
-                description="本轮课堂计时已经结束，请及时查看当前教学节奏。"
-                width="560px"
-            >
+            <AppDialogShell v-model="timerFinishedDialogVisible" title="计时结束" eyebrow="课堂提醒"
+                description="本轮课堂计时已经结束，请及时查看当前教学节奏。" width="560px">
                 <div class="timer-finished-dialog">
                     <div class="timer-finished-dialog__icon">
                         <el-icon><Timer /></el-icon>
@@ -148,13 +148,12 @@
                     </div>
                 </template>
             </AppDialogShell>
-
         </main>
     </div>
 </template>
 
 <script setup lang="ts">
-import { Timer } from "@element-plus/icons-vue";
+import { ArrowDown, Clock, Expand, Fold, HomeFilled, Lock, Present, Setting, StarFilled, Timer, Tools, UserFilled } from "@element-plus/icons-vue";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import ClassSwitchButton from "@/v3/components/ClassSwitchButton.vue";
 import SemesterSwitchButton from "@/v3/components/SemesterSwitchButton.vue";
@@ -166,23 +165,16 @@ import type { ClassDTO, SemesterDTO } from "@/types/class";
 import { isApiRequestError } from "@/types/api";
 import { computeTrialFromProfile, normalizeUserProfile } from "@/utils/userProfile";
 import { ElMessage } from "element-plus";
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 
 /** 定义左侧导航项结构。 */
 interface NavItem {
     id: string
     label: string
-    icon: string
+    icon: Component
     to: string
-    heading: string
-}
-
-/** 定义带路由的快捷入口结构。 */
-interface LinkActionItem {
-    id: string
-    label: string
-    to: string
+    mobileLabel: string
 }
 
 /** 定义状态标签结构。 */
@@ -195,68 +187,22 @@ interface ChipItem {
 const route = useRoute();
 const router = useRouter()
 const cacheStore = useCacheStore()
-const { closeTimerFinishedDialog, timerDisplayTime, timerFinishedDialogVisible, timerProgressPercent, timerState } = useSharedTimer()
+const { closeTimerFinishedDialog, timerDisplayTime, timerFinishedDialogVisible, timerState } = useSharedTimer()
 const classes = ref<ClassDTO[]>([])
 const classesLoading = ref(false)
 const ASIDE_COLLAPSED_STORAGE_KEY = "teacher-assistant-aside-collapsed"
 const userMenuVisible = ref(false)
 const userMenuContainerRef = ref<HTMLElement | null>(null)
 const userProfileRefreshing = ref(false)
-const dockCollapsed = ref(false)
 const asideCollapsed = ref(readAsideCollapsed())
 
 const navItems: NavItem[] = [
-    {
-        id: "dashboard",
-        label: "班级总览",
-        icon: "01",
-        to: "/dashboard",
-        heading: "高一（2）班课堂工作台"
-    },
-    {
-        id: "students",
-        label: "学生管理",
-        icon: "02",
-        to: "/students",
-        heading: "学生与分组管理"
-    },
-    {
-        id: "points",
-        label: "积分中心",
-        icon: "03",
-        to: "/points",
-        heading: "课堂积分中心"
-    },
-    {
-        id: "shop",
-        label: "积分商城",
-        icon: "04",
-        to: "/shop",
-        heading: "积分商城管理"
-    },
-    {
-        id: "tools",
-        label: "课堂工具",
-        icon: "05",
-        to: "/tools",
-        heading: "课堂工具箱"
-    },
-    {
-        id: "settings",
-        label: "设置中心",
-        icon: "06",
-        to: "/settings",
-        heading: "设置与辅助功能"
-    }
-]
-
-/** 提供底部快捷入口的静态数据。 */
-const dockActions: LinkActionItem[] = [
-    { id: "dock-students", label: "学生管理", to: "/students" },
-    { id: "dock-points", label: "积分中心", to: "/points" },
-    { id: "dock-shop", label: "积分商城", to: "/shop" },
-    { id: "dock-tools", label: "打开工具箱", to: "/tools" },
-    { id: "dock-settings", label: "设置中心", to: "/settings" }
+    { id: "dashboard", label: "班级总览", mobileLabel: "总览", icon: HomeFilled, to: "/dashboard" },
+    { id: "students", label: "学生管理", mobileLabel: "学生", icon: UserFilled, to: "/students" },
+    { id: "points", label: "积分中心", mobileLabel: "积分", icon: StarFilled, to: "/points" },
+    { id: "shop", label: "积分商城", mobileLabel: "商城", icon: Present, to: "/shop" },
+    { id: "tools", label: "课堂工具", mobileLabel: "工具", icon: Tools, to: "/tools" },
+    { id: "settings", label: "设置中心", mobileLabel: "设置", icon: Setting, to: "/settings" }
 ]
 
 /** 返回当前激活的班级 ID。 */
@@ -577,21 +523,9 @@ const userInitial = computed<string>(() => {
 /** 返回当前学期名称。 */
 const currentSemesterName = computed<string>(() => cacheStore.getActiveSemesterName()?.trim() || "未知学期")
 
-/** 返回页面顶部的班级与学期说明。 */
-const pageHeadingCaption = computed<string>(() => `${currentClassName.value} · ${currentSemesterName.value}`)
-
 /** 返回当前激活的导航项。 */
 const currentNavItem = computed<NavItem>(() => {
     return navItems.find((item) => route.path.startsWith(item.to)) ?? navItems[0]!
-})
-
-/** 返回当前页面标题。 */
-const currentPageTitle = computed<string>(() => {
-    if (currentNavItem.value.id === "dashboard") {
-        return `${currentClassName.value}课堂工作台`
-    }
-
-    return currentNavItem.value.heading
 })
 
 /** 返回是否展示顶部计时气泡。 */
@@ -666,11 +600,6 @@ function toggleAsideCollapsed(): void {
     persistAsideCollapsed(asideCollapsed.value)
 }
 
-/** 切换底部高频操作栏的展开状态。 */
-function toggleDockCollapsed(): void {
-    dockCollapsed.value = !dockCollapsed.value
-}
-
 /** 打开完整计时器页面。 */
 function openTimerPage(): void {
     closeTimerFinishedDialog()
@@ -714,170 +643,151 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .main-view {
+    --sidebar-width: 236px;
     min-height: 100vh;
     display: grid;
-    grid-template-columns: 280px minmax(0, 1fr);
-    background:
-        radial-gradient(circle at top left, rgba(142, 108, 255, 0.18), transparent 30%),
-        radial-gradient(circle at top right, rgba(85, 104, 255, 0.12), transparent 26%),
-        linear-gradient(180deg, #f8faff 0%, #eef3ff 100%);
-    color: #16213e;
-    transition: grid-template-columns 0.22s ease;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    color: var(--ta-text);
+    background: var(--ta-bg);
+    transition: grid-template-columns 260ms cubic-bezier(.2, .8, .2, 1);
 }
 
 .main-view.is-aside-collapsed {
-    grid-template-columns: 88px minmax(0, 1fr);
+    --sidebar-width: 82px;
 }
 
 .main-view__aside {
     position: sticky;
     top: 0;
+    z-index: 30;
     height: 100vh;
+    padding: 14px 12px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
-    padding: 24px 18px;
-    background: rgba(17, 25, 53, 0.9);
-    color: #eef3ff;
-    backdrop-filter: blur(18px);
-    z-index: 20;
-    transition: padding 0.22s ease, gap 0.22s ease;
-}
-
-.main-view__aside.is-collapsed {
-    padding: 18px 12px;
-    gap: 16px;
-}
-
-.brand-card,
-.main-view__content {
-    border: 1px solid rgba(122, 141, 198, 0.18);
-    box-shadow: 0 14px 30px rgba(71, 90, 150, 0.12);
+    gap: 12px;
+    border-right: 1px solid var(--ta-line);
+    background: rgba(249, 249, 251, 0.84);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
 .brand-card {
+    min-height: 56px;
+    padding: 8px;
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 18px;
-    border-radius: 24px;
-    background: linear-gradient(135deg, rgba(85, 104, 255, 0.28), rgba(142, 108, 255, 0.12));
-}
-
-.aside-collapse-button {
-    width: 36px;
-    height: 36px;
-    margin-left: auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.1);
-    color: #eef3ff;
-    font-size: 16px;
-    cursor: pointer;
-    transition: transform 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
-}
-
-.aside-collapse-button:hover {
-    transform: translateY(-1px);
-    border-color: rgba(255, 255, 255, 0.28);
-    background: rgba(255, 255, 255, 0.18);
-}
-
-.main-view.is-aside-collapsed .brand-card {
-    flex-direction: column;
-    gap: 10px;
-    padding: 12px 8px;
-}
-
-.main-view.is-aside-collapsed .brand-card__content,
-.main-view.is-aside-collapsed .aside-nav__label,
-.main-view.is-aside-collapsed .aside-user__content,
-.main-view.is-aside-collapsed .aside-user__hint {
-    display: none;
-}
-
-.main-view.is-aside-collapsed .aside-collapse-button {
-    margin-left: 0;
+    gap: 11px;
+    border-radius: 14px;
 }
 
 .brand-card__badge {
-    width: 52px;
-    height: 52px;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 auto;
     display: grid;
     place-items: center;
-    border-radius: 18px;
-    background: #ffffff;
-    color: #5568ff;
-    font-size: 18px;
-    font-weight: 800;
-    flex-shrink: 0;
+    border-radius: 11px;
+    color: #ffffff;
+    background: linear-gradient(145deg, #1687ff, #0061d9);
+    box-shadow: 0 7px 18px rgba(0, 122, 255, 0.24);
+}
+
+.brand-card__badge svg {
+    width: 19px;
+    height: 19px;
 }
 
 .brand-card__content {
     min-width: 0;
 }
 
-.page-heading__caption {
-    margin: 0;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.brand-card__title,
-.page-heading__title {
-    margin: 0;
-}
-
 .brand-card__title {
+    display: block;
+    font-size: 16px;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+}
+
+.brand-card__content span {
+    display: block;
     margin-top: 4px;
-    font-size: 20px;
-    font-weight: 800;
+    color: var(--ta-text-tertiary);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.aside-collapse-button {
+    width: 30px;
+    height: 30px;
+    margin-left: auto;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border: 0;
+    border-radius: 9px;
+    color: var(--ta-text-tertiary);
+    background: transparent;
+    cursor: pointer;
+}
+
+.aside-collapse-button:hover {
+    color: var(--ta-text);
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.aside-collapse-button svg {
+    width: 17px;
+    height: 17px;
 }
 
 .aside-nav {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    gap: 10px;
+    display: grid;
+    gap: 4px;
 }
 
 .aside-nav__item {
     width: 100%;
+    min-height: 46px;
+    padding: 0 12px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 16px;
-    border: none;
-    border-radius: 18px;
+    gap: 11px;
+    border: 0;
+    border-radius: 12px;
+    color: var(--ta-text-secondary);
     background: transparent;
-    color: rgba(238, 243, 255, 0.88);
-    text-align: left;
     text-decoration: none;
-    transition: transform 0.16s ease, background-color 0.16s ease, color 0.16s ease;
+    cursor: pointer;
+    text-align: left;
+    transition: color 140ms ease, background-color 140ms ease, transform 100ms ease;
 }
 
-.aside-nav__item:hover,
+.aside-nav__item:hover {
+    color: var(--ta-text);
+    background: rgba(0, 0, 0, 0.045);
+}
+
 .aside-nav__item.is-active {
-    background: rgba(255, 255, 255, 0.12);
-    color: #ffffff;
-    transform: translateX(4px);
+    color: #006edc;
+    background: var(--ta-blue-soft);
+    font-weight: 650;
 }
 
-.main-view.is-aside-collapsed .aside-nav__item {
-    justify-content: center;
-    padding: 12px 8px;
-    transform: none;
+.aside-nav__item:active,
+.aside-user:active,
+.header-actions__button:active,
+.timer-pill:active,
+.mobile-nav__item:active {
+    transform: scale(0.975);
 }
 
-.main-view.is-aside-collapsed .aside-nav__item:hover,
-.main-view.is-aside-collapsed .aside-nav__item.is-active {
-    transform: none;
+.aside-nav__icon {
+    width: 19px;
+    height: 19px;
+    flex: 0 0 auto;
 }
 
 .aside-nav__label {
@@ -887,638 +797,632 @@ onBeforeUnmount(() => {
     white-space: nowrap;
 }
 
-.aside-nav__icon {
-    width: 36px;
-    height: 36px;
-    display: grid;
-    place-items: center;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.14);
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.aside-user {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 22px;
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
-    text-align: left;
-    cursor: pointer;
-    transition: transform 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+.sidebar-spacer {
+    flex: 1;
 }
 
 .aside-user-dropdown {
     position: relative;
-    width: 100%;
-}
-
-.aside-user:hover {
-    transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.14);
-}
-
-.aside-user.is-open {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.16);
-}
-
-.aside-user:hover .aside-user__arrow {
-    transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.32);
-    background: rgba(255, 255, 255, 0.14);
-}
-
-.aside-user__avatar {
-    flex-shrink: 0;
-    border: 2px solid rgba(255, 255, 255, 0.14);
-}
-
-.aside-user__content {
-    min-width: 0;
-    display: grid;
-    gap: 2px;
-    flex: 1;
-}
-
-.aside-user__label {
-    color: rgba(238, 243, 255, 0.68);
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.aside-user__name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 16px;
-    font-weight: 700;
-}
-
-.aside-user__hint {
-    display: grid;
-    justify-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-}
-
-.aside-user__hint-text {
-    color: rgba(238, 243, 255, 0.68);
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1;
-    white-space: nowrap;
-}
-
-.aside-user__arrow {
-    width: 26px;
-    height: 26px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.1);
-    transition: transform 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
-}
-
-.aside-user__arrow::before {
-    content: "";
-    width: 8px;
-    height: 8px;
-    border-top: 2px solid rgba(255, 255, 255, 0.84);
-    border-right: 2px solid rgba(255, 255, 255, 0.84);
-    transform: rotate(-45deg) translateY(1px);
-}
-
-.aside-user.is-open .aside-user__arrow::before {
-    transform: rotate(135deg) translateX(-1px);
 }
 
 .aside-user-menu {
     position: absolute;
     left: 0;
     right: 0;
-    bottom: calc(100% + 10px);
-    padding: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
-    background: rgba(57, 67, 103, 0.96);
-    box-shadow: 0 18px 36px rgba(10, 16, 34, 0.28);
-    overflow: hidden;
+    bottom: calc(100% + 7px);
+    z-index: 80;
+    padding: 6px;
+    border: 1px solid var(--ta-line);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: var(--ta-shadow-2);
+    backdrop-filter: blur(22px) saturate(180%);
+    transform-origin: bottom left;
 }
 
 .aside-user-menu__item {
     width: 100%;
-    min-height: 46px;
-    padding: 0 14px;
-    border: none;
-    border-radius: 12px;
+    min-height: 40px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    border: 0;
+    border-radius: 9px;
+    color: var(--ta-text-secondary);
     background: transparent;
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: 700;
-    text-align: left;
+    text-decoration: none;
     cursor: pointer;
-    transition: background-color 0.16s ease;
 }
 
 .aside-user-menu__item:hover {
-    background: rgba(255, 255, 255, 0.12);
+    color: var(--ta-text);
+    background: var(--ta-surface-muted);
 }
 
+.aside-user-menu__item.is-danger {
+    color: var(--ta-red);
+}
+
+.aside-user {
+    width: 100%;
+    min-height: 54px;
+    padding: 7px 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    color: var(--ta-text);
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+}
+
+.aside-user:hover,
+.aside-user.is-open {
+    border-color: var(--ta-line);
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.aside-user__avatar {
+    flex: 0 0 auto;
+    color: #ffffff;
+    background: linear-gradient(145deg, #5e5ce6, #007aff);
+}
+
+.aside-user__content {
+    min-width: 0;
+    flex: 1;
+}
+
+.aside-user__name,
+.aside-user__label {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aside-user__name {
+    font-size: 13px;
+}
+
+.aside-user__label {
+    margin-top: 2px;
+    color: var(--ta-text-tertiary);
+    font-size: 11px;
+}
+
+.aside-user__arrow {
+    width: 16px;
+    color: var(--ta-text-tertiary);
+    transition: transform 160ms ease;
+}
+
+.aside-user.is-open .aside-user__arrow {
+    transform: rotate(180deg);
+}
+
+.main-view.is-aside-collapsed .brand-card {
+    justify-content: center;
+    padding-inline: 0;
+}
+
+.main-view.is-aside-collapsed .brand-card__content,
+.main-view.is-aside-collapsed .aside-nav__label,
+.main-view.is-aside-collapsed .aside-user__content,
+.main-view.is-aside-collapsed .aside-user__arrow {
+    display: none;
+}
+
+.main-view.is-aside-collapsed .aside-collapse-button {
+    position: absolute;
+    top: 76px;
+    left: 26px;
+}
+
+.main-view.is-aside-collapsed .aside-nav {
+    margin-top: 37px;
+}
+
+.main-view.is-aside-collapsed .aside-nav__item,
 .main-view.is-aside-collapsed .aside-user {
     justify-content: center;
-    padding: 10px;
+    padding-inline: 0;
 }
 
 .main-view.is-aside-collapsed .aside-user-menu {
-    left: calc(100% + 10px);
+    left: calc(100% + 9px);
     right: auto;
     bottom: 0;
-    width: 180px;
+    width: 190px;
 }
 
 .main-view__main {
-    padding: 26px 26px 120px;
-    box-sizing: border-box;
-    min-height: 100vh;
     min-width: 0;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
+}
+
+.mobile-topbar,
+.mobile-nav {
+    display: none;
 }
 
 .main-view__header {
-    position: relative;
+    position: sticky;
+    top: 0;
+    z-index: 24;
+    min-height: 70px;
+    padding: 10px clamp(18px, 3vw, 34px);
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-}
-
-.page-heading__title {
-    margin-top: 8px;
-    font-size: clamp(32px, 3vw, 42px);
-    line-height: 1.15;
-}
-
-.status-chips,
-.header-actions,
-.dock-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-.status-chips {
-    margin-top: 12px;
-}
-
-.status-chip {
-    display: inline-flex;
     align-items: center;
-    min-height: 36px;
-    padding: 0 12px;
-    border-radius: 999px;
-    background: rgba(22, 33, 62, 0.06);
-    color: #627099;
-    font-size: 13px;
-    font-weight: 700;
+    justify-content: space-between;
+    gap: 16px;
+    background: rgba(245, 245, 247, 0.76);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
-.status-chip--sky {
-    color: #2563eb;
-    background: rgba(59, 130, 246, 0.12);
-}
-
-.status-chip--green {
-    color: #067647;
-    background: rgba(18, 185, 129, 0.12);
-}
-
-.status-chip--slate {
-    color: #475467;
-    background: rgba(71, 84, 103, 0.12);
-}
-
-.status-chip--amber {
-    color: #b54708;
-    background: rgba(247, 144, 9, 0.14);
-}
-
-.header-actions {
-    align-self: flex-end;
-    justify-content: flex-end;
-}
-
-.header-timer-bubble {
+.main-view__header::after {
+    content: "";
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: min(320px, calc(100% - 380px));
-    padding: 14px 18px;
-    display: grid;
-    gap: 8px;
-    border: 1px solid rgba(85, 104, 255, 0.16);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 16px 36px rgba(85, 104, 255, 0.16);
-    backdrop-filter: blur(16px);
-    text-align: left;
-    cursor: pointer;
-    transition: transform 0.16s ease, box-shadow 0.16s ease;
+    left: 0;
+    right: 0;
+    bottom: -12px;
+    height: 12px;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(245, 245, 247, 0.56), transparent);
 }
 
-.header-timer-bubble:hover {
-    transform: translate(-50%, calc(-50% - 2px));
-    box-shadow: 0 20px 42px rgba(85, 104, 255, 0.2);
+.context-bar,
+.header-actions {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 7px;
 }
 
-.header-timer-bubble__eyebrow {
-    color: #5568ff;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
+.context-bar {
+    overflow-x: auto;
+    scrollbar-width: none;
 }
 
-.header-timer-bubble__time {
-    color: #16213e;
-    font-size: 26px;
-    font-weight: 900;
-    line-height: 1;
+.context-bar::-webkit-scrollbar {
+    display: none;
 }
 
-.header-timer-bubble__meta {
-    color: #627099;
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.header-timer-bubble__track {
-    height: 8px;
-    display: block;
-    overflow: hidden;
-    border-radius: 999px;
-    background: rgba(85, 104, 255, 0.12);
-}
-
-.header-timer-bubble__fill {
-    height: 100%;
-    display: block;
-    border-radius: inherit;
-    background: linear-gradient(135deg, #5568ff, #8e6cff);
-    transition: width 0.24s ease;
-}
-
-.header-actions__button,
-.dock-actions__button {
-    min-height: 46px;
-    padding: 0 18px;
+.context-bar :deep(.switch-trigger),
+.header-actions__button {
+    min-height: 38px;
+    padding: 0 10px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 16px;
-    border: 1px solid rgba(122, 141, 198, 0.24);
-    background: rgba(255, 255, 255, 0.82);
-    color: #16213e;
-    font-size: 14px;
-    font-weight: 700;
+    gap: 7px;
+    border: 0;
+    border-radius: 10px;
+    color: var(--ta-text-secondary);
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: inset 0 0 0 1px var(--ta-line);
+    font-size: 13px;
+    font-weight: 600;
     line-height: 1;
     white-space: nowrap;
     text-decoration: none;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
     cursor: pointer;
+    transition: background-color 140ms ease, color 140ms ease, transform 100ms ease, box-shadow 140ms ease;
 }
 
-.header-actions__button.is-primary {
-    border: none;
-    background: linear-gradient(135deg, #5568ff, #8e6cff);
-    color: #ffffff;
-    box-shadow: 0 12px 24px rgba(85, 104, 255, 0.26);
+.context-bar :deep(.switch-trigger:hover),
+.header-actions__button:hover {
+    color: var(--ta-text);
+    background: #ffffff;
+    transform: none;
 }
 
-.header-actions__button:hover,
-.dock-actions__button:hover {
-    transform: translateY(-2px);
+.context-bar :deep(.switch-trigger > svg) {
+    width: 16px;
+    height: 16px;
 }
 
-.main-view__content {
-    margin-top: 24px;
-    padding: 24px;
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    border-radius: 32px;
-    background: rgba(255, 255, 255, 0.66);
-    backdrop-filter: blur(16px);
+.context-divider {
+    width: 1px;
+    height: 20px;
+    margin: 0 3px;
+    flex: 0 0 auto;
+    background: var(--ta-line);
 }
 
-.main-view__content :deep(.tools-standalone-page-frame) {
-    flex: 1;
-    min-height: 0;
-}
-
-.main-view__dock {
-    position: fixed;
-    left: 50%;
-    bottom: 22px;
-    transform: translateX(-50%);
-    width: min(920px, calc(100vw - 32px));
-    display: flex;
+.context-status {
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 16px 18px;
-    border-radius: 28px;
-    background: rgba(20, 29, 56, 0.88);
-    box-shadow: 0 24px 60px rgba(17, 25, 53, 0.2);
-    backdrop-filter: blur(24px);
-}
-
-.dock-meta {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-
-.dock-label {
-    color: rgba(255, 255, 255, 0.72);
-    font-size: 13px;
-    font-weight: 700;
+    gap: 7px;
+    color: var(--ta-green);
+    font-size: 12px;
     white-space: nowrap;
 }
 
-.dock-collapse-button {
-    min-height: 36px;
-    padding: 0 12px;
+.context-status::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 4px rgba(36, 138, 61, 0.1);
+}
+
+.context-status.status-chip--slate,
+.context-status.status-chip--amber {
+    color: var(--ta-orange);
+}
+
+.header-actions {
+    justify-content: flex-end;
+    flex: 0 0 auto;
+}
+
+.header-actions__button svg,
+.timer-pill svg {
+    width: 16px;
+    height: 16px;
+}
+
+.header-actions__button.is-primary {
+    color: #ffffff;
+    background: var(--ta-blue);
+    box-shadow: 0 5px 14px rgba(0, 122, 255, 0.2);
+}
+
+.header-actions__button.is-primary:hover {
+    color: #ffffff;
+    background: var(--ta-blue-hover);
+}
+
+.header-actions__button.is-icon {
+    width: 38px;
+    padding: 0;
+}
+
+.timer-pill,
+.mobile-timer-pill {
+    min-height: 38px;
+    padding: 0 11px;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
-    font-size: 12px;
-    font-weight: 700;
+    gap: 7px;
+    border: 0;
+    border-radius: 11px;
+    color: #005ecb;
+    background: #e8f3ff;
     cursor: pointer;
-    transition: transform 0.16s ease, background-color 0.16s ease;
+    font-size: 13px;
 }
 
-.dock-collapse-button:hover {
-    transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.14);
+.timer-pill strong,
+.mobile-timer-pill {
+    font-variant-numeric: tabular-nums;
 }
 
-.dock-actions__button {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.08);
+.main-view__content {
+    width: 100%;
+    min-width: 0;
+    padding: 24px clamp(18px, 2vw, 48px) 44px;
+    flex: 1;
 }
 
-.main-view__dock-fab {
-    position: fixed;
-    right: 22px;
-    bottom: 22px;
-    z-index: 20;
-    min-height: 58px;
-    padding: 0 18px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    border: none;
-    border-radius: 999px;
-    background: linear-gradient(135deg, #5568ff, #8e6cff);
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: 700;
-    box-shadow: 0 18px 40px rgba(85, 104, 255, 0.3);
-    cursor: pointer;
-    transition: transform 0.16s ease, box-shadow 0.16s ease;
-}
-
-.main-view__dock-fab:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 22px 44px rgba(85, 104, 255, 0.34);
-}
-
-.main-view__dock-fab-icon {
-    font-size: 16px;
+.main-view__content :deep(.tools-standalone-page-frame) {
+    min-height: calc(100vh - 138px);
 }
 
 .lock-overlay {
     position: fixed;
     inset: 0;
     z-index: 3000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    background: rgba(13, 18, 36, 0.54);
-    backdrop-filter: blur(8px);
+    padding: 22px;
+    display: grid;
+    place-items: center;
+    background: rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(18px) saturate(130%);
 }
 
 .lock-card {
-    width: min(440px, 100%);
+    width: min(400px, 100%);
     padding: 28px;
-    border: 1px solid rgba(122, 141, 198, 0.18);
-    border-radius: 28px;
-    background: rgba(255, 255, 255, 0.94);
-    box-shadow: 0 30px 64px rgba(17, 25, 53, 0.24);
     display: grid;
-    gap: 14px;
+    justify-items: center;
+    gap: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.74);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: var(--ta-shadow-2);
+    text-align: center;
+}
+
+.lock-card__icon {
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border-radius: 16px;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+}
+
+.lock-card__icon svg {
+    width: 24px;
 }
 
 .lock-title {
-    font-size: 28px;
-    font-weight: 800;
-    color: #16213e;
+    margin-top: 4px;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
 }
 
 .lock-sub {
-    color: #627099;
-    line-height: 1.7;
+    color: var(--ta-text-tertiary);
+    font-size: 13px;
 }
 
 .lock-input {
-    margin-top: 6px;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.lock-card :deep(.el-input__wrapper) {
+    min-height: 42px;
+    border-radius: 10px;
 }
 
 .lock-card__action {
     width: 100%;
-    min-height: 52px;
+    margin-top: 4px;
 }
 
 .timer-finished-dialog {
+    padding: 8px 0 2px;
     display: grid;
     justify-items: center;
     gap: 14px;
-    padding: 12px 0 4px;
     text-align: center;
 }
 
 .timer-finished-dialog__icon {
-    width: 72px;
-    height: 72px;
+    width: 64px;
+    height: 64px;
     display: grid;
     place-items: center;
-    border-radius: 24px;
-    background: linear-gradient(135deg, rgba(85, 104, 255, 0.14), rgba(142, 108, 255, 0.18));
-    color: #5568ff;
-    font-size: 32px;
+    border-radius: 20px;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+    font-size: 28px;
 }
 
 .timer-finished-dialog__time {
-    color: #16213e;
-    font-size: clamp(42px, 7vw, 64px);
-    font-weight: 900;
+    font-size: clamp(42px, 7vw, 62px);
+    font-weight: 700;
     line-height: 1;
-    letter-spacing: 0.04em;
+    letter-spacing: -0.045em;
+    font-variant-numeric: tabular-nums;
 }
 
 .timer-finished-dialog__summary {
     margin: 0;
-    color: #627099;
-    font-size: 15px;
-    line-height: 1.7;
+    color: var(--ta-text-tertiary);
+    font-size: 14px;
 }
 
 .timer-finished-dialog__actions {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 12px;
+    justify-content: flex-end;
+    gap: 8px;
 }
 
-.lock-card :deep(.el-input__wrapper) {
-    min-height: 52px;
-    border-radius: 16px;
-    border: 1px solid rgba(122, 141, 198, 0.24);
-    box-shadow: none;
+@media (min-width: 1800px) {
+    .main-view__content {
+        padding-inline: 44px;
+    }
 }
 
-.lock-card :deep(.el-input__wrapper.is-focus) {
-    border-color: rgba(85, 104, 255, 0.36);
-    box-shadow: 0 0 0 4px rgba(85, 104, 255, 0.08);
+@media (min-width: 2300px) {
+    .main-view__content {
+        padding-inline: 52px;
+    }
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 1180px) {
+    .header-settings-link span {
+        display: none;
+    }
+
+    .header-settings-link {
+        width: 38px;
+        padding: 0;
+    }
+}
+
+@media (max-width: 920px) {
     .main-view,
     .main-view.is-aside-collapsed {
-        grid-template-columns: 1fr;
+        display: block;
     }
 
     .main-view__aside {
-        position: static;
-        height: auto;
+        display: none;
     }
 
-    .main-view.is-aside-collapsed .main-view__aside {
-        flex-direction: row;
+    .mobile-topbar {
+        position: sticky;
+        top: 0;
+        z-index: 35;
+        height: 54px;
+        padding: 0 14px;
+        display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 12px 16px;
-    }
-
-    .main-view.is-aside-collapsed .brand-card {
-        flex-direction: row;
-        padding: 8px 10px;
-    }
-
-    .main-view.is-aside-collapsed .aside-nav {
-        flex-direction: row;
-        flex: 1;
-        gap: 6px;
-        overflow-x: auto;
-    }
-
-    .main-view.is-aside-collapsed .aside-nav__item {
-        width: auto;
-        flex-shrink: 0;
-        padding: 8px;
-    }
-
-    .main-view.is-aside-collapsed .aside-user-menu {
-        left: auto;
-        right: 0;
-        bottom: auto;
-        top: calc(100% + 8px);
-    }
-}
-
-@media (max-width: 768px) {
-    .main-view__main {
-        padding: 18px 14px 140px;
-    }
-
-    .main-view__aside {
-        min-height: auto;
-    }
-
-    .main-view__header,
-    .main-view__dock {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .dock-meta {
         justify-content: space-between;
+        border-bottom: 1px solid var(--ta-line);
+        background: rgba(249, 249, 251, 0.9);
+        backdrop-filter: blur(22px) saturate(180%);
     }
 
+    .mobile-brand,
+    .mobile-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .mobile-brand .brand-card__badge {
+        width: 31px;
+        height: 31px;
+        border-radius: 9px;
+    }
+
+    .mobile-brand strong {
+        font-size: 14px;
+    }
+
+    .mobile-account {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        color: #ffffff;
+        background: linear-gradient(145deg, #5e5ce6, #007aff);
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .main-view__header {
+        top: 54px;
+        min-height: 58px;
+        padding: 8px 14px;
+        gap: 8px;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .main-view__header::-webkit-scrollbar {
+        display: none;
+    }
+
+    .context-bar,
     .header-actions {
-        align-self: stretch;
-    }
-
-    .header-timer-bubble {
-        position: static;
-        order: 3;
-        width: 100%;
-        transform: none;
-    }
-
-    .header-timer-bubble:hover {
-        transform: translateY(-2px);
+        overflow: visible;
     }
 
     .main-view__content {
-        padding: 18px;
+        padding: 18px 14px calc(88px + env(safe-area-inset-bottom));
     }
 
-    .timer-finished-dialog__actions {
+    .mobile-nav {
+        position: fixed;
+        left: 10px;
+        right: 10px;
+        bottom: calc(9px + env(safe-area-inset-bottom));
+        z-index: 70;
+        height: 66px;
+        padding: 6px;
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 2px;
+        border: 1px solid rgba(255, 255, 255, 0.74);
+        border-radius: 19px;
+        background: rgba(250, 250, 252, 0.88);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16);
+        backdrop-filter: blur(26px) saturate(190%);
+        -webkit-backdrop-filter: blur(26px) saturate(190%);
+    }
+
+    .mobile-nav__item {
+        min-width: 0;
+        min-height: 52px;
+        padding: 4px 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 3px;
+        border-radius: 13px;
+        color: var(--ta-text-tertiary);
+        font-size: 10px;
+        text-align: center;
+        text-decoration: none;
+        transition: color 140ms ease, background-color 140ms ease, transform 100ms ease;
+    }
+
+    .mobile-nav__item svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .mobile-nav__item span {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobile-nav__item.is-active {
+        color: #006edc;
+        background: var(--ta-blue-soft);
+        font-weight: 650;
+    }
+}
+
+@media (max-width: 660px) {
+    .context-divider,
+    .context-status,
+    .timer-pill,
+    .header-settings-link {
+        display: none;
+    }
+
+    .context-bar :deep(.switch-trigger) {
+        max-width: min(46vw, 210px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .header-actions__button.is-primary span {
+        display: none;
+    }
+
+    .header-actions__button.is-primary {
+        width: 38px;
+        padding: 0;
+    }
+
+    .timer-finished-dialog__actions,
+    .timer-finished-dialog__actions .header-actions__button {
         width: 100%;
     }
 
     .timer-finished-dialog__actions .header-actions__button {
         flex: 1;
     }
+}
 
-    .main-view__dock {
-        left: 8px;
-        right: 8px;
-        bottom: 8px;
-        width: auto;
-        transform: none;
+@media (max-width: 440px) {
+    .main-view__header {
+        align-items: stretch;
     }
 
-    .main-view__dock-fab {
-        right: 12px;
-        bottom: 12px;
-        min-height: 52px;
-        padding: 0 16px;
+    .context-bar {
+        flex: 1 1 auto;
     }
 
-    .dock-label {
-        white-space: normal;
+    .context-bar :deep(.switch-trigger) {
+        max-width: 42vw;
+    }
+
+    .header-actions {
+        flex: 0 0 auto;
     }
 }
 </style>

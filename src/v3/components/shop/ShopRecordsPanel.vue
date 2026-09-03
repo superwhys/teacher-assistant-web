@@ -162,12 +162,13 @@ function getCompactRecordTimeLabel(date: Date): string {
 
 <style scoped>
 .shop-records-panel {
-    padding: 24px;
-    border: 1px solid rgba(122, 141, 198, 0.18);
-    border-radius: 32px;
-    background: rgba(255, 255, 255, 0.72);
-    box-shadow: 0 14px 30px rgba(71, 90, 150, 0.12);
-    backdrop-filter: blur(16px);
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface);
+    box-shadow: var(--ta-shadow-1);
+    backdrop-filter: blur(18px) saturate(150%);
 }
 
 .shop-records-panel--preview {
@@ -175,9 +176,8 @@ function getCompactRecordTimeLabel(date: Date): string {
 }
 
 .panel-head,
-.record-card,
+.record-card__identity,
 .record-card__footer,
-.record-card__info,
 .record-card__content,
 .record-card__aside,
 .shop-records-panel__pagination {
@@ -185,155 +185,119 @@ function getCompactRecordTimeLabel(date: Date): string {
     align-items: center;
 }
 
-.panel-head,
-.record-card,
-.shop-records-panel__pagination {
-    justify-content: space-between;
-}
-
 .panel-head {
     align-items: flex-start;
-    gap: 14px;
+    justify-content: space-between;
+    gap: 12px;
 }
 
 .panel-head__eyebrow {
-    display: inline-flex;
-    align-items: center;
-    min-height: 30px;
-    padding: 0 10px;
-    border-radius: 999px;
-    background: rgba(18, 185, 129, 0.12);
-    color: #067647;
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.panel-head h3,
-.panel-head p,
-.record-card__content strong,
-.record-card__content p,
-.shop-records-panel__empty strong,
-.shop-records-panel__empty p {
-    margin: 0;
+    color: var(--ta-green);
+    font-size: 11px;
+    font-weight: 650;
 }
 
 .panel-head h3 {
-    margin-top: 12px;
-    color: #16213e;
-    font-size: 24px;
+    margin: 5px 0 0;
+    font-size: 17px;
+    letter-spacing: -0.015em;
 }
 
-.panel-head p {
-    margin-top: 8px;
-    color: #627099;
-    line-height: 1.7;
-}
-
-.panel-head__link {
-    min-height: 42px;
-    padding: 0 16px;
-    border: 1px solid rgba(122, 141, 198, 0.24);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.78);
-    color: #16213e;
-    font: inherit;
-    font-weight: 700;
+.panel-head__link,
+.record-card__undo {
+    border: 0;
+    color: var(--ta-blue);
+    background: transparent;
+    font-size: 12px;
+    font-weight: 600;
     cursor: pointer;
-    white-space: nowrap;
-    flex-shrink: 0;
 }
 
 .shop-records-panel__body {
-    min-height: 240px;
-    margin-top: 20px;
+    min-height: 180px;
+    margin-top: 12px;
 }
 
 .shop-records-panel__list {
     display: grid;
-    gap: 14px;
 }
 
 .record-card {
-    padding: 18px;
-    border: 1px solid rgba(122, 141, 198, 0.16);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.82);
-    gap: 14px;
-    flex-direction: column;
-    align-items: stretch;
+    min-height: 72px;
+    padding: 10px 0;
+    border-top: 1px solid var(--ta-line);
 }
 
-.record-card__footer {
-    min-width: 0;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
+.record-card:first-child {
+    border-top: 0;
 }
 
 .record-card__identity {
-    display: flex;
-    align-items: center;
-    gap: 14px;
     min-width: 0;
-}
-
-.record-card__meta {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    gap: 6px;
-    min-width: 0;
+    gap: 9px;
 }
 
 .record-card__avatar {
-    width: 48px;
-    height: 48px;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
     display: grid;
     place-items: center;
-    border-radius: 18px;
-    background: linear-gradient(135deg, rgba(85, 104, 255, 0.9), rgba(142, 108, 255, 0.9));
-    color: #ffffff;
-    font-size: 18px;
-    font-weight: 800;
-    flex-shrink: 0;
+    border-radius: 11px;
+    color: #0069d6;
+    background: #e7f3ff;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.record-card__meta {
+    min-width: 0;
+}
+
+.record-card__meta strong {
+    display: block;
+    overflow: hidden;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.record-card__time {
+    margin-top: 3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--ta-text-tertiary);
+    font-size: 10px;
+}
+
+.record-card__time svg {
+    width: 12px;
+    height: 12px;
+}
+
+.record-card__footer {
+    margin-top: 8px;
+    justify-content: space-between;
+    gap: 8px;
 }
 
 .record-card__content {
     min-width: 0;
     flex: 1;
-    align-items: center;
-}
-
-.record-card__meta strong {
-    color: #16213e;
-    font-size: 17px;
-    line-height: 1.4;
-    word-break: break-all;
-}
-
-.record-card__time {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: #8a94b3;
-    font-size: 12px;
-    line-height: 1.6;
-    flex-wrap: wrap;
 }
 
 .record-card__badge {
+    max-width: 100%;
+    min-height: 27px;
+    padding: 0 8px;
     display: inline-flex;
     align-items: center;
-    max-width: 100%;
-    min-width: 0;
-    padding: 8px 14px;
-    border-radius: 12px;
-    background: rgba(85, 104, 255, 0.08);
-    color: #5b63f6;
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.4;
-    gap: 8px;
+    gap: 5px;
+    border-radius: 8px;
+    color: #0064cf;
+    background: #e6f2ff;
+    font-size: 10px;
 }
 
 .record-card__badge-name {
@@ -344,89 +308,59 @@ function getCompactRecordTimeLabel(date: Date): string {
 }
 
 .record-card__badge-count {
-    flex-shrink: 0;
     white-space: nowrap;
 }
 
 .record-card__aside {
-    gap: 10px;
-    flex-wrap: wrap;
+    flex: 0 0 auto;
     justify-content: flex-end;
+    gap: 6px;
 }
 
 .record-card__points {
-    display: inline-flex;
-    align-items: center;
-    min-height: 38px;
-    padding: 0 12px;
-    border-radius: 999px;
-    background: rgba(255, 182, 72, 0.14);
-    color: #b54708;
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.record-card__undo {
-    min-height: 38px;
-    padding: 0 14px;
-    border: none;
-    border-radius: 14px;
-    background: rgba(22, 33, 62, 0.08);
-    color: #16213e;
-    font: inherit;
-    font-weight: 700;
-    cursor: pointer;
+    color: var(--ta-orange);
+    font-size: 11px;
+    font-weight: 650;
+    white-space: nowrap;
 }
 
 .shop-records-panel__pagination {
-    margin-top: 18px;
+    margin-top: 14px;
+    justify-content: center;
 }
 
 .shop-records-panel__empty {
-    min-height: 240px;
+    min-height: 200px;
+    padding: 24px;
     display: grid;
     place-items: center;
+    align-content: center;
+    gap: 8px;
+    border-radius: 14px;
+    color: var(--ta-text-tertiary);
+    background: var(--ta-surface-muted);
     text-align: center;
-    gap: 10px;
-    color: #627099;
 }
 
 .shop-records-panel__empty-icon {
-    font-size: 54px;
-    color: #5568ff;
+    width: 40px;
+    height: 40px;
+    color: var(--ta-blue);
 }
 
-@media (max-width: 1200px) {
-    .record-card__footer {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .record-card__aside {
-        width: 100%;
-        justify-content: flex-start;
-    }
+.shop-records-panel__empty strong {
+    color: var(--ta-text);
+    font-size: 14px;
 }
 
-@media (max-width: 768px) {
+.shop-records-panel__empty p {
+    margin: 0;
+    font-size: 12px;
+}
+
+@media (max-width: 660px) {
     .shop-records-panel {
-        padding: 18px;
-        border-radius: 28px;
-    }
-
-    .panel-head,
-    .record-card,
-    .record-card__footer,
-    .record-card__info,
-    .record-card__content,
-    .record-card__aside,
-    .shop-records-panel__pagination {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .panel-head__link {
-        width: 100%;
+        padding: 16px;
     }
 }
 </style>

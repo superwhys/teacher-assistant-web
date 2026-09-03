@@ -1,13 +1,24 @@
 <template>
     <article class="shop-card">
         <div class="shop-card__toolbar">
-            <button type="button" class="icon-button" aria-label="编辑商品" @click="emit('edit', item)">
-                <i-ep-edit />
-            </button>
-            <button type="button" class="icon-button icon-button--danger" aria-label="删除商品"
-                @click="emit('delete', item)">
-                <i-ep-delete />
-            </button>
+            <el-dropdown trigger="click" placement="bottom-end" popper-class="shop-card-actions-menu"
+                @command="handleActionCommand">
+                <button type="button" class="shop-card__menu-button" aria-label="商品操作" @click.stop>
+                    <i-ep-more-filled />
+                </button>
+                <template #dropdown>
+                    <el-dropdown-menu>
+                        <el-dropdown-item command="edit">
+                            <i-ep-edit />
+                            <span>编辑商品</span>
+                        </el-dropdown-item>
+                        <el-dropdown-item command="delete" divided class="shop-card-actions-menu__danger">
+                            <i-ep-delete />
+                            <span>删除商品</span>
+                        </el-dropdown-item>
+                    </el-dropdown-menu>
+                </template>
+            </el-dropdown>
         </div>
 
         <div class="shop-card__visual" :class="visualClass">
@@ -43,6 +54,8 @@ import { getShopIconComponent, getShopVisualClass } from "@/v3/components/shop/s
 
 defineOptions({ name: "ShopPrizeCard" })
 
+type ShopCardActionCommand = "edit" | "delete"
+
 /** 定义商城商品卡片属性。 */
 interface ShopPrizeCardProps {
     canExchange: boolean
@@ -75,6 +88,17 @@ const iconComponent = computed(() => getShopIconComponent(props.item.icon))
 /** 返回商品顶部视觉渐变样式。 */
 const visualClass = computed<string>(() => getShopVisualClass(props.item.icon))
 
+
+/** 处理商品卡片右上角菜单操作。 */
+function handleActionCommand(command: ShopCardActionCommand): void {
+    if (command === "edit") {
+        emit("edit", props.item)
+        return
+    }
+
+    emit("delete", props.item)
+}
+
 /** 将任意值转换为数字。 */
 function toNumber(value: unknown, fallback = 0): number {
     const parsedValue = typeof value === "number" ? value : Number(value)
@@ -85,230 +109,222 @@ function toNumber(value: unknown, fallback = 0): number {
 <style scoped>
 .shop-card {
     position: relative;
-    padding: 18px;
-    border: 1px solid rgba(122, 141, 198, 0.18);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 14px 30px rgba(71, 90, 150, 0.12);
-    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+    min-width: 0;
+    padding: 13px;
+    border: 1px solid var(--ta-line);
+    border-radius: 16px;
+    background: #ffffff;
+    transition: border-color 140ms ease, box-shadow 140ms ease, transform 100ms ease;
 }
 
 .shop-card:hover {
-    transform: translateY(-4px);
-    border-color: rgba(85, 104, 255, 0.26);
-    box-shadow: 0 20px 34px rgba(71, 90, 150, 0.16);
+    border-color: rgba(0, 122, 255, 0.25);
 }
 
-.shop-card__toolbar,
+.shop-card:active {
+    transform: scale(0.99);
+}
+
 .shop-card__footer,
 .shop-card__meta {
     display: flex;
     align-items: center;
 }
 
-.shop-card__toolbar,
-.shop-card__footer {
-    justify-content: space-between;
-    gap: 12px;
-}
-
 .shop-card__toolbar {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    opacity: 0;
-    transition: opacity 0.16s ease;
+    top: 9px;
+    right: 9px;
+    z-index: 2;
 }
 
-.shop-card:hover .shop-card__toolbar {
-    opacity: 1;
-}
-
-.icon-button,
-.exchange-button {
-    border: none;
-    font: inherit;
-    cursor: pointer;
-}
-
-.icon-button {
-    width: 34px;
-    height: 34px;
+.shop-card__menu-button {
+    width: 32px;
+    height: 32px;
+    padding: 0;
     display: grid;
     place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 10px;
+    color: var(--ta-text-secondary);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(12px);
+    cursor: pointer;
+    transition: color 140ms ease, background-color 140ms ease, transform 100ms ease;
+}
+
+.shop-card__menu-button:hover,
+.shop-card__menu-button[aria-expanded="true"] {
+    color: var(--ta-blue);
+    background: #ffffff;
+}
+
+.shop-card__menu-button:active {
+    transform: scale(0.96);
+}
+
+.shop-card__menu-button svg {
+    width: 17px;
+    height: 17px;
+}
+
+:global(.shop-card-actions-menu.el-popper) {
+    padding: 4px;
+    border: 1px solid var(--ta-line);
     border-radius: 12px;
-    background: rgba(22, 33, 62, 0.06);
-    color: #5568ff;
-    transition: transform 0.16s ease, background-color 0.16s ease;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: var(--ta-shadow-2);
+    backdrop-filter: blur(20px) saturate(160%);
 }
 
-.icon-button:hover {
-    transform: translateY(-1px);
-    background: rgba(85, 104, 255, 0.12);
+:global(.shop-card-actions-menu .el-dropdown-menu) {
+    padding: 0;
+    background: transparent;
 }
 
-.icon-button--danger {
-    color: #d92d20;
+:global(.shop-card-actions-menu .el-dropdown-menu__item) {
+    min-height: 36px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px;
+    color: var(--ta-text-secondary);
+    font-size: 12px;
 }
 
-.icon-button--danger:hover {
-    background: rgba(217, 45, 32, 0.12);
+:global(.shop-card-actions-menu .el-dropdown-menu__item svg) {
+    width: 15px;
+    height: 15px;
+}
+
+:global(.shop-card-actions-menu .el-dropdown-menu__item:not(.is-disabled):focus) {
+    color: var(--ta-text);
+    background: var(--ta-surface-muted);
+}
+
+:global(.shop-card-actions-menu .shop-card-actions-menu__danger) {
+    color: var(--ta-red);
 }
 
 .shop-card__visual {
-    height: 126px;
-    border-radius: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    height: 90px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
     color: #ffffff;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .shop-card__visual :deep(svg) {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
 }
 
 .shop-card__visual--violet {
-    background: linear-gradient(135deg, #8e6cff, #5568ff);
+    background: linear-gradient(145deg, #9b6be8, #7650c7);
 }
 
 .shop-card__visual--emerald {
-    background: linear-gradient(135deg, #12b981, #14b8a6);
+    background: linear-gradient(145deg, #4aa568, #2f7f49);
 }
 
 .shop-card__visual--gold {
-    background: linear-gradient(135deg, #f59e0b, #f97316);
+    background: linear-gradient(145deg, #efad32, #d57c16);
 }
 
 .shop-card__visual--sunset {
-    background: linear-gradient(135deg, #ff8f6b, #ff6b81);
+    background: linear-gradient(145deg, #ef8f6f, #d65b76);
 }
 
 .shop-card__visual--indigo {
-    background: linear-gradient(135deg, #5568ff, #7c8cff);
+    background: linear-gradient(145deg, #5e72d8, #4555aa);
 }
 
 .shop-card__visual--cyan {
-    background: linear-gradient(135deg, #06b6d4, #3b82f6);
+    background: linear-gradient(145deg, #37a6c8, #357fbd);
 }
 
 .shop-card__title {
-    margin-top: 14px;
-}
-
-.shop-card__title strong,
-.shop-card__title p,
-.shop-card__points span,
-.shop-card__points strong,
-.shop-card__stock {
-    margin: 0;
+    margin-top: 11px;
 }
 
 .shop-card__title strong {
     display: block;
-    color: #16213e;
-    font-size: 18px;
-    line-height: 1.3;
-    min-height: 48px;
+    overflow: hidden;
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .shop-card__title p {
-    margin-top: 8px;
-    color: #627099;
-    font-size: 13px;
-    line-height: 1.6;
-    min-height: 42px;
+    min-height: 34px;
+    margin: 4px 0 0;
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--ta-text-tertiary);
+    font-size: 11px;
+    line-height: 1.5;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
 }
 
 .shop-card__footer {
-    margin-top: 14px;
+    margin-top: 10px;
+    justify-content: space-between;
+    gap: 8px;
 }
 
 .shop-card__points span {
     display: block;
-    color: #627099;
-    font-size: 12px;
-    white-space: nowrap;
+    color: var(--ta-text-tertiary);
+    font-size: 10px;
 }
 
 .shop-card__points strong {
     display: block;
-    margin-top: 6px;
-    color: #16213e;
-    font-size: 24px;
+    margin-top: 3px;
+    font-size: 18px;
     line-height: 1;
 }
 
 .shop-card__meta {
-    gap: 8px;
-    flex-wrap: wrap;
     justify-content: flex-end;
+    gap: 5px;
+    flex-wrap: wrap;
 }
 
 .shop-card__stock {
+    min-height: 25px;
+    padding: 0 7px;
     display: inline-flex;
     align-items: center;
-    min-height: 32px;
-    padding: 0 10px;
     border-radius: 999px;
-    background: rgba(22, 33, 62, 0.06);
-    color: #627099;
-    font-size: 12px;
-    font-weight: 700;
+    color: var(--ta-text-tertiary);
+    background: var(--ta-surface-muted);
+    font-size: 10px;
+    white-space: nowrap;
 }
 
 .shop-card__stock.is-empty {
-    background: rgba(217, 45, 32, 0.1);
-    color: #d92d20;
+    color: var(--ta-red);
+    background: var(--ta-red-soft);
 }
 
 .exchange-button {
-    min-height: 36px;
-    padding: 0 14px;
-    border-radius: 14px;
-    background: rgba(22, 33, 62, 0.08);
-    color: #16213e;
-    font-size: 13px;
-    font-weight: 700;
-    transition: transform 0.16s ease, background-color 0.16s ease, color 0.16s ease;
-}
-
-.exchange-button:not(:disabled):hover {
-    transform: translateY(-1px);
-    background: linear-gradient(135deg, #5568ff, #8e6cff);
+    min-height: 30px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 9px;
     color: #ffffff;
+    background: var(--ta-blue);
+    font-size: 11px;
+    font-weight: 620;
+    cursor: pointer;
 }
 
 .exchange-button:disabled {
-    opacity: 0.46;
-    cursor: not-allowed;
+    opacity: 0.42;
 }
 
-@media (max-width: 768px) {
-    .shop-card {
-        padding: 16px;
-    }
-
-    .shop-card__toolbar {
-        opacity: 1;
-        top: 10px;
-        right: 10px;
-    }
-
-    .shop-card__visual {
-        height: 112px;
-    }
-
-    .shop-card__footer {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .shop-card__meta {
-        width: 100%;
-        justify-content: space-between;
-    }
-}
 </style>

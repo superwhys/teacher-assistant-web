@@ -1,0 +1,2037 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>教师助手 · v4 UI 原型</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Segoe UI", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      --bg: #f5f5f7;
+      --surface: rgba(255, 255, 255, 0.82);
+      --surface-solid: #ffffff;
+      --surface-muted: #f2f2f7;
+      --surface-blue: #eef6ff;
+      --text: #1d1d1f;
+      --text-2: #515154;
+      --text-3: #86868b;
+      --line: rgba(60, 60, 67, 0.12);
+      --line-strong: rgba(60, 60, 67, 0.2);
+      --blue: #007aff;
+      --blue-hover: #006ee6;
+      --blue-soft: rgba(0, 122, 255, 0.1);
+      --green: #248a3d;
+      --green-soft: #eaf7ed;
+      --orange: #c93400;
+      --orange-soft: #fff1e7;
+      --red: #d70015;
+      --red-soft: #fff0f1;
+      --purple: #8944ab;
+      --purple-soft: #f7effb;
+      --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 30px rgba(0, 0, 0, 0.04);
+      --shadow-2: 0 18px 50px rgba(0, 0, 0, 0.14);
+      --radius-s: 10px;
+      --radius-m: 16px;
+      --radius-l: 22px;
+      --sidebar: 236px;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-width: 320px; background: var(--bg); }
+    body { margin: 0; min-width: 320px; min-height: 100vh; color: var(--text); background: var(--bg); }
+    button, input, select, textarea { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 3px solid rgba(0, 122, 255, 0.28);
+      outline-offset: 2px;
+    }
+    svg { display: block; }
+    [hidden] { display: none !important; }
+
+    .svg-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+    .icon { width: 19px; height: 19px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .icon.small { width: 16px; height: 16px; }
+    .icon.large { width: 28px; height: 28px; }
+
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: var(--sidebar) minmax(0, 1fr);
+      transition: grid-template-columns 260ms cubic-bezier(.2,.8,.2,1);
+    }
+    .app-shell.is-collapsed { --sidebar: 82px; }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      z-index: 30;
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-right: 1px solid var(--line);
+      background: rgba(249, 249, 251, 0.84);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+    }
+    .brand {
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 8px;
+      border-radius: 14px;
+    }
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      color: #fff;
+      background: linear-gradient(145deg, #1687ff, #0061d9);
+      box-shadow: 0 7px 18px rgba(0, 122, 255, 0.24);
+    }
+    .brand-copy { min-width: 0; }
+    .brand-copy strong { display: block; font-size: 16px; line-height: 1.15; letter-spacing: -0.01em; white-space: nowrap; }
+    .brand-copy span { display: block; margin-top: 4px; color: var(--text-3); font-size: 11px; letter-spacing: .02em; white-space: nowrap; }
+    .collapse-button {
+      width: 30px;
+      height: 30px;
+      margin-left: auto;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border: 0;
+      border-radius: 9px;
+      color: var(--text-3);
+      background: transparent;
+      cursor: pointer;
+    }
+    .collapse-button:hover { color: var(--text); background: rgba(0,0,0,.05); }
+    .app-shell.is-collapsed .brand-copy,
+    .app-shell.is-collapsed .nav-label,
+    .app-shell.is-collapsed .account-copy,
+    .app-shell.is-collapsed .account-chevron { display: none; }
+    .app-shell.is-collapsed .brand { justify-content: center; padding-inline: 0; }
+    .app-shell.is-collapsed .collapse-button { position: absolute; top: 76px; left: 26px; transform: rotate(180deg); }
+    .app-shell.is-collapsed .sidebar { padding-top: 14px; }
+    .app-shell.is-collapsed .primary-nav { margin-top: 37px; }
+
+    .primary-nav { display: grid; gap: 4px; }
+    .nav-item {
+      width: 100%;
+      min-height: 46px;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      border: 0;
+      border-radius: 12px;
+      color: var(--text-2);
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+      transition: color 140ms ease, background-color 140ms ease, transform 100ms ease;
+    }
+    .nav-item:hover { color: var(--text); background: rgba(0, 0, 0, 0.045); }
+    .nav-item.is-active { color: #006edc; background: var(--blue-soft); font-weight: 650; }
+    .nav-item:active { transform: scale(.975); }
+    .app-shell.is-collapsed .nav-item { justify-content: center; padding-inline: 0; }
+    .nav-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .sidebar-spacer { flex: 1; }
+    .quick-entry {
+      min-height: 42px;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 0;
+      border-radius: 12px;
+      color: var(--text-2);
+      background: transparent;
+      cursor: pointer;
+    }
+    .quick-entry:hover { color: var(--text); background: rgba(0,0,0,.045); }
+    .account-wrap { position: relative; }
+    .account-button {
+      width: 100%;
+      min-height: 54px;
+      padding: 7px 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid transparent;
+      border-radius: 14px;
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+    }
+    .account-button:hover, .account-button.is-open { border-color: var(--line); background: rgba(255,255,255,.7); }
+    .avatar {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      background: linear-gradient(145deg, #5e5ce6, #007aff);
+    }
+    .account-copy { min-width: 0; flex: 1; }
+    .account-copy strong { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .account-copy span { display: block; margin-top: 2px; color: var(--text-3); font-size: 11px; }
+    .account-chevron { color: var(--text-3); }
+
+    .popover {
+      position: absolute;
+      z-index: 80;
+      min-width: 200px;
+      padding: 6px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.94);
+      box-shadow: var(--shadow-2);
+      backdrop-filter: blur(22px) saturate(180%);
+      -webkit-backdrop-filter: blur(22px) saturate(180%);
+      transform-origin: bottom left;
+      animation: materialize 160ms cubic-bezier(.2,.8,.2,1);
+    }
+    .account-menu { left: 0; bottom: 61px; width: 100%; }
+    .quick-menu { left: 12px; bottom: 118px; }
+    .popover button {
+      width: 100%;
+      min-height: 40px;
+      padding: 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      border: 0;
+      border-radius: 9px;
+      color: var(--text-2);
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+    }
+    .popover button:hover { color: var(--text); background: var(--surface-muted); }
+    .popover button.danger { color: var(--red); }
+
+    .workspace { min-width: 0; display: flex; flex-direction: column; }
+    .workspace-header {
+      position: sticky;
+      top: 0;
+      z-index: 24;
+      min-height: 70px;
+      padding: 10px clamp(18px, 3vw, 34px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid transparent;
+      background: rgba(245,245,247,.76);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+    }
+    .workspace-header::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -12px;
+      height: 12px;
+      pointer-events: none;
+      background: linear-gradient(180deg, rgba(245,245,247,.56), transparent);
+      opacity: .8;
+    }
+    .context-bar { min-width: 0; display: flex; align-items: center; gap: 7px; }
+    .context-button, .header-button, .primary-button, .secondary-button, .danger-button, .icon-button, .text-button, .segmented button, .chip {
+      border: 0;
+      cursor: pointer;
+      transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease, transform 100ms ease, box-shadow 140ms ease;
+    }
+    .context-button:active, .header-button:active, .primary-button:active, .secondary-button:active, .danger-button:active, .icon-button:active, .chip:active, .segmented button:active { transform: scale(.97); }
+    .context-button {
+      min-height: 38px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 10px;
+      color: var(--text-2);
+      background: rgba(255,255,255,.7);
+      box-shadow: inset 0 0 0 1px var(--line);
+      white-space: nowrap;
+    }
+    .context-button:hover { color: var(--text); background: #fff; }
+    .context-divider { width: 1px; height: 20px; margin: 0 3px; background: var(--line); }
+    .context-status { display: inline-flex; align-items: center; gap: 7px; color: var(--green); font-size: 12px; white-space: nowrap; }
+    .context-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 4px rgba(36,138,61,.1); }
+    .context-status.is-archived { color: var(--orange); }
+    .header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
+    .header-button {
+      min-height: 38px;
+      padding: 0 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border-radius: 10px;
+      color: var(--text-2);
+      background: rgba(255,255,255,.7);
+      box-shadow: inset 0 0 0 1px var(--line);
+      white-space: nowrap;
+    }
+    .header-button:hover { color: var(--text); background: #fff; }
+    .header-button.primary { color: #fff; background: var(--blue); box-shadow: 0 5px 14px rgba(0,122,255,.2); }
+    .header-button.primary:hover { background: var(--blue-hover); }
+    .header-button.icon-only { width: 38px; padding: 0; }
+
+    .timer-pill {
+      min-height: 40px;
+      padding: 0 12px 0 9px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 0;
+      border-radius: 12px;
+      color: #005ecb;
+      background: #e8f3ff;
+      cursor: pointer;
+      animation: materialize 180ms cubic-bezier(.2,.8,.2,1);
+    }
+    .timer-dot { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 8px; color: white; background: var(--blue); }
+    .timer-pill strong { font-variant-numeric: tabular-nums; }
+
+    .content {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 24px clamp(18px, 2vw, 48px) 44px;
+    }
+    .page { display: none; animation: page-in 210ms cubic-bezier(.2,.8,.2,1); }
+    .page.is-active { display: block; }
+    .page-heading {
+      min-height: 66px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+    }
+    .page-heading-copy { min-width: 0; }
+    .eyebrow { margin: 0 0 6px; color: var(--blue); font-size: 12px; font-weight: 650; letter-spacing: .05em; }
+    .page-heading h1 { margin: 0; font-size: clamp(25px, 2.2vw, 34px); line-height: 1.14; letter-spacing: -.035em; }
+    .page-heading p { max-width: 720px; margin: 7px 0 0; color: var(--text-3); font-size: 14px; line-height: 1.55; }
+    .page-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-l);
+      background: var(--surface);
+      box-shadow: var(--shadow-1);
+      backdrop-filter: blur(18px) saturate(150%);
+      -webkit-backdrop-filter: blur(18px) saturate(150%);
+    }
+    .panel.pad { padding: 20px; }
+    .panel-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+    .panel-header h2, .panel-header h3 { margin: 0; letter-spacing: -.015em; }
+    .panel-header h2 { font-size: 20px; }
+    .panel-header h3 { font-size: 17px; }
+    .panel-header p { margin: 5px 0 0; color: var(--text-3); font-size: 13px; line-height: 1.5; }
+    .panel-actions { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .metrics-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+    .metrics-grid.three { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .metric {
+      min-height: 112px;
+      padding: 17px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,255,255,.84);
+      box-shadow: var(--shadow-1);
+    }
+    .metric::after { content: ""; position: absolute; width: 74px; height: 74px; right: -24px; bottom: -30px; border-radius: 50%; background: var(--metric-soft, var(--blue-soft)); }
+    .metric.blue { --metric-soft: #dceeff; }
+    .metric.purple { --metric-soft: #eee1f6; }
+    .metric.orange { --metric-soft: #ffe6d6; }
+    .metric.green { --metric-soft: #dcf2e1; }
+    .metric span { display: block; color: var(--text-3); font-size: 12px; }
+    .metric strong { display: block; margin-top: 8px; font-size: 27px; line-height: 1; letter-spacing: -.025em; font-variant-numeric: tabular-nums; }
+    .metric small { display: block; margin-top: 9px; color: var(--text-2); font-size: 12px; line-height: 1.4; }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .grid-main-side { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 14px; }
+    .stack { display: grid; gap: 14px; }
+    .list { display: grid; margin-top: 14px; }
+    .list-row {
+      min-height: 54px;
+      padding: 10px 2px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-top: 1px solid var(--line);
+    }
+    .list-row:first-child { border-top: 0; }
+    .list-index { width: 26px; color: var(--text-3); font-size: 13px; font-variant-numeric: tabular-nums; text-align: center; }
+    .list-index.medal { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 9px; color: #8a5c00; background: #fff0c2; font-weight: 700; }
+    .list-main { min-width: 0; flex: 1; }
+    .list-main strong { display: block; font-size: 14px; }
+    .list-main span, .list-main p { display: block; margin: 3px 0 0; color: var(--text-3); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .list-value { color: var(--text-2); font-size: 14px; font-weight: 650; white-space: nowrap; }
+    .list-value.plus { color: var(--green); }
+    .list-value.minus { color: var(--red); }
+
+    .status-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+    .status-chip {
+      min-height: 26px;
+      padding: 0 9px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      color: var(--text-2);
+      background: var(--surface-muted);
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .status-chip.blue { color: #0064cf; background: #e6f2ff; }
+    .status-chip.green { color: #1b7133; background: var(--green-soft); }
+    .status-chip.orange { color: #a53400; background: var(--orange-soft); }
+    .status-chip.red { color: #bb0012; background: var(--red-soft); }
+    .status-chip.purple { color: #733593; background: var(--purple-soft); }
+
+    .primary-button, .secondary-button, .danger-button {
+      min-height: 38px;
+      padding: 0 13px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 620;
+      white-space: nowrap;
+    }
+    .primary-button { color: #fff; background: var(--blue); box-shadow: 0 5px 14px rgba(0,122,255,.18); }
+    .primary-button:hover { background: var(--blue-hover); }
+    .secondary-button { color: var(--text-2); background: #fff; box-shadow: inset 0 0 0 1px var(--line-strong); }
+    .secondary-button:hover { color: var(--text); background: #fafafa; }
+    .danger-button { color: var(--red); background: var(--red-soft); }
+    .danger-button:hover { background: #ffe4e7; }
+    .icon-button { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; color: var(--text-2); background: #fff; box-shadow: inset 0 0 0 1px var(--line); }
+    .icon-button:hover { color: var(--text); box-shadow: inset 0 0 0 1px var(--line-strong); }
+    .icon-button.danger { color: var(--red); }
+    .text-button { padding: 4px 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: var(--blue); background: transparent; font-size: 13px; font-weight: 600; line-height: 1.2; }
+    .text-button:hover { color: #005ecb; }
+    button:disabled { opacity: .42; cursor: not-allowed; transform: none !important; }
+
+    .segmented {
+      min-height: 34px;
+      padding: 3px;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      border-radius: 10px;
+      background: #e9e9ed;
+    }
+    .segmented button {
+      min-height: 28px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border-radius: 8px;
+      color: var(--text-2);
+      background: transparent;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .segmented button.is-active { color: var(--text); background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.12); font-weight: 620; }
+
+    .field { display: grid; gap: 6px; }
+    .field label, .field > span { color: var(--text-2); font-size: 12px; font-weight: 600; }
+    .input, .select, .textarea {
+      width: 100%;
+      min-height: 40px;
+      padding: 0 12px;
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      color: var(--text);
+      background: rgba(255,255,255,.9);
+      outline: 0;
+    }
+    .textarea { min-height: 112px; padding-block: 10px; resize: vertical; line-height: 1.55; }
+    .input::placeholder, .textarea::placeholder { color: #a1a1a6; }
+    .input:focus, .select:focus, .textarea:focus { border-color: rgba(0,122,255,.65); box-shadow: 0 0 0 3px rgba(0,122,255,.1); }
+    .search-field { position: relative; min-width: 260px; }
+    .search-field .icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-3); pointer-events: none; }
+    .search-field .input { padding-left: 37px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 13px; }
+    .form-grid .full { grid-column: 1 / -1; }
+
+    .module-commandbar {
+      margin-bottom: 14px;
+      padding: 2px 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .module-commandbar__context { min-width: 0; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .module-commandbar__meta { color: var(--text-3); font-size: 12px; line-height: 1.5; }
+    .module-commandbar__actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; flex-wrap: wrap; }
+
+    .toolbar {
+      margin-bottom: 14px;
+      padding: 14px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,255,255,.76);
+      box-shadow: var(--shadow-1);
+    }
+    .toolbar-section { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+    .toolbar-label { display: grid; gap: 6px; color: var(--text-3); font-size: 11px; }
+    .toolbar-scroll { min-width: 0; overflow-x: auto; scrollbar-width: none; }
+    .toolbar-scroll::-webkit-scrollbar { display: none; }
+    .chip-row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .chip {
+      min-height: 32px;
+      padding: 0 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      color: var(--text-2);
+      background: #fff;
+      box-shadow: inset 0 0 0 1px var(--line);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .chip:hover { box-shadow: inset 0 0 0 1px var(--line-strong); }
+    .chip.is-active { color: #0065d1; background: #eaf4ff; box-shadow: inset 0 0 0 1px rgba(0,122,255,.2); font-weight: 620; }
+    .chip-count { color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+    .notice {
+      margin-bottom: 14px;
+      padding: 11px 13px;
+      display: none;
+      align-items: center;
+      gap: 9px;
+      border: 1px solid #f5c8a8;
+      border-radius: 12px;
+      color: #8c2f00;
+      background: #fff7f0;
+      font-size: 13px;
+    }
+    .is-archived .notice { display: flex; }
+    .is-archived [data-mutation] { opacity: .42; pointer-events: none; }
+
+    .student-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 9px; margin-top: 14px; }
+    .student-card {
+      min-height: 106px;
+      padding: 12px;
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: rgba(255,255,255,.82);
+      cursor: pointer;
+      transition: transform 130ms ease, border-color 130ms ease, box-shadow 130ms ease, background-color 130ms ease;
+    }
+    .student-card:hover { transform: translateY(-1px); border-color: rgba(0,122,255,.25); box-shadow: 0 8px 20px rgba(0,0,0,.05); }
+    .student-card:active { transform: scale(.985); }
+    .student-card.is-selected { border-color: rgba(0,122,255,.52); background: #f1f7ff; box-shadow: 0 0 0 3px rgba(0,122,255,.08); }
+    .student-card-head { display: flex; align-items: center; gap: 9px; }
+    .student-avatar { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; color: #3a4f75; background: #e7effd; font-size: 13px; font-weight: 700; }
+    .student-card:nth-child(3n+2) .student-avatar { color: #6d3d7e; background: #f0e7f5; }
+    .student-card:nth-child(3n) .student-avatar { color: #7f5418; background: #fff0d6; }
+    .student-name { min-width: 0; flex: 1; }
+    .student-name strong { display: block; font-size: 14px; }
+    .student-name span { display: block; margin-top: 3px; color: var(--text-3); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .student-actions { display: flex; gap: 3px; opacity: .55; }
+    .student-actions button { width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 8px; color: var(--text-3); background: transparent; cursor: pointer; }
+    .student-actions button:hover { color: var(--text); background: var(--surface-muted); }
+    .student-actions button:last-child:hover { color: var(--red); background: var(--red-soft); }
+    .student-score { margin-top: 13px; display: flex; align-items: baseline; gap: 5px; color: var(--text-3); font-size: 11px; }
+    .student-score strong { color: var(--text); font-size: 17px; }
+    .student-grid.is-list { grid-template-columns: 1fr; }
+    .student-grid.is-list .student-card { min-height: 64px; display: flex; align-items: center; gap: 12px; }
+    .student-grid.is-list .student-card-head { flex: 1; }
+    .student-grid.is-list .student-score { margin-top: 0; min-width: 120px; justify-content: flex-end; }
+
+    .selection-summary { margin-top: 14px; padding: 14px; border-radius: 14px; background: var(--surface-muted); }
+    .selection-summary-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .selection-summary span { color: var(--text-3); font-size: 12px; }
+    .selection-summary strong { font-size: 14px; }
+    .score-pair { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin-top: 9px; }
+    .score-box { padding: 11px; border-radius: 12px; background: #fff; }
+    .score-box span { display: block; color: var(--text-3); font-size: 11px; }
+    .score-box strong { display: block; margin-top: 4px; font-size: 20px; font-variant-numeric: tabular-nums; }
+    .dual-actions { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin-top: 10px; }
+    .points-plus, .points-minus { min-height: 43px; border: 0; border-radius: 12px; font-weight: 650; cursor: pointer; }
+    .points-plus { color: #176d2d; background: var(--green-soft); }
+    .points-minus { color: #b70012; background: var(--red-soft); }
+    .points-plus:active, .points-minus:active { transform: scale(.98); }
+
+    .rules-layout { display: grid; grid-template-columns: 248px minmax(0,1fr); gap: 12px; margin-top: 14px; }
+    .rule-groups { padding-right: 12px; border-right: 1px solid var(--line); }
+    .rule-group-list { display: grid; gap: 6px; margin-top: 9px; }
+    .rule-group {
+      width: 100%;
+      min-height: 42px;
+      padding: 0 11px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 9px;
+      border: 0;
+      border-radius: 10px;
+      color: var(--text-2);
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+    }
+    .rule-group:hover { background: var(--surface-muted); }
+    .rule-group.is-active { color: #0064cf; background: var(--blue-soft); font-weight: 620; }
+    .rule-group span { color: var(--text-3); font-size: 11px; }
+    .rule-items { min-width: 0; }
+    .rule-item {
+      min-height: 58px;
+      padding: 9px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-top: 1px solid var(--line);
+    }
+    .rule-item:first-of-type { border-top: 0; }
+    .rule-sign { width: 34px; height: 34px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 10px; color: var(--green); background: var(--green-soft); font-size: 12px; font-weight: 700; }
+    .rule-sign.minus { color: var(--red); background: var(--red-soft); }
+    .rule-copy { min-width: 0; flex: 1; }
+    .rule-copy strong { display: block; font-size: 13px; }
+    .rule-copy span { display: block; margin-top: 3px; color: var(--text-3); font-size: 11px; }
+    .rule-actions { display: flex; align-items: center; gap: 4px; }
+
+    .tab-strip { margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
+    .tab-button {
+      min-height: 38px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 11px;
+      color: var(--text-2);
+      background: transparent;
+      cursor: pointer;
+      font-weight: 610;
+    }
+    .tab-button:hover { background: rgba(0,0,0,.04); }
+    .tab-button.is-active { color: #0064cf; background: #fff; box-shadow: var(--shadow-1), inset 0 0 0 1px var(--line); }
+    .tab-panel { display: none; }
+    .tab-panel.is-active { display: block; animation: page-in 180ms cubic-bezier(.2,.8,.2,1); }
+
+    .product-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-top: 14px; }
+    .product-card { overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+    .product-visual { height: 96px; display: grid; place-items: center; color: #5b4a22; background: linear-gradient(145deg, #fff7df, #f5e2a8); }
+    .product-card:nth-child(3n+2) .product-visual { color: #266249; background: linear-gradient(145deg, #edf9f1, #cfead8); }
+    .product-card:nth-child(3n) .product-visual { color: #4c4a89; background: linear-gradient(145deg, #f2f1ff, #dcd9ff); }
+    .product-body { padding: 12px; }
+    .product-body h3 { margin: 0; font-size: 14px; }
+    .product-body p { min-height: 34px; margin: 5px 0 0; color: var(--text-3); font-size: 11px; line-height: 1.5; }
+    .product-meta { margin-top: 10px; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .product-points { color: #9a5a00; font-weight: 700; }
+    .product-stock { color: var(--text-3); font-size: 11px; }
+    .product-actions { margin-top: 10px; display: flex; gap: 6px; }
+    .product-actions button { flex: 1; }
+
+    .tool-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
+    .tool-card { min-height: 360px; padding: 20px; display: flex; flex-direction: column; }
+    .tool-icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 14px; color: #0069d6; background: #e7f3ff; }
+    .tool-card:nth-child(2) .tool-icon { color: #307b43; background: #eaf7ed; }
+    .tool-card:nth-child(3) .tool-icon { color: #79419a; background: #f5edfa; }
+    .tool-card h2 { margin: 15px 0 0; font-size: 19px; }
+    .tool-card > p { margin: 6px 0 0; color: var(--text-3); font-size: 13px; line-height: 1.55; }
+    .tool-body { flex: 1; margin-top: 18px; display: grid; align-content: center; }
+    .timer-display { text-align: center; font-size: clamp(42px, 5vw, 66px); font-weight: 650; line-height: 1; letter-spacing: -.055em; font-variant-numeric: tabular-nums; }
+    .preset-row { margin-top: 16px; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+    .rollcall-display { display: grid; place-items: center; text-align: center; }
+    .rollcall-avatar { width: 94px; height: 94px; display: grid; place-items: center; border-radius: 30px; color: #2c6740; background: linear-gradient(145deg, #effaf2, #d8efdf); font-size: 27px; font-weight: 700; }
+    .rollcall-display strong { margin-top: 13px; font-size: 23px; }
+    .rollcall-display span { margin-top: 4px; color: var(--text-3); font-size: 12px; }
+    .lottery-summary { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+    .summary-box { padding: 14px; border-radius: 14px; background: var(--surface-muted); }
+    .summary-box span { color: var(--text-3); font-size: 11px; }
+    .summary-box strong { display: block; margin-top: 5px; font-size: 23px; }
+    .tool-actions { margin-top: 18px; display: flex; gap: 7px; flex-wrap: wrap; }
+    .tool-actions button { flex: 1; }
+
+    .standalone-toolbar { margin-bottom: 14px; display: flex; align-items: center; gap: 9px; }
+    .standalone-toolbar h1 { margin: 0; font-size: 23px; letter-spacing: -.025em; }
+    .back-button { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 11px; color: var(--text-2); background: #fff; cursor: pointer; }
+    .timer-page-card { min-height: 460px; padding: 26px; display: grid; place-items: center; text-align: center; }
+    .timer-page-card .timer-display { font-size: clamp(62px, 9vw, 112px); }
+    .timer-page-card .preset-row { max-width: 700px; }
+    .timer-controls { margin-top: 26px; display: flex; justify-content: center; gap: 9px; flex-wrap: wrap; }
+    .timer-controls button { min-width: 120px; }
+
+    .lottery-layout { display: grid; grid-template-columns: minmax(0,1.45fr) minmax(300px,.7fr); gap: 14px; }
+    .lottery-toolbar { margin-bottom: 14px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .lottery-toolbar-left, .lottery-toolbar-actions { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .lottery-stage { min-height: 430px; padding: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .lottery-stage-icon { width: 74px; height: 74px; display: grid; place-items: center; border-radius: 24px; color: #6c3590; background: #f1e8f7; }
+    .lottery-name { min-height: 1.1em; margin-top: 22px; font-size: clamp(38px, 5vw, 64px); font-weight: 700; line-height: 1.08; letter-spacing: -.045em; }
+    .lottery-meta { margin-top: 9px; color: var(--text-3); font-size: 13px; }
+    .lottery-side { display: grid; grid-template-rows: minmax(0,1fr) minmax(180px,.6fr); gap: 14px; }
+    .prize-list { display: grid; gap: 7px; margin-top: 12px; }
+    .prize-row { min-height: 50px; padding: 8px 9px; display: flex; align-items: center; gap: 9px; border: 1px solid var(--line); border-radius: 12px; background: #fff; cursor: pointer; }
+    .prize-row:hover { border-color: rgba(0,122,255,.25); }
+    .prize-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; color: #74508a; background: #f4ecf8; }
+    .prize-copy { min-width: 0; flex: 1; }
+    .prize-copy strong { display: block; font-size: 12px; }
+    .prize-copy span { color: var(--text-3); font-size: 10px; }
+    .switch { width: 34px; height: 20px; padding: 2px; border: 0; border-radius: 999px; background: #34c759; cursor: pointer; }
+    .switch::after { content: ""; display: block; width: 16px; height: 16px; margin-left: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: margin 160ms ease; }
+    .switch.is-off { background: #c7c7cc; }
+    .switch.is-off::after { margin-left: 0; }
+
+    .settings-content { display: grid; }
+    .settings-profile {
+      padding: 10px 4px 26px;
+      display: grid;
+      grid-template-columns: auto minmax(170px, .65fr) minmax(420px, 1.35fr) auto;
+      align-items: center;
+      gap: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .settings-profile > .avatar { width: 58px; height: 58px; font-size: 18px; box-shadow: 0 8px 22px rgba(0,122,255,.18); }
+    .settings-profile__identity { min-width: 0; }
+    .settings-profile__identity h2 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
+    .settings-profile__identity p { margin: 4px 0 0; color: var(--text-3); font-size: 12px; }
+    .settings-profile__identity .status-row { margin-top: 9px; }
+    .settings-profile__facts { min-width: 0; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); }
+    .settings-profile__fact { min-width: 0; padding: 3px 16px; border-left: 1px solid var(--line); }
+    .settings-profile__fact span { display: block; color: var(--text-3); font-size: 11px; }
+    .settings-profile__fact strong { display: block; margin-top: 5px; overflow: hidden; color: var(--text-2); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .settings-flow { display: grid; }
+    .settings-section {
+      padding: 28px 4px;
+      display: grid;
+      grid-template-columns: minmax(180px, 230px) minmax(0, 1fr);
+      gap: clamp(28px, 5vw, 72px);
+      border-bottom: 1px solid var(--line);
+    }
+    .settings-section:last-child { border-bottom: 0; }
+    .settings-section__intro h2 { margin: 0; font-size: 17px; letter-spacing: -.015em; }
+    .settings-section__intro p { margin: 7px 0 0; color: var(--text-3); font-size: 12px; line-height: 1.6; }
+    .settings-section__body { min-width: 0; }
+    .settings-kv-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); column-gap: 28px; }
+    .settings-kv {
+      min-height: 58px;
+      padding: 10px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .settings-kv span { color: var(--text-3); font-size: 12px; }
+    .settings-kv strong { min-width: 0; color: var(--text-2); font-size: 13px; text-align: right; }
+    .settings-kv.is-wide { grid-column: 1 / -1; }
+    .settings-state-row {
+      min-height: 62px;
+      padding: 10px 0 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .settings-state-row strong { display: block; font-size: 13px; }
+    .settings-state-row p { margin: 4px 0 0; color: var(--text-3); font-size: 12px; }
+    .settings-action-row { margin-top: 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .settings-feedback .textarea { min-height: 150px; background: rgba(255,255,255,.62); }
+    .settings-section--lock .settings-state-row strong { font-size: 13px; }
+    .settings-section--lock .settings-state-row p { font-size: 11.5px; }
+    .settings-lock-form { gap: 10px; }
+    .settings-lock-form .field { gap: 5px; }
+    .settings-lock-form .field > span { font-size: 11px; }
+    .settings-lock-form .input { min-height: 36px; padding-inline: 10px; border-radius: 9px; font-size: 13px; }
+    .settings-section--lock .settings-action-row { margin-top: 12px; }
+    .settings-section--lock .settings-action-row button,
+    .settings-section--lock .settings-state-row button { min-height: 34px; padding-inline: 10px; font-size: 12px; }
+
+    .summary-list { display: grid; gap: 8px; margin-top: 12px; }
+    .summary-row { min-height: 48px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 13px; border-radius: 12px; background: var(--surface-muted); }
+    .summary-row span { color: var(--text-3); font-size: 12px; }
+    .summary-row strong { font-size: 13px; text-align: right; }
+    .helper { margin-top: 11px; color: var(--text-3); font-size: 12px; line-height: 1.55; }
+
+    .mobile-topbar, .mobile-nav { display: none; }
+
+    .modal-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 120;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+      background: rgba(20,20,24,.34);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .modal-layer.is-open { display: flex; }
+    .modal {
+      width: min(680px, 100%);
+      max-height: min(84vh, 820px);
+      overflow: auto;
+      border: 1px solid rgba(255,255,255,.72);
+      border-radius: 22px;
+      background: rgba(255,255,255,.94);
+      box-shadow: 0 34px 90px rgba(0,0,0,.24);
+      animation: modal-in 220ms cubic-bezier(.2,.8,.2,1);
+    }
+    .modal.wide { width: min(920px, 100%); }
+    .modal-header { position: sticky; top: 0; z-index: 2; padding: 20px 20px 13px; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; background: rgba(255,255,255,.88); backdrop-filter: blur(20px); }
+    .modal-header .eyebrow { margin-bottom: 4px; }
+    .modal-header h2 { margin: 0; font-size: 22px; letter-spacing: -.025em; }
+    .modal-header p { margin: 6px 0 0; color: var(--text-3); font-size: 13px; line-height: 1.5; }
+    .modal-close { width: 32px; height: 32px; display: grid; place-items: center; flex: 0 0 auto; border: 0; border-radius: 50%; color: var(--text-2); background: var(--surface-muted); cursor: pointer; }
+    .modal-body { padding: 6px 20px 20px; }
+    .modal-card { padding: 15px; border: 1px solid var(--line); border-radius: 15px; background: #fff; }
+    .modal-footer { position: sticky; bottom: 0; padding: 13px 20px 18px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--line); background: rgba(255,255,255,.9); backdrop-filter: blur(18px); }
+    .upload-zone { min-height: 150px; padding: 20px; display: grid; place-items: center; border: 1.5px dashed rgba(0,122,255,.34); border-radius: 15px; color: var(--text-3); background: #f7fbff; text-align: center; }
+    .upload-zone strong { display: block; color: var(--text); }
+    .upload-zone p { margin: 6px 0 0; font-size: 12px; }
+    .confirm-icon { width: 54px; height: 54px; margin: 2px auto 14px; display: grid; place-items: center; border-radius: 18px; color: var(--red); background: var(--red-soft); }
+    .confirm-copy { text-align: center; }
+    .confirm-copy strong { display: block; font-size: 17px; }
+    .confirm-copy p { margin: 7px 0 0; color: var(--text-3); font-size: 13px; line-height: 1.55; }
+
+    .lock-layer { position: fixed; inset: 0; z-index: 200; display: none; place-items: center; padding: 22px; background: rgba(22,22,27,.56); backdrop-filter: blur(20px); }
+    .lock-layer.is-open { display: grid; }
+    .lock-card { width: min(390px, 100%); padding: 26px; border: 1px solid rgba(255,255,255,.7); border-radius: 24px; background: rgba(255,255,255,.94); box-shadow: var(--shadow-2); text-align: center; }
+    .lock-card .brand-mark { margin: 0 auto 15px; }
+    .lock-card h2 { margin: 0; font-size: 24px; }
+    .lock-card p { margin: 7px 0 18px; color: var(--text-3); font-size: 13px; }
+    .lock-card .primary-button { width: 100%; margin-top: 10px; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
+      z-index: 300;
+      max-width: calc(100vw - 32px);
+      padding: 11px 15px;
+      border-radius: 12px;
+      color: #fff;
+      background: rgba(29,29,31,.9);
+      box-shadow: var(--shadow-2);
+      backdrop-filter: blur(18px);
+      transform: translate(-50%, 24px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease, transform 260ms cubic-bezier(.2,.8,.2,1);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
+    .auth-screen {
+      min-height: 100vh;
+      padding: clamp(18px, 4vw, 44px);
+      display: none;
+      place-items: center;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(0,122,255,.16), transparent 28%),
+        radial-gradient(circle at 84% 85%, rgba(94,92,230,.12), transparent 30%),
+        #f5f5f7;
+    }
+    .auth-screen.is-active { display: grid; }
+    .auth-shell { width: min(1040px, 100%); min-height: 640px; overflow: hidden; display: grid; grid-template-columns: minmax(0,.9fr) minmax(420px,1.1fr); border: 1px solid rgba(255,255,255,.8); border-radius: 30px; background: rgba(255,255,255,.76); box-shadow: 0 34px 100px rgba(0,0,0,.12); backdrop-filter: blur(28px); }
+    .auth-art { padding: 36px; position: relative; overflow: hidden; color: white; background: linear-gradient(155deg, #006edc, #5856d6); }
+    .auth-art .brand { padding: 0; }
+    .auth-art .brand-copy strong { color: #fff; font-size: 18px; }
+    .auth-art .brand-copy span { color: rgba(255,255,255,.68); }
+    .auth-illustration { position: absolute; inset: 110px 38px 38px; display: flex; align-items: flex-end; justify-content: center; gap: 10px; }
+    .character { position: relative; min-width: 80px; border-radius: 48px 48px 16px 16px; background: rgba(255,255,255,.92); box-shadow: inset 0 -18px 34px rgba(0,0,0,.05); }
+    .character.c1 { width: 34%; height: 62%; background: #ff9f6e; }
+    .character.c2 { width: 27%; height: 82%; background: #693ce8; }
+    .character.c3 { width: 24%; height: 52%; background: #f2df58; }
+    .eyes { position: absolute; top: 28px; left: 50%; display: flex; gap: 10px; transform: translateX(-50%); }
+    .eyes::before, .eyes::after { content: ""; width: 10px; height: 13px; border-radius: 50%; background: #1d1d1f; }
+    .auth-form-wrap { padding: clamp(28px, 5vw, 64px); display: grid; align-content: center; }
+    .auth-form-wrap h1 { margin: 0; font-size: 32px; letter-spacing: -.04em; }
+    .auth-form-wrap > p { margin: 9px 0 24px; color: var(--text-3); font-size: 14px; }
+    .auth-form { display: grid; gap: 13px; }
+    .auth-form .primary-button { width: 100%; min-height: 44px; margin-top: 2px; }
+    .code-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .password-wrap { position: relative; }
+    .password-wrap .input { padding-right: 60px; }
+    .password-toggle { position: absolute; right: 8px; top: 50%; padding: 4px 5px; border: 0; color: var(--blue); background: transparent; transform: translateY(-50%); cursor: pointer; font-size: 12px; }
+    .auth-helper { display: flex; justify-content: flex-end; }
+
+    @keyframes page-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes materialize { from { opacity: 0; transform: scale(.96); filter: blur(5px); } to { opacity: 1; transform: scale(1); filter: blur(0); } }
+    @keyframes modal-in { from { opacity: 0; transform: translateY(14px) scale(.97); filter: blur(4px); } to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
+
+    @media (min-width: 1800px) {
+      .content { padding-inline: 44px; }
+      .student-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .product-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .grid-main-side { grid-template-columns: minmax(0, 1fr) 400px; }
+      .rules-layout { grid-template-columns: 280px minmax(0, 1fr); }
+      .lottery-layout { grid-template-columns: minmax(0, 1.7fr) minmax(360px, .65fr); }
+      .settings-profile { grid-template-columns: auto minmax(190px, .55fr) minmax(560px, 1.45fr) auto; }
+      .settings-section { grid-template-columns: minmax(220px, 260px) minmax(0, 1fr); gap: clamp(60px, 5vw, 100px); }
+    }
+
+    @media (min-width: 2300px) {
+      .content { padding-inline: 52px; }
+      .student-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+      .product-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+      .grid-main-side { grid-template-columns: minmax(0, 1fr) 450px; }
+      .lottery-layout { grid-template-columns: minmax(0, 1.85fr) 430px; }
+    }
+
+    @media (max-width: 1180px) {
+      .student-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .product-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .grid-main-side { grid-template-columns: minmax(0,1fr) 310px; }
+      .header-button .button-label.optional { display: none; }
+    }
+
+    @media (max-width: 920px) {
+      .app-shell { display: block; }
+      .sidebar { display: none; }
+      .workspace-header { top: 54px; min-height: 58px; padding: 8px 14px; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+      .workspace-header::-webkit-scrollbar { display: none; }
+      .mobile-topbar {
+        position: sticky;
+        top: 0;
+        z-index: 35;
+        height: 54px;
+        padding: 0 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--line);
+        background: rgba(249,249,251,.9);
+        backdrop-filter: blur(22px) saturate(180%);
+      }
+      .mobile-brand { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+      .mobile-brand .brand-mark { width: 31px; height: 31px; border-radius: 9px; }
+      .mobile-actions { display: flex; align-items: center; gap: 7px; }
+      .mobile-topbar .timer-pill { min-height: 34px; padding: 0 10px; border-radius: 10px; }
+      .mobile-topbar .timer-pill .timer-dot { display: none; }
+      .mobile-account { width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 50%; color: white; background: linear-gradient(145deg,#5e5ce6,#007aff); font-weight: 700; }
+      .content { padding: 18px 14px calc(88px + env(safe-area-inset-bottom)); }
+      .mobile-nav {
+        position: fixed;
+        left: 10px;
+        right: 10px;
+        bottom: calc(9px + env(safe-area-inset-bottom));
+        z-index: 70;
+        height: 66px;
+        padding: 6px;
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 2px;
+        border: 1px solid rgba(255,255,255,.74);
+        border-radius: 19px;
+        background: rgba(250,250,252,.88);
+        box-shadow: 0 12px 40px rgba(0,0,0,.16);
+        backdrop-filter: blur(26px) saturate(190%);
+        -webkit-backdrop-filter: blur(26px) saturate(190%);
+      }
+      .mobile-nav .nav-item { min-height: 52px; padding: 4px 2px; justify-content: center; flex-direction: column; gap: 3px; border-radius: 13px; font-size: 10px; text-align: center; }
+      .mobile-nav .icon { width: 18px; height: 18px; }
+      .mobile-nav .nav-label { display: block; max-width: 100%; }
+      .page-heading { min-height: 0; margin-bottom: 14px; }
+      .page-actions { display: none; }
+      .metrics-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .metrics-grid.three { grid-template-columns: repeat(3, minmax(0,1fr)); }
+      .grid-main-side, .lottery-layout { grid-template-columns: 1fr; }
+      .tool-grid { grid-template-columns: 1fr; }
+      .tool-card { min-height: 330px; }
+      .settings-profile { grid-template-columns: auto minmax(150px,.55fr) minmax(300px,1fr); }
+      .settings-profile > .secondary-button { grid-column: 2 / -1; justify-self: start; }
+      .settings-profile__facts { grid-template-columns: repeat(2,minmax(0,1fr)); row-gap: 14px; }
+      .settings-section { grid-template-columns: minmax(150px,190px) minmax(0,1fr); gap: 28px; }
+      .lottery-side { grid-template-columns: repeat(2, minmax(0,1fr)); grid-template-rows: none; }
+      .auth-shell { grid-template-columns: 1fr; min-height: 0; }
+      .auth-art { display: none; }
+      .auth-form-wrap { min-height: 620px; }
+    }
+
+    @media (max-width: 660px) {
+      .workspace-header { justify-content: flex-start; }
+      .context-status, .context-divider, .header-actions .header-button:not(.icon-only) { display: none !important; }
+      .header-actions .timer-pill { display: none !important; }
+      .context-button { max-width: 170px; }
+      .context-button .context-text { overflow: hidden; text-overflow: ellipsis; }
+      .content { padding-inline: 12px; }
+      .page-heading h1 { font-size: 25px; }
+      .page-heading p { font-size: 13px; }
+      .metrics-grid.three { grid-template-columns: 1fr; }
+      .metric { min-height: 102px; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .panel-header:has(> .panel-actions > button:nth-of-type(2)) { align-items: stretch; flex-direction: column; }
+      .panel-header > .panel-actions:has(> button:nth-of-type(2)) {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 8px;
+        flex-wrap: nowrap;
+      }
+      .panel-header > .panel-actions:has(> button:nth-of-type(2)) > button { flex: 1 1 0; min-width: 0; }
+
+      .module-commandbar { align-items: stretch; flex-direction: column; padding-top: 0; }
+      .module-commandbar__actions { justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+      .module-commandbar__actions::-webkit-scrollbar { display: none; }
+      .module-commandbar__actions button { flex: 0 0 auto; }
+      .toolbar { align-items: stretch; flex-direction: column; }
+      .toolbar-section { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+      .toolbar-section::-webkit-scrollbar { display: none; }
+      .search-field { min-width: min(100%, 310px); flex: 1; }
+      .students-controls .toolbar-section:first-child {
+        width: 100%;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 10px;
+        overflow: visible;
+      }
+      .students-controls .toolbar-section:first-child .toolbar-label:first-child { grid-column: 1 / -1; }
+      .students-controls .toolbar-label { min-width: 0; width: 100%; }
+      .students-controls .search-field { width: 100%; min-width: 0; }
+      .students-controls .segmented { width: 100%; overflow-x: auto; scrollbar-width: none; }
+      .students-controls .segmented button { flex: 1 0 auto; padding-inline: 8px; }
+      .students-controls .toolbar-section:last-child { width: 100%; flex-wrap: wrap; overflow: visible; }
+      .students-controls .toolbar-section:last-child button { flex: 1 1 auto; }
+      .student-grid { grid-template-columns: 1fr; }
+      .student-card { min-height: 84px; }
+      .student-grid.is-list .student-card { display: block; }
+      .student-grid.is-list .student-score { margin-top: 11px; min-width: 0; justify-content: flex-start; }
+      .rules-layout { grid-template-columns: 1fr; }
+      .rule-groups { padding: 0 0 12px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .rule-group-list { grid-template-columns: repeat(3, minmax(140px,1fr)); overflow-x: auto; }
+      .product-grid { grid-template-columns: 1fr; }
+      .lottery-side { grid-template-columns: 1fr; }
+      .lottery-toolbar { align-items: stretch; flex-direction: column; }
+      .lottery-toolbar-left, .lottery-toolbar-actions { flex-wrap: nowrap; overflow-x: auto; }
+      .lottery-stage { min-height: 360px; }
+      .settings-profile { padding-top: 4px; grid-template-columns: auto minmax(0,1fr); gap: 14px 12px; }
+      .settings-profile__identity { align-self: center; }
+      .settings-profile__facts { grid-column: 1 / -1; grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .settings-profile__fact { padding: 2px 12px; }
+      .settings-profile__fact:nth-child(odd) { border-left: 0; padding-left: 0; }
+      .settings-profile > .secondary-button { grid-column: 1 / -1; justify-self: start; }
+      .settings-section { padding-block: 24px; grid-template-columns: 1fr; gap: 16px; }
+      .settings-section__intro p { max-width: 440px; }
+      .settings-kv-grid { grid-template-columns: 1fr; }
+      .settings-kv.is-wide { grid-column: auto; }
+      .settings-state-row { align-items: flex-start; flex-direction: column; }
+      .settings-state-row .panel-actions { justify-content: flex-start; }
+      .form-grid { grid-template-columns: 1fr; }
+      .form-grid .full { grid-column: auto; }
+      .settings-section--lock { padding-block: 20px; gap: 13px; }
+      .settings-section--lock .settings-section__intro h2 { font-size: 16px; }
+      .settings-section--lock .settings-section__intro p { margin-top: 5px; font-size: 11.5px; }
+      .settings-section--lock .settings-state-row { min-height: 0; padding: 0 0 12px; gap: 10px; }
+      .settings-section--lock .settings-state-row .panel-actions { width: 100%; display: flex; align-items: center; gap: 7px; }
+      .settings-section--lock .settings-state-row .panel-actions > * { flex: 0 0 auto; }
+      .settings-lock-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .settings-lock-form .field.full { grid-column: 1 / -1; }
+
+      .modal-layer { padding: 10px; align-items: flex-end; }
+      .modal { width: 100%; max-height: 91vh; border-radius: 24px 24px 12px 12px; animation-name: sheet-in; }
+      .modal.wide { width: 100%; }
+      .modal-footer { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+      .auth-screen { padding: 10px; }
+      .auth-shell { border-radius: 24px; }
+      .auth-form-wrap { min-height: calc(100vh - 20px); padding: 26px 20px; }
+      .code-row { grid-template-columns: 1fr; }
+      .toast { bottom: calc(88px + env(safe-area-inset-bottom)); white-space: normal; text-align: center; }
+    }
+
+    @media (max-width: 440px) {
+      .settings-lock-form { grid-template-columns: 1fr; }
+      .settings-lock-form .field.full { grid-column: auto; }
+      .panel-header > .panel-actions:has(> button:nth-of-type(2)) { gap: 6px; }
+      .panel-header > .panel-actions:has(> button:nth-of-type(2)) > button { padding-inline: 8px; font-size: 12px; }
+    }
+
+    @keyframes sheet-in { from { opacity: .5; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+    @media (prefers-reduced-transparency: reduce) {
+      .sidebar, .workspace-header, .mobile-topbar, .mobile-nav, .panel, .modal, .modal-header, .modal-footer, .popover { background: #fff; backdrop-filter: none; -webkit-backdrop-filter: none; }
+    }
+    @media (prefers-contrast: more) {
+      :root { --line: rgba(0,0,0,.28); --line-strong: rgba(0,0,0,.48); }
+      .panel, .metric, .toolbar { background: #fff; }
+    }
+  </style>
+</head>
+<body>
+  <svg class="svg-sprite" aria-hidden="true">
+    <symbol id="i-logo" viewBox="0 0 24 24"><path d="M4 5.5h16v11H8l-4 3v-14Z"/><path d="M8 9h8M8 12.5h5"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3.5 10 8.5-7 8.5 7"/><path d="M5.5 9v11h13V9M9.5 20v-6h5v6"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3.5 20v-2.2A4.8 4.8 0 0 1 8.3 13h1.4a4.8 4.8 0 0 1 4.8 4.8V20"/><path d="M15 5.5a3 3 0 0 1 0 5.8M16 14a4.5 4.5 0 0 1 4.5 4.5V20"/></symbol>
+    <symbol id="i-points" viewBox="0 0 24 24"><path d="m12 2 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 8.6l6.2-.9L12 2Z"/></symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24"><path d="M3 9h18v4H3zM5 13h14v8H5zM12 9v12"/><path d="M12 9H8.8a2.3 2.3 0 1 1 2.3-2.3V9ZM12 9h3.2a2.3 2.3 0 1 0-2.3-2.3V9Z"/></symbol>
+    <symbol id="i-tools" viewBox="0 0 24 24"><path d="M14.5 6.5a4 4 0 0 0-5-4.2l2.2 2.2-2.9 2.9-2.2-2.2a4 4 0 0 0 4.2 5L19 18.4a1.8 1.8 0 0 0 2.5-2.5l-7-7Z"/><path d="m4 20 5.4-5.4"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21h-4v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H3v-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6V3h4v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1v4H21a1.7 1.7 0 0 0-1.6 1Z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 15v2"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r=".8"/><circle cx="3.5" cy="12" r=".8"/><circle cx="3.5" cy="18" r=".8"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3M7 8l5-5 5 5"/><path d="M4 14v6h16v-6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M4 20h16"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="m14 5 5 5M4 20l3.5-.7L20 6.8 17.2 4 4.7 16.5 4 20Z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></symbol>
+    <symbol id="i-dice" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1"/><circle cx="16" cy="8" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="8" cy="16" r="1"/><circle cx="16" cy="16" r="1"/></symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4h8v4a4 4 0 0 1-8 0V4Z"/><path d="M8 6H4v2a4 4 0 0 0 4 4M16 6h4v2a4 4 0 0 1-4 4M12 12v5M8 21h8M9 17h6v4"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="m9 7-5 5 5 5"/><path d="M4 12h9a6 6 0 0 1 6 6v1"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 8a7 7 0 0 1 11.8-1L20 12M4 12l2.1 5a7 7 0 0 0 11.8-1"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 4v6h6"/><path d="M5.5 15a8 8 0 1 0 .7-7.8L4 10"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H4v16h6M14 8l4 4-4 4M8 12h10"/></symbol>
+    <symbol id="i-warning" viewBox="0 0 24 24"><path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v5M12 17.5h.01"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  </svg>
+
+  <div id="productApp" class="app-shell">
+    <aside class="sidebar" aria-label="主导航">
+      <div class="brand">
+        <div class="brand-mark"><svg class="icon"><use href="#i-logo"/></svg></div>
+        <div class="brand-copy"><strong>教师助手</strong><span>Teacher Assistant</span></div>
+        <button id="collapseSidebar" class="collapse-button" type="button" aria-label="收起侧边栏"><svg class="icon small"><use href="#i-chevron"/></svg></button>
+      </div>
+
+      <nav class="primary-nav">
+        <button class="nav-item is-active" type="button" data-page="dashboard"><svg class="icon"><use href="#i-home"/></svg><span class="nav-label">班级总览</span></button>
+        <button class="nav-item" type="button" data-page="students"><svg class="icon"><use href="#i-users"/></svg><span class="nav-label">学生管理</span></button>
+        <button class="nav-item" type="button" data-page="points"><svg class="icon"><use href="#i-points"/></svg><span class="nav-label">积分中心</span></button>
+        <button class="nav-item" type="button" data-page="shop"><svg class="icon"><use href="#i-gift"/></svg><span class="nav-label">积分商城</span></button>
+        <button class="nav-item" type="button" data-page="tools"><svg class="icon"><use href="#i-tools"/></svg><span class="nav-label">课堂工具</span></button>
+        <button class="nav-item" type="button" data-page="settings"><svg class="icon"><use href="#i-settings"/></svg><span class="nav-label">设置中心</span></button>
+      </nav>
+
+      <div class="sidebar-spacer"></div>
+      <button id="quickEntry" class="quick-entry" type="button"><svg class="icon"><use href="#i-more"/></svg><span class="nav-label">快捷操作</span></button>
+      <div id="quickMenu" class="popover quick-menu" hidden>
+        <button type="button" data-page="students"><svg class="icon small"><use href="#i-users"/></svg>学生管理</button>
+        <button type="button" data-page="points"><svg class="icon small"><use href="#i-points"/></svg>积分中心</button>
+        <button type="button" data-page="shop"><svg class="icon small"><use href="#i-gift"/></svg>积分商城</button>
+        <button type="button" data-page="tools"><svg class="icon small"><use href="#i-tools"/></svg>打开工具箱</button>
+        <button type="button" data-page="settings"><svg class="icon small"><use href="#i-settings"/></svg>设置中心</button>
+      </div>
+      <div class="account-wrap">
+        <button id="accountButton" class="account-button" type="button">
+          <span class="avatar">林</span>
+          <span class="account-copy"><strong>林老师</strong><span>当前用户</span></span>
+          <svg class="icon small account-chevron"><use href="#i-down"/></svg>
+        </button>
+        <div id="accountMenu" class="popover account-menu" hidden>
+          <button type="button" data-page="settings"><svg class="icon small"><use href="#i-settings"/></svg>进入设置</button>
+          <button id="logoutButton" class="danger" type="button"><svg class="icon small"><use href="#i-logout"/></svg>退出登录</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <div class="mobile-topbar">
+        <div class="mobile-brand"><div class="brand-mark"><svg class="icon small"><use href="#i-logo"/></svg></div><span>教师助手</span></div>
+        <div class="mobile-actions"><button id="mobileTimerPill" class="timer-pill" type="button" data-page="timer" hidden><strong class="timer-value">05:00</strong></button><button id="mobileAccount" class="mobile-account" type="button" aria-label="打开账号菜单">林</button></div>
+      </div>
+
+      <header class="workspace-header">
+        <div class="context-bar">
+          <button class="context-button" type="button" data-modal="class-switch"><svg class="icon small"><use href="#i-users"/></svg><span class="context-text" data-class-name>高一（2）班</span><svg class="icon small"><use href="#i-down"/></svg></button>
+          <button class="context-button" type="button" data-modal="semester-switch"><svg class="icon small"><use href="#i-clock"/></svg><span class="context-text" data-semester-name>2026年秋季学期</span><svg class="icon small"><use href="#i-down"/></svg></button>
+          <span class="context-divider"></span>
+          <span id="contextStatus" class="context-status">最新学期 · 允许积分操作</span>
+        </div>
+        <div class="header-actions">
+          <button id="globalTimerPill" class="timer-pill" type="button" data-page="timer" hidden><span class="timer-dot"><svg class="icon small"><use href="#i-clock"/></svg></span><strong class="timer-value">05:00</strong></button>
+          <button class="header-button icon-only" type="button" data-lock aria-label="立即锁屏"><svg class="icon"><use href="#i-lock"/></svg></button>
+          <button class="header-button" type="button" data-page="settings"><svg class="icon small"><use href="#i-settings"/></svg><span class="button-label optional">进入设置</span></button>
+          <button class="header-button primary" type="button" data-page="points"><svg class="icon small"><use href="#i-points"/></svg><span class="button-label">进入积分中心</span></button>
+        </div>
+      </header>
+
+      <div class="content">
+        <section id="page-dashboard" class="page is-active" data-page-section="dashboard">
+          <div class="metrics-grid">
+            <article class="metric blue"><span>学生人数</span><strong>36</strong><small>已完成名册导入</small></article>
+            <article class="metric purple"><span>分组数量</span><strong>6</strong><small>支持课堂筛选</small></article>
+            <article class="metric orange"><span>积分记录</span><strong>248</strong><small>支持撤回最近一次</small></article>
+            <article class="metric green"><span>商城奖品</span><strong>12</strong><small>可用于课堂激励</small></article>
+          </div>
+
+          <div class="grid-2">
+            <article class="panel pad">
+              <div class="panel-header">
+                <div><h2>排行榜</h2><p>按当前班级和学期统计。</p></div>
+                <div class="panel-actions"><button id="dashboardMask" class="text-button" type="button"><svg class="icon small"><use href="#i-eye"/></svg><span>隐藏</span></button><button class="text-button" type="button" data-page="points">查看完整排行榜</button></div>
+              </div>
+              <div class="segmented" style="margin-top:14px" data-segment="dashboard-range">
+                <button class="is-active" type="button">全部</button><button type="button">周榜</button><button type="button">月榜</button>
+              </div>
+              <div id="dashboardRanking" class="list">
+                <div class="list-row"><span class="list-index medal">1</span><div class="list-main"><strong>陈子涵</strong><span>向日葵组</span></div><span class="list-value">286 分</span></div>
+                <div class="list-row"><span class="list-index medal">2</span><div class="list-main"><strong>周景行</strong><span>远航组</span></div><span class="list-value">272 分</span></div>
+                <div class="list-row"><span class="list-index medal">3</span><div class="list-main"><strong>许知夏</strong><span>星辰组</span></div><span class="list-value">261 分</span></div>
+                <div class="list-row"><span class="list-index">4</span><div class="list-main"><strong>林墨</strong><span>向日葵组</span></div><span class="list-value">248 分</span></div>
+                <div class="list-row"><span class="list-index">5</span><div class="list-main"><strong>沈星河</strong><span>远航组</span></div><span class="list-value">239 分</span></div>
+              </div>
+            </article>
+
+            <article class="panel pad">
+              <div class="panel-header"><div><h2>最近积分记录</h2><p>保留课堂最新规则积分操作。</p></div><button class="text-button" type="button" data-page="points" data-open-records>查看积分历史</button></div>
+              <div class="list">
+                <div class="list-row"><span class="student-avatar">陈</span><div class="list-main"><strong>主动发言 · 陈子涵</strong><span>课堂表现 · 10:26</span></div><span class="list-value plus">+3</span></div>
+                <div class="list-row"><span class="student-avatar">周</span><div class="list-main"><strong>作业优秀 · 周景行</strong><span>作业表现 · 09:48</span></div><span class="list-value plus">+5</span></div>
+                <div class="list-row"><span class="student-avatar">许</span><div class="list-main"><strong>课堂纪律 · 许知夏</strong><span>课堂表现 · 昨天</span></div><span class="list-value minus">-2</span></div>
+                <div class="list-row"><span class="student-avatar">林</span><div class="list-main"><strong>小组合作 · 林墨</strong><span>小组合作 · 昨天</span></div><span class="list-value plus">+3</span></div>
+                <div class="list-row"><span class="student-avatar">沈</span><div class="list-main"><strong>作业未交 · 沈星河</strong><span>作业表现 · 昨天</span></div><span class="list-value minus">-3</span></div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section id="page-students" class="page" data-page-section="students">
+          <div class="toolbar students-controls">
+            <div class="toolbar-section">
+              <label class="toolbar-label">快速搜索<div class="search-field"><svg class="icon small"><use href="#i-search"/></svg><input id="studentSearch" class="input" type="search" placeholder="支持姓名、拼音首字母；可用逗号隔开"></div></label>
+              <label class="toolbar-label">展示方式<div class="segmented" data-segment="student-layout"><button class="is-active" type="button" data-layout="card"><svg class="icon small"><use href="#i-grid"/></svg>卡片视图</button><button type="button" data-layout="list"><svg class="icon small"><use href="#i-list"/></svg>列表视图</button></div></label>
+              <label class="toolbar-label">排序方式<div class="segmented" data-segment="student-sort"><button class="is-active" type="button" data-sort="points">按积分</button><button type="button" data-sort="name">按姓名</button><button type="button" data-sort="direction">倒序</button></div></label>
+            </div>
+            <div class="toolbar-section">
+              <button class="secondary-button" type="button" data-modal="group-manage">管理分组</button>
+              <button class="secondary-button" type="button" data-modal="group-import" data-mutation><svg class="icon small"><use href="#i-upload"/></svg>Excel 导入分组</button>
+              <button class="primary-button" type="button" data-modal="student-add" data-mutation><svg class="icon small"><use href="#i-plus"/></svg>添加学生</button>
+            </div>
+          </div>
+
+          <div class="toolbar toolbar-scroll" style="align-items:center">
+            <span style="color:var(--text-3);font-size:12px;white-space:nowrap">筛选分组</span>
+            <div class="chip-row" id="groupFilters">
+              <button class="chip is-active" type="button" data-group="all">全部学生 <span class="chip-count">36</span></button>
+              <button class="chip" type="button" data-group="向日葵组">向日葵组 <span class="chip-count">7</span></button>
+              <button class="chip" type="button" data-group="远航组">远航组 <span class="chip-count">6</span></button>
+              <button class="chip" type="button" data-group="星辰组">星辰组 <span class="chip-count">6</span></button>
+              <button class="chip" type="button" data-group="未分组">未分组 <span class="chip-count">3</span></button>
+            </div>
+          </div>
+
+          <div class="notice"><svg class="icon"><use href="#i-warning"/></svg><span>当前为归档学期，可继续查看学生与分组信息，积分相关操作暂不可用。</span></div>
+
+          <div class="grid-main-side">
+            <article class="panel pad">
+              <div class="panel-header">
+                <div><h2>学生名册</h2><p>点击卡片可切换选中状态，支持单选或多选高亮，保留编辑与删除入口。</p></div>
+                <div class="panel-actions"><button id="multiSelectButton" class="secondary-button" type="button">开启多选</button><button id="selectAllButton" class="secondary-button" type="button">全选当前学生</button></div>
+              </div>
+              <div id="studentGrid" class="student-grid"></div>
+              <div style="margin-top:15px;display:flex;justify-content:space-between;align-items:center;color:var(--text-3);font-size:12px"><span>显示 8 / 36 名学生</span><span>按积分倒序</span></div>
+            </article>
+
+            <aside class="panel pad">
+              <div class="panel-header"><div><h2 id="selectionTitle">陈子涵</h2><p id="selectionStatus">已选择 1 名学生</p></div><button id="clearSelection" class="text-button" type="button">清空选择</button></div>
+              <div id="singleSelection">
+                <div class="selection-summary">
+                  <div class="selection-summary-row"><span>基础信息</span><strong id="selectionMeta">女生 · 向日葵组</strong></div>
+                  <div class="score-pair"><div class="score-box"><span>可用积分</span><strong id="selectionAvailable">248</strong></div><div class="score-box"><span>总积分</span><strong id="selectionTotal">286</strong></div></div>
+                  <div class="dual-actions"><button class="points-plus" type="button" data-modal="points-action" data-action-sign="plus" data-mutation>加分</button><button class="points-minus" type="button" data-modal="points-action" data-action-sign="minus" data-mutation>扣分</button></div>
+                </div>
+                <div style="margin-top:16px" class="panel-header"><div><h3>最近 5 条积分记录</h3></div><button class="text-button" type="button" data-page="points" data-open-records>查看全部</button></div>
+                <div class="list">
+                  <div class="list-row"><div class="list-main"><strong>主动发言</strong><span>今天 10:26</span></div><span class="list-value plus">+3</span></div>
+                  <div class="list-row"><div class="list-main"><strong>作业优秀</strong><span>昨天 16:40</span></div><span class="list-value plus">+5</span></div>
+                  <div class="list-row"><div class="list-main"><strong>小组合作</strong><span>9月1日 14:18</span></div><span class="list-value plus">+3</span></div>
+                  <div class="list-row"><div class="list-main"><strong>课堂纪律</strong><span>9月1日 10:02</span></div><span class="list-value minus">-2</span></div>
+                  <div class="list-row"><div class="list-main"><strong>作业优秀</strong><span>8月31日 17:06</span></div><span class="list-value plus">+5</span></div>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section id="page-points" class="page" data-page-section="points">
+          <div class="metrics-grid three">
+            <article class="metric blue"><span>积分规则组</span><strong>4</strong><small>支持直接新增、编辑、删除</small></article>
+            <article class="metric orange"><span>积分项总数</span><strong>18</strong><small>12 个加分项 / 6 个扣分项</small></article>
+            <article class="metric green"><span>积分记录</span><strong>248</strong><small>最近：主动发言 +3</small></article>
+          </div>
+          <div class="notice"><svg class="icon"><use href="#i-warning"/></svg><span>当前为归档学期，仅支持查看积分数据，不支持继续加分、扣分、导入和规则维护。</span></div>
+
+          <article class="panel pad" style="margin-bottom:14px">
+            <div class="panel-header">
+              <div><h2>积分规则</h2><p>规则项用于学生积分操作与单项榜展示。</p></div>
+              <div class="panel-actions"><button class="secondary-button" type="button" data-modal="points-import-items" data-mutation><svg class="icon small"><use href="#i-upload"/></svg>导入积分项</button><button class="secondary-button" type="button" data-modal="points-import-records" data-mutation><svg class="icon small"><use href="#i-upload"/></svg>导入积分</button><button class="secondary-button" type="button" data-modal="points-export"><svg class="icon small"><use href="#i-download"/></svg>导出结果</button></div>
+            </div>
+            <div class="rules-layout">
+              <aside class="rule-groups">
+                <div class="panel-header"><div><h3>规则组列表</h3></div><span class="status-chip blue">4 个规则组</span></div>
+                <button class="primary-button" style="width:100%;margin-top:10px" type="button" data-modal="rule-group" data-mutation><svg class="icon small"><use href="#i-plus"/></svg>新增规则组</button>
+                <div class="rule-group-list" data-rule-groups>
+                  <button class="rule-group is-active" type="button"><span style="color:inherit">课堂表现</span><span>6 项</span></button>
+                  <button class="rule-group" type="button"><span style="color:inherit">作业表现</span><span>5 项</span></button>
+                  <button class="rule-group" type="button"><span style="color:inherit">小组合作</span><span>4 项</span></button>
+                  <button class="rule-group" type="button"><span style="color:inherit">课堂纪律</span><span>3 项</span></button>
+                </div>
+                <div class="panel-actions" style="justify-content:flex-start;margin-top:10px"><button class="text-button" type="button" data-modal="rule-group" data-mutation>编辑规则组</button><button class="text-button" style="color:var(--red)" type="button" data-confirm="删除规则组" data-mutation>删除规则组</button></div>
+              </aside>
+              <section class="rule-items">
+                <div class="panel-header"><div><div class="eyebrow">当前规则组</div><h3>课堂表现</h3></div><div class="panel-actions"><div class="segmented" data-segment="rule-filter"><button class="is-active" type="button" data-rule-filter="all">全部</button><button type="button" data-rule-filter="plus">加分项</button><button type="button" data-rule-filter="minus">扣分项</button></div><button class="primary-button" type="button" data-modal="rule-item" data-mutation><svg class="icon small"><use href="#i-plus"/></svg>新增积分项</button></div></div>
+                <div id="ruleItems" style="margin-top:8px">
+                  <div class="rule-item" data-sign="plus"><span class="rule-sign">+3</span><div class="rule-copy"><strong>主动发言</strong><span>加分项 · 用于课堂表现</span></div><div class="rule-actions"><button class="icon-button" type="button" data-modal="rule-item" data-mutation aria-label="编辑"><svg class="icon small"><use href="#i-edit"/></svg></button><button class="icon-button danger" type="button" data-confirm="删除积分项" data-mutation aria-label="删除"><svg class="icon small"><use href="#i-trash"/></svg></button></div></div>
+                  <div class="rule-item" data-sign="plus"><span class="rule-sign">+5</span><div class="rule-copy"><strong>精彩回答</strong><span>加分项 · 用于课堂表现</span></div><div class="rule-actions"><button class="icon-button" type="button" data-modal="rule-item" data-mutation><svg class="icon small"><use href="#i-edit"/></svg></button><button class="icon-button danger" type="button" data-confirm="删除积分项" data-mutation><svg class="icon small"><use href="#i-trash"/></svg></button></div></div>
+                  <div class="rule-item" data-sign="plus"><span class="rule-sign">+2</span><div class="rule-copy"><strong>认真听讲</strong><span>加分项 · 用于课堂表现</span></div><div class="rule-actions"><button class="icon-button" type="button" data-modal="rule-item" data-mutation><svg class="icon small"><use href="#i-edit"/></svg></button><button class="icon-button danger" type="button" data-confirm="删除积分项" data-mutation><svg class="icon small"><use href="#i-trash"/></svg></button></div></div>
+                  <div class="rule-item" data-sign="minus"><span class="rule-sign minus">-2</span><div class="rule-copy"><strong>课堂走神</strong><span>扣分项 · 用于课堂表现</span></div><div class="rule-actions"><button class="icon-button" type="button" data-modal="rule-item" data-mutation><svg class="icon small"><use href="#i-edit"/></svg></button><button class="icon-button danger" type="button" data-confirm="删除积分项" data-mutation><svg class="icon small"><use href="#i-trash"/></svg></button></div></div>
+                </div>
+              </section>
+            </div>
+          </article>
+
+          <div class="tab-strip" data-tab-strip="points-content"><button class="tab-button is-active" type="button" data-tab="ranking">排行榜</button><button class="tab-button" type="button" data-tab="records">历史记录</button></div>
+          <div id="points-ranking" class="tab-panel is-active" data-tab-panel="points-content:ranking">
+            <article class="panel pad">
+              <div class="panel-header">
+                <div><h2>积分排行榜</h2><p>支持总榜、单项榜以及时间范围切换。</p></div>
+                <div class="panel-actions"><button id="pointsMask" class="secondary-button" type="button"><svg class="icon small"><use href="#i-eye"/></svg><span>隐藏</span></button><div class="segmented" data-segment="ranking-type"><button class="is-active" type="button" data-ranking-type="total">总榜</button><button type="button" data-ranking-type="item">单项榜</button></div><div class="segmented" data-segment="ranking-range"><button class="is-active" type="button">全部</button><button type="button">周榜</button><button type="button">月榜</button></div></div>
+              </div>
+              <label id="rankingRuleSelector" class="field" style="max-width:360px;margin-top:14px" hidden><span>积分项</span><select class="select"><option>课堂表现 / 主动发言</option><option>作业表现 / 作业优秀</option><option>课堂纪律 / 课堂走神</option></select></label>
+              <div id="pointsRanking" class="list">
+                <div class="list-row"><span class="list-index medal">1</span><div class="list-main"><strong>陈子涵</strong><span>向日葵组 · 可用 248</span></div><span class="list-value">286 分</span></div>
+                <div class="list-row"><span class="list-index medal">2</span><div class="list-main"><strong>周景行</strong><span>远航组 · 可用 231</span></div><span class="list-value">272 分</span></div>
+                <div class="list-row"><span class="list-index medal">3</span><div class="list-main"><strong>许知夏</strong><span>星辰组 · 可用 223</span></div><span class="list-value">261 分</span></div>
+                <div class="list-row"><span class="list-index">4</span><div class="list-main"><strong>林墨</strong><span>向日葵组 · 可用 208</span></div><span class="list-value">248 分</span></div>
+                <div class="list-row"><span class="list-index">5</span><div class="list-main"><strong>沈星河</strong><span>远航组 · 可用 199</span></div><span class="list-value">239 分</span></div>
+              </div>
+            </article>
+          </div>
+          <div id="points-records" class="tab-panel" data-tab-panel="points-content:records">
+            <article class="panel pad">
+              <div class="panel-header"><div><h2>积分规则记录</h2><p>保留课堂最新操作记录，并支持快速撤回最近一次规则积分。</p></div><div class="panel-actions"><button class="secondary-button" type="button" data-toast="记录已刷新"><svg class="icon small"><use href="#i-refresh"/></svg>刷新记录</button><button class="secondary-button" type="button" data-confirm="撤回最近一次积分记录" data-mutation><svg class="icon small"><use href="#i-undo"/></svg>撤回最近一次</button></div></div>
+              <div class="toolbar" style="margin-top:14px">
+                <label class="toolbar-label">学生搜索<div class="search-field"><svg class="icon small"><use href="#i-search"/></svg><input class="input" type="search" placeholder="搜索学生姓名"></div></label>
+                <label class="toolbar-label">记录类型<div class="segmented" data-segment="record-type"><button class="is-active" type="button">全部</button><button type="button">加分</button><button type="button">扣分</button></div></label>
+              </div>
+              <div class="list">
+                <div class="list-row"><span class="rule-sign">+3</span><div class="list-main"><strong>主动发言 · 陈子涵</strong><span>规则积分 · 今天 10:26</span></div><button class="text-button" type="button" data-confirm="撤回积分记录" data-mutation>撤回</button></div>
+                <div class="list-row"><span class="rule-sign">+5</span><div class="list-main"><strong>作业优秀 · 周景行</strong><span>规则积分 · 今天 09:48</span></div><button class="text-button" type="button" data-confirm="撤回积分记录" data-mutation>撤回</button></div>
+                <div class="list-row"><span class="rule-sign minus">-2</span><div class="list-main"><strong>课堂纪律 · 许知夏</strong><span>规则积分 · 昨天 16:25</span></div><button class="text-button" type="button" data-confirm="撤回积分记录" data-mutation>撤回</button></div>
+                <div class="list-row"><span class="rule-sign minus">-80</span><div class="list-main"><strong>兑换“免作业卡” · 林墨</strong><span>商城兑换 · 昨天 15:12</span></div><button class="text-button" type="button" disabled>商城处理</button></div>
+              </div>
+              <div style="margin-top:15px;display:flex;align-items:center;justify-content:center;gap:10px"><button class="secondary-button" type="button" disabled>上一页</button><span style="font-size:12px;color:var(--text-3)">第 1 / 7 页</span><button class="secondary-button" type="button" data-toast="已进入下一页">下一页</button></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="page-shop" class="page" data-page-section="shop">
+          <div class="module-commandbar">
+            <div class="module-commandbar__context">
+              <span class="status-chip blue">奖品总数 12</span>
+              <span class="status-chip green" data-semester-chip>最新学期</span>
+              <span class="status-chip">允许兑换与编辑</span>
+              <span class="module-commandbar__meta"><span data-class-name>高一（2）班</span> · <span data-semester-name>2026年秋季学期</span> · <span data-shop-permission>当前学期支持正常兑换与商品维护</span></span>
+            </div>
+            <div class="module-commandbar__actions">
+              <button class="secondary-button" type="button" data-modal="shop-import" data-mutation><svg class="icon small"><use href="#i-upload"/></svg>导入奖品</button>
+              <button class="secondary-button" type="button" data-shop-records>查看兑换记录</button>
+              <button class="primary-button" type="button" data-modal="shop-prize" data-mutation><svg class="icon small"><use href="#i-plus"/></svg>新增奖品</button>
+            </div>
+          </div>
+          <div class="metrics-grid three">
+            <article class="metric purple"><span>商城奖品</span><strong>12</strong><small>支持新增、编辑、删除和 Excel 导入</small></article>
+            <article class="metric green"><span>当前库存</span><strong>86</strong><small>10 个商品可立即兑换</small></article>
+            <article class="metric orange"><span>兑换记录</span><strong>48</strong><small>最近：陈子涵兑换免作业卡</small></article>
+          </div>
+          <div class="notice"><svg class="icon"><use href="#i-warning"/></svg><span>当前为归档学期，仅支持浏览奖品，不支持学生兑换。</span></div>
+          <div class="tab-strip" data-tab-strip="shop-content"><button class="tab-button is-active" type="button" data-tab="overview">商品总览</button><button class="tab-button" type="button" data-tab="records">兑换记录</button></div>
+          <div class="tab-panel is-active" data-tab-panel="shop-content:overview">
+            <div class="grid-main-side">
+              <article class="panel pad">
+                <div class="panel-header"><div><div class="eyebrow">商品列表</div><h2>课堂奖品卡片</h2></div><span class="status-chip">共 12 个奖品</span></div>
+                <div class="product-grid">
+                  <article class="product-card"><div class="product-visual"><svg class="icon large"><use href="#i-gift"/></svg></div><div class="product-body"><h3>免作业卡</h3><p>可免除一次常规书面作业。</p><div class="product-meta"><span class="product-points">80 积分</span><span class="product-stock">库存 12</span></div><div class="product-actions"><button class="secondary-button" type="button" data-modal="shop-prize" data-mutation>编辑</button><button class="primary-button" type="button" data-modal="shop-exchange" data-mutation>兑换</button><button class="icon-button danger" type="button" data-confirm="删除商品" data-mutation><svg class="icon small"><use href="#i-trash"/></svg></button></div></div></article>
+                  <article class="product-card"><div class="product-visual"><svg class="icon large"><use href="#i-trophy"/></svg></div><div class="product-body"><h3>优先选座</h3><p>下一次课堂可优先选择座位。</p><div class="product-meta"><span class="product-points">60 积分</span><span class="product-stock">库存 20</span></div><div class="product-actions"><button class="secondary-button" type="button" data-modal="shop-prize" data-mutation>编辑</button><button class="primary-button" type="button" data-modal="shop-exchange" data-mutation>兑换</button><button class="icon-button danger" type="button" data-confirm="删除商品" data-mutation><svg class="icon small"><use href="#i-trash"/></svg></button></div></div></article>
+                  <article class="product-card"><div class="product-visual"><svg class="icon large"><use href="#i-points"/></svg></div><div class="product-body"><h3>课堂小助手</h3><p>担任一次课堂小助手。</p><div class="product-meta"><span class="product-points">45 积分</span><span class="product-stock">库存 8</span></div><div class="product-actions"><button class="secondary-button" type="button" data-modal="shop-prize" data-mutation>编辑</button><button class="primary-button" type="button" data-modal="shop-exchange" data-mutation>兑换</button><button class="icon-button danger" type="button" data-confirm="删除商品" data-mutation><svg class="icon small"><use href="#i-trash"/></svg></button></div></div></article>
+                  <article class="product-card"><div class="product-visual"><svg class="icon large"><use href="#i-gift"/></svg></div><div class="product-body"><h3>文具盲袋</h3><p>随机获得一份课堂文具。</p><div class="product-meta"><span class="product-points">100 积分</span><span class="product-stock">库存 16</span></div><div class="product-actions"><button class="secondary-button" type="button" data-modal="shop-prize" data-mutation>编辑</button><button class="primary-button" type="button" data-modal="shop-exchange" data-mutation>兑换</button><button class="icon-button danger" type="button" data-confirm="删除商品" data-mutation><svg class="icon small"><use href="#i-trash"/></svg></button></div></div></article>
+                  <article class="product-card"><div class="product-visual"><svg class="icon large"><use href="#i-trophy"/></svg></div><div class="product-body"><h3>班级徽章</h3><p>获得一枚班级荣誉徽章。</p><div class="product-meta"><span class="product-points">120 积分</span><span class="product-stock">库存 10</span></div><div class="product-actions"><button class="secondary-button" type="button" data-modal="shop-prize" data-mutation>编辑</button><button class="primary-button" type="button" data-modal="shop-exchange" data-mutation>兑换</button><button class="icon-button danger" type="button" data-confirm="删除商品" data-mutation><svg class="icon small"><use href="#i-trash"/></svg></button></div></div></article>
+                  <article class="product-card"><div class="product-visual"><svg class="icon large"><use href="#i-points"/></svg></div><div class="product-body"><h3>神秘奖励</h3><p>由老师准备的一份神秘奖励。</p><div class="product-meta"><span class="product-points">150 积分</span><span class="product-stock">库存 0</span></div><div class="product-actions"><button class="secondary-button" type="button" data-modal="shop-prize" data-mutation>编辑</button><button class="primary-button" type="button" disabled>库存不足</button><button class="icon-button danger" type="button" data-confirm="删除商品" data-mutation><svg class="icon small"><use href="#i-trash"/></svg></button></div></div></article>
+                </div>
+              </article>
+              <aside class="panel pad">
+                <div class="panel-header"><div><div class="eyebrow">兑换信息</div><h2>最近兑换动态</h2></div><button class="text-button" type="button" data-shop-records>查看全部</button></div>
+                <div class="list">
+                  <div class="list-row"><span class="student-avatar">陈</span><div class="list-main"><strong>陈子涵</strong><span>免作业卡 × 1 · 今天 10:18</span></div><span class="list-value">80 积分</span><button class="text-button" type="button" data-confirm="撤销兑换" data-mutation>撤销</button></div>
+                  <div class="list-row"><span class="student-avatar">周</span><div class="list-main"><strong>周景行</strong><span>优先选座 × 1 · 昨天</span></div><span class="list-value">60 积分</span><button class="text-button" type="button" data-confirm="撤销兑换" data-mutation>撤销</button></div>
+                  <div class="list-row"><span class="student-avatar">许</span><div class="list-main"><strong>许知夏</strong><span>课堂小助手 × 1 · 9月1日</span></div><span class="list-value">45 积分</span><button class="text-button" type="button" data-confirm="撤销兑换" data-mutation>撤销</button></div>
+                </div>
+              </aside>
+            </div>
+          </div>
+          <div class="tab-panel" data-tab-panel="shop-content:records">
+            <article class="panel pad">
+              <div class="panel-header"><div><div class="eyebrow">兑换记录</div><h2>班级兑换历史</h2></div><span class="status-chip">共 48 条</span></div>
+              <div class="list">
+                <div class="list-row"><span class="student-avatar">陈</span><div class="list-main"><strong>陈子涵</strong><span>免作业卡 × 1 · 今天 10:18</span></div><span class="list-value">80 积分</span><button class="text-button" type="button" data-confirm="撤销兑换" data-mutation>撤销</button></div>
+                <div class="list-row"><span class="student-avatar">周</span><div class="list-main"><strong>周景行</strong><span>优先选座 × 1 · 昨天 16:20</span></div><span class="list-value">60 积分</span><button class="text-button" type="button" data-confirm="撤销兑换" data-mutation>撤销</button></div>
+                <div class="list-row"><span class="student-avatar">许</span><div class="list-main"><strong>许知夏</strong><span>课堂小助手 × 1 · 9月1日 14:08</span></div><span class="list-value">45 积分</span><button class="text-button" type="button" data-confirm="撤销兑换" data-mutation>撤销</button></div>
+                <div class="list-row"><span class="student-avatar">林</span><div class="list-main"><strong>林墨</strong><span>文具盲袋 × 1 · 8月31日 11:30</span></div><span class="list-value">100 积分</span><button class="text-button" type="button" data-confirm="撤销兑换" data-mutation>撤销</button></div>
+              </div>
+              <div style="margin-top:15px;display:flex;align-items:center;justify-content:center;gap:10px"><button class="secondary-button" type="button" disabled>上一页</button><span style="font-size:12px;color:var(--text-3)">第 1 / 5 页 · 共 48 条</span><button class="secondary-button" type="button" data-toast="已进入下一页">下一页</button></div>
+            </article>
+          </div>
+        </section>
+        <section id="page-tools" class="page" data-page-section="tools">
+          <div class="tool-grid">
+            <article class="panel tool-card">
+              <div class="panel-header"><div class="tool-icon"><svg class="icon large"><use href="#i-clock"/></svg></div><span id="timerStatusChip" class="status-chip blue">准备就绪</span></div>
+              <h2>课堂倒计时</h2><p>快速选择预设时长，也可以进入完整页设置自定义时长。</p>
+              <div class="tool-body"><div class="timer-display timer-value">05:00</div><div class="preset-row" data-timer-presets><button class="chip" type="button" data-seconds="60">1 分钟</button><button class="chip is-active" type="button" data-seconds="300">5 分钟</button><button class="chip" type="button" data-seconds="600">10 分钟</button><button class="chip" type="button" data-seconds="900">15 分钟</button></div></div>
+              <div class="tool-actions"><button class="primary-button timer-toggle" type="button"><svg class="icon small"><use href="#i-play"/></svg><span>开始计时</span></button><button class="secondary-button timer-reset" type="button"><svg class="icon small"><use href="#i-reset"/></svg>重置</button><button class="secondary-button" type="button" data-page="timer">进入完整页</button></div>
+            </article>
+
+            <article class="panel tool-card">
+              <div class="panel-header"><div class="tool-icon"><svg class="icon large"><use href="#i-dice"/></svg></div><span class="status-chip green">可抽取 36 人</span></div>
+              <h2>随机点名</h2><p>从当前班级学生中随机抽取一名学生。</p>
+              <div class="tool-body rollcall-display"><div class="rollcall-avatar rollcall-initials">陈</div><strong class="rollcall-name">陈子涵</strong><span class="rollcall-meta">向日葵组 · 女生</span></div>
+              <div class="tool-actions"><button class="primary-button rollcall-random" type="button"><svg class="icon small"><use href="#i-dice"/></svg>随机点名</button><button class="secondary-button" type="button" data-page="students">学生管理</button><button class="secondary-button" type="button" data-page="rollcall">进入完整页</button></div>
+            </article>
+
+            <article class="panel tool-card">
+              <div class="panel-header"><div class="tool-icon"><svg class="icon large"><use href="#i-trophy"/></svg></div><span class="status-chip purple">3 个奖池</span></div>
+              <h2>奖池预览</h2><p>管理自定义奖品，也可以直接从积分商城导入。</p>
+              <div class="tool-body"><div class="lottery-summary"><div class="summary-box"><span>启用奖品</span><strong>8</strong></div><div class="summary-box"><span>商城可同步</span><strong>12</strong></div></div><div style="margin-top:18px;display:grid;place-items:center;color:var(--purple)"><svg class="icon" style="width:72px;height:72px;stroke-width:1.2"><use href="#i-trophy"/></svg></div></div>
+              <div class="tool-actions"><button class="secondary-button" type="button" data-page="shop">查看商城奖品</button><button class="secondary-button" type="button" data-page="lottery">管理奖池</button><button class="primary-button" type="button" data-page="lottery">进入完整页</button></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="page-timer" class="page" data-page-section="timer">
+          <div class="standalone-toolbar"><button class="secondary-button" type="button" data-page="tools"><svg class="icon small"><use href="#i-arrow-left"/></svg>返回课堂工具</button></div>
+          <article class="panel timer-page-card">
+            <div>
+              <span id="timerPageStatus" class="status-chip blue">准备就绪</span>
+              <div class="timer-display timer-value" style="margin-top:28px">05:00</div>
+              <div style="margin-top:19px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--text-3);font-size:13px"><span>当前单位：<strong id="timerUnitLabel" style="color:var(--text)">分钟</strong></span><button id="toggleTimerUnit" class="text-button" type="button">切换为秒</button></div>
+              <div class="preset-row" data-timer-presets style="margin-top:18px"><button class="chip" type="button" data-seconds="60">1 分钟</button><button class="chip is-active" type="button" data-seconds="300">5 分钟</button><button class="chip" type="button" data-seconds="600">10 分钟</button><button class="chip" type="button" data-seconds="900">15 分钟</button></div>
+              <div class="field" style="width:min(280px,100%);margin:18px auto 0"><span>自定义时长</span><input id="customTimerValue" class="input" type="number" min="1" max="180" value="5"></div>
+              <div class="timer-controls"><button class="primary-button timer-toggle" type="button"><svg class="icon small"><use href="#i-play"/></svg><span>开始计时</span></button><button class="secondary-button timer-reset" type="button"><svg class="icon small"><use href="#i-reset"/></svg>重置</button></div>
+            </div>
+          </article>
+        </section>
+
+        <section id="page-rollcall" class="page" data-page-section="rollcall">
+          <div class="standalone-toolbar"><button class="secondary-button" type="button" data-page="tools"><svg class="icon small"><use href="#i-arrow-left"/></svg>返回课堂工具</button></div>
+          <article class="panel timer-page-card">
+            <div class="rollcall-display"><span class="status-chip green">可抽取 36 人</span><div class="rollcall-avatar rollcall-initials" style="width:150px;height:150px;border-radius:44px;font-size:42px;margin-top:28px">陈</div><strong class="rollcall-name" style="font-size:34px">陈子涵</strong><span class="rollcall-meta" style="font-size:14px">向日葵组 · 女生</span><div class="timer-controls"><button class="primary-button rollcall-random" type="button"><svg class="icon small"><use href="#i-dice"/></svg>随机点名</button><button class="secondary-button" type="button" data-page="students">打开学生管理</button></div></div>
+          </article>
+        </section>
+
+        <section id="page-lottery" class="page" data-page-section="lottery">
+          <div class="standalone-toolbar"><button class="secondary-button" type="button" data-page="tools"><svg class="icon small"><use href="#i-arrow-left"/></svg>返回课堂工具</button></div>
+          <div class="panel lottery-toolbar">
+            <div class="lottery-toolbar-left"><span style="color:var(--text-3);font-size:12px">奖池</span><select class="select" style="width:auto;min-width:180px"><option>课堂奖励</option><option>周会抽奖</option><option>节日活动</option></select><button class="icon-button" type="button" data-modal="lottery-pool" aria-label="新建奖池"><svg class="icon small"><use href="#i-plus"/></svg></button><button class="icon-button" type="button" data-modal="lottery-pool" aria-label="编辑奖池"><svg class="icon small"><use href="#i-edit"/></svg></button></div>
+            <div class="lottery-toolbar-actions"><button class="secondary-button" type="button" data-modal="lottery-prize"><svg class="icon small"><use href="#i-plus"/></svg>添加奖品</button><button class="secondary-button" type="button" data-modal="lottery-import"><svg class="icon small"><use href="#i-upload"/></svg>商城导入</button><button class="danger-button" type="button" data-confirm="清空奖池"><svg class="icon small"><use href="#i-trash"/></svg>清空奖池</button></div>
+          </div>
+          <div class="lottery-layout">
+            <article class="panel lottery-stage">
+              <span id="lotteryStatus" class="status-chip purple">准备就绪</span>
+              <div class="lottery-stage-icon" style="margin-top:22px"><svg class="icon large"><use href="#i-trophy"/></svg></div>
+              <div id="lotteryName" class="lottery-name">准备就绪</div>
+              <div id="lotteryMeta" class="lottery-meta">课堂奖励 · 8 个启用奖品</div>
+              <div class="timer-controls"><button id="lotteryToggle" class="primary-button" type="button">开始抽奖</button><button id="lotteryOnce" class="secondary-button" type="button">抽取 1 次</button></div>
+            </article>
+            <div class="lottery-side">
+              <article class="panel pad">
+                <div class="panel-header"><div><h2>奖品</h2><p>点击奖品可编辑，开关用于启停。</p></div><span class="status-chip purple">8</span></div>
+                <div class="prize-list">
+                  <div class="prize-row" data-modal="lottery-prize"><span class="prize-icon"><svg class="icon small"><use href="#i-trophy"/></svg></span><div class="prize-copy"><strong>免作业卡</strong><span>商城 · 权重 1</span></div><button class="switch" type="button" aria-label="启用"></button></div>
+                  <div class="prize-row" data-modal="lottery-prize"><span class="prize-icon"><svg class="icon small"><use href="#i-trophy"/></svg></span><div class="prize-copy"><strong>优先选座</strong><span>商城 · 权重 2</span></div><button class="switch" type="button" aria-label="启用"></button></div>
+                  <div class="prize-row" data-modal="lottery-prize"><span class="prize-icon"><svg class="icon small"><use href="#i-trophy"/></svg></span><div class="prize-copy"><strong>神秘奖励</strong><span>自定义 · 权重 1</span></div><button class="switch" type="button" aria-label="启用"></button></div>
+                  <div class="prize-row" data-modal="lottery-prize"><span class="prize-icon"><svg class="icon small"><use href="#i-trophy"/></svg></span><div class="prize-copy"><strong>文具盲袋</strong><span>商城 · 权重 3</span></div><button class="switch is-off" type="button" aria-label="停用"></button></div>
+                </div>
+              </article>
+              <article class="panel pad">
+                <div class="panel-header"><div><h2>历史</h2></div><div class="panel-actions"><span id="lotteryHistoryCount" class="status-chip">3</span><button id="clearLotteryHistory" class="text-button" type="button">清空</button></div></div>
+                <div id="lotteryHistory" class="list">
+                  <div class="list-row"><div class="list-main"><strong>优先选座</strong><span>17:02:18</span></div></div>
+                  <div class="list-row"><div class="list-main"><strong>免作业卡</strong><span>16:58:42</span></div></div>
+                  <div class="list-row"><div class="list-main"><strong>文具盲袋</strong><span>16:55:07</span></div></div>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section id="page-settings" class="page" data-page-section="settings">
+          <div class="settings-content">
+            <section class="settings-profile">
+              <span class="avatar">林</span>
+              <div class="settings-profile__identity">
+                <h2>林老师</h2>
+                <p>teacher@example.com</p>
+                <div class="status-row"><span class="status-chip green">已登录</span><span class="status-chip orange">试用账号 · 剩余 6 天</span><span class="status-chip blue">已设置锁屏密码</span></div>
+              </div>
+              <div class="settings-profile__facts">
+                <div class="settings-profile__fact"><span>当前班级</span><strong data-class-name>高一（2）班</strong></div>
+                <div class="settings-profile__fact"><span>当前学期</span><strong data-semester-name>2026年秋季学期</strong></div>
+                <div class="settings-profile__fact"><span>用户 ID</span><strong>TA-20260903-08</strong></div>
+                <div class="settings-profile__fact"><span>账号状态</span><strong>可以正常使用</strong></div>
+              </div>
+              <button class="secondary-button" type="button" data-logout><svg class="icon small"><use href="#i-logout"/></svg>退出登录</button>
+            </section>
+
+            <div class="settings-flow">
+              <section class="settings-section">
+                <div class="settings-section__intro"><h2>班级与学期</h2><p>管理当前班级名称、学期状态和课堂操作权限。</p></div>
+                <div class="settings-section__body">
+                  <div class="settings-kv-grid">
+                    <div class="settings-kv"><span>当前班级</span><strong data-class-name>高一（2）班</strong></div>
+                    <div class="settings-kv"><span>当前学期</span><strong data-semester-name>2026年秋季学期</strong></div>
+                    <div class="settings-kv"><span>学期状态</span><strong data-semester-status>最新学期</strong></div>
+                    <div class="settings-kv"><span>课堂权限</span><strong><span class="status-chip green" data-permission-chip>允许积分操作</span></strong></div>
+                    <div class="settings-kv is-wide"><span>使用建议</span><strong data-semester-notice>当前学期状态正常。</strong></div>
+                  </div>
+                  <div class="settings-action-row"><button class="secondary-button" type="button" data-modal="rename-class">修改班级名称</button><button class="secondary-button" type="button" data-modal="new-semester">切换到新学期</button><button class="secondary-button" type="button" data-page="dashboard">返回工作台</button></div>
+                </div>
+              </section>
+
+              <section class="settings-section settings-section--lock">
+                <div class="settings-section__intro"><h2>锁屏</h2><p>设置、修改或清除锁屏密码，防止临时离开时发生误触。</p></div>
+                <div class="settings-section__body">
+                  <div class="settings-state-row"><div><strong>锁屏功能已启用</strong><p>修改或清除密码前，需要先输入原密码进行校验。</p></div><div class="panel-actions"><span class="status-chip blue">已设置锁屏密码</span><button class="secondary-button" type="button" data-lock>立即锁屏</button></div></div>
+                  <div class="form-grid settings-lock-form" style="margin-top:14px"><label class="field"><span>原密码</span><input class="input" type="password" placeholder="输入当前锁屏密码"></label><label class="field"><span>新密码</span><input class="input" type="password" placeholder="请输入新的锁屏密码（至少 4 位）"></label><label class="field full"><span>确认密码</span><input class="input" type="password" placeholder="再次输入锁屏密码"></label></div>
+                  <div class="settings-action-row"><button class="primary-button" type="button" data-toast="锁屏密码已保存">保存密码</button><button class="secondary-button" type="button" data-confirm="清除锁屏密码">清除密码</button></div>
+                </div>
+              </section>
+
+              <section class="settings-section settings-feedback">
+                <div class="settings-section__intro"><h2>意见反馈</h2><p>提交使用问题、具体场景或改进建议。</p><div class="status-row"><span class="status-chip">未提交</span></div></div>
+                <div class="settings-section__body">
+                  <label class="field"><span>反馈内容</span><textarea id="feedbackText" class="textarea" placeholder="请描述你遇到的问题、使用场景或改进建议"></textarea></label>
+                  <div class="settings-action-row"><button id="submitFeedback" class="primary-button" type="button">提交反馈</button><button id="clearFeedback" class="secondary-button" type="button">清空内容</button></div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <nav class="mobile-nav" aria-label="手机主导航">
+      <button class="nav-item is-active" type="button" data-page="dashboard"><svg class="icon"><use href="#i-home"/></svg><span class="nav-label">总览</span></button>
+      <button class="nav-item" type="button" data-page="students"><svg class="icon"><use href="#i-users"/></svg><span class="nav-label">学生</span></button>
+      <button class="nav-item" type="button" data-page="points"><svg class="icon"><use href="#i-points"/></svg><span class="nav-label">积分</span></button>
+      <button class="nav-item" type="button" data-page="shop"><svg class="icon"><use href="#i-gift"/></svg><span class="nav-label">商城</span></button>
+      <button class="nav-item" type="button" data-page="tools"><svg class="icon"><use href="#i-tools"/></svg><span class="nav-label">工具</span></button>
+      <button class="nav-item" type="button" data-page="settings"><svg class="icon"><use href="#i-settings"/></svg><span class="nav-label">设置</span></button>
+    </nav>
+  </div>
+
+  <section id="authScreen" class="auth-screen">
+    <div class="auth-shell">
+      <div class="auth-art">
+        <div class="brand"><div class="brand-mark"><svg class="icon"><use href="#i-logo"/></svg></div><div class="brand-copy"><strong>教师助手</strong><span>Teacher Assistant</span></div></div>
+        <div class="auth-illustration"><div class="character c1"><span class="eyes"></span></div><div class="character c2"><span class="eyes"></span></div><div class="character c3"><span class="eyes"></span></div></div>
+      </div>
+      <div class="auth-form-wrap">
+        <h1 id="authTitle">欢迎登录</h1><p id="authDescription">首次登录可免费试用 7 天。</p>
+        <div id="authTabs" class="segmented" style="margin-bottom:18px"><button class="is-active" type="button" data-auth-tab="login">登录</button><button type="button" data-auth-tab="register">注册</button></div>
+        <form id="loginForm" class="auth-form" data-auth-panel="login">
+          <label class="field"><span>邮箱</span><input class="input" type="email" placeholder="输入邮箱"></label>
+          <label class="field"><span>密码</span><span class="password-wrap"><input class="input auth-password" type="password" placeholder="输入密码"><button class="password-toggle" type="button">显示</button></span></label>
+          <div class="auth-helper"><button class="text-button" type="button" data-auth-tab="reset">忘记密码？</button></div>
+          <button class="primary-button" type="submit">登录</button>
+        </form>
+        <form class="auth-form" data-auth-panel="register" hidden>
+          <label class="field"><span>姓名</span><input class="input" type="text" placeholder="输入姓名"></label>
+          <label class="field"><span>邮箱</span><input class="input" type="email" placeholder="输入邮箱"></label>
+          <label class="field"><span>密码</span><span class="password-wrap"><input class="input auth-password" type="password" placeholder="设置密码（至少 6 位）"><button class="password-toggle" type="button">显示</button></span></label>
+          <label class="field"><span>确认密码</span><input class="input auth-password" type="password" placeholder="再次输入密码"></label>
+          <label class="field"><span>邮箱验证码</span><span class="code-row"><input class="input" type="text" maxlength="6" placeholder="输入邮箱验证码"><button class="secondary-button send-code" type="button">获取验证码</button></span></label>
+          <button class="primary-button" type="submit">注册账号</button>
+        </form>
+        <form class="auth-form" data-auth-panel="reset" hidden>
+          <label class="field"><span>邮箱</span><input class="input" type="email" placeholder="输入邮箱"></label>
+          <label class="field"><span>邮箱验证码</span><span class="code-row"><input class="input" type="text" maxlength="6" placeholder="输入邮箱验证码"><button class="secondary-button send-code" type="button">获取验证码</button></span></label>
+          <label class="field"><span>新密码</span><span class="password-wrap"><input class="input auth-password" type="password" placeholder="设置新密码（至少 6 位）"><button class="password-toggle" type="button">显示</button></span></label>
+          <label class="field"><span>确认新密码</span><input class="input auth-password" type="password" placeholder="再次输入新密码"></label>
+          <button class="primary-button" type="submit">重置密码</button>
+          <button class="text-button" type="button" data-auth-tab="login">返回登录</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <div id="modalLayer" class="modal-layer" aria-hidden="true">
+    <section id="modalCard" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <header class="modal-header"><div><div id="modalEyebrow" class="eyebrow"></div><h2 id="modalTitle"></h2><p id="modalDescription"></p></div><button id="modalClose" class="modal-close" type="button" aria-label="关闭"><svg class="icon small"><use href="#i-close"/></svg></button></header>
+      <div id="modalBody" class="modal-body"></div>
+      <footer class="modal-footer"><button id="modalCancel" class="secondary-button" type="button">取消</button><button id="modalPrimary" class="primary-button" type="button">确认</button></footer>
+    </section>
+  </div>
+
+  <div id="lockLayer" class="lock-layer">
+    <section class="lock-card"><div class="brand-mark"><svg class="icon"><use href="#i-lock"/></svg></div><h2>已锁定</h2><p>请输入锁屏密码以继续使用</p><input id="unlockPassword" class="input" type="password" placeholder="输入锁屏密码"><button id="unlockButton" class="primary-button" type="button">立即解锁</button></section>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const icon = (id, className = "small") => `<svg class="icon ${className}"><use href="#${id}"/></svg>`;
+    const modalDefinitions = {
+      "class-switch": {
+        eyebrow: "主导航",
+        title: "切换班级",
+        description: "选择当前要进入的班级，切换后页面会同步更新对应班级和学期数据。",
+        primary: "应用切换",
+        body: `
+          <div class="modal-card">
+            <div class="segmented" data-modal-tabs="class-mode"><button class="is-active" type="button" data-modal-tab="switch">切换班级</button><button type="button" data-modal-tab="create">创建班级</button></div>
+            <div data-modal-panel="class-mode:switch" style="margin-top:14px">
+              <label class="field"><span>当前班级</span><select id="modalClassSelect" class="select"><option>高一（2）班</option><option>高一（1）班</option><option>初三（4）班</option></select></label>
+            </div>
+            <div data-modal-panel="class-mode:create" style="margin-top:14px" hidden>
+              <div class="form-grid"><label class="field"><span>班级名称</span><input id="createClassName" class="input" placeholder="例如：一年级三班"></label><label class="field"><span>学期名称</span><input id="createSemesterName" class="input" placeholder="例如：2026-2027学年上学期"></label></div>
+              <p class="helper">创建完成后会自动切换到新班级，并同步进入填写的学期。</p>
+            </div>
+          </div>`
+      },
+      "semester-switch": {
+        eyebrow: "主导航", title: "切换学期", description: "选择当前班级下要查看和操作的学期，切换后页面状态会同步刷新。", primary: "应用切换",
+        body: `<div class="modal-card"><label class="field"><span>当前学期</span><select id="modalSemesterSelect" class="select"><option value="latest">2026年秋季学期 · 最新学期</option><option value="archived">2026年春季学期 · 归档学期</option><option value="archived-old">2025年秋季学期 · 归档学期</option></select></label></div>`
+      },
+      "student-add": {
+        eyebrow: "学生管理", title: "添加学生", description: "支持单个添加、批量添加和 Excel 导入。", primary: "确认添加", wide: true,
+        body: `<div class="segmented" data-modal-tabs="student-add"><button class="is-active" type="button" data-modal-tab="single">单个添加</button><button type="button" data-modal-tab="batch">批量添加</button><button type="button" data-modal-tab="excel">Excel 导入</button></div>
+          <div class="modal-card" data-modal-panel="student-add:single" style="margin-top:14px"><div class="form-grid"><label class="field"><span>姓名</span><input class="input" placeholder="请输入学生姓名"></label><label class="field"><span>性别</span><select class="select"><option>男</option><option>女</option><option>未设置</option></select></label></div></div>
+          <div class="modal-card" data-modal-panel="student-add:batch" style="margin-top:14px" hidden><label class="field"><span>姓名列表</span><textarea class="textarea" placeholder="例：张三:男, 李四:女&#10;王五 刘六"></textarea></label><div class="form-grid" style="margin-top:12px"><label class="field"><span>默认性别</span><select class="select"><option>男</option><option>女</option></select></label><div class="field"><span>预解析结果</span><div class="summary-row"><span>支持逗号、空格、换行和 姓名:性别</span><strong>0 条</strong></div></div></div></div>
+          <div class="modal-card" data-modal-panel="student-add:excel" style="margin-top:14px" hidden><div class="upload-zone">${icon("i-upload","large")}<div><strong>拖拽或选择 Excel 文件</strong><p>必填列：姓名 / Name / 学生姓名；可选列：性别 / Gender</p><button class="text-button" type="button" style="margin-top:9px">下载模板</button></div></div></div>`
+      },
+      "group-manage": {
+        eyebrow: "学生分组", title: "管理分组", description: "创建、编辑、删除分组，并调整分组成员。", primary: "保存成员", wide: true,
+        body: `<div class="grid-2"><div class="modal-card"><div class="panel-header"><h3>分组列表</h3><button class="primary-button" type="button">${icon("i-plus")}新建分组</button></div><div class="rule-group-list"><button class="rule-group is-active" type="button"><span style="color:inherit">向日葵组</span><span>7 人</span></button><button class="rule-group" type="button"><span style="color:inherit">远航组</span><span>6 人</span></button><button class="rule-group" type="button"><span style="color:inherit">星辰组</span><span>6 人</span></button></div><div class="panel-actions" style="justify-content:flex-start;margin-top:10px"><button class="text-button">编辑分组</button><button class="text-button" style="color:var(--red)">删除分组</button></div></div><div class="modal-card"><div class="panel-header"><h3>向日葵组成员</h3><span class="status-chip">已选 7 人</span></div><div class="summary-list"><label class="summary-row"><span>陈子涵</span><input type="checkbox" checked></label><label class="summary-row"><span>林墨</span><input type="checkbox" checked></label><label class="summary-row"><span>陆可欣</span><input type="checkbox" checked></label><label class="summary-row"><span>沈星河</span><input type="checkbox"></label></div></div></div>`
+      },
+      "group-import": {
+        eyebrow: "学生分组", title: "导入分组", description: "支持使用 Excel 批量导入分组关系，导入前会校验分组名、学生名和重复归属。", primary: "确认导入", wide: true,
+        body: `<div class="upload-zone">${icon("i-upload","large")}<div><strong>选择分组 Excel 文件</strong><p>必填列：分组名称、学生姓名；推荐先下载模板。</p><button class="text-button" type="button" style="margin-top:9px">下载模板</button></div></div><div class="modal-card" style="margin-top:13px"><strong>导入说明</strong><p class="helper">重复分组会合并，重复学生归属会在导入前提示。确认后会写入当前班级。</p></div>`
+      },
+      "points-action": {
+        eyebrow: "积分操作", title: "选择积分规则", description: "按规则组快速选择本次要执行的加分或扣分项目。", primary: "执行积分操作", wide: true,
+        body: `<div class="status-row"><span class="status-chip blue">操作对象：陈子涵</span><span class="status-chip green">当前可用积分：248</span></div><div class="segmented" style="margin-top:14px" data-modal-tabs="points-sign"><button class="is-active" type="button" data-modal-tab="plus">加分</button><button type="button" data-modal-tab="minus">扣分</button><button type="button" data-modal-tab="all">全部</button></div><div class="grid-2" style="margin-top:14px"><div class="modal-card"><div class="eyebrow">规则分组</div><div class="rule-group-list"><button class="rule-group is-active"><span style="color:inherit">课堂表现</span><span>6</span></button><button class="rule-group"><span style="color:inherit">作业表现</span><span>5</span></button><button class="rule-group"><span style="color:inherit">小组合作</span><span>4</span></button></div></div><div class="modal-card"><label class="field"><span>搜索规则</span><input class="input" placeholder="请输入规则名称"></label><div class="rule-item"><span class="rule-sign">+3</span><div class="rule-copy"><strong>主动发言</strong><span>点击后立即执行</span></div></div><div class="rule-item"><span class="rule-sign">+5</span><div class="rule-copy"><strong>精彩回答</strong><span>点击后立即执行</span></div></div><div class="rule-item"><span class="rule-sign minus">-2</span><div class="rule-copy"><strong>课堂走神</strong><span>扣分项</span></div></div></div></div>`
+      },
+      "rule-group": { eyebrow: "规则管理", title: "新增 / 编辑规则组", description: "规则组用于归类课堂中的常用加减分场景。", primary: "保存规则组", body: `<div class="modal-card"><label class="field"><span>规则组名称</span><input class="input" value="课堂表现" placeholder="例如：课堂表现"></label></div>` },
+      "rule-item": { eyebrow: "规则管理", title: "新增 / 编辑积分项", description: "积分项会直接用于单项榜与课堂积分操作。", primary: "保存积分项", body: `<div class="modal-card"><div class="form-grid"><label class="field full"><span>积分项名称</span><input class="input" value="主动发言" placeholder="例如：主动发言"></label><label class="field"><span>分值</span><input class="input" type="number" value="3" min="1" max="99"></label><label class="field"><span>类型</span><select class="select"><option>加分</option><option>扣分</option></select></label></div></div>` },
+      "points-import-items": { eyebrow: "Excel 导入", title: "导入积分项", description: "支持通过 Excel 批量导入积分组与积分项。", primary: "确认导入", wide: true, body: `<div class="upload-zone">${icon("i-upload","large")}<div><strong>拖拽或选择积分项 Excel 文件</strong><p>模板字段：组名、项目名、分值</p><button class="text-button" type="button" style="margin-top:9px">下载模板</button></div></div>` },
+      "points-import-records": { eyebrow: "Excel 导入", title: "导入积分", description: "按学生姓名批量导入当前班级积分。", primary: "确认导入", wide: true, body: `<div class="upload-zone">${icon("i-upload","large")}<div><strong>拖拽或选择积分 Excel 文件</strong><p>模板字段：姓名、分值、项目（可选）</p><button class="text-button" type="button" style="margin-top:9px">下载模板</button></div></div>` },
+      "points-export": {
+        eyebrow: "数据导出", title: "导出积分结果", description: "支持导出积分结果或积分历史，并按分组、积分项和时间范围筛选。", primary: "确认导出", wide: true,
+        body: `<div class="modal-card"><div class="form-grid"><label class="field"><span>导出类型</span><select class="select"><option>积分结果</option><option>积分历史</option></select></label><label class="field"><span>学生范围</span><select class="select"><option>全部学生</option><option>向日葵组（7）</option><option>远航组（6）</option></select></label><label class="field"><span>排序方式</span><select class="select"><option>积分倒序</option><option>积分正序</option></select></label><label class="field"><span>按积分项筛选</span><select class="select"><option>全部积分项</option><option>课堂表现 / 主动发言</option></select></label><label class="field full"><span>时间范围</span><input class="input" value="2026-09-01 00:00 至 2026-09-03 23:59"></label></div></div><div class="modal-card" style="margin-top:13px"><div class="panel-header"><div><h3>数据预览</h3><p>当前共预览 36 条数据。</p></div><button class="secondary-button">刷新预览</button></div><div class="summary-list"><div class="summary-row"><span>陈子涵 · 向日葵组</span><strong>286 分</strong></div><div class="summary-row"><span>周景行 · 远航组</span><strong>272 分</strong></div><div class="summary-row"><span>许知夏 · 星辰组</span><strong>261 分</strong></div></div></div>`
+      },
+      "shop-prize": { eyebrow: "商品管理", title: "新增 / 编辑商城奖品", description: "设置商品名称、积分、库存和描述。", primary: "保存商品", wide: true, body: `<div class="grid-2"><div class="modal-card"><div class="form-grid"><label class="field full"><span>商品名称</span><input class="input" value="免作业卡"></label><label class="field"><span>所需积分</span><input class="input" type="number" value="80"></label><label class="field"><span>库存</span><input class="input" type="number" value="12"></label><label class="field full"><span>描述</span><textarea class="textarea">可免除一次常规书面作业。</textarea></label></div></div><div class="modal-card" style="display:grid;place-items:center;text-align:center"><div class="product-visual" style="width:100%;height:150px;border-radius:15px">${icon("i-gift","large")}</div><strong style="margin-top:12px">免作业卡</strong><p class="helper">80 积分 · 当前库存 12</p></div></div>` },
+      "shop-import": { eyebrow: "Excel 导入", title: "批量导入商城奖品", description: "自动识别商品名称、积分、库存和描述字段。", primary: "确认导入", wide: true, body: `<div class="upload-zone">${icon("i-upload","large")}<div><strong>拖拽或选择商城奖品 Excel</strong><p>字段：商品名称、积分、库存、描述（可选）</p><button class="text-button" type="button" style="margin-top:9px">下载模板</button></div></div><div class="modal-card" style="margin-top:13px"><strong>解析结果</strong><p class="helper">选择文件后会在这里预览识别到的商品，并可清空结果后重新上传。</p></div>` },
+      "shop-exchange": { eyebrow: "商品兑换", title: "确认课堂奖励兑换", description: "选择兑换学生，再确认数量与所需积分，系统会校验库存和可用积分。", primary: "确认兑换", wide: true, body: `<div class="grid-2"><div class="modal-card"><div class="product-visual" style="height:140px;border-radius:15px">${icon("i-gift","large")}</div><div class="summary-list"><div class="summary-row"><span>单件积分</span><strong>80</strong></div><div class="summary-row"><span>剩余库存</span><strong>12</strong></div><div class="summary-row"><span>本次消耗</span><strong>80</strong></div></div></div><div class="modal-card"><div class="form-grid"><label class="field full"><span>选择学生</span><select class="select"><option>陈子涵（可用积分：248）</option><option>周景行（可用积分：231）</option><option>林墨（可用积分：28）</option></select></label><label class="field full"><span>兑换数量</span><input class="input" type="number" value="1" min="1" max="12"></label></div><div class="summary-list"><div class="summary-row"><span>学生可用积分</span><strong>248</strong></div><div class="summary-row"><span>是否足够兑换</span><strong style="color:var(--green)">可以兑换</strong></div></div></div></div>` },
+      "lottery-pool": { eyebrow: "奖池设置", title: "新建 / 编辑奖池", description: "为当前抽奖器创建或修改奖池名称。", primary: "保存", body: `<div class="modal-card"><label class="field"><span>奖池名称</span><input class="input" value="课堂奖励" placeholder="请输入奖池名称"></label><p class="helper">可以按“周会抽奖”“课堂奖励”“节日活动”等场景命名。</p></div>` },
+      "lottery-prize": { eyebrow: "奖品设置", title: "新增 / 编辑奖品", description: "设置奖品名称、权重和启用状态。", primary: "保存", body: `<div class="modal-card"><div class="form-grid"><label class="field full"><span>奖品名称</span><input class="input" value="免作业卡"></label><label class="field"><span>抽奖权重</span><input class="input" type="number" value="1" min="1"></label><label class="field"><span>状态</span><select class="select"><option>启用</option><option>停用</option></select></label></div><p class="helper">建议将高价值奖品设置为较低权重，常规奖品设置为中等权重。</p></div>` },
+      "lottery-import": { eyebrow: "商城同步", title: "从商城导入奖品", description: "选择商城奖品导入当前奖池，并设置权重生成方式。", primary: "追加导入", wide: true, body: `<div class="modal-card"><div class="segmented"><button class="is-active">权重 = 1</button><button>权重 = 库存</button></div><p class="helper">可追加到现有奖池，也可覆盖当前奖池中的全部奖品。</p></div><div class="modal-card" style="margin-top:13px"><div class="summary-list"><label class="summary-row"><span>免作业卡 · 库存 12 · 80 积分</span><input type="checkbox" checked></label><label class="summary-row"><span>优先选座 · 库存 20 · 60 积分</span><input type="checkbox" checked></label><label class="summary-row"><span>课堂小助手 · 库存 8 · 45 积分</span><input type="checkbox"></label></div><div class="panel-actions" style="justify-content:flex-start;margin-top:12px"><button class="danger-button" type="button">覆盖导入</button></div></div>` },
+      "rename-class": { eyebrow: "班级设置", title: "修改班级名称", description: "修改后会立即同步到当前班级，不影响学期数据和学生积分。", primary: "确认修改", body: `<div class="modal-card"><div class="form-grid"><div class="field"><span>当前班级</span><div class="summary-row"><strong data-class-name>高一（2）班</strong></div></div><label class="field"><span>新班级名称</span><input id="renameClassInput" class="input" value="高一（2）班" placeholder="例如：一年级三班"></label></div></div>` },
+      "new-semester": { eyebrow: "学期设置", title: "切换到新学期", description: "切换后当前学期会进入历史状态，积分数据仅支持查看，不能继续操作。", primary: "确认切换", body: `<div class="notice" style="display:flex"><svg class="icon"><use href="#i-warning"/></svg><span>旧学期仍可查看历史记录、排行榜与积分结果，但不能继续进行课堂积分操作。</span></div><div class="modal-card"><div class="form-grid"><label class="field"><span>新学期名称</span><input id="newSemesterInput" class="input" value="2027年春季学期" placeholder="例如：2027年春季学期"></label><label class="field"><span>学生积分处理方式</span><select class="select"><option>保留积分</option><option>清空积分</option></select></label></div></div>` }
+    };
+
+    const app = document.getElementById("productApp");
+    const authScreen = document.getElementById("authScreen");
+    const modalLayer = document.getElementById("modalLayer");
+    const modalCard = document.getElementById("modalCard");
+    const modalBody = document.getElementById("modalBody");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalEyebrow = document.getElementById("modalEyebrow");
+    const modalDescription = document.getElementById("modalDescription");
+    const modalPrimary = document.getElementById("modalPrimary");
+    const toast = document.getElementById("toast");
+    let activePage = "dashboard";
+    let currentModal = null;
+    let toastTimer = null;
+    let isArchived = false;
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("is-visible");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("is-visible"), 2100);
+    }
+
+    function navRoot(page) {
+      return ["timer", "rollcall", "lottery"].includes(page) ? "tools" : page;
+    }
+
+    function setPage(page) {
+      const target = document.querySelector(`[data-page-section="${page}"]`);
+      if (!target) return;
+      activePage = page;
+      document.querySelectorAll("[data-page-section]").forEach(section => section.classList.toggle("is-active", section === target));
+      const root = navRoot(page);
+      document.querySelectorAll(".nav-item[data-page]").forEach(button => button.classList.toggle("is-active", button.dataset.page === root));
+      document.getElementById("quickMenu").hidden = true;
+      document.getElementById("accountMenu").hidden = true;
+      window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    }
+
+    function openModal(key) {
+      const definition = modalDefinitions[key];
+      if (!definition) return;
+      currentModal = key;
+      modalEyebrow.textContent = definition.eyebrow || "";
+      modalTitle.textContent = definition.title;
+      modalDescription.textContent = definition.description || "";
+      modalBody.innerHTML = definition.body;
+      modalPrimary.textContent = definition.primary || "确认";
+      modalCard.classList.toggle("wide", Boolean(definition.wide));
+      modalLayer.classList.add("is-open");
+      modalLayer.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+      requestAnimationFrame(() => modalCard.querySelector("input, select, textarea")?.focus());
+    }
+
+    function openConfirm(name) {
+      currentModal = "confirm";
+      modalEyebrow.textContent = "风险操作";
+      modalTitle.textContent = name;
+      modalDescription.textContent = "请确认本次操作确实需要执行，确认后将立即生效。";
+      modalBody.innerHTML = `<div class="modal-card"><div class="confirm-icon">${icon("i-warning","large")}</div><div class="confirm-copy"><strong>确定要${name}吗？</strong><p>当前原型保留了正式版本中的二次确认流程。</p></div></div>`;
+      modalPrimary.textContent = "确认操作";
+      modalPrimary.className = "danger-button";
+      modalCard.classList.remove("wide");
+      modalLayer.classList.add("is-open");
+      modalLayer.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeModal() {
+      modalLayer.classList.remove("is-open");
+      modalLayer.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+      modalPrimary.className = "primary-button";
+      currentModal = null;
+    }
+
+    function applyModalAction() {
+      if (currentModal === "class-switch") {
+        const createPanel = modalBody.querySelector('[data-modal-panel="class-mode:create"]');
+        if (createPanel && !createPanel.hidden) {
+          const className = modalBody.querySelector("#createClassName")?.value.trim();
+          const semesterName = modalBody.querySelector("#createSemesterName")?.value.trim();
+          if (!className) return showToast("请输入班级名称");
+          document.querySelectorAll("[data-class-name]").forEach(el => el.textContent = className);
+          if (semesterName) document.querySelectorAll("[data-semester-name]").forEach(el => el.textContent = semesterName);
+          setArchived(false);
+          closeModal();
+          return showToast("已创建并切换到新班级");
+        }
+        const className = modalBody.querySelector("#modalClassSelect")?.value;
+        if (className) document.querySelectorAll("[data-class-name]").forEach(el => el.textContent = className);
+        closeModal();
+        return showToast("班级已切换");
+      }
+      if (currentModal === "semester-switch") {
+        const select = modalBody.querySelector("#modalSemesterSelect");
+        const selected = select?.options[select.selectedIndex];
+        if (selected) {
+          const name = selected.textContent.split(" · ")[0];
+          document.querySelectorAll("[data-semester-name]").forEach(el => el.textContent = name);
+          setArchived(select.value.startsWith("archived"));
+        }
+        closeModal();
+        return showToast("学期已切换");
+      }
+      if (currentModal === "rename-class") {
+        const name = modalBody.querySelector("#renameClassInput")?.value.trim();
+        if (!name) return showToast("请输入新班级名称");
+        document.querySelectorAll("[data-class-name]").forEach(el => el.textContent = name);
+        closeModal();
+        return showToast("班级名称已修改");
+      }
+      if (currentModal === "new-semester") {
+        const name = modalBody.querySelector("#newSemesterInput")?.value.trim();
+        if (!name) return showToast("请输入新学期名称");
+        document.querySelectorAll("[data-semester-name]").forEach(el => el.textContent = name);
+        setArchived(false);
+        closeModal();
+        return showToast("已切换到新学期");
+      }
+      const actionName = modalTitle.textContent;
+      const wasConfirm = currentModal === "confirm";
+      closeModal();
+      showToast(wasConfirm ? "操作已确认（原型未写入数据）" : `${actionName}已完成（原型演示）`);
+    }
+
+    function setArchived(value) {
+      isArchived = value;
+      app.classList.toggle("is-archived", value);
+      const contextStatus = document.getElementById("contextStatus");
+      contextStatus.textContent = value ? "归档学期 · 不允许积分操作" : "最新学期 · 允许积分操作";
+      contextStatus.classList.toggle("is-archived", value);
+      document.querySelectorAll("[data-operation-chip]").forEach(el => { el.textContent = value ? "当前状态：不允许积分操作" : "当前状态：允许积分操作"; el.className = `status-chip ${value ? "orange" : "green"}`; });
+      document.querySelectorAll("[data-semester-chip]").forEach(el => { el.textContent = value ? "归档学期" : "最新学期"; el.className = `status-chip ${value ? "orange" : "green"}`; });
+      document.querySelectorAll("[data-shop-permission]").forEach(el => el.textContent = value ? "当前学期仅可浏览商品" : "当前学期支持正常兑换与商品维护");
+      document.querySelectorAll("[data-permission-chip]").forEach(el => { el.textContent = value ? "积分操作已关闭" : "允许积分操作"; el.className = `status-chip ${value ? "orange" : "green"}`; });
+      document.querySelectorAll("[data-semester-status]").forEach(el => el.textContent = value ? "归档学期" : "最新学期");
+      document.querySelectorAll("[data-semester-notice]").forEach(el => el.textContent = value ? "当前学期已归档，仅支持查看历史记录和排行榜。" : "当前学期状态正常。");
+    }
+
+    document.addEventListener("click", event => {
+      const pageButton = event.target.closest("[data-page]");
+      if (pageButton) {
+        setPage(pageButton.dataset.page);
+        if (pageButton.hasAttribute("data-open-records")) activateTab("points-content", "records");
+        return;
+      }
+      const modalButton = event.target.closest("[data-modal]");
+      if (modalButton) { openModal(modalButton.dataset.modal); return; }
+      const confirmButton = event.target.closest("[data-confirm]");
+      if (confirmButton) { openConfirm(confirmButton.dataset.confirm); return; }
+      const toastButton = event.target.closest("[data-toast]");
+      if (toastButton) { showToast(toastButton.dataset.toast); return; }
+      const lockButton = event.target.closest("[data-lock]");
+      if (lockButton) { document.getElementById("lockLayer").classList.add("is-open"); setTimeout(() => document.getElementById("unlockPassword").focus(), 80); return; }
+      const shopRecords = event.target.closest("[data-shop-records]");
+      if (shopRecords) { activateTab("shop-content", "records"); setPage("shop"); return; }
+      const openRecords = event.target.closest("[data-open-records]");
+      if (openRecords) { setPage("points"); activateTab("points-content", "records"); return; }
+      const segmentButton = event.target.closest("[data-segment] button");
+      if (segmentButton) {
+        segmentButton.parentElement.querySelectorAll("button").forEach(button => button.classList.toggle("is-active", button === segmentButton));
+      }
+      const stripButton = event.target.closest("[data-tab-strip] [data-tab]");
+      if (stripButton) activateTab(stripButton.closest("[data-tab-strip]").dataset.tabStrip, stripButton.dataset.tab);
+      const ruleGroup = event.target.closest("[data-rule-groups] .rule-group");
+      if (ruleGroup) ruleGroup.parentElement.querySelectorAll(".rule-group").forEach(button => button.classList.toggle("is-active", button === ruleGroup));
+      const modalTab = event.target.closest("[data-modal-tab]");
+      if (modalTab) activateModalTab(modalTab);
+    });
+
+    function activateTab(group, tab) {
+      document.querySelectorAll(`[data-tab-strip="${group}"] [data-tab]`).forEach(button => button.classList.toggle("is-active", button.dataset.tab === tab));
+      document.querySelectorAll(`[data-tab-panel^="${group}:"]`).forEach(panel => panel.classList.toggle("is-active", panel.dataset.tabPanel === `${group}:${tab}`));
+    }
+
+    function activateModalTab(button) {
+      const tabs = button.closest("[data-modal-tabs]");
+      if (!tabs) return;
+      const group = tabs.dataset.modalTabs;
+      tabs.querySelectorAll("[data-modal-tab]").forEach(item => item.classList.toggle("is-active", item === button));
+      modalBody.querySelectorAll(`[data-modal-panel^="${group}:"]`).forEach(panel => panel.hidden = panel.dataset.modalPanel !== `${group}:${button.dataset.modalTab}`);
+      if (currentModal === "class-switch") modalPrimary.textContent = button.dataset.modalTab === "create" ? "创建" : "应用切换";
+    }
+
+    document.getElementById("collapseSidebar").addEventListener("click", () => app.classList.toggle("is-collapsed"));
+    document.getElementById("quickEntry").addEventListener("click", event => { event.stopPropagation(); const menu = document.getElementById("quickMenu"); menu.hidden = !menu.hidden; document.getElementById("accountMenu").hidden = true; });
+    document.getElementById("accountButton").addEventListener("click", event => { event.stopPropagation(); const menu = document.getElementById("accountMenu"); menu.hidden = !menu.hidden; document.getElementById("quickMenu").hidden = true; });
+    document.getElementById("mobileAccount").addEventListener("click", () => setPage("settings"));
+    document.addEventListener("click", event => { if (!event.target.closest(".popover") && !event.target.closest("#quickEntry") && !event.target.closest("#accountButton")) { document.getElementById("quickMenu").hidden = true; document.getElementById("accountMenu").hidden = true; } });
+
+    document.getElementById("modalClose").addEventListener("click", closeModal);
+    document.getElementById("modalCancel").addEventListener("click", closeModal);
+    modalLayer.addEventListener("click", event => { if (event.target === modalLayer) closeModal(); });
+    modalPrimary.addEventListener("click", applyModalAction);
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && modalLayer.classList.contains("is-open")) closeModal(); });
+
+    document.getElementById("unlockButton").addEventListener("click", () => { document.getElementById("lockLayer").classList.remove("is-open"); document.getElementById("unlockPassword").value = ""; showToast("已解锁"); });
+    document.getElementById("unlockPassword").addEventListener("keydown", event => { if (event.key === "Enter") document.getElementById("unlockButton").click(); });
+
+    function logout() { app.hidden = true; authScreen.classList.add("is-active"); document.body.style.overflow = ""; }
+    document.getElementById("logoutButton").addEventListener("click", logout);
+    document.querySelectorAll("[data-logout]").forEach(button => button.addEventListener("click", logout));
+    document.getElementById("loginForm").addEventListener("submit", event => { event.preventDefault(); authScreen.classList.remove("is-active"); app.hidden = false; setPage("dashboard"); showToast("登录成功"); });
+    document.querySelectorAll("[data-auth-panel]").forEach(form => form.addEventListener("submit", event => { event.preventDefault(); if (form.dataset.authPanel !== "login") showToast(form.dataset.authPanel === "register" ? "注册成功（原型演示）" : "密码已重置（原型演示）"); }));
+    document.querySelectorAll("[data-auth-tab]").forEach(button => button.addEventListener("click", () => setAuthTab(button.dataset.authTab)));
+
+    function setAuthTab(tab) {
+      const isReset = tab === "reset";
+      document.getElementById("authTabs").hidden = isReset;
+      document.querySelectorAll("[data-auth-panel]").forEach(panel => panel.hidden = panel.dataset.authPanel !== tab);
+      document.querySelectorAll("#authTabs [data-auth-tab]").forEach(button => button.classList.toggle("is-active", button.dataset.authTab === tab));
+      document.getElementById("authTitle").textContent = tab === "login" ? "欢迎登录" : tab === "register" ? "注册账号" : "重置密码";
+      document.getElementById("authDescription").textContent = tab === "login" ? "首次登录可免费试用 7 天。" : tab === "register" ? "创建账号并开始管理班级。" : "通过邮箱验证码设置新密码。";
+    }
+    document.querySelectorAll(".password-toggle").forEach(button => button.addEventListener("click", () => { const input = button.parentElement.querySelector("input"); input.type = input.type === "password" ? "text" : "password"; button.textContent = input.type === "password" ? "显示" : "隐藏"; }));
+    document.querySelectorAll(".send-code").forEach(button => button.addEventListener("click", () => { let seconds = 60; button.disabled = true; button.textContent = `${seconds}s`; const timer = setInterval(() => { seconds -= 1; button.textContent = seconds > 0 ? `${seconds}s` : "获取验证码"; if (seconds <= 0) { clearInterval(timer); button.disabled = false; } }, 1000); showToast("验证码已发送（原型演示）"); }));
+
+    const students = [
+      { name: "陈子涵", group: "向日葵组", gender: "女生", available: 248, total: 286 },
+      { name: "周景行", group: "远航组", gender: "男生", available: 231, total: 272 },
+      { name: "许知夏", group: "星辰组", gender: "女生", available: 223, total: 261 },
+      { name: "林墨", group: "向日葵组", gender: "男生", available: 208, total: 248 },
+      { name: "沈星河", group: "远航组", gender: "男生", available: 199, total: 239 },
+      { name: "陆可欣", group: "向日葵组", gender: "女生", available: 188, total: 228 },
+      { name: "顾言", group: "未分组", gender: "男生", available: 174, total: 211 },
+      { name: "江晚晴", group: "星辰组", gender: "女生", available: 168, total: 205 }
+    ];
+    let selectedStudents = new Set(["陈子涵"]);
+    let multiSelect = false;
+    let studentLayout = "card";
+    let studentSort = "points";
+    let sortDescending = true;
+    let activeGroup = "all";
+
+    function renderStudents() {
+      const keyword = document.getElementById("studentSearch").value.trim().toLowerCase();
+      const rows = students.filter(student => (activeGroup === "all" || student.group === activeGroup) && (!keyword || student.name.toLowerCase().includes(keyword) || student.group.toLowerCase().includes(keyword)));
+      rows.sort((a,b) => studentSort === "name" ? a.name.localeCompare(b.name,"zh-CN") : a.total - b.total);
+      if (sortDescending) rows.reverse();
+      const grid = document.getElementById("studentGrid");
+      grid.classList.toggle("is-list", studentLayout === "list");
+      grid.innerHTML = rows.map(student => `
+        <article class="student-card ${selectedStudents.has(student.name) ? "is-selected" : ""}" data-student="${student.name}" data-group="${student.group}">
+          <div class="student-card-head"><span class="student-avatar">${student.name[0]}</span><div class="student-name"><strong>${student.name}</strong><span>${student.gender} · ${student.group}</span></div><div class="student-actions"><button type="button" data-edit-student="${student.name}" aria-label="编辑">${icon("i-edit")}</button><button type="button" data-delete-student="${student.name}" aria-label="删除">${icon("i-trash")}</button></div></div>
+          <div class="student-score"><span>可用</span><strong>${student.available}</strong><span>/ 总分 ${student.total}</span></div>
+        </article>`).join("") || `<div class="modal-card" style="grid-column:1/-1;text-align:center"><strong>当前条件下暂无学生</strong><p class="helper">可以调整分组筛选、搜索关键字，或者直接新增学生。</p></div>`;
+      updateSelectionPanel();
+    }
+
+    function updateSelectionPanel() {
+      const selected = students.filter(student => selectedStudents.has(student.name));
+      const title = document.getElementById("selectionTitle");
+      const status = document.getElementById("selectionStatus");
+      const content = document.getElementById("singleSelection");
+      if (selected.length === 0) {
+        title.textContent = "暂无选中学生";
+        status.textContent = "点击左侧学生卡片查看详情";
+        content.style.opacity = ".42";
+        return;
+      }
+      content.style.opacity = "1";
+      if (selected.length > 1) {
+        title.textContent = `已选择 ${selected.length} 名学生`;
+        status.textContent = "支持批量加分或扣分";
+        document.getElementById("selectionMeta").textContent = selected.map(s => s.name).join("、");
+        document.getElementById("selectionAvailable").textContent = selected.reduce((sum,s) => sum + s.available,0);
+        document.getElementById("selectionTotal").textContent = selected.reduce((sum,s) => sum + s.total,0);
+        return;
+      }
+      const student = selected[0];
+      title.textContent = student.name;
+      status.textContent = "已选择 1 名学生";
+      document.getElementById("selectionMeta").textContent = `${student.gender} · ${student.group}`;
+      document.getElementById("selectionAvailable").textContent = student.available;
+      document.getElementById("selectionTotal").textContent = student.total;
+    }
+
+    document.getElementById("studentGrid").addEventListener("click", event => {
+      const edit = event.target.closest("[data-edit-student]");
+      if (edit) { event.stopPropagation(); openModal("student-add"); modalTitle.textContent = `编辑学生 · ${edit.dataset.editStudent}`; modalDescription.textContent = "修改当前学生的姓名与性别。"; return; }
+      const remove = event.target.closest("[data-delete-student]");
+      if (remove) { event.stopPropagation(); openConfirm(`删除学生 ${remove.dataset.deleteStudent}`); return; }
+      const card = event.target.closest("[data-student]");
+      if (!card) return;
+      const name = card.dataset.student;
+      if (multiSelect) {
+        selectedStudents.has(name) ? selectedStudents.delete(name) : selectedStudents.add(name);
+      } else {
+        selectedStudents = new Set([name]);
+      }
+      renderStudents();
+    });
+    document.getElementById("studentSearch").addEventListener("input", renderStudents);
+    document.getElementById("groupFilters").addEventListener("click", event => { const chip = event.target.closest("[data-group]"); if (!chip) return; activeGroup = chip.dataset.group; document.querySelectorAll("#groupFilters [data-group]").forEach(item => item.classList.toggle("is-active", item === chip)); renderStudents(); });
+    document.querySelectorAll("[data-layout]").forEach(button => button.addEventListener("click", () => { studentLayout = button.dataset.layout; renderStudents(); }));
+    document.querySelectorAll("[data-sort]").forEach(button => button.addEventListener("click", () => { if (button.dataset.sort === "direction") sortDescending = !sortDescending; else studentSort = button.dataset.sort; renderStudents(); }));
+    document.getElementById("multiSelectButton").addEventListener("click", event => { multiSelect = !multiSelect; event.currentTarget.textContent = multiSelect ? "关闭多选" : "开启多选"; if (!multiSelect && selectedStudents.size > 1) selectedStudents = new Set([Array.from(selectedStudents)[0]]); renderStudents(); });
+    document.getElementById("selectAllButton").addEventListener("click", () => { multiSelect = true; document.getElementById("multiSelectButton").textContent = "关闭多选"; selectedStudents = new Set(students.filter(s => activeGroup === "all" || s.group === activeGroup).map(s => s.name)); renderStudents(); });
+    document.getElementById("clearSelection").addEventListener("click", () => { selectedStudents.clear(); renderStudents(); });
+
+    document.querySelectorAll("[data-rule-filter]").forEach(button => button.addEventListener("click", () => { const filter = button.dataset.ruleFilter; document.querySelectorAll("#ruleItems [data-sign]").forEach(item => item.hidden = filter !== "all" && item.dataset.sign !== filter); }));
+    document.querySelectorAll("[data-ranking-type]").forEach(button => button.addEventListener("click", () => { document.getElementById("rankingRuleSelector").hidden = button.dataset.rankingType !== "item"; }));
+
+    function toggleMask(containerId, button) {
+      const container = document.getElementById(containerId);
+      const masked = container.dataset.masked !== "true";
+      container.dataset.masked = String(masked);
+      container.querySelectorAll(".list-main strong, .list-value").forEach(el => { if (!el.dataset.original) el.dataset.original = el.textContent; el.textContent = masked ? "••••" : el.dataset.original; });
+      button.querySelector("span").textContent = masked ? "显示" : "隐藏";
+    }
+    document.getElementById("dashboardMask").addEventListener("click", event => toggleMask("dashboardRanking", event.currentTarget));
+    document.getElementById("pointsMask").addEventListener("click", event => toggleMask("pointsRanking", event.currentTarget));
+
+    let timerInitial = 300;
+    let timerRemaining = 300;
+    let timerRunning = false;
+    let timerInterval = null;
+    let timerUnit = "minutes";
+    function formatTime(seconds) { const safe = Math.max(0, seconds); return `${String(Math.floor(safe / 60)).padStart(2,"0")}:${String(safe % 60).padStart(2,"0")}`; }
+    function updateTimerUI() {
+      document.querySelectorAll(".timer-value").forEach(el => el.textContent = formatTime(timerRemaining));
+      document.querySelectorAll(".timer-toggle").forEach(button => { button.querySelector("span").textContent = timerRunning ? "暂停计时" : "开始计时"; button.querySelector("use").setAttribute("href", timerRunning ? "#i-pause" : "#i-play"); });
+      document.getElementById("timerStatusChip").textContent = timerRunning ? "计时中" : timerRemaining === 0 ? "已结束" : "准备就绪";
+      document.getElementById("timerPageStatus").textContent = timerRunning ? "计时中" : timerRemaining === 0 ? "计时结束" : "准备就绪";
+      document.getElementById("globalTimerPill").hidden = !timerRunning;
+      document.getElementById("mobileTimerPill").hidden = !timerRunning;
+    }
+    function toggleTimer() {
+      if (timerRemaining <= 0) timerRemaining = timerInitial;
+      timerRunning = !timerRunning;
+      clearInterval(timerInterval);
+      if (timerRunning) timerInterval = setInterval(() => { timerRemaining -= 1; if (timerRemaining <= 0) { timerRemaining = 0; timerRunning = false; clearInterval(timerInterval); openTimerFinished(); } updateTimerUI(); }, 1000);
+      updateTimerUI();
+    }
+    function resetTimer() { clearInterval(timerInterval); timerRunning = false; timerRemaining = timerInitial; updateTimerUI(); }
+    function setTimer(seconds) { timerInitial = seconds; timerRemaining = seconds; timerRunning = false; clearInterval(timerInterval); document.querySelectorAll("[data-timer-presets] [data-seconds]").forEach(button => button.classList.toggle("is-active", Number(button.dataset.seconds) === seconds)); updateTimerUI(); }
+    document.querySelectorAll(".timer-toggle").forEach(button => button.addEventListener("click", toggleTimer));
+    document.querySelectorAll(".timer-reset").forEach(button => button.addEventListener("click", resetTimer));
+    document.querySelectorAll("[data-timer-presets] [data-seconds]").forEach(button => button.addEventListener("click", () => setTimer(Number(button.dataset.seconds))));
+    document.getElementById("toggleTimerUnit").addEventListener("click", event => { timerUnit = timerUnit === "minutes" ? "seconds" : "minutes"; document.getElementById("timerUnitLabel").textContent = timerUnit === "minutes" ? "分钟" : "秒"; event.currentTarget.textContent = timerUnit === "minutes" ? "切换为秒" : "切换为分钟"; });
+    document.getElementById("customTimerValue").addEventListener("change", event => setTimer(Math.max(1, Number(event.target.value)) * (timerUnit === "minutes" ? 60 : 1)));
+    function openTimerFinished() { currentModal = "timer-finished"; modalEyebrow.textContent = "课堂提醒"; modalTitle.textContent = "计时结束"; modalDescription.textContent = "本轮课堂计时已经结束，请及时查看当前教学节奏。"; modalBody.innerHTML = `<div class="modal-card" style="text-align:center"><div class="timer-display">00:00</div><p class="helper">倒计时已到，当前计时器已自动停止。</p></div>`; modalPrimary.textContent = "我知道了"; modalLayer.classList.add("is-open"); modalLayer.setAttribute("aria-hidden","false"); document.body.style.overflow="hidden"; }
+
+    const rollcallStudents = students;
+    document.querySelectorAll(".rollcall-random").forEach(button => button.addEventListener("click", () => { const student = rollcallStudents[Math.floor(Math.random()*rollcallStudents.length)]; document.querySelectorAll(".rollcall-initials").forEach(el => el.textContent = student.name[0]); document.querySelectorAll(".rollcall-name").forEach(el => el.textContent = student.name); document.querySelectorAll(".rollcall-meta").forEach(el => el.textContent = `${student.group} · ${student.gender}`); button.animate([{transform:"scale(.97)"},{transform:"scale(1)"}],{duration:180,easing:"cubic-bezier(.2,.8,.2,1)"}); }));
+
+    const lotteryPrizes = ["免作业卡", "优先选座", "文具盲袋", "课堂小助手", "神秘奖励", "班级徽章"];
+    let lotteryRolling = false;
+    let lotteryTimer = null;
+    function setLotteryResult(name, selected = true) { document.getElementById("lotteryName").textContent = name; document.getElementById("lotteryStatus").textContent = selected ? "抽取完成" : "抽奖进行中"; document.getElementById("lotteryMeta").textContent = selected ? "本次抽奖结果已记录" : "再次点击可停止抽奖"; }
+    function drawLottery() { const name = lotteryPrizes[Math.floor(Math.random()*lotteryPrizes.length)]; setLotteryResult(name,true); const history = document.getElementById("lotteryHistory"); const row = document.createElement("div"); row.className="list-row"; row.innerHTML=`<div class="list-main"><strong>${name}</strong><span>${new Date().toLocaleTimeString("zh-CN",{hour12:false})}</span></div>`; history.prepend(row); document.getElementById("lotteryHistoryCount").textContent=history.children.length; }
+    document.getElementById("lotteryToggle").addEventListener("click", event => { lotteryRolling=!lotteryRolling; event.currentTarget.textContent=lotteryRolling?"停止抽奖":"开始抽奖"; clearInterval(lotteryTimer); if(lotteryRolling){ lotteryTimer=setInterval(()=>setLotteryResult(lotteryPrizes[Math.floor(Math.random()*lotteryPrizes.length)],false),90); } else { drawLottery(); } });
+    document.getElementById("lotteryOnce").addEventListener("click", drawLottery);
+    document.getElementById("clearLotteryHistory").addEventListener("click", () => openConfirm("清空抽奖历史"));
+    document.querySelectorAll(".switch").forEach(button => button.addEventListener("click", event => { event.stopPropagation(); button.classList.toggle("is-off"); showToast(button.classList.contains("is-off") ? "奖品已停用" : "奖品已启用"); }));
+
+    document.getElementById("submitFeedback").addEventListener("click", () => { if (!document.getElementById("feedbackText").value.trim()) return showToast("请输入反馈内容"); document.getElementById("feedbackText").value=""; showToast("反馈已提交（原型演示）"); });
+    document.getElementById("clearFeedback").addEventListener("click", () => { document.getElementById("feedbackText").value=""; showToast("反馈内容已清空"); });
+
+    renderStudents();
+    updateTimerUI();
+  </script>
+</body>
+</html>

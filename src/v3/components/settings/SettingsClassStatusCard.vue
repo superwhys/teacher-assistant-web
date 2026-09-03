@@ -1,54 +1,25 @@
 <template>
-    <article class="panel-surface spotlight-card">
-        <div class="panel-head panel-head--stack">
-            <div>
-                <h3>班级状态概览</h3>
-                <p>查看当前班级、当前学期和课堂操作权限，也可以在这里修改班级名称。</p>
-            </div>
-            <span class="status-chip" :class="semesterPermissionToneClass">
-                {{ semesterPermissionText }}
-            </span>
+    <article class="settings-section">
+        <div class="settings-section__intro">
+            <h3>班级与学期</h3>
+            <p>查看当前班级、当前学期和课堂操作权限，也可以在这里修改班级名称。</p>
         </div>
-
-        <div class="class-summary-list">
-            <div class="summary-item">
-                <span>当前班级</span>
-                <strong>{{ currentClassName || "未选择班级" }}</strong>
+        <div class="settings-section__body">
+            <div class="class-summary-list">
+                <div class="summary-item"><span>当前班级</span><strong>{{ currentClassName || "未选择班级" }}</strong></div>
+                <div class="summary-item"><span>当前学期</span><strong>{{ currentSemesterName || "未设置学期" }}</strong></div>
+                <div class="summary-item"><span>学期状态</span><strong>{{ semesterStatusText }}</strong></div>
+                <div class="summary-item"><span>课堂权限</span><strong><span class="status-chip"
+                            :class="semesterPermissionToneClass">{{ semesterPermissionText }}</span></strong></div>
+                <div class="summary-item summary-item--wide"><span>使用建议</span><strong>{{ semesterNoticeText }}</strong></div>
             </div>
-            <div class="summary-item">
-                <span>当前学期</span>
-                <strong>{{ currentSemesterName || "未设置学期" }}</strong>
+            <div class="toolbar compact-toolbar">
+                <button type="button" class="ghost-button" :disabled="!activeClassId || classesLoading"
+                    @click="emit('open-rename-class')">修改班级名称</button>
+                <button type="button" class="ghost-button" :disabled="!activeClassId || classesLoading"
+                    @click="emit('open-next-semester')">切换到新学期</button>
+                <button type="button" class="ghost-button" @click="emit('go-dashboard')">返回工作台</button>
             </div>
-            <div class="summary-item">
-                <span>学期状态</span>
-                <strong>{{ semesterStatusText }}</strong>
-            </div>
-            <div class="summary-item">
-                <span>使用建议</span>
-                <strong>{{ semesterNoticeText }}</strong>
-            </div>
-        </div>
-
-        <div class="toolbar compact-toolbar">
-            <button
-                type="button"
-                class="ghost-button ghost-button--small"
-                :disabled="!activeClassId || classesLoading"
-                @click="emit('open-rename-class')"
-            >
-                修改班级名称
-            </button>
-            <button
-                type="button"
-                class="ghost-button ghost-button--small"
-                :disabled="!activeClassId || classesLoading"
-                @click="emit('open-next-semester')"
-            >
-                切换到新学期
-            </button>
-            <button type="button" class="ghost-button ghost-button--small" @click="emit('go-dashboard')">
-                返回工作台
-            </button>
         </div>
     </article>
 </template>
@@ -78,141 +49,169 @@ const emit = defineEmits<SettingsClassStatusCardEmits>()
 </script>
 
 <style scoped>
-.panel-surface {
-    padding: 24px;
-    border: 1px solid rgba(122, 141, 198, 0.18);
-    border-radius: 32px;
-    background: rgba(255, 255, 255, 0.72);
-    box-shadow: 0 14px 30px rgba(71, 90, 150, 0.12);
-    backdrop-filter: blur(16px);
+.settings-section {
+    padding: 28px 4px;
+    display: grid;
+    grid-template-columns: minmax(180px, 230px) minmax(0, 1fr);
+    gap: clamp(28px, 5vw, 72px);
+    border-bottom: 1px solid var(--ta-line);
 }
 
-.spotlight-card {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(245, 247, 255, 0.92));
+.settings-section:last-child {
+    border-bottom: 0;
 }
 
-.panel-head,
-.toolbar {
-    display: flex;
-    align-items: center;
-}
-
-.panel-head {
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 18px;
-}
-
-.panel-head--stack {
-    align-items: flex-start;
-}
-
-.panel-head h3 {
+.settings-section__intro h3 {
     margin: 0;
-    font-size: 24px;
-    color: #16213e;
+    font-size: 17px;
+    letter-spacing: -0.015em;
 }
 
-.panel-head p {
-    margin: 0;
-    color: #627099;
-    line-height: 1.7;
+.settings-section__intro p {
+    margin: 7px 0 0;
+    color: var(--ta-text-tertiary);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.settings-section__body {
+    min-width: 0;
 }
 
 .class-summary-list {
     display: grid;
-    gap: 14px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 28px;
 }
 
 .summary-item {
-    padding: 18px;
-    border-radius: 24px;
-    background: rgba(85, 104, 255, 0.06);
+    min-height: 58px;
+    padding: 10px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    border-bottom: 1px solid var(--ta-line);
 }
 
 .summary-item span {
-    display: block;
-    font-size: 13px;
-    color: #627099;
+    color: var(--ta-text-tertiary);
+    font-size: 12px;
 }
 
 .summary-item strong {
-    display: block;
-    margin-top: 8px;
-    font-size: 18px;
-    color: #16213e;
-    line-height: 1.5;
+    min-width: 0;
+    color: var(--ta-text-secondary);
+    font-size: 13px;
+    text-align: right;
 }
 
-.toolbar {
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-top: 18px;
-}
-
-.compact-toolbar {
-    gap: 10px;
+.summary-item--wide {
+    grid-column: 1 / -1;
 }
 
 .status-chip {
+    min-height: 26px;
+    padding: 0 9px;
     display: inline-flex;
     align-items: center;
-    min-height: 36px;
-    padding: 0 12px;
     border-radius: 999px;
-    background: rgba(22, 33, 62, 0.06);
-    color: #627099;
-    font-size: 13px;
-    font-weight: 700;
+    color: var(--ta-text-secondary);
+    background: var(--ta-surface-muted);
+    font-size: 11px;
+    font-weight: 600;
     white-space: nowrap;
 }
 
 .status-chip--emerald {
-    color: #067647;
-    background: rgba(18, 185, 129, 0.12);
+    color: #1b7133;
+    background: var(--ta-green-soft);
 }
 
 .status-chip--amber {
-    color: #b45309;
-    background: rgba(245, 158, 11, 0.16);
+    color: #a53400;
+    background: var(--ta-orange-soft);
 }
 
-.ghost-button {
-    min-height: 46px;
-    padding: 0 18px;
+.toolbar {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ghost-button,
+.primary-button {
+    min-height: 38px;
+    padding: 0 13px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(122, 141, 198, 0.24);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.82);
-    color: #16213e;
-    font: inherit;
+    border: 0;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 620;
+    white-space: nowrap;
     cursor: pointer;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
 }
 
-.ghost-button--small {
-    min-height: 42px;
-    padding: 0 14px;
-    border-radius: 14px;
+.ghost-button {
+    color: var(--ta-text-secondary);
+    background: #ffffff;
+    box-shadow: inset 0 0 0 1px var(--ta-line-strong);
 }
 
-.ghost-button:hover {
-    transform: translateY(-2px);
+.primary-button {
+    color: #ffffff;
+    background: var(--ta-blue);
+    box-shadow: 0 5px 14px rgba(0, 122, 255, 0.18);
 }
 
-.ghost-button:disabled {
-    opacity: 0.56;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+.ghost-button:disabled,
+.primary-button:disabled {
+    opacity: 0.42;
 }
 
-@media (max-width: 768px) {
-    .panel-surface {
-        padding: 20px;
-        border-radius: 26px;
+@media (min-width: 1800px) {
+    .settings-section {
+        grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+        gap: clamp(60px, 5vw, 100px);
+    }
+}
+
+@media (max-width: 920px) {
+    .settings-section {
+        grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);
+        gap: 28px;
+    }
+}
+
+@media (max-width: 660px) {
+    .settings-section {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding-block: 22px;
+    }
+
+    .class-summary-list {
+        grid-template-columns: 1fr;
+    }
+
+    .summary-item--wide {
+        grid-column: auto;
+    }
+
+    .toolbar {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .toolbar button {
+        min-width: 0;
+        width: 100%;
+        padding-inline: 7px;
+        font-size: 11px;
     }
 }
 </style>

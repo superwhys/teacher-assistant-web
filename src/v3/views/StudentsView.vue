@@ -1115,7 +1115,8 @@ watch(filteredStudents, () => {
 
 .control-toolbar {
     display: flex;
-    align-items: flex-start;
+    align-items: stretch;
+    flex-direction: column;
     justify-content: space-between;
     gap: 12px;
 }
@@ -1130,17 +1131,17 @@ watch(filteredStudents, () => {
 
 .control-actions {
     align-items: flex-end;
-    justify-content: flex-end;
+    justify-content: flex-start;
     gap: 10px;
     flex-wrap: wrap;
 }
 
 .control-actions .control-label {
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .control-actions .chip-button {
-    font-size: 14px !important;
+    font-size: 15px !important;
 }
 
 .control-actions :is(.ghost-button, .primary-button) {
@@ -1403,17 +1404,6 @@ watch(filteredStudents, () => {
 @media (min-width: 2300px) {
     .students-layout {
         grid-template-columns: minmax(0, 1fr) 450px;
-    }
-}
-
-@media (max-width: 1380px) {
-    .control-toolbar {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .control-actions {
-        justify-content: flex-start;
     }
 }
 

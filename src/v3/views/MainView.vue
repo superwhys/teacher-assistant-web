@@ -127,6 +127,11 @@
                 </div>
             </div>
 
+            <TeachersDayWelcomeDialog
+                v-model="teachersDayDialogVisible"
+                :teacher-name="cacheStore.profile?.name || ''"
+            />
+
             <AppDialogShell v-model="welcomeDialogVisible" title="欢迎使用全新的教师助手" eyebrow="v4 新体验"
                 description="界面已经针对办公电脑和手机重新设计，你原有的班级与课堂数据不会受到影响。" width="640px">
                 <div class="welcome-dialog">
@@ -203,9 +208,11 @@ import { ArrowDown, Clock, Expand, Fold, HomeFilled, Lock, Menu, Present, Settin
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import ClassSwitchButton from "@/v3/components/ClassSwitchButton.vue";
 import SemesterSwitchButton from "@/v3/components/SemesterSwitchButton.vue";
+import TeachersDayWelcomeDialog from "@/v3/components/TeachersDayWelcomeDialog.vue";
 import { classManager } from "@/managers/class";
 import { useCacheStore } from "@/stores/cacheStore";
 import { useSessionStore } from "@/stores/sessionStore";
+import { getTeachersDayWelcomeStorageKey, isTeachersDay } from "@/utils/teachersDayWelcome";
 import { useSharedTimer } from "@/v3/composables/useToolsWorkspace";
 import type { ClassDTO, SemesterDTO } from "@/types/class";
 import { ElMessage } from "element-plus";
@@ -239,6 +246,9 @@ const ASIDE_COLLAPSED_STORAGE_KEY = "teacher-assistant-aside-collapsed"
 const V4_WELCOME_STORAGE_KEY_PREFIX = "teacher-assistant-v4-welcome-seen"
 const welcomeDialogVisible = ref(false)
 const welcomeDialogOpened = ref(false)
+const teachersDayDialogVisible = ref(false)
+const teachersDayDialogOpened = ref(false)
+const teachersDayStorageKey = ref("")
 const userMenuVisible = ref(false)
 const userMenuContainerRef = ref<HTMLElement | null>(null)
 const userProfileRefreshing = ref(false)
@@ -670,6 +680,39 @@ function openV4WelcomeOnFirstVisit(): void {
     welcomeDialogVisible.value = true
 }
 
+/** 判断当前教师节欢迎弹窗是否已经展示过。 */
+function hasSeenTeachersDayWelcome(storageKey: string): boolean {
+    try {
+        return window.localStorage.getItem(storageKey) === "1"
+    } catch {
+        return false
+    }
+}
+
+/** 记录当前教师节欢迎弹窗已经展示过。 */
+function persistTeachersDayWelcomeSeen(): void {
+    if (!teachersDayStorageKey.value) return
+
+    try {
+        window.localStorage.setItem(teachersDayStorageKey.value, "1")
+    } catch {
+        return
+    }
+}
+
+/** 在每年教师节当天为当前用户展示一次节日欢迎弹窗。 */
+function openTeachersDayWelcome(date = new Date()): boolean {
+    if (!isTeachersDay(date)) return false
+
+    const storageKey = getTeachersDayWelcomeStorageKey(date, cacheStore.profile?.id)
+    if (hasSeenTeachersDayWelcome(storageKey)) return false
+
+    teachersDayStorageKey.value = storageKey
+    teachersDayDialogOpened.value = true
+    teachersDayDialogVisible.value = true
+    return true
+}
+
 /** 读取本地保存的侧边栏收起状态。 */
 function readAsideCollapsed(): boolean {
     try {
@@ -725,6 +768,15 @@ watch(welcomeDialogVisible, (visible) => {
     welcomeDialogOpened.value = false
 })
 
+watch(teachersDayDialogVisible, (visible) => {
+    if (visible || !teachersDayDialogOpened.value) {
+        return
+    }
+
+    persistTeachersDayWelcomeSeen()
+    teachersDayDialogOpened.value = false
+})
+
 watch(
     [() => cacheStore.token, () => cacheStore.isExpired],
     ([token, expired], [previousToken]) => {
@@ -739,7 +791,9 @@ watch(
 
 onMounted(() => {
     document.addEventListener("pointerdown", handleDocumentPointerDown)
-    openV4WelcomeOnFirstVisit()
+    if (!openTeachersDayWelcome()) {
+        openV4WelcomeOnFirstVisit()
+    }
 })
 
 onBeforeUnmount(() => {

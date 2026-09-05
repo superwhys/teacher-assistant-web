@@ -1115,7 +1115,7 @@ watch(filteredStudents, () => {
 
 .control-toolbar {
     display: flex;
-    align-items: flex-end;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
 }
@@ -1406,7 +1406,7 @@ watch(filteredStudents, () => {
     }
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1380px) {
     .control-toolbar {
         align-items: stretch;
         flex-direction: column;
@@ -1415,7 +1415,9 @@ watch(filteredStudents, () => {
     .control-actions {
         justify-content: flex-start;
     }
+}
 
+@media (max-width: 1180px) {
     .students-layout {
         grid-template-columns: minmax(0, 1fr) 310px;
     }

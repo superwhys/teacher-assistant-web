@@ -1,7 +1,8 @@
 <template>
     <article :id="`student-card-${student.id}`" class="student-card"
-        :class="{ 'is-list': displayMode === 'list', 'is-selected': selected }" @click="emit('select', student.id)">
-        <div v-if="selected" class="student-card__selected-badge">
+        :class="{ 'is-group': displayMode === 'group', 'is-list': displayMode === 'list', 'is-selected': selected }"
+        @click.stop="emit('select', student.id)">
+        <div v-if="selected && displayMode !== 'group'" class="student-card__selected-badge">
             <i-ep-check />
         </div>
         <div class="student-card__accent" :class="student.toneClass" />
@@ -9,7 +10,7 @@
         <div class="student-card__head">
             <div class="student-card__main">
                 <div class="student-profile">
-                    <div class="student-avatar" :class="student.toneClass">
+                    <div v-if="displayMode !== 'group'" class="student-avatar" :class="student.toneClass">
                         {{ student.initials }}
                     </div>
                     <div class="student-profile__body">
@@ -23,6 +24,10 @@
                                 <span class="student-profile__score-label">总分</span>
                                 <span class="student-profile__score-value">{{ student.totalPoints }}</span>
                             </span>
+                        </div>
+                        <div v-else-if="displayMode === 'group'">
+                            <strong class="student-profile__name">{{ student.name }}</strong>
+                            <p class="student-profile__group-score">积分 {{ student.totalPoints }}</p>
                         </div>
                         <div v-else>
                             <strong class="student-profile__name">{{ student.name }}</strong>
@@ -43,7 +48,7 @@
                 </div>
             </div>
 
-            <div v-if="displayMode !== 'list'" class="student-card__score-row">
+            <div v-if="displayMode === 'card'" class="student-card__score-row">
                 <span class="student-profile__score" :style="getScoreStyle(student.toneClass)">
                     <span class="student-profile__score-label">可用</span>
                     <span class="student-profile__score-value">{{ student.availablePoints }}</span>
@@ -79,7 +84,7 @@ export type StudentsListCardItem = UiStudent & {
 
 /** 定义学生卡片属性结构。 */
 interface StudentsListCardProps {
-    displayMode?: "card" | "list"
+    displayMode?: "card" | "list" | "group"
     selected: boolean
     student: StudentsListCardItem
 }
@@ -198,6 +203,20 @@ function getScoreStyle(toneClass: string): Record<string, string> {
 .student-card.is-list {
     min-height: 68px;
     padding: 10px 12px;
+}
+
+.student-card.is-group {
+    min-height: 72px;
+    padding: 11px;
+    background: var(--ta-surface-muted);
+}
+
+.student-card.is-group:hover {
+    background: #ffffff;
+}
+
+.student-card.is-group.is-selected {
+    background: var(--ta-blue-soft);
 }
 
 .student-card__accent {
@@ -410,6 +429,41 @@ function getScoreStyle(toneClass: string): Record<string, string> {
 .student-card.is-list .student-card__head,
 .student-card.is-list .student-card__main {
     width: 100%;
+}
+
+.student-card.is-group .student-card__head,
+.student-card.is-group .student-card__main {
+    width: 100%;
+}
+
+.student-card.is-group .student-card__main {
+    align-items: center;
+}
+
+.student-card.is-group .student-profile {
+    flex: 1;
+}
+
+.student-card.is-group .student-profile__name {
+    font-size: 14px;
+}
+
+.student-profile__group-score {
+    margin: 3px 0 0;
+    color: var(--ta-text-tertiary);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.student-card.is-group .student-card__actions {
+    gap: 3px;
+}
+
+.student-card.is-group .icon-button {
+    width: 27px !important;
+    height: 27px !important;
+    min-height: 27px !important;
+    border-radius: 8px;
 }
 
 .student-card.is-list .student-card__main {

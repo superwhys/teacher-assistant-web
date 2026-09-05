@@ -25,6 +25,11 @@
                                 <i-ep-list aria-hidden="true" />
                                 列表视图
                             </button>
+                            <button type="button" class="chip-button" :class="{ 'is-active': layoutMode === 'group' }"
+                                @click="layoutMode = 'group'">
+                                <i-ep-user-filled aria-hidden="true" />
+                                分组卡片
+                            </button>
                         </div>
                     </div>
 
@@ -99,10 +104,11 @@
 
         <section class="students-layout">
             <StudentsListPanel class="student-panel" :has-active-class="hasActiveClass"
-                :is-all-selected="isAllFilteredStudentsSelected" :layout-mode="layoutMode" :loading="loading"
-                :multi-select-enabled="multiSelectEnabled" :selected-student-ids="selectedStudentIds"
-                :sort-by="sortBy" :students="filteredStudents" @edit-student="openEdit" @remove-student="requestRemoveStudent"
-                @select-student="handleSelectStudent" @toggle-multi-select="toggleMultiSelectEnabled"
+                :groups="visibleGroupChips" :is-all-selected="isAllFilteredStudentsSelected" :layout-mode="layoutMode"
+                :loading="loading" :multi-select-enabled="multiSelectEnabled" :selected-student-ids="selectedStudentIds"
+                :sort-by="sortBy" :students="filteredStudents" @edit-student="openEdit"
+                @remove-student="requestRemoveStudent" @select-student="handleSelectStudent"
+                @toggle-group-selection="handleToggleGroupSelection" @toggle-multi-select="toggleMultiSelectEnabled"
                 @toggle-select-all="toggleSelectAllStudents" />
 
             <aside class="side-column">
@@ -510,6 +516,15 @@ const groupChips = computed<GroupChipItem[]>(() => {
         .filter((item) => item.id > 0)
 })
 
+/** 返回当前筛选条件下需要展示的分组卡片列表。 */
+const visibleGroupChips = computed<GroupChipItem[]>(() => {
+    if (selectedGroupId.value === null) {
+        return groupChips.value
+    }
+
+    return groupChips.value.filter((group) => group.id === selectedGroupId.value)
+})
+
 /** 返回筛选并排序后的学生列表。 */
 const filteredStudents = computed<StudentCardItem[]>(() => {
     const normalizedKeyword = keyword.value.trim().toLowerCase()
@@ -820,6 +835,31 @@ function handleSelectStudent(studentId: number): void {
     }
 
     selectedStudentIds.value = [...selectedStudentIds.value, studentId]
+}
+
+/** 切换指定分组内全部学生的选中状态，并保留其他分组的选择。 */
+function handleToggleGroupSelection(studentIds: number[]): void {
+    const validStudentIds = Array.from(new Set(
+        studentIds.filter((studentId) => studentCardMap.value.has(studentId))
+    ))
+    if (validStudentIds.length === 0) {
+        return
+    }
+
+    const selectedIdSet = new Set(selectedStudentIds.value)
+    const isGroupSelected = validStudentIds.every((studentId) => selectedIdSet.has(studentId))
+
+    multiSelectEnabled.value = true
+    if (isGroupSelected) {
+        const groupIdSet = new Set(validStudentIds)
+        selectedStudentIds.value = selectedStudentIds.value.filter((studentId) => !groupIdSet.has(studentId))
+        return
+    }
+
+    selectedStudentIds.value = [
+        ...selectedStudentIds.value,
+        ...validStudentIds.filter((studentId) => !selectedIdSet.has(studentId))
+    ]
 }
 
 /** 从已选列表中移除指定学生。 */
@@ -1400,6 +1440,10 @@ watch(filteredStudents, () => {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
+    }
+
+    .control-actions .control-block:nth-child(-n + 2) {
+        grid-column: 1 / -1;
     }
 
     .control-actions .control-block {

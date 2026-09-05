@@ -31,7 +31,7 @@ const allStudents = ref<StudentDTO[]>([])
 const groups = ref<StudentGroupDTO[]>([])
 
 const layoutMode = computed<LayoutMode>({
-    get: () => cacheStore.getClassLayout() ?? 'card',
+    get: () => cacheStore.getClassLayout() === 'list' ? 'list' : 'card',
     set: (val) => cacheStore.setClassLayout(val)
 })
 

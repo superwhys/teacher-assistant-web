@@ -380,8 +380,17 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
 }
 
 .selection-panel__body {
+    min-width: 0;
     display: grid;
     gap: 14px;
+}
+
+.detail-list,
+.detail-item,
+.points-actions-card,
+.selected-name-list,
+.selected-name-item {
+    min-width: 0;
 }
 
 .selected-student {
@@ -528,6 +537,13 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
     font-size: 13px;
     font-weight: 620;
     cursor: pointer;
+}
+
+.points-actions-grid .action-button {
+    min-width: 0;
+    padding-inline: 6px !important;
+    gap: 5px !important;
+    font-size: 13px !important;
 }
 
 .action-button svg {

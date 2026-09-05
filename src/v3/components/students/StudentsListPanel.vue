@@ -3,7 +3,11 @@
         <div class="panel-head">
             <div>
                 <h3>学生名册</h3>
-                <p class="panel-description">点击卡片可切换选中状态，支持单选或多选高亮，卡片右上角保留编辑与删除入口。</p>
+                <p class="panel-description">
+                    {{ layoutMode === "group"
+                        ? "点击分组卡片可全选该组学生，再次点击可取消该组选择；组内学生仍支持单独选择。"
+                        : "点击卡片可切换选中状态，支持单选或多选高亮，卡片右上角保留编辑与删除入口。" }}
+                </p>
             </div>
             <div class="panel-head-actions">
                 <button
@@ -36,6 +40,36 @@
         <div v-else-if="students.length === 0" class="empty-state">
             <strong>当前条件下暂无学生</strong>
             <p>你可以调整分组筛选、搜索关键字，或者直接新增学生。</p>
+        </div>
+
+        <div v-else-if="layoutMode === 'group'" class="group-card-grid">
+            <section v-for="group in studentGroups" :key="group.id ?? 'ungrouped'" class="student-group-card"
+                :class="{
+                    'is-all-selected': isStudentGroupSelected(group.students),
+                    'is-empty': group.students.length === 0
+                }" @click="toggleStudentGroupSelection(group.students)">
+                <div class="student-group-card__head">
+                    <div>
+                        <h4>{{ group.name }}</h4>
+                        <div class="student-group-card__summary">
+                            <span>成员 <strong>{{ group.students.length }}</strong></span>
+                            <span>总积分 <strong>{{ group.totalPoints }}</strong></span>
+                            <span>平均积分 <strong>{{ formatAveragePoints(group.averagePoints) }}</strong></span>
+                        </div>
+                    </div>
+                    <span v-if="group.students.length > 0" class="student-group-card__selection-hint">
+                        {{ isStudentGroupSelected(group.students) ? "已全选" : "点击全选" }}
+                    </span>
+                </div>
+
+                <div v-if="group.students.length > 0" class="student-group-card__members">
+                    <StudentsListCard v-for="student in group.students" :key="student.id" display-mode="group"
+                        :selected="isStudentSelected(student.id)" :student="student"
+                        @edit="emit('edit-student', $event)" @remove="emit('remove-student', $event)"
+                        @select="emit('select-student', $event)" />
+                </div>
+                <p v-else class="student-group-card__empty">当前分组暂无学生</p>
+            </section>
         </div>
 
         <div v-else-if="layoutMode === 'list'" class="list-column">
@@ -86,13 +120,20 @@ import type { StudentsSortOption } from "@/types/student";
 import StudentsListCard, { type StudentsListCardItem } from "@/v3/components/students/StudentsListCard.vue";
 
 /** 定义学生列表面板布局模式。 */
-export type StudentsListPanelLayoutMode = "card" | "list"
+export type StudentsListPanelLayoutMode = "card" | "list" | "group"
 
 /** 定义学生列表卡片展示结构。 */
 export type StudentsListPanelItem = StudentsListCardItem
 
+/** 定义分组卡片的基础分组结构。 */
+export interface StudentsListPanelGroupItem {
+    id: number
+    name: string
+}
+
 /** 定义学生列表面板属性结构。 */
 interface StudentsListPanelProps {
+    groups?: StudentsListPanelGroupItem[]
     hasActiveClass: boolean
     isAllSelected: boolean
     layoutMode: StudentsListPanelLayoutMode
@@ -108,11 +149,14 @@ interface StudentsListPanelEmits {
     (event: "edit-student", student: StudentsListPanelItem): void
     (event: "remove-student", student: StudentsListPanelItem): void
     (event: "select-student", studentId: number): void
+    (event: "toggle-group-selection", studentIds: number[]): void
     (event: "toggle-multi-select"): void
     (event: "toggle-select-all"): void
 }
 
-const props = defineProps<StudentsListPanelProps>()
+const props = withDefaults(defineProps<StudentsListPanelProps>(), {
+    groups: () => []
+})
 const emit = defineEmits<StudentsListPanelEmits>()
 
 /** 定义按首字母分组后的学生列表结构。 */
@@ -121,9 +165,32 @@ interface StudentLetterGroup {
     students: StudentsListPanelItem[]
 }
 
+/** 定义分组卡片展示结构。 */
+interface StudentGroupCard {
+    averagePoints: number
+    id: number | null
+    name: string
+    students: StudentsListPanelItem[]
+    totalPoints: number
+}
+
 /** 判断指定学生是否处于选中状态。 */
 function isStudentSelected(studentId: number): boolean {
     return props.selectedStudentIds.includes(studentId)
+}
+
+/** 判断指定分组内的学生是否已全部选中。 */
+function isStudentGroupSelected(students: StudentsListPanelItem[]): boolean {
+    return students.length > 0 && students.every((student) => isStudentSelected(student.id))
+}
+
+/** 切换指定分组内全部学生的选中状态。 */
+function toggleStudentGroupSelection(students: StudentsListPanelItem[]): void {
+    if (students.length === 0) {
+        return
+    }
+
+    emit("toggle-group-selection", students.map((student) => student.id))
 }
 
 /** 返回学生姓名的拼音首字母。 */
@@ -179,6 +246,51 @@ const studentsGroupedByLetter = computed<StudentLetterGroup[]>(() => {
         }))
 })
 
+/** 返回按学生分组组织后的卡片列表，并将未分组学生集中展示。 */
+const studentGroups = computed<StudentGroupCard[]>(() => {
+    const groupMap = new Map<number, StudentGroupCard>()
+
+    props.groups.forEach((group) => {
+        groupMap.set(group.id, {
+            averagePoints: 0,
+            id: group.id,
+            name: group.name,
+            students: [],
+            totalPoints: 0
+        })
+    })
+
+    const ungroupedStudents: StudentsListPanelItem[] = []
+    props.students.forEach((student) => {
+        if (student.groupId === null || !groupMap.has(student.groupId)) {
+            ungroupedStudents.push(student)
+            return
+        }
+
+        groupMap.get(student.groupId)?.students.push(student)
+    })
+
+    const result = Array.from(groupMap.values())
+    if (ungroupedStudents.length > 0) {
+        result.push({
+            averagePoints: 0,
+            id: null,
+            name: "未分组",
+            students: ungroupedStudents,
+            totalPoints: 0
+        })
+    }
+
+    return result.map((group) => {
+        const totalPoints = group.students.reduce((total, student) => total + student.totalPoints, 0)
+        return {
+            ...group,
+            averagePoints: group.students.length > 0 ? totalPoints / group.students.length : 0,
+            totalPoints
+        }
+    })
+})
+
 /** 返回可用于跳转的首字母索引列表。 */
 const availableLetters = computed<string[]>(() => {
     return studentsGroupedByLetter.value.map((group) => group.letter)
@@ -195,6 +307,11 @@ function scrollToLetter(letter: string): void {
         behavior: "smooth",
         block: "start"
     })
+}
+
+/** 将分组平均积分格式化为一位小数。 */
+function formatAveragePoints(points: number): string {
+    return points.toFixed(1)
 }
 </script>
 
@@ -267,6 +384,115 @@ function scrollToLetter(letter: string): void {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
+}
+
+.group-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
+    gap: 12px;
+    align-items: start;
+}
+
+.student-group-card {
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid var(--ta-line);
+    border-radius: 16px;
+    background: #ffffff;
+    cursor: pointer;
+    transition: border-color 140ms ease, box-shadow 140ms ease, transform 100ms ease;
+}
+
+.student-group-card:hover {
+    border-color: rgba(0, 122, 255, 0.28);
+}
+
+.student-group-card:active {
+    transform: scale(0.995);
+}
+
+.student-group-card.is-all-selected {
+    border-color: rgba(0, 122, 255, 0.62);
+    box-shadow: inset 0 0 0 2px rgba(0, 122, 255, 0.1);
+}
+
+.student-group-card.is-empty {
+    cursor: default;
+}
+
+.student-group-card.is-empty:hover {
+    border-color: var(--ta-line);
+}
+
+.student-group-card.is-empty:active {
+    transform: none;
+}
+
+.student-group-card__head {
+    padding-bottom: 12px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    border-bottom: 1px solid var(--ta-line);
+}
+
+.student-group-card h4 {
+    margin: 0;
+    font-size: 16px;
+    letter-spacing: -0.01em;
+}
+
+.student-group-card__summary {
+    margin-top: 7px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--ta-text-tertiary);
+    font-size: 12px;
+    flex-wrap: wrap;
+}
+
+.student-group-card__summary strong {
+    color: var(--ta-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.student-group-card__selection-hint {
+    min-height: 24px;
+    padding: 0 8px;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+    font-size: 12px;
+    font-weight: 620;
+    white-space: nowrap;
+}
+
+.student-group-card.is-all-selected .student-group-card__selection-hint {
+    color: #ffffff;
+    background: var(--ta-blue);
+}
+
+.student-group-card__members {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(148px, 100%), 1fr));
+    gap: 8px;
+}
+
+.student-group-card__empty {
+    min-height: 72px;
+    margin: 12px 0 0;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    color: var(--ta-text-tertiary);
+    background: var(--ta-surface-muted);
+    font-size: 13px;
 }
 
 .list-column {

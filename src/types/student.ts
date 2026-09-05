@@ -112,6 +112,8 @@ export type GetStudentGroupQuery = {
 
 export type StudentsSortOption = 'default' | 'name-asc' | 'name-desc' | 'points-desc' | 'points-asc'
 
+export type StudentsLayoutMode = 'card' | 'list' | 'group'
+
 /**
  * 兼容旧版本地存储结构（stores / 旧组件仍在使用）
  */
@@ -124,5 +126,4 @@ export type Student = {
     studentName: string
     gender: Gender
 }
-
 

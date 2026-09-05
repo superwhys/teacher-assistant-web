@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
-import type { StudentsSortOption } from '@/types/student'
+import type { StudentsLayoutMode, StudentsSortOption } from '@/types/student'
 import type { UserProfile } from '@/types/user'
 import { generateSaltBase64, hashPassword, verifyPassword } from '@/utils/crypto'
 
@@ -15,7 +15,7 @@ type UserScopedCache = {
     activeSemesterStatus?: number | null
     activeSemesterIsLatest?: boolean | null
     studentsSort?: StudentsSortOption | null
-    classLayout?: 'card' | 'list' | null
+    classLayout?: StudentsLayoutMode | null
     pointsSelectedGroupByClass?: Record<string, number | null> | null
     pointsContentTab?: 'ranking' | 'records' | null
     pointsRankingTab?: 'total' | 'item' | null
@@ -46,7 +46,7 @@ export const useCacheStore = defineStore('cache', () => {
     let activeSemesterStatus = ref<number | null>(null)
     let activeSemesterIsLatest = ref<boolean | null>(null)
     let studentsSort = ref<StudentsSortOption | null>(null)
-    let classLayout = ref<'card' | 'list' | null>(null)
+    let classLayout = ref<StudentsLayoutMode | null>(null)
     let pointsSelectedGroupByClass = ref<Record<string, number | null>>({})
     let pointsContentTab = ref<'ranking' | 'records'>('ranking')
     let pointsRankingTab = ref<'total' | 'item'>('total')
@@ -85,7 +85,9 @@ export const useCacheStore = defineStore('cache', () => {
         activeSemesterStatus.value = typeof obj.activeSemesterStatus === 'number' ? obj.activeSemesterStatus : null
         activeSemesterIsLatest.value = typeof obj.activeSemesterIsLatest === 'boolean' ? obj.activeSemesterIsLatest : null
         studentsSort.value = (obj.studentsSort as StudentsSortOption | null) ?? null
-        classLayout.value = (obj.classLayout as any) ?? null
+        classLayout.value = obj.classLayout === 'card' || obj.classLayout === 'list' || obj.classLayout === 'group'
+            ? obj.classLayout
+            : null
         pointsSelectedGroupByClass.value = (obj.pointsSelectedGroupByClass && typeof obj.pointsSelectedGroupByClass === 'object')
             ? (obj.pointsSelectedGroupByClass as Record<string, number | null>)
             : {}
@@ -295,7 +297,7 @@ export const useCacheStore = defineStore('cache', () => {
         studentsSort.value = null
     }
 
-    function setClassLayout(layout: 'card' | 'list') {
+    function setClassLayout(layout: StudentsLayoutMode) {
         classLayout.value = layout
     }
 

@@ -193,13 +193,13 @@ function getCompactRecordTimeLabel(date: Date): string {
 
 .panel-head__eyebrow {
     color: var(--ta-green);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 650;
 }
 
 .panel-head h3 {
     margin: 5px 0 0;
-    font-size: 17px;
+    font-size: 18px;
     letter-spacing: -0.015em;
 }
 
@@ -208,7 +208,7 @@ function getCompactRecordTimeLabel(date: Date): string {
     border: 0;
     color: var(--ta-blue);
     background: transparent;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
 }
@@ -246,7 +246,7 @@ function getCompactRecordTimeLabel(date: Date): string {
     border-radius: 11px;
     color: #0069d6;
     background: #e7f3ff;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
 }
 
@@ -257,7 +257,7 @@ function getCompactRecordTimeLabel(date: Date): string {
 .record-card__meta strong {
     display: block;
     overflow: hidden;
-    font-size: 13px;
+    font-size: 14px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -268,7 +268,7 @@ function getCompactRecordTimeLabel(date: Date): string {
     align-items: center;
     gap: 4px;
     color: var(--ta-text-tertiary);
-    font-size: 10px;
+    font-size: 11px;
 }
 
 .record-card__time svg {
@@ -297,7 +297,7 @@ function getCompactRecordTimeLabel(date: Date): string {
     border-radius: 8px;
     color: #0064cf;
     background: #e6f2ff;
-    font-size: 10px;
+    font-size: 11px;
 }
 
 .record-card__badge-name {
@@ -319,7 +319,7 @@ function getCompactRecordTimeLabel(date: Date): string {
 
 .record-card__points {
     color: var(--ta-orange);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 650;
     white-space: nowrap;
 }
@@ -350,12 +350,12 @@ function getCompactRecordTimeLabel(date: Date): string {
 
 .shop-records-panel__empty strong {
     color: var(--ta-text);
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .shop-records-panel__empty p {
     margin: 0;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 @media (max-width: 660px) {

@@ -5,5 +5,5 @@ export interface SubmitOpinionReq {
 }
 
 export async function submitOpinion(data: SubmitOpinionReq): Promise<void> {
-  await post('/opinion/submit', data)
+  await post('/feedback/submit', data)
 }

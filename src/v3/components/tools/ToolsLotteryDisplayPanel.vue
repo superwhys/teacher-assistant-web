@@ -124,7 +124,7 @@ const statusMeta = computed<string>(() => {
     border-radius: 999px;
     color: #0064cf;
     background: #e6f2ff;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
 }
 
@@ -154,7 +154,7 @@ const statusMeta = computed<string>(() => {
 .display-name {
     min-height: 1.1em;
     margin-top: 22px;
-    font-size: clamp(38px, 5vw, 64px);
+    font-size: clamp(39px, 5vw, 65px);
     font-weight: 700;
     line-height: 1.08;
     letter-spacing: -0.045em;
@@ -168,7 +168,7 @@ const statusMeta = computed<string>(() => {
 .display-meta {
     margin: 9px 0 0;
     color: var(--ta-text-tertiary);
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .selected-overlay {
@@ -180,7 +180,7 @@ const statusMeta = computed<string>(() => {
 }
 
 .celebrate-icon {
-    font-size: 72px;
+    font-size: 73px;
 }
 
 .display-actions {
@@ -198,7 +198,7 @@ const statusMeta = computed<string>(() => {
     padding: 0 13px;
     border: 0;
     border-radius: 10px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 620;
     cursor: pointer;
 }

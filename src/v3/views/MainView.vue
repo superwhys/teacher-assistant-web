@@ -18,7 +18,7 @@
 
             <nav class="aside-nav" aria-label="主导航">
                 <RouterLink v-for="item in navItems" :key="item.id" :to="item.to" class="aside-nav__item"
-                    :class="{ 'is-active': currentNavItem.id === item.id }" :title="item.label">
+                    :class="{ 'is-active': currentNavItem?.id === item.id }" :title="item.label">
                     <component :is="item.icon" class="aside-nav__icon" aria-hidden="true" />
                     <span class="aside-nav__label">{{ item.label }}</span>
                 </RouterLink>
@@ -40,7 +40,7 @@
                 </button>
 
                 <div v-show="userMenuVisible" class="aside-user-menu">
-                    <RouterLink to="/settings" class="aside-user-menu__item" @click="userMenuVisible = false">
+                    <RouterLink v-if="sessionStore.canAccess('/settings')" to="/settings" class="aside-user-menu__item" @click="userMenuVisible = false">
                         进入设置
                     </RouterLink>
                     <button type="button" class="aside-user-menu__item is-danger"
@@ -62,7 +62,7 @@
                         @click="openTimerPage">
                         {{ timerDisplayTime }}
                     </button>
-                    <RouterLink to="/settings" class="mobile-account" aria-label="进入设置">
+                    <RouterLink v-if="sessionStore.canAccess('/settings')" to="/settings" class="mobile-account" aria-label="进入设置">
                         {{ userInitial }}
                     </RouterLink>
                 </div>
@@ -90,24 +90,24 @@
                         title="立即锁屏" @click="lockNow">
                         <Lock aria-hidden="true" />
                     </button>
-                    <RouterLink to="/settings" class="header-actions__button header-settings-link">
+                    <RouterLink v-if="sessionStore.canAccess('/settings')" to="/settings" class="header-actions__button header-settings-link">
                         <Setting aria-hidden="true" />
                         <span>进入设置</span>
                     </RouterLink>
-                    <RouterLink to="/points" class="header-actions__button is-primary">
+                    <RouterLink v-if="sessionStore.canAccess('/points')" to="/points" class="header-actions__button is-primary">
                         <StarFilled aria-hidden="true" />
                         <span>进入积分中心</span>
                     </RouterLink>
                 </div>
             </header>
 
-            <section class="main-view__content" :aria-label="currentNavItem.label">
+            <section class="main-view__content" :aria-label="currentNavItem?.label || '内容区'">
                 <RouterView />
             </section>
 
             <nav class="mobile-nav" aria-label="手机主导航">
                 <RouterLink v-for="item in navItems" :key="`mobile-${item.id}`" :to="item.to"
-                    class="mobile-nav__item" :class="{ 'is-active': currentNavItem.id === item.id }">
+                    class="mobile-nav__item" :class="{ 'is-active': currentNavItem?.id === item.id }">
                     <component :is="item.icon" aria-hidden="true" />
                     <span>{{ item.mobileLabel }}</span>
                 </RouterLink>
@@ -199,17 +199,15 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowDown, Clock, Expand, Fold, HomeFilled, Lock, Present, Setting, StarFilled, Timer, Tools, UserFilled } from "@element-plus/icons-vue";
+import { ArrowDown, Clock, Expand, Fold, HomeFilled, Lock, Menu, Present, Setting, StarFilled, Timer, Tools, UserFilled } from "@element-plus/icons-vue";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import ClassSwitchButton from "@/v3/components/ClassSwitchButton.vue";
 import SemesterSwitchButton from "@/v3/components/SemesterSwitchButton.vue";
 import { classManager } from "@/managers/class";
-import { userApi } from "@/api/user";
 import { useCacheStore } from "@/stores/cacheStore";
+import { useSessionStore } from "@/stores/sessionStore";
 import { useSharedTimer } from "@/v3/composables/useToolsWorkspace";
 import type { ClassDTO, SemesterDTO } from "@/types/class";
-import { isApiRequestError } from "@/types/api";
-import { computeTrialFromProfile, normalizeUserProfile } from "@/utils/userProfile";
 import { ElMessage } from "element-plus";
 import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
@@ -233,6 +231,7 @@ interface ChipItem {
 const route = useRoute();
 const router = useRouter()
 const cacheStore = useCacheStore()
+const sessionStore = useSessionStore()
 const { closeTimerFinishedDialog, timerDisplayTime, timerFinishedDialogVisible, timerState } = useSharedTimer()
 const classes = ref<ClassDTO[]>([])
 const classesLoading = ref(false)
@@ -245,14 +244,32 @@ const userMenuContainerRef = ref<HTMLElement | null>(null)
 const userProfileRefreshing = ref(false)
 const asideCollapsed = ref(readAsideCollapsed())
 
-const navItems: NavItem[] = [
-    { id: "dashboard", label: "班级总览", mobileLabel: "总览", icon: HomeFilled, to: "/dashboard" },
-    { id: "students", label: "学生管理", mobileLabel: "学生", icon: UserFilled, to: "/students" },
-    { id: "points", label: "积分中心", mobileLabel: "积分", icon: StarFilled, to: "/points" },
-    { id: "shop", label: "积分商城", mobileLabel: "商城", icon: Present, to: "/shop" },
-    { id: "tools", label: "课堂工具", mobileLabel: "工具", icon: Tools, to: "/tools" },
-    { id: "settings", label: "设置中心", mobileLabel: "设置", icon: Setting, to: "/settings" }
-]
+const NAV_ICON_MAP: Record<string, Component> = {
+    HomeFilled,
+    UserFilled,
+    StarFilled,
+    Present,
+    Tools,
+    Setting,
+    Menu,
+}
+
+const MOBILE_MENU_LABELS: Record<string, string> = {
+    dashboard: "总览",
+    students: "学生",
+    points: "积分",
+    shop: "商城",
+    tools: "工具",
+    settings: "设置",
+}
+
+const navItems = computed<NavItem[]>(() => sessionStore.sidebar.map((item) => ({
+    id: item.code,
+    label: item.name,
+    mobileLabel: MOBILE_MENU_LABELS[item.code] || item.name,
+    icon: NAV_ICON_MAP[item.icon] || Menu,
+    to: `/${item.route_key}`,
+})))
 
 /** 返回当前激活的班级 ID。 */
 const activeClassId = computed<number | null>({
@@ -316,15 +333,9 @@ async function refreshUserProfile(): Promise<void> {
 
     userProfileRefreshing.value = true
     try {
-        const response = await userApi.getUserProfile()
-        const profile = normalizeUserProfile(response.data, cacheStore.profile?.email ?? "")
-        const { trial, expiresAt } = computeTrialFromProfile(profile)
-        cacheStore.setAuth(cacheStore.token, profile, trial, expiresAt)
+        await sessionStore.initialize()
     } catch (error) {
-        if (!isApiRequestError(error)) {
-            console.error("获取当前用户信息失败", error)
-            ElMessage.error("获取当前用户信息失败")
-        }
+        console.error("初始化当前用户会话失败", error)
     } finally {
         userProfileRefreshing.value = false
     }
@@ -573,13 +584,13 @@ const userInitial = computed<string>(() => {
 const currentSemesterName = computed<string>(() => cacheStore.getActiveSemesterName()?.trim() || "未知学期")
 
 /** 返回当前激活的导航项。 */
-const currentNavItem = computed<NavItem>(() => {
-    return navItems.find((item) => route.path.startsWith(item.to)) ?? navItems[0]!
+const currentNavItem = computed<NavItem | null>(() => {
+    return navItems.value.find((item) => route.path.startsWith(item.to)) ?? navItems.value[0] ?? null
 })
 
 /** 返回是否展示顶部计时气泡。 */
 const showHeaderTimerBubble = computed<boolean>(() => {
-    if (!timerState.isRunning) {
+    if (!timerState.isRunning || !sessionStore.canAccess("/tools")) {
         return false
     }
 
@@ -593,6 +604,7 @@ async function handleUserMenuCommand(command: string): Promise<void> {
     }
 
     userMenuVisible.value = false
+    sessionStore.reset()
     cacheStore.logout()
     ElMessage.success("已退出登录")
     await router.replace("/auth")
@@ -685,6 +697,7 @@ function toggleAsideCollapsed(): void {
 
 /** 打开完整计时器页面。 */
 function openTimerPage(): void {
+    if (!sessionStore.canAccess("/tools")) return
     closeTimerFinishedDialog()
     void router.push("/tools/timer")
 }
@@ -796,7 +809,7 @@ onBeforeUnmount(() => {
 
 .brand-card__title {
     display: block;
-    font-size: 16px;
+    font-size: 17px;
     line-height: 1.15;
     letter-spacing: -0.01em;
     white-space: nowrap;
@@ -806,7 +819,7 @@ onBeforeUnmount(() => {
     display: block;
     margin-top: 4px;
     color: var(--ta-text-tertiary);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.02em;
     white-space: nowrap;
 }
@@ -977,13 +990,13 @@ onBeforeUnmount(() => {
 }
 
 .aside-user__name {
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .aside-user__label {
     margin-top: 2px;
     color: var(--ta-text-tertiary);
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .aside-user__arrow {
@@ -1099,7 +1112,7 @@ onBeforeUnmount(() => {
     color: var(--ta-text-secondary);
     background: rgba(255, 255, 255, 0.7);
     box-shadow: inset 0 0 0 1px var(--ta-line);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     line-height: 1;
     white-space: nowrap;
@@ -1133,7 +1146,7 @@ onBeforeUnmount(() => {
     align-items: center;
     gap: 7px;
     color: var(--ta-green);
-    font-size: 12px;
+    font-size: 13px;
     white-space: nowrap;
 }
 
@@ -1191,7 +1204,7 @@ onBeforeUnmount(() => {
     color: #005ecb;
     background: #e8f3ff;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .timer-pill strong,
@@ -1250,14 +1263,14 @@ onBeforeUnmount(() => {
 
 .lock-title {
     margin-top: 4px;
-    font-size: 24px;
+    font-size: 25px;
     font-weight: 700;
     letter-spacing: -0.025em;
 }
 
 .lock-sub {
     color: var(--ta-text-tertiary);
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .lock-input {
@@ -1308,14 +1321,14 @@ onBeforeUnmount(() => {
 }
 
 .welcome-dialog__lead strong {
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .welcome-dialog__lead p,
 .welcome-highlight p {
     margin: 4px 0 0;
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.55;
 }
 
@@ -1351,7 +1364,7 @@ onBeforeUnmount(() => {
 .welcome-highlight strong {
     display: block;
     margin-top: 10px;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .welcome-dialog__note {
@@ -1363,7 +1376,7 @@ onBeforeUnmount(() => {
     border-radius: 11px;
     color: #0064cf;
     background: #eaf4ff;
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.5;
 }
 
@@ -1398,11 +1411,11 @@ onBeforeUnmount(() => {
     border-radius: 20px;
     color: var(--ta-blue);
     background: var(--ta-blue-soft);
-    font-size: 28px;
+    font-size: 29px;
 }
 
 .timer-finished-dialog__time {
-    font-size: clamp(42px, 7vw, 62px);
+    font-size: clamp(43px, 7vw, 63px);
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.045em;
@@ -1412,7 +1425,7 @@ onBeforeUnmount(() => {
 .timer-finished-dialog__summary {
     margin: 0;
     color: var(--ta-text-tertiary);
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .timer-finished-dialog__actions {
@@ -1482,7 +1495,7 @@ onBeforeUnmount(() => {
     }
 
     .mobile-brand strong {
-        font-size: 14px;
+        font-size: 15px;
     }
 
     .mobile-account {
@@ -1493,7 +1506,7 @@ onBeforeUnmount(() => {
         border-radius: 50%;
         color: #ffffff;
         background: linear-gradient(145deg, #5e5ce6, #007aff);
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 700;
         text-decoration: none;
     }
@@ -1550,7 +1563,7 @@ onBeforeUnmount(() => {
         gap: 3px;
         border-radius: 13px;
         color: var(--ta-text-tertiary);
-        font-size: 10px;
+        font-size: 11px;
         text-align: center;
         text-decoration: none;
         transition: color 140ms ease, background-color 140ms ease, transform 100ms ease;

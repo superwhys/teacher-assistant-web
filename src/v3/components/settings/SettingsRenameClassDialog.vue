@@ -98,7 +98,7 @@ const nameModel = computed({
 }
 
 .field-block__label {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -106,7 +106,7 @@ const nameModel = computed({
 }
 
 .current-class-name {
-    font-size: 20px;
+    font-size: 21px;
     color: #16213e;
     line-height: 1.4;
 }

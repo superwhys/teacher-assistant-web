@@ -128,14 +128,14 @@ const emit = defineEmits<{
     border-radius: 999px;
     background: rgba(85, 104, 255, 0.1);
     color: #5568ff;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
 }
 
 .tools-status-panel__head h3 {
     margin-top: 12px;
     color: #16213e;
-    font-size: 24px;
+    font-size: 25px;
     line-height: 1.35;
 }
 
@@ -153,7 +153,7 @@ const emit = defineEmits<{
     border-radius: 999px;
     background: rgba(22, 33, 62, 0.06);
     color: #627099;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
 }
 
@@ -183,14 +183,14 @@ const emit = defineEmits<{
 .status-card span {
     display: block;
     color: #627099;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .status-card strong {
     display: block;
     margin-top: 10px;
     color: #16213e;
-    font-size: 20px;
+    font-size: 21px;
 }
 
 .status-card small {
@@ -236,7 +236,7 @@ const emit = defineEmits<{
 
 .sub-head strong {
     color: #16213e;
-    font-size: 18px;
+    font-size: 19px;
 }
 
 .tips-list {
@@ -270,14 +270,14 @@ const emit = defineEmits<{
 .shortcut-card span {
     display: block;
     color: #627099;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
 }
 
 .shortcut-card strong {
     display: block;
     margin-top: 10px;
-    font-size: 18px;
+    font-size: 19px;
 }
 
 .shortcut-card p {

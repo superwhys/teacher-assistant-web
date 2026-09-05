@@ -41,6 +41,12 @@
   --el-color-primary-light-8: #cce5ff;
   --el-color-primary-light-9: #e6f2ff;
   --el-color-primary-dark-2: #0062cc;
+  --el-font-size-extra-large: 21px;
+  --el-font-size-large: 19px;
+  --el-font-size-medium: 17px;
+  --el-font-size-base: 15px;
+  --el-font-size-small: 14px;
+  --el-font-size-extra-small: 13px;
   --el-border-radius-base: 10px;
   --el-border-color: rgba(60, 60, 67, 0.16);
   --el-text-color-primary: #1d1d1f;
@@ -193,7 +199,7 @@ body .app-dialog-shell :is(
   color: var(--ta-text-secondary);
   background: #ffffff;
   box-shadow: none;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 620;
   line-height: 1;
   white-space: nowrap;
@@ -354,7 +360,7 @@ body .app-dialog-shell .text-button {
   color: var(--ta-blue);
   background: transparent;
   box-shadow: none;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -425,7 +431,7 @@ body .app-dialog-shell :is(
   color: var(--ta-text-secondary);
   background: transparent;
   box-shadow: none;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
@@ -509,7 +515,7 @@ body .app-dialog-shell .surface-card--warning {
 
 body .app-dialog-shell :is(.field-block__label, .field-label) {
   color: var(--ta-text-secondary);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
@@ -538,7 +544,7 @@ body .app-dialog-shell :is(.meta-tag, .preview-tag, .status-chip) {
   min-height: 24px;
   padding: 0 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -594,7 +600,7 @@ body .app-dialog-shell .el-upload-dragger:hover {
   ) {
     min-height: 36px;
     padding-inline: 10px;
-    font-size: 12px;
+    font-size: 13px;
   }
 }
 

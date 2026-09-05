@@ -727,13 +727,13 @@ onBeforeUnmount(() => {
 }
 
 .brand-title {
-    font-size: 22px;
+    font-size: 23px;
     font-weight: 700;
     color: #111827;
 }
 
 .brand-subtitle {
-    font-size: 13px;
+    font-size: 14px;
     color: #6b7280;
 }
 
@@ -743,7 +743,7 @@ onBeforeUnmount(() => {
 
 .title {
     margin: 0 0 10px;
-    font-size: 32px;
+    font-size: 33px;
     line-height: 1.2;
     color: #111827;
 }
@@ -771,7 +771,7 @@ onBeforeUnmount(() => {
     border-radius: 12px;
     background: transparent;
     color: #556070;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -796,7 +796,7 @@ onBeforeUnmount(() => {
 }
 
 .label {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     color: #374151;
 }
@@ -808,7 +808,7 @@ onBeforeUnmount(() => {
     border: 1px solid #d6deea;
     border-radius: 16px;
     background: #ffffff;
-    font-size: 14px;
+    font-size: 15px;
     color: #111827;
     box-sizing: border-box;
     outline: none;
@@ -844,7 +844,7 @@ onBeforeUnmount(() => {
     height: 54px;
     padding: 0 18px;
     border-radius: 16px;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
 }
 
@@ -880,7 +880,7 @@ onBeforeUnmount(() => {
     padding: 0;
     background: transparent;
     color: #3553b4;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
 }
 
@@ -907,7 +907,7 @@ onBeforeUnmount(() => {
     border-radius: 16px;
     background: #3553b4;
     color: #ffffff;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
     box-shadow: 0 14px 28px rgba(53, 83, 180, 0.2);
 }
@@ -986,7 +986,7 @@ onBeforeUnmount(() => {
     }
 
     .title {
-        font-size: 28px;
+        font-size: 29px;
     }
 }
 

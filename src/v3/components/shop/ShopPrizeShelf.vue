@@ -62,13 +62,13 @@ const emit = defineEmits<{
 
 .panel-head__eyebrow {
     color: var(--ta-blue);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 650;
 }
 
 .panel-head h3 {
     margin: 5px 0 0;
-    font-size: 17px;
+    font-size: 18px;
     letter-spacing: -0.015em;
 }
 
@@ -80,7 +80,7 @@ const emit = defineEmits<{
     border-radius: 999px;
     color: var(--ta-text-secondary);
     background: var(--ta-surface-muted);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
 }
@@ -114,12 +114,12 @@ const emit = defineEmits<{
 
 .shop-prize-shelf__empty strong {
     color: var(--ta-text);
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .shop-prize-shelf__empty p {
     margin: 0;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 @media (min-width: 1800px) {

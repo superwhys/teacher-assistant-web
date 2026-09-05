@@ -173,7 +173,7 @@ watch([currentClassId, currentSemesterId], async () => {
 .dashboard-context p {
     margin: 0;
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .hero-status {
@@ -192,7 +192,7 @@ watch([currentClassId, currentSemesterId], async () => {
     border-radius: 999px;
     color: var(--ta-text-secondary);
     background: var(--ta-surface-muted);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
 }
@@ -244,7 +244,7 @@ watch([currentClassId, currentSemesterId], async () => {
 
 .summary-card span {
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .summary-card strong {
@@ -252,7 +252,7 @@ watch([currentClassId, currentSemesterId], async () => {
     position: relative;
     z-index: 1;
     margin-top: 8px;
-    font-size: 27px;
+    font-size: 28px;
     line-height: 1;
     letter-spacing: -0.025em;
     font-variant-numeric: tabular-nums;
@@ -261,7 +261,7 @@ watch([currentClassId, currentSemesterId], async () => {
 .summary-card small {
     margin-top: 9px;
     color: var(--ta-text-secondary);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.4;
 }
 

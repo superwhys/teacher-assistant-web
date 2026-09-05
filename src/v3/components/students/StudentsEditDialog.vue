@@ -168,7 +168,7 @@ function handleSave(): void {
 .field-block__label {
     display: block;
     color: #627099;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;

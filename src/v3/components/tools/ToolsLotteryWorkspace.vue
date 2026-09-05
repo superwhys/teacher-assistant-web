@@ -756,7 +756,7 @@ onBeforeUnmount(() => {
 
 .lottery-toolbar__eyebrow {
     color: var(--ta-text-tertiary);
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .lottery-toolbar__select {
@@ -777,7 +777,7 @@ onBeforeUnmount(() => {
     color: var(--ta-text-secondary);
     background: #ffffff;
     box-shadow: inset 0 0 0 1px var(--ta-line-strong);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 620;
     cursor: pointer;
 }
@@ -872,7 +872,7 @@ onBeforeUnmount(() => {
         min-width: 0;
         width: 100%;
         padding-inline: 7px;
-        font-size: 11px;
+        font-size: 12px;
     }
 
     .tools-lottery-workspace__side {

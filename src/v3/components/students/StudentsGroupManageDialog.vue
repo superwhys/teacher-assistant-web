@@ -332,7 +332,7 @@ function handleSaveMembers(): void {
     display: block;
     margin: 0;
     color: #16213e;
-    font-size: 18px;
+    font-size: 19px;
 }
 
 .empty-card p,
@@ -371,7 +371,7 @@ function handleSaveMembers(): void {
 
 .section-head h4 {
     color: #16213e;
-    font-size: 18px;
+    font-size: 19px;
 }
 
 .section-head p {
@@ -393,7 +393,7 @@ function handleSaveMembers(): void {
     border-radius: 999px;
     background: rgba(85, 104, 255, 0.1);
     color: #5568ff;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
 }
 

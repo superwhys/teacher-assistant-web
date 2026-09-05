@@ -101,14 +101,14 @@ const confirmPasswordModel = computed({
 
 .settings-section__intro h3 {
     margin: 0;
-    font-size: 17px;
+    font-size: 18px;
     letter-spacing: -0.015em;
 }
 
 .settings-section__intro p {
     margin: 7px 0 0;
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.6;
 }
 
@@ -133,13 +133,13 @@ const confirmPasswordModel = computed({
 
 .lock-status-card__meta strong {
     display: block;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .lock-status-card__meta p {
     margin: 4px 0 0;
     color: var(--ta-text-tertiary);
-    font-size: 11.5px;
+    font-size: 12.5px;
 }
 
 .lock-status-card__actions {
@@ -156,7 +156,7 @@ const confirmPasswordModel = computed({
     border-radius: 999px;
     color: var(--ta-text-secondary);
     background: var(--ta-surface-muted);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
 }
@@ -185,7 +185,7 @@ const confirmPasswordModel = computed({
 
 .field-block__label {
     color: var(--ta-text-secondary);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
 }
 
@@ -193,7 +193,7 @@ const confirmPasswordModel = computed({
     min-height: 36px;
     padding-inline: 10px;
     border-radius: 9px;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .toolbar {
@@ -211,7 +211,7 @@ const confirmPasswordModel = computed({
     justify-content: center;
     border: 0;
     border-radius: 9px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 620;
     white-space: nowrap;
     cursor: pointer;

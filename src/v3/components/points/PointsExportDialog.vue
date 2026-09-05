@@ -421,7 +421,7 @@ watch([exportType, exportScope, exportGroupId, sortBy, filterRuleIds, dateRange]
 
 .field-label {
     color: #627099;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -502,14 +502,14 @@ watch([exportType, exportScope, exportGroupId, sortBy, filterRuleIds, dateRange]
 .preview-card__head strong,
 .empty-state strong {
     color: #16213e;
-    font-size: 16px;
+    font-size: 17px;
 }
 
 .preview-card__head p,
 .empty-state p {
     margin: 6px 0 0;
     color: #627099;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.7;
 }
 

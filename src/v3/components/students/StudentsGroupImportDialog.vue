@@ -401,7 +401,7 @@ function confirmImport(): void {
 
 .section-head h4 {
     color: #16213e;
-    font-size: 18px;
+    font-size: 19px;
 }
 
 .section-head p {
@@ -424,7 +424,7 @@ function confirmImport(): void {
     min-height: 32px;
     padding: 0 12px;
     border-radius: 999px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
 }
 
@@ -523,7 +523,7 @@ function confirmImport(): void {
 }
 
 .v3-upload__icon {
-    font-size: 52px;
+    font-size: 53px;
     color: #8a96b8;
 }
 
@@ -535,7 +535,7 @@ function confirmImport(): void {
 .v3-upload__title {
     margin-top: 12px;
     color: #16213e;
-    font-size: 18px;
+    font-size: 19px;
 }
 
 .v3-upload__hint {

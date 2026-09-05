@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useCacheStore } from '@/stores/cacheStore'
 import { useMainLoadingStore } from '@/stores/mainLoadingStore'
+import { useSessionStore } from '@/stores/sessionStore'
 
 const routes = [
   {
@@ -50,6 +51,14 @@ const routes = [
       {
         path: 'settings',
         component: () => import('@/v3/views/SettingsView.vue'),
+      },
+      {
+        path: 'no-access',
+        component: () => import('@/v3/views/NoAccessView.vue'),
+      },
+      {
+        path: ':pathMatch(.*)*',
+        component: () => import('@/v3/views/ComingSoonView.vue'),
       },
     ]
   },
@@ -125,19 +134,43 @@ const router = createRouter({
   scrollBehavior: () => ({ top: 0 }),
 });
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const mainLoading = useMainLoadingStore()
   const token = mainLoading.beginRoute()
     ; (to as any).__mainLoadingToken = token
 
   const cache = useCacheStore()
-  if (!cache.isAuthenticated && to.path !== '/auth') {
+  const session = useSessionStore()
+  if (!cache.isAuthenticated) {
+    session.reset()
+    if (to.path === '/auth') return true
     mainLoading.endRoute(token)
     return { path: '/auth', query: { redirect: to.fullPath } }
   }
-  if (cache.isAuthenticated && to.path === '/auth') {
+
+  try {
+    await session.initialize()
+  } catch {
     mainLoading.endRoute(token)
-    return { path: '/dashboard' }
+    if (!cache.isAuthenticated) {
+      return { path: '/auth', query: { redirect: to.fullPath } }
+    }
+    return false
+  }
+
+  const fallback = session.firstRoute || '/no-access'
+  if (to.path === '/auth' || to.path === '/') {
+    mainLoading.endRoute(token)
+    return fallback
+  }
+  if (to.path === '/no-access') {
+    if (!session.firstRoute) return true
+    mainLoading.endRoute(token)
+    return session.firstRoute
+  }
+  if (!session.canAccess(to.path)) {
+    mainLoading.endRoute(token)
+    return fallback
   }
   return true
 })

@@ -380,14 +380,14 @@ function toggleRankingMask(): void {
 
 .panel-head h3 {
     margin: 0;
-    font-size: 17px;
+    font-size: 18px;
     letter-spacing: -0.015em;
 }
 
 .panel-head p {
     margin: 5px 0 0;
     color: var(--ta-text-tertiary);
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.5;
 }
 
@@ -421,7 +421,7 @@ function toggleRankingMask(): void {
     border-radius: 8px;
     color: var(--ta-text-secondary);
     background: transparent;
-    font-size: 12px;
+    font-size: 13px;
     white-space: nowrap;
 }
 
@@ -439,7 +439,7 @@ function toggleRankingMask(): void {
     color: var(--ta-text-secondary);
     background: #ffffff;
     box-shadow: inset 0 0 0 1px var(--ta-line-strong);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 620;
     white-space: nowrap;
 }
@@ -448,7 +448,7 @@ function toggleRankingMask(): void {
     padding: 4px 0;
     color: var(--ta-blue);
     background: transparent;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
 }
 
@@ -470,7 +470,7 @@ function toggleRankingMask(): void {
 
 .field-label {
     color: var(--ta-text-secondary);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
 }
 
@@ -505,7 +505,7 @@ function toggleRankingMask(): void {
     place-items: center;
     border-radius: 9px;
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
 }
 
@@ -530,7 +530,7 @@ function toggleRankingMask(): void {
 .record-item__summary strong {
     min-width: 0;
     overflow: hidden;
-    font-size: 14px;
+    font-size: 15px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -543,7 +543,7 @@ function toggleRankingMask(): void {
 
 .ranking-item__score span {
     color: var(--ta-text-secondary);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 650;
     white-space: nowrap;
 }
@@ -589,7 +589,7 @@ function toggleRankingMask(): void {
 .record-item__score {
     width: 54px;
     flex: 0 0 auto;
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 700;
     text-align: center;
 }
@@ -609,7 +609,7 @@ function toggleRankingMask(): void {
 
 .record-item__student {
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .record-item__meta {
@@ -620,7 +620,7 @@ function toggleRankingMask(): void {
 
 .record-item__meta span {
     color: var(--ta-text-tertiary);
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .empty-state {
@@ -638,12 +638,12 @@ function toggleRankingMask(): void {
 
 .empty-state strong {
     color: var(--ta-text);
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .empty-state p {
     margin: 0;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .pagination-row {
@@ -653,7 +653,7 @@ function toggleRankingMask(): void {
 
 .pagination-row__label {
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .content-panel-enter-active,

@@ -250,7 +250,7 @@ function normalizeNumber(value: unknown, allowZero = false): number {
 }
 
 .exchange-preview__visual span {
-    font-size: 26px;
+    font-size: 27px;
     font-weight: 800;
 }
 
@@ -290,7 +290,7 @@ function normalizeNumber(value: unknown, allowZero = false): number {
 .exchange-preview__meta strong {
     display: block;
     color: #16213e;
-    font-size: 22px;
+    font-size: 23px;
 }
 
 .exchange-preview__meta p {
@@ -317,7 +317,7 @@ function normalizeNumber(value: unknown, allowZero = false): number {
 .notice-card span {
     display: block;
     color: #627099;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .exchange-preview__summary strong,
@@ -325,7 +325,7 @@ function normalizeNumber(value: unknown, allowZero = false): number {
     display: block;
     margin-top: 8px;
     color: #16213e;
-    font-size: 22px;
+    font-size: 23px;
 }
 
 .notice-card strong.is-enough {
@@ -351,7 +351,7 @@ function normalizeNumber(value: unknown, allowZero = false): number {
 
 .student-option__points {
     color: #067647;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
 }
 

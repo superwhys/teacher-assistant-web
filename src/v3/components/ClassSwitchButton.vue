@@ -230,7 +230,7 @@ watch(dialogVisible, async (visible) => {
     border: 1px solid rgba(122, 141, 198, 0.24);
     background: rgba(255, 255, 255, 0.82);
     color: #16213e;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
     line-height: 1;
     white-space: nowrap;
@@ -305,7 +305,7 @@ watch(dialogVisible, async (visible) => {
 .field-block__label {
     display: block;
     color: #627099;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;

@@ -219,14 +219,14 @@ function scrollToLetter(letter: string): void {
 
 .panel-head h3 {
     margin: 0;
-    font-size: 17px;
+    font-size: 18px;
     letter-spacing: -0.015em;
 }
 
 .panel-description {
     margin: 5px 0 0;
     color: var(--ta-text-tertiary);
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.5;
 }
 
@@ -246,7 +246,7 @@ function scrollToLetter(letter: string): void {
     color: var(--ta-text-secondary);
     background: #ffffff;
     box-shadow: inset 0 0 0 1px var(--ta-line-strong);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
 }
@@ -259,7 +259,7 @@ function scrollToLetter(letter: string): void {
 
 .panel-meta {
     color: var(--ta-text-tertiary);
-    font-size: 11px;
+    font-size: 12px;
     white-space: nowrap;
 }
 
@@ -296,7 +296,7 @@ function scrollToLetter(letter: string): void {
     border-radius: 8px;
     color: var(--ta-text-tertiary);
     background: transparent;
-    font-size: 11px;
+    font-size: 12px;
     cursor: pointer;
 }
 
@@ -316,7 +316,7 @@ function scrollToLetter(letter: string): void {
 .letter-header {
     margin-bottom: 7px;
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 650;
 }
 
@@ -340,13 +340,13 @@ function scrollToLetter(letter: string): void {
 
 .empty-state strong {
     color: var(--ta-text);
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .empty-state p {
     max-width: 420px;
     margin: 0;
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.6;
 }
 

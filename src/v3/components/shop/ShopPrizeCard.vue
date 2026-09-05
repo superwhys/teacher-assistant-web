@@ -191,7 +191,7 @@ function toNumber(value: unknown, fallback = 0): number {
     gap: 8px;
     border-radius: 8px;
     color: var(--ta-text-secondary);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 :global(.shop-card-actions-menu .el-dropdown-menu__item svg) {
@@ -252,7 +252,7 @@ function toNumber(value: unknown, fallback = 0): number {
 .shop-card__title strong {
     display: block;
     overflow: hidden;
-    font-size: 14px;
+    font-size: 15px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -263,7 +263,7 @@ function toNumber(value: unknown, fallback = 0): number {
     display: -webkit-box;
     overflow: hidden;
     color: var(--ta-text-tertiary);
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.5;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
@@ -278,13 +278,13 @@ function toNumber(value: unknown, fallback = 0): number {
 .shop-card__points span {
     display: block;
     color: var(--ta-text-tertiary);
-    font-size: 10px;
+    font-size: 11px;
 }
 
 .shop-card__points strong {
     display: block;
     margin-top: 3px;
-    font-size: 18px;
+    font-size: 19px;
     line-height: 1;
 }
 
@@ -302,7 +302,7 @@ function toNumber(value: unknown, fallback = 0): number {
     border-radius: 999px;
     color: var(--ta-text-tertiary);
     background: var(--ta-surface-muted);
-    font-size: 10px;
+    font-size: 11px;
     white-space: nowrap;
 }
 
@@ -318,7 +318,7 @@ function toNumber(value: unknown, fallback = 0): number {
     border-radius: 9px;
     color: #ffffff;
     background: var(--ta-blue);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 620;
     cursor: pointer;
 }

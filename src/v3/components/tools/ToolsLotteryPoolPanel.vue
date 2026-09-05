@@ -62,7 +62,7 @@ const emit = defineEmits<{
 
 .prize-section__head h3 {
     margin: 0;
-    font-size: 16px;
+    font-size: 17px;
 }
 
 .prize-section__count {
@@ -74,7 +74,7 @@ const emit = defineEmits<{
     border-radius: 999px;
     color: #0064cf;
     background: #e6f2ff;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
 }
 
@@ -110,11 +110,11 @@ const emit = defineEmits<{
 
 .empty-state strong {
     color: var(--ta-text);
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .empty-state p {
     margin: 0;
-    font-size: 11px;
+    font-size: 12px;
 }
 </style>

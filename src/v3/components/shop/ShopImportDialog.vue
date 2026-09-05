@@ -284,7 +284,7 @@ function confirmImport(): void {
 }
 
 .import-dropzone__icon {
-    font-size: 52px;
+    font-size: 53px;
     color: #5568ff;
     margin-bottom: 12px;
 }
@@ -336,7 +336,7 @@ function confirmImport(): void {
     border-radius: 999px;
     background: rgba(85, 104, 255, 0.1);
     color: #5568ff;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
 }
 
@@ -381,7 +381,7 @@ function confirmImport(): void {
 .import-preview__head h4 {
     margin-top: 10px;
     color: #16213e;
-    font-size: 22px;
+    font-size: 23px;
 }
 
 .ghost-button,

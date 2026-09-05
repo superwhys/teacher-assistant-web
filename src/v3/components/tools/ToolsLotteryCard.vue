@@ -81,13 +81,13 @@ const emit = defineEmits<{
 
 .summary-pill span {
     color: var(--ta-text-tertiary);
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .summary-pill strong {
     display: block;
     margin-top: 5px;
-    font-size: 23px;
+    font-size: 24px;
 }
 
 .tools-lottery-card__empty {
@@ -111,7 +111,7 @@ const emit = defineEmits<{
     color: var(--ta-text-secondary);
     background: #ffffff;
     box-shadow: inset 0 0 0 1px var(--ta-line-strong);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 620;
     white-space: nowrap;
     cursor: pointer;

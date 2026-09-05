@@ -57,7 +57,7 @@ withDefaults(defineProps<ToolsStandalonePageFrameProps>(), {
     border-radius: 10px;
     color: var(--ta-text-secondary);
     background: #ffffff;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     text-decoration: none;
     transition: color 140ms ease, background-color 140ms ease, transform 100ms ease;

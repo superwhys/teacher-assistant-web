@@ -4,6 +4,8 @@ import { useCacheStore } from "@/stores/cacheStore";
 import router from "@/routers";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+const UNAUTHORIZED_CODE = 100401;
+const PERMISSION_DENIED_CODE = 100403;
 const UNAUTHORIZED_MESSAGE_COOLDOWN = 3000;
 
 let isRedirectingToAuth = false;
@@ -82,12 +84,25 @@ function handleUnauthorized(
 }
 
 /**
+ * 处理权限不足；保留当前登录状态，不跳转登录页。
+ */
+function handlePermissionDenied(message?: string): never {
+    const errorMessage = message || "您的账号没有使用该功能的权限";
+    showMessage(errorMessage, "error");
+    throw new ApiRequestError(errorMessage);
+}
+
+/**
  * 统一处理标准接口返回结果。
  */
 function handleResponse<T>(response: ApiResponse<T>, token?: string | null): ApiResponse<T> {
-    if (response.code === 100401) {
+    if (response.code === UNAUTHORIZED_CODE) {
         const cacheStore = useCacheStore();
         return handleUnauthorized(cacheStore, response.message, token);
+    }
+
+    if (response.code === PERMISSION_DENIED_CODE) {
+        return handlePermissionDenied(response.message);
     }
 
     if (response.code === 0 || response.code === 200) {
@@ -143,6 +158,11 @@ async function request<T>(
         );
     }
 
+    if (response.status === 403) {
+        const forbiddenResponse = await safeParseJson<T>(response);
+        handlePermissionDenied(forbiddenResponse?.message);
+    }
+
     if (!response.ok) {
         const errResp = (await safeParseJson<unknown>(response)) as ApiResponse<unknown> | null;
         const errorMessage = errResp?.message || `HTTP error! status: ${response.status}`;
@@ -176,6 +196,11 @@ async function requestBlob(
             unauthorizedResponse?.message || "登录已过期，请重新登录",
             authToken
         );
+    }
+
+    if (response.status === 403) {
+        const forbiddenResponse = await safeParseJson<unknown>(response);
+        handlePermissionDenied(forbiddenResponse?.message);
     }
 
     if (!response.ok) {

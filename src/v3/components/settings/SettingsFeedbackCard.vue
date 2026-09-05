@@ -59,14 +59,14 @@ const feedbackContentModel = computed({
 
 .settings-section__intro h3 {
     margin: 0;
-    font-size: 17px;
+    font-size: 18px;
     letter-spacing: -0.015em;
 }
 
 .settings-section__intro p,
 .helper-note {
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.6;
 }
 
@@ -87,7 +87,7 @@ const feedbackContentModel = computed({
     border-radius: 999px;
     color: var(--ta-text-secondary);
     background: var(--ta-surface-muted);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
 }
 
@@ -98,7 +98,7 @@ const feedbackContentModel = computed({
 
 .field-block__label {
     color: var(--ta-text-secondary);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
 }
 
@@ -106,7 +106,7 @@ const feedbackContentModel = computed({
     min-height: 150px !important;
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.62);
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.55;
 }
 
@@ -127,7 +127,7 @@ const feedbackContentModel = computed({
     justify-content: center;
     border: 0;
     border-radius: 10px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 620;
     white-space: nowrap;
     cursor: pointer;

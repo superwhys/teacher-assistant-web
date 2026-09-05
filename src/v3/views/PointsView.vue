@@ -1136,12 +1136,12 @@ watch([historySign, historyPage], async () => {
 
 .metric-card span {
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .metric-card strong {
     margin-top: 8px;
-    font-size: 27px;
+    font-size: 28px;
     line-height: 1;
     letter-spacing: -0.025em;
     font-variant-numeric: tabular-nums;
@@ -1150,7 +1150,7 @@ watch([historySign, historyPage], async () => {
 .metric-card small {
     margin-top: 9px;
     color: var(--ta-text-secondary);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.4;
 }
 
@@ -1176,7 +1176,7 @@ watch([historySign, historyPage], async () => {
     border-radius: 12px;
     color: #a53400;
     background: var(--ta-orange-soft);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .points-view__notice-icon {
@@ -1196,11 +1196,11 @@ watch([historySign, historyPage], async () => {
     }
 
     .metric-card strong {
-        font-size: 24px;
+        font-size: 25px;
     }
 
     .metric-card small {
-        font-size: 10px;
+        font-size: 11px;
     }
 }
 </style>

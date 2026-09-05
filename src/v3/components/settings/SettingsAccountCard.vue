@@ -90,7 +90,7 @@ defineProps<SettingsAccountCardProps>()
 
 .settings-profile__identity h2 {
     margin: 0;
-    font-size: 20px;
+    font-size: 21px;
     letter-spacing: -0.02em;
 }
 
@@ -98,7 +98,7 @@ defineProps<SettingsAccountCardProps>()
     margin: 4px 0 0;
     overflow: hidden;
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -118,7 +118,7 @@ defineProps<SettingsAccountCardProps>()
     border-radius: 999px;
     color: var(--ta-text-secondary);
     background: var(--ta-surface-muted);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
 }
@@ -158,7 +158,7 @@ defineProps<SettingsAccountCardProps>()
 .settings-profile__fact span {
     display: block;
     color: var(--ta-text-tertiary);
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .settings-profile__fact strong {
@@ -166,7 +166,7 @@ defineProps<SettingsAccountCardProps>()
     margin-top: 5px;
     overflow: hidden;
     color: var(--ta-text-secondary);
-    font-size: 12px;
+    font-size: 13px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -196,7 +196,7 @@ defineProps<SettingsAccountCardProps>()
 
 .empty-state p {
     margin: 4px 0 0;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 @media (min-width: 1800px) {

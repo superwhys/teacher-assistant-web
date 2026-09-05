@@ -121,7 +121,7 @@ const emit = defineEmits<{
     border-radius: 999px;
     background: rgba(85, 104, 255, 0.1);
     color: #5568ff;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -130,7 +130,7 @@ const emit = defineEmits<{
 .tools-overview-banner__copy h2 {
     margin-top: 14px;
     color: #16213e;
-    font-size: clamp(26px, 2.7vw, 34px);
+    font-size: clamp(27px, 2.7vw, 35px);
     line-height: 1.2;
 }
 
@@ -164,7 +164,7 @@ const emit = defineEmits<{
     border-radius: 999px;
     background: rgba(22, 33, 62, 0.06);
     color: #627099;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
 }
 
@@ -239,14 +239,14 @@ const emit = defineEmits<{
 .metric-card span {
     display: block;
     color: #627099;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .metric-card strong {
     display: block;
     margin-top: 10px;
     color: #16213e;
-    font-size: clamp(24px, 2vw, 32px);
+    font-size: clamp(25px, 2vw, 33px);
     line-height: 1.2;
 }
 
@@ -290,7 +290,7 @@ const emit = defineEmits<{
     }
 
     .tools-overview-banner__copy h2 {
-        font-size: 24px;
+        font-size: 25px;
     }
 
     .tools-overview-banner__dot {

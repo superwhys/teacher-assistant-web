@@ -613,7 +613,7 @@ async function downloadTemplate(): Promise<void> {
 .field-block__label {
     display: block;
     color: #627099;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -634,7 +634,7 @@ async function downloadTemplate(): Promise<void> {
 
 .section-head h4 {
     color: #16213e;
-    font-size: 18px;
+    font-size: 19px;
 }
 
 .section-head p {
@@ -656,7 +656,7 @@ async function downloadTemplate(): Promise<void> {
     border-radius: 999px;
     background: rgba(85, 104, 255, 0.1);
     color: #5568ff;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
 }
 
@@ -706,7 +706,7 @@ async function downloadTemplate(): Promise<void> {
 }
 
 .v3-upload__icon {
-    font-size: 52px;
+    font-size: 53px;
     color: #8a96b8;
 }
 
@@ -718,7 +718,7 @@ async function downloadTemplate(): Promise<void> {
 .v3-upload__title {
     margin-top: 12px;
     color: #16213e;
-    font-size: 18px;
+    font-size: 19px;
 }
 
 .v3-upload__hint {

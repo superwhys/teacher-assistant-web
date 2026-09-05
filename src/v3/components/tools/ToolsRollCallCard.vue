@@ -67,20 +67,20 @@ const emit = defineEmits<{
     border-radius: 30px;
     color: #2c6740;
     background: linear-gradient(145deg, #effaf2, #d8efdf);
-    font-size: 27px;
+    font-size: 28px;
     font-weight: 700;
 }
 
 .rollcall-display__name {
     margin-top: 13px;
-    font-size: 23px;
+    font-size: 24px;
     font-weight: 700;
 }
 
 .rollcall-display p {
     margin: 4px 0 0;
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .action-button {
@@ -91,7 +91,7 @@ const emit = defineEmits<{
     color: var(--ta-text-secondary);
     background: #ffffff;
     box-shadow: inset 0 0 0 1px var(--ta-line-strong);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 620;
     white-space: nowrap;
     cursor: pointer;

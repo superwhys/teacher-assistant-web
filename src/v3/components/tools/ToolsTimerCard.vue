@@ -150,7 +150,7 @@ function adjustCustomPreset(delta: number): void {
 }
 
 .tools-timer-card__display {
-    font-size: clamp(42px, 5vw, 66px);
+    font-size: clamp(43px, 5vw, 67px);
     font-weight: 650;
     line-height: 1;
     letter-spacing: -0.055em;
@@ -168,7 +168,7 @@ function adjustCustomPreset(delta: number): void {
 
 .tools-timer-card__unit-label {
     color: var(--ta-text-tertiary);
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .tools-timer-card__presets {
@@ -197,7 +197,7 @@ function adjustCustomPreset(delta: number): void {
 .tools-timer-card__custom-label {
     width: 100%;
     color: var(--ta-text-secondary);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     text-align: center;
 }
@@ -265,7 +265,7 @@ function adjustCustomPreset(delta: number): void {
     border: 0;
     color: inherit;
     background: transparent;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 650;
     line-height: 1;
     text-align: right;
@@ -281,7 +281,7 @@ function adjustCustomPreset(delta: number): void {
 
 .custom-stepper__value span {
     color: var(--ta-text-tertiary);
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .preset-button,
@@ -293,7 +293,7 @@ function adjustCustomPreset(delta: number): void {
     color: var(--ta-text-secondary);
     background: #ffffff;
     box-shadow: inset 0 0 0 1px var(--ta-line-strong);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 620;
     white-space: nowrap;
     cursor: pointer;
@@ -302,7 +302,7 @@ function adjustCustomPreset(delta: number): void {
 .preset-button {
     min-height: 32px;
     padding-inline: 10px;
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .preset-button.is-active {

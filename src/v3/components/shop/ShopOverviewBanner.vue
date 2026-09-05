@@ -112,7 +112,7 @@ const emit = defineEmits<{
 .shop-overview-banner__copy p {
     margin: 0;
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.5;
 }
 
@@ -140,7 +140,7 @@ const emit = defineEmits<{
     border-radius: 999px;
     color: var(--ta-text-secondary);
     background: var(--ta-surface-muted);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
 }
@@ -172,7 +172,7 @@ const emit = defineEmits<{
     color: var(--ta-text-secondary);
     background: #ffffff;
     box-shadow: inset 0 0 0 1px var(--ta-line-strong);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 620;
     white-space: nowrap;
     cursor: pointer;
@@ -227,12 +227,12 @@ const emit = defineEmits<{
 
 .metric-card span {
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .metric-card strong {
     margin-top: 8px;
-    font-size: 27px;
+    font-size: 28px;
     line-height: 1;
     letter-spacing: -0.025em;
     font-variant-numeric: tabular-nums;
@@ -241,7 +241,7 @@ const emit = defineEmits<{
 .metric-card small {
     margin-top: 9px;
     color: var(--ta-text-secondary);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.4;
 }
 
@@ -278,7 +278,7 @@ const emit = defineEmits<{
         min-width: 0;
         width: 100%;
         padding-inline: 7px;
-        font-size: 11px;
+        font-size: 12px;
     }
 
     .shop-overview-banner__metrics {
@@ -291,11 +291,11 @@ const emit = defineEmits<{
     }
 
     .metric-card strong {
-        font-size: 24px;
+        font-size: 25px;
     }
 
     .metric-card small {
-        font-size: 10px;
+        font-size: 11px;
     }
 }
 </style>

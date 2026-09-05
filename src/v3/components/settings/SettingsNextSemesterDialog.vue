@@ -120,7 +120,7 @@ const clearPointsModel = computed({
 
 .warning-box i {
     margin-top: 2px;
-    font-size: 18px;
+    font-size: 19px;
 }
 
 .warning-box strong {
@@ -139,7 +139,7 @@ const clearPointsModel = computed({
 }
 
 .field-block__label {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;

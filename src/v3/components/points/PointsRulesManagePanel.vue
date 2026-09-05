@@ -323,7 +323,7 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
 }
 
 .panel-head h3 {
-    font-size: 17px;
+    font-size: 18px;
 }
 
 .toolbar-row {
@@ -345,7 +345,7 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
     gap: 7px;
     border: 0;
     border-radius: 10px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 620;
     white-space: nowrap;
     cursor: pointer;
@@ -412,7 +412,11 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
 .summary-eyebrow,
 .rule-items-panel__hint {
     color: var(--ta-text-tertiary);
-    font-size: 11px;
+    font-size: 12px;
+}
+
+.rule-groups-panel .summary-eyebrow {
+    font-size: 13px;
 }
 
 .status-chip {
@@ -423,7 +427,7 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
     border-radius: 999px;
     color: #0064cf;
     background: #e6f2ff;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 600;
     white-space: nowrap;
 }
@@ -431,6 +435,7 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
 .rule-groups-panel__create {
     width: 100%;
     margin-top: 10px;
+    font-size: 15px !important;
 }
 
 .rule-groups-list,
@@ -468,14 +473,14 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
 .rule-group-card strong {
     min-width: 0;
     overflow: hidden;
-    font-size: 12px;
+    font-size: 14px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .rule-group-card span {
     color: var(--ta-text-tertiary);
-    font-size: 10px;
+    font-size: 12px;
     white-space: nowrap;
 }
 
@@ -489,7 +494,7 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
 .rule-groups-panel__actions button {
     min-height: 32px;
     padding-inline: 8px;
-    font-size: 11px;
+    font-size: 15px !important;
 }
 
 .rule-items-panel {
@@ -498,7 +503,7 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
 
 .rule-items-panel__title h4 {
     margin-top: 5px;
-    font-size: 17px;
+    font-size: 18px;
 }
 
 .rule-items-panel__toolbar {
@@ -532,7 +537,7 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
     padding: 0 10px;
     color: var(--ta-text-secondary);
     background: transparent;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .filter-button.is-active {
@@ -562,7 +567,7 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
 }
 
 .rule-item-row__title strong {
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .points-badge {
@@ -571,7 +576,7 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
     display: inline-flex;
     align-items: center;
     border-radius: 999px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 650;
 }
 
@@ -593,7 +598,7 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
 .rule-item-row__actions button {
     min-height: 32px;
     padding-inline: 9px;
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .empty-state {
@@ -611,12 +616,12 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
 
 .empty-state strong {
     color: var(--ta-text);
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .empty-state p {
     margin: 0;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 @media (min-width: 1800px) {
@@ -650,7 +655,7 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
         min-width: 0;
         width: 100%;
         padding-inline: 7px;
-        font-size: 11px;
+        font-size: 12px;
     }
 
     .rule-items-panel__toolbar,

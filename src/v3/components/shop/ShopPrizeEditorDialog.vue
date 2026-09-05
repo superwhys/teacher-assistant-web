@@ -231,7 +231,7 @@ function normalizePositiveNumber(value: number, allowZero = false): number {
 .editor-preview__meta strong {
     display: block;
     color: #16213e;
-    font-size: 22px;
+    font-size: 23px;
 }
 
 .editor-preview__meta p {
@@ -254,14 +254,14 @@ function normalizePositiveNumber(value: number, allowZero = false): number {
 .editor-preview__summary span {
     display: block;
     color: #627099;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .editor-preview__summary strong {
     display: block;
     margin-top: 8px;
     color: #16213e;
-    font-size: 24px;
+    font-size: 25px;
 }
 
 .dialog-footer {

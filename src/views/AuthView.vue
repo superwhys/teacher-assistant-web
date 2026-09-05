@@ -282,6 +282,7 @@ import { ElMessage } from "element-plus";
 import AnimatedCharacters from "@/components/login/AnimatedCharacters.vue";
 import { authApi } from "@/api/auth";
 import { useCacheStore } from "@/stores/cacheStore";
+import { useSessionStore } from "@/stores/sessionStore";
 import { isApiRequestError } from "@/types/api";
 import { sha256Hex } from "@/utils/crypto";
 
@@ -290,6 +291,7 @@ type AuthTab = "login" | "register";
 const router = useRouter();
 const route = useRoute();
 const cacheStore = useCacheStore();
+const sessionStore = useSessionStore();
 
 const activeTab = ref<AuthTab>("login");
 const showResetCard = ref(false);
@@ -530,6 +532,7 @@ async function handleLogin(): Promise<void> {
         return;
     }
     loginLoading.value = true;
+    let tokenReceived = false;
     try {
         const hashedPassword = await sha256Hex(password);
         const res = await authApi.login({
@@ -544,10 +547,15 @@ async function handleLogin(): Promise<void> {
             return;
         }
         cacheStore.setTokenOnly(token);
+        tokenReceived = true;
+        await sessionStore.initialize(true);
         ElMessage.success("登录成功");
         await maybeRedirect();
     } catch {
-        cacheStore.logout();
+        if (!tokenReceived) {
+            sessionStore.reset();
+            cacheStore.logout();
+        }
     } finally {
         loginLoading.value = false;
     }
@@ -726,7 +734,7 @@ onBeforeUnmount(() => {
 }
 
 .brand-title {
-    font-size: 18px;
+    font-size: 19px;
     font-weight: 700;
     letter-spacing: -0.015em;
 }
@@ -734,7 +742,7 @@ onBeforeUnmount(() => {
 .brand-subtitle {
     margin-top: 2px;
     color: var(--ta-text-tertiary);
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .heading-block {
@@ -743,7 +751,7 @@ onBeforeUnmount(() => {
 
 .title {
     margin: 0;
-    font-size: 32px;
+    font-size: 33px;
     line-height: 1.2;
     letter-spacing: -0.035em;
 }
@@ -751,7 +759,7 @@ onBeforeUnmount(() => {
 .subtitle {
     margin: 8px 0 0;
     color: var(--ta-text-tertiary);
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.55;
 }
 
@@ -772,7 +780,7 @@ onBeforeUnmount(() => {
     border-radius: 10px;
     color: var(--ta-text-secondary);
     background: transparent;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
 }
@@ -797,7 +805,7 @@ onBeforeUnmount(() => {
 
 .label {
     color: var(--ta-text-secondary);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
 }
 
@@ -809,7 +817,7 @@ onBeforeUnmount(() => {
     border-radius: 11px;
     color: var(--ta-text);
     background: rgba(255, 255, 255, 0.9);
-    font-size: 13px;
+    font-size: 14px;
     outline: 0;
 }
 
@@ -844,7 +852,7 @@ onBeforeUnmount(() => {
     color: var(--ta-text-secondary);
     background: #ffffff;
     box-shadow: inset 0 0 0 1px var(--ta-line-strong);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
 }
 
@@ -872,7 +880,7 @@ onBeforeUnmount(() => {
     padding: 3px 0;
     color: var(--ta-blue);
     background: transparent;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
 }
 
@@ -895,7 +903,7 @@ onBeforeUnmount(() => {
     color: #ffffff;
     background: var(--ta-blue);
     box-shadow: 0 7px 18px rgba(0, 122, 255, 0.2);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 650;
 }
 
@@ -1000,11 +1008,11 @@ onBeforeUnmount(() => {
     }
 
     .brand-title {
-        font-size: 16px;
+        font-size: 17px;
     }
 
     .title {
-        font-size: 27px;
+        font-size: 28px;
     }
 
     .password-row,
@@ -1020,7 +1028,7 @@ onBeforeUnmount(() => {
     .send-code-button {
         min-width: 96px;
         padding-inline: 9px;
-        font-size: 11px;
+        font-size: 12px;
     }
 
     .action-row {

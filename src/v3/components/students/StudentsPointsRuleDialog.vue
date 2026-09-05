@@ -418,7 +418,7 @@ watch(filteredGroups, (groups) => {
 
 .section-head h4 {
     color: #16213e;
-    font-size: 18px;
+    font-size: 19px;
 }
 
 .section-head p {
@@ -439,7 +439,7 @@ watch(filteredGroups, (groups) => {
     border-radius: 999px;
     background: rgba(85, 104, 255, 0.1);
     color: #5568ff;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
 }
 
@@ -451,7 +451,7 @@ watch(filteredGroups, (groups) => {
 .field-block__label {
     display: block;
     color: #627099;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -521,7 +521,7 @@ watch(filteredGroups, (groups) => {
     justify-content: center;
     border-radius: 14px;
     background: rgba(85, 104, 255, 0.08);
-    font-size: 18px;
+    font-size: 19px;
 }
 
 .group-nav-item__body {
@@ -537,13 +537,13 @@ watch(filteredGroups, (groups) => {
 
 .group-nav-item__body strong {
     color: #16213e;
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1.4;
 }
 
 .group-nav-item__body small {
     color: #627099;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .group-head {
@@ -559,7 +559,7 @@ watch(filteredGroups, (groups) => {
     justify-content: center;
     border-radius: 14px;
     background: rgba(85, 104, 255, 0.08);
-    font-size: 18px;
+    font-size: 19px;
 }
 
 .rule-grid {
@@ -611,14 +611,14 @@ watch(filteredGroups, (groups) => {
 .rule-card__body strong {
     display: block;
     color: #16213e;
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1.45;
 }
 
 .rule-card__body p {
     margin: 4px 0 0;
     color: #627099;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.5;
 }
 
@@ -638,7 +638,7 @@ watch(filteredGroups, (groups) => {
     min-height: 34px;
     padding: 0 12px;
     border-radius: 999px;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 800;
 }
 
@@ -654,7 +654,7 @@ watch(filteredGroups, (groups) => {
 
 .empty-card strong {
     display: block;
-    font-size: 18px;
+    font-size: 19px;
 }
 
 .empty-card p {

@@ -63,13 +63,13 @@ defineProps<ToolsCardPanelProps>()
 
 .tools-card-panel__eyebrow {
     color: var(--ta-blue);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 650;
 }
 
 .tools-card-panel__head h3 {
     margin: 5px 0 0;
-    font-size: 19px;
+    font-size: 20px;
     letter-spacing: -0.015em;
 }
 
@@ -81,7 +81,7 @@ defineProps<ToolsCardPanelProps>()
     border-radius: 999px;
     color: var(--ta-text-secondary);
     background: var(--ta-surface-muted);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
 }

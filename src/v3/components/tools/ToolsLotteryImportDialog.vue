@@ -186,7 +186,7 @@ function handleSelectionChange(rows: ShopItem[]): void {
 .field-block__label {
     display: block;
     color: #627099;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -226,7 +226,7 @@ function handleSelectionChange(rows: ShopItem[]): void {
 
 .section-head h4 {
     color: #16213e;
-    font-size: 18px;
+    font-size: 19px;
 }
 
 .section-head p {
@@ -243,7 +243,7 @@ function handleSelectionChange(rows: ShopItem[]): void {
     border-radius: 999px;
     background: rgba(85, 104, 255, 0.1);
     color: #5568ff;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
 }
 

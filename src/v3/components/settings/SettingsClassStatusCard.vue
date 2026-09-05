@@ -63,14 +63,14 @@ const emit = defineEmits<SettingsClassStatusCardEmits>()
 
 .settings-section__intro h3 {
     margin: 0;
-    font-size: 17px;
+    font-size: 18px;
     letter-spacing: -0.015em;
 }
 
 .settings-section__intro p {
     margin: 7px 0 0;
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.6;
 }
 
@@ -96,13 +96,13 @@ const emit = defineEmits<SettingsClassStatusCardEmits>()
 
 .summary-item span {
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .summary-item strong {
     min-width: 0;
     color: var(--ta-text-secondary);
-    font-size: 13px;
+    font-size: 14px;
     text-align: right;
 }
 
@@ -118,7 +118,7 @@ const emit = defineEmits<SettingsClassStatusCardEmits>()
     border-radius: 999px;
     color: var(--ta-text-secondary);
     background: var(--ta-surface-muted);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
 }
@@ -150,7 +150,7 @@ const emit = defineEmits<SettingsClassStatusCardEmits>()
     justify-content: center;
     border: 0;
     border-radius: 10px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 620;
     white-space: nowrap;
     cursor: pointer;
@@ -211,7 +211,7 @@ const emit = defineEmits<SettingsClassStatusCardEmits>()
         min-width: 0;
         width: 100%;
         padding-inline: 7px;
-        font-size: 11px;
+        font-size: 12px;
     }
 }
 </style>

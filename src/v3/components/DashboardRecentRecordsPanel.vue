@@ -185,7 +185,7 @@ watch(() => [props.activeClassId, props.currentSemesterId], () => {
 
 .panel-head h3 {
     margin: 0;
-    font-size: 17px;
+    font-size: 18px;
     letter-spacing: -0.015em;
 }
 
@@ -206,7 +206,7 @@ watch(() => [props.activeClassId, props.currentSemesterId], () => {
     border: 0;
     color: var(--ta-blue);
     background: transparent;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     line-height: 1.2;
     cursor: pointer;
@@ -243,7 +243,7 @@ watch(() => [props.activeClassId, props.currentSemesterId], () => {
     border-radius: 8px;
     color: var(--ta-text-secondary);
     background: transparent;
-    font-size: 12px;
+    font-size: 13px;
     cursor: pointer;
 }
 
@@ -274,19 +274,19 @@ watch(() => [props.activeClassId, props.currentSemesterId], () => {
 
 .preview-item strong {
     display: block;
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .preview-item p {
     margin: 3px 0 0;
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.4;
 }
 
 .preview-item > span {
     color: var(--ta-text-secondary);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 650;
     white-space: nowrap;
 }
@@ -315,13 +315,13 @@ watch(() => [props.activeClassId, props.currentSemesterId], () => {
 .ranking-empty-state strong,
 .empty-state strong {
     color: var(--ta-text);
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .ranking-empty-state p,
 .empty-state p {
     margin: 0;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 @media (max-width: 660px) {

@@ -1095,6 +1095,18 @@ watch(filteredStudents, () => {
     flex-wrap: wrap;
 }
 
+.control-actions .control-label {
+    font-size: 13px;
+}
+
+.control-actions .chip-button {
+    font-size: 14px !important;
+}
+
+.control-actions :is(.ghost-button, .primary-button) {
+    font-size: 15px !important;
+}
+
 .control-block {
     min-width: 0;
     display: grid;
@@ -1108,7 +1120,7 @@ watch(filteredStudents, () => {
 
 .control-label {
     color: var(--ta-text-tertiary);
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1;
 }
 
@@ -1152,7 +1164,7 @@ watch(filteredStudents, () => {
     border-radius: 10px;
     color: var(--ta-text);
     background: transparent;
-    font-size: 13px;
+    font-size: 14px;
     outline: 0;
     -webkit-appearance: none;
 }
@@ -1185,7 +1197,7 @@ watch(filteredStudents, () => {
     border-radius: 8px;
     color: var(--ta-text-secondary);
     background: transparent;
-    font-size: 12px;
+    font-size: 13px;
     white-space: nowrap;
     cursor: pointer;
     transition: background-color 140ms ease, color 140ms ease, transform 100ms ease, box-shadow 140ms ease;
@@ -1224,7 +1236,7 @@ watch(filteredStudents, () => {
     gap: 7px;
     border: 0;
     border-radius: 10px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 620;
     white-space: nowrap;
     cursor: pointer;
@@ -1269,6 +1281,7 @@ watch(filteredStudents, () => {
 
 .group-filter > .control-label {
     flex: 0 0 auto;
+    font-size: 13px;
     white-space: nowrap;
 }
 
@@ -1278,11 +1291,12 @@ watch(filteredStudents, () => {
 }
 
 .group-chip {
-    min-height: 32px;
+    min-height: 32px !important;
     padding: 0 11px;
     border-radius: 999px;
     background: #ffffff;
     box-shadow: inset 0 0 0 1px var(--ta-line);
+    font-size: 14px !important;
 }
 
 .group-chip.is-active {
@@ -1300,7 +1314,7 @@ watch(filteredStudents, () => {
     border-radius: 999px;
     color: var(--ta-text-tertiary);
     background: var(--ta-surface-muted);
-    font-size: 10px;
+    font-size: 12px;
 }
 
 .students-view__notice {
@@ -1313,7 +1327,7 @@ watch(filteredStudents, () => {
     border-radius: 12px;
     color: #a53400;
     background: var(--ta-orange-soft);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .students-view__notice-icon {

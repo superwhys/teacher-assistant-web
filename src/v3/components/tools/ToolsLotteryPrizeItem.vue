@@ -109,7 +109,7 @@ function handleToggleEnabled(): void {
     display: block;
     overflow: hidden;
     color: var(--ta-text);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 650;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -129,7 +129,7 @@ function handleToggleEnabled(): void {
     display: inline-flex;
     align-items: center;
     border-radius: 999px;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     line-height: 1;
     white-space: nowrap;

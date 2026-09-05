@@ -119,7 +119,7 @@ const visible = computed({
 
 .app-dialog-shell__eyebrow {
     color: var(--ta-blue);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 650;
     letter-spacing: 0.02em;
 }
@@ -131,7 +131,7 @@ const visible = computed({
 
 .app-dialog-shell__title {
     margin-top: 5px;
-    font-size: 20px;
+    font-size: 21px;
     font-weight: 700;
     line-height: 1.25;
     letter-spacing: -0.02em;
@@ -140,7 +140,7 @@ const visible = computed({
 .app-dialog-shell__description {
     margin-top: 6px;
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.55;
 }
 

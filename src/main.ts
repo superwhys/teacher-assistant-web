@@ -8,8 +8,7 @@ import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import { useMainLoadingStore } from '@/stores/mainLoadingStore'
 import { useCacheStore } from '@/stores/cacheStore'
-import { userApi } from '@/api/user'
-import { computeTrialFromProfile, normalizeUserProfile } from '@/utils/userProfile'
+import { useSessionStore } from '@/stores/sessionStore'
 
 const pinia = createPinia()
 pinia.use(piniaPluginPersistedstate)
@@ -26,24 +25,28 @@ function clearTokenFromCurrentUrl(): void {
     window.history.replaceState(window.history.state, '', nextUrl)
 }
 
-async function initAuthBeforeMount(): Promise<void> {
+async function initSessionBeforeMount(): Promise<void> {
     const cacheStore = useCacheStore(pinia)
+    const sessionStore = useSessionStore(pinia)
     const tokenFromQuery = new URL(window.location.href).searchParams.get('token')?.trim() ?? ''
-    if (!tokenFromQuery) return
-
-    cacheStore.setTokenOnly(tokenFromQuery)
-    cacheStore.setExpired(false)
+    if (tokenFromQuery) {
+        cacheStore.setTokenOnly(tokenFromQuery)
+        cacheStore.setExpired(false)
+    }
+    if (!cacheStore.token) {
+        clearTokenFromCurrentUrl()
+        return
+    }
     try {
-        const res = await userApi.getUserProfile()
-        const profile = normalizeUserProfile(res.data, cacheStore.profile?.email ?? '')
-        const { trial, expiresAt } = computeTrialFromProfile(profile)
-        cacheStore.setAuth(tokenFromQuery, profile, trial, expiresAt)
+        await sessionStore.initialize(true)
+    } catch {
+        // 401 会由请求层清理 Token；其他错误由 App 的会话错误页承接。
     } finally {
         clearTokenFromCurrentUrl()
     }
 }
 
-await initAuthBeforeMount()
+await initSessionBeforeMount()
 
 app.use(router)
 app.use(ElementPlus)

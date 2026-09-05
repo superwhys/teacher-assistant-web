@@ -245,7 +245,7 @@ function getScoreStyle(toneClass: string): Record<string, string> {
     border-radius: 50%;
     color: #ffffff;
     background: var(--ta-blue);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .student-card__head {
@@ -284,7 +284,7 @@ function getScoreStyle(toneClass: string): Record<string, string> {
     border-radius: 13px;
     color: #0069d6;
     background: #e7f3ff;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
 }
 
@@ -325,7 +325,7 @@ function getScoreStyle(toneClass: string): Record<string, string> {
 .student-profile__name {
     display: block;
     overflow: hidden;
-    font-size: 14px;
+    font-size: 15px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -334,7 +334,7 @@ function getScoreStyle(toneClass: string): Record<string, string> {
 .student-profile__inline p {
     margin: 3px 0 0;
     color: var(--ta-text-tertiary);
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .student-profile__inline {
@@ -390,7 +390,7 @@ function getScoreStyle(toneClass: string): Record<string, string> {
     border-radius: 9px;
     color: var(--student-score-color, var(--ta-blue));
     background: var(--student-score-background, var(--ta-blue-soft));
-    font-size: 11px;
+    font-size: 12px;
     white-space: nowrap;
 }
 

@@ -366,7 +366,7 @@ watch(visible, (value) => {
 }
 
 .upload-panel__icon {
-    font-size: 54px;
+    font-size: 55px;
     color: #5568ff;
 }
 
@@ -379,14 +379,14 @@ watch(visible, (value) => {
 .upload-panel__title {
     margin-top: 10px;
     color: #16213e;
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 700;
 }
 
 .upload-panel__hint {
     margin-top: 8px;
     color: #627099;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .guide-card,
@@ -412,7 +412,7 @@ watch(visible, (value) => {
 .guide-card__head strong,
 .preview-card__head strong {
     color: #16213e;
-    font-size: 16px;
+    font-size: 17px;
 }
 
 .guide-list {
@@ -429,7 +429,7 @@ watch(visible, (value) => {
 .preview-card__head p {
     margin-top: 6px;
     color: #627099;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .preview-tag,
@@ -440,7 +440,7 @@ watch(visible, (value) => {
     min-height: 32px;
     padding: 0 12px;
     border-radius: 999px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
 }
 

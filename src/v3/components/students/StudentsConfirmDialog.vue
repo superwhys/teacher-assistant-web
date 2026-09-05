@@ -73,7 +73,7 @@ function handleConfirm(): void {
     display: block;
     margin: 0;
     color: #16213e;
-    font-size: 18px;
+    font-size: 19px;
     line-height: 1.7;
 }
 

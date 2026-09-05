@@ -323,7 +323,7 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
 
 .panel-head h3 {
     margin: 0;
-    font-size: 17px;
+    font-size: 18px;
     letter-spacing: -0.015em;
 }
 
@@ -344,7 +344,7 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
 
 .clear-action-button {
     padding: 4px 0;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
 }
 
@@ -374,7 +374,7 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
     border-radius: 999px;
     color: #0064cf;
     background: #e6f2ff;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
 }
@@ -402,14 +402,14 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
     width: 48px;
     height: 48px;
     border-radius: 15px;
-    font-size: 16px;
+    font-size: 17px;
 }
 
 .selected-name-item__avatar {
     width: 36px;
     height: 36px;
     border-radius: 11px;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .tone-orange {
@@ -450,7 +450,7 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
 .selected-student__body strong,
 .selected-name-item__body strong {
     display: block;
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .selected-student__body p,
@@ -459,7 +459,7 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
 .side-empty p {
     margin: 3px 0 0;
     color: var(--ta-text-tertiary);
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.45;
 }
 
@@ -478,12 +478,12 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
 
 .detail-item span {
     color: var(--ta-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .detail-item strong {
     color: var(--ta-text-secondary);
-    font-size: 13px;
+    font-size: 14px;
     text-align: right;
 }
 
@@ -500,13 +500,13 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
 
 .points-actions-card__head span {
     color: var(--ta-text-tertiary);
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .points-actions-card__head strong {
     margin-top: 4px;
     color: var(--ta-text-secondary);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.45;
 }
 
@@ -525,7 +525,7 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
     gap: 6px;
     border: 0;
     border-radius: 10px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 620;
     cursor: pointer;
 }
@@ -554,7 +554,7 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
 }
 
 .recent-records__head strong {
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .recent-records__list,
@@ -577,13 +577,13 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
 .recent-record-item__head strong {
     min-width: 0;
     overflow: hidden;
-    font-size: 12px;
+    font-size: 13px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .recent-record-item__delta {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     white-space: nowrap;
 }
@@ -606,13 +606,13 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
     border-radius: 14px;
     color: var(--ta-text-tertiary);
     background: var(--ta-surface-muted);
-    font-size: 12px;
+    font-size: 13px;
     text-align: center;
 }
 
 .side-empty strong {
     color: var(--ta-text);
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .selected-name-item {
@@ -641,7 +641,7 @@ watch(() => [props.classId, props.selectedStudent?.id] as const, async () => {
     border-radius: 999px;
     color: var(--ta-text-tertiary);
     background: var(--ta-surface-muted);
-    font-size: 10px;
+    font-size: 11px;
 }
 
 @media (max-width: 660px) {

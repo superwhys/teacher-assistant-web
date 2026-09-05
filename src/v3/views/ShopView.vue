@@ -723,7 +723,7 @@ watch(activeTab, async (tab) => {
     border-radius: 12px;
     color: #a53400;
     background: var(--ta-orange-soft);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .shop-view__notice-icon {
@@ -750,7 +750,7 @@ watch(activeTab, async (tab) => {
     border-radius: 8px;
     color: var(--ta-text-secondary);
     background: transparent;
-    font-size: 12px;
+    font-size: 13px;
     cursor: pointer;
 }
 

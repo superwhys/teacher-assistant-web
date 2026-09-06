@@ -369,9 +369,10 @@ function formatAveragePoints(points: number): string {
 }
 
 .ghost-button.is-active {
-    color: #0065d1;
-    background: #eaf4ff;
-    box-shadow: inset 0 0 0 1px rgba(0, 122, 255, 0.18);
+    border-color: rgba(0, 122, 255, 0.24) !important;
+    color: #0065d1 !important;
+    background: #eaf4ff !important;
+    box-shadow: inset 0 0 0 1px rgba(0, 122, 255, 0.18) !important;
 }
 
 .panel-meta {

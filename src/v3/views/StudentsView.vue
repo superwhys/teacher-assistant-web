@@ -1136,10 +1136,6 @@ watch(filteredStudents, () => {
     flex-wrap: wrap;
 }
 
-.control-actions .control-label {
-    font-size: 14px;
-}
-
 .control-actions .chip-button {
     font-size: 15px !important;
 }

@@ -426,6 +426,24 @@ function getScoreStyle(toneClass: string): Record<string, string> {
     color: var(--ta-line-strong);
 }
 
+.student-card:not(.is-list):not(.is-group) .student-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 15px;
+    font-size: 18px;
+}
+
+.student-card:not(.is-list):not(.is-group) .student-profile__name {
+    font-size: 17px;
+}
+
+.student-card:not(.is-list):not(.is-group) .student-profile__score {
+    min-height: 34px;
+    padding: 0 11px;
+    gap: 6px;
+    font-size: 14px;
+}
+
 .student-card.is-list .student-card__head,
 .student-card.is-list .student-card__main {
     width: 100%;

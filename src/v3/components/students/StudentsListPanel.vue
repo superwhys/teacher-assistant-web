@@ -6,24 +6,28 @@
                 <p class="panel-description">
                     {{ layoutMode === "group"
                         ? "点击分组卡片可全选该组学生，再次点击可取消该组选择；组内学生仍支持单独选择。"
-                        : "点击卡片可切换选中状态，支持单选或多选高亮，卡片右上角保留编辑与删除入口。" }}
+                        : "选择学生后即可加减分；更多菜单中可编辑或删除学生。" }}
                 </p>
             </div>
+            <span class="panel-meta">当前显示 {{ students.length }} 人</span>
+        </div>
+        <div class="roster-controls">
+            <div class="roster-display-controls"><slot name="toolbar" /></div>
             <div class="panel-head-actions">
                 <button
                     type="button"
-                    class="ghost-button ghost-button--small"
+                    class="selection-toggle"
                     :class="{ 'is-active': multiSelectEnabled }"
+                    :aria-pressed="multiSelectEnabled"
                     :disabled="students.length === 0"
                     @click="emit('toggle-multi-select')"
                 >
-                    多选
+                    {{ multiSelectEnabled ? "退出多选" : "多选" }}
                 </button>
-                <button type="button" class="ghost-button ghost-button--small" :class="{ 'is-active': isAllSelected }"
+                <button type="button" class="selection-toggle" :class="{ 'is-active': isAllSelected }" :aria-pressed="isAllSelected"
                     :disabled="students.length === 0" @click="emit('toggle-select-all')">
                     {{ isAllSelected ? "取消全选" : "全选" }}
                 </button>
-                <span class="panel-meta">当前显示 {{ students.length }} 人</span>
             </div>
         </div>
 
@@ -57,9 +61,11 @@
                             <span>平均积分 <strong>{{ formatAveragePoints(group.averagePoints) }}</strong></span>
                         </div>
                     </div>
-                    <span v-if="group.students.length > 0" class="student-group-card__selection-hint">
+                    <button v-if="group.students.length > 0" type="button" class="student-group-card__selection-hint"
+                        :aria-pressed="isStudentGroupSelected(group.students)" :aria-label="`选择${group.name}全组学生`"
+                        @click.stop="toggleStudentGroupSelection(group.students)">
                         {{ isStudentGroupSelected(group.students) ? "已全选" : "点击全选" }}
-                    </span>
+                    </button>
                 </div>
 
                 <div v-if="group.students.length > 0" class="student-group-card__members">
@@ -304,7 +310,7 @@ function scrollToLetter(letter: string): void {
     }
 
     element.scrollIntoView({
-        behavior: "smooth",
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
         block: "start"
     })
 }
@@ -318,12 +324,19 @@ function formatAveragePoints(points: number): string {
 <style scoped>
 .students-list-panel {
     min-width: 0;
-    padding: 20px;
-    border: 1px solid var(--ta-line);
-    border-radius: var(--ta-radius-large);
-    background: var(--ta-surface);
-    box-shadow: var(--ta-shadow-1);
-    backdrop-filter: blur(18px) saturate(150%);
+}
+
+.roster-controls,
+.roster-display-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.roster-controls {
+    justify-content: space-between;
+    margin-bottom: 14px;
 }
 
 .panel-head {
@@ -355,24 +368,21 @@ function formatAveragePoints(points: number): string {
     flex-wrap: wrap;
 }
 
-.ghost-button {
+.selection-toggle {
     min-height: 36px;
     padding: 0 11px;
     border: 0;
     border-radius: 10px;
-    color: var(--ta-text-secondary);
-    background: #ffffff;
-    box-shadow: inset 0 0 0 1px var(--ta-line-strong);
+    color: var(--ta-blue);
+    background: transparent;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
 }
 
-.ghost-button.is-active {
-    border-color: rgba(0, 122, 255, 0.24) !important;
-    color: #0065d1 !important;
-    background: #eaf4ff !important;
-    box-shadow: inset 0 0 0 1px rgba(0, 122, 255, 0.18) !important;
+.selection-toggle.is-active {
+    color: #0065d1;
+    background: var(--ta-blue-soft);
 }
 
 .panel-meta {
@@ -383,7 +393,7 @@ function formatAveragePoints(points: number): string {
 
 .student-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
     gap: 10px;
 }
 
@@ -471,6 +481,8 @@ function formatAveragePoints(points: number): string {
     font-size: 12px;
     font-weight: 620;
     white-space: nowrap;
+    border: 0;
+    cursor: pointer;
 }
 
 .student-group-card.is-all-selected .student-group-card__selection-hint {
@@ -481,7 +493,7 @@ function formatAveragePoints(points: number): string {
 .student-group-card__members {
     margin-top: 12px;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(148px, 100%), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
     gap: 8px;
 }
 
@@ -577,49 +589,28 @@ function formatAveragePoints(points: number): string {
     line-height: 1.6;
 }
 
-@media (min-width: 1800px) {
-    .student-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-}
-
-@media (min-width: 2300px) {
-    .student-grid {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 1180px) {
-    .student-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (max-width: 920px) {
+    .selection-toggle,
+    .student-group-card__selection-hint {
+        min-height: 44px;
     }
 }
 
 @media (max-width: 660px) {
-    .students-list-panel {
-        padding: 16px;
+    .panel-head {
+        align-items: flex-start;
     }
 
-    .panel-head {
-        align-items: stretch;
-        flex-direction: column;
+    .panel-description {
+        font-size: 12px;
     }
 
     .panel-head-actions {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .panel-head-actions .ghost-button {
-        width: 100%;
-    }
-
-    .panel-meta {
-        grid-column: 1 / -1;
+        margin-left: auto;
     }
 
     .student-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
     }
 
     .list-column {

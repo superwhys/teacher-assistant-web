@@ -1,99 +1,48 @@
 <template>
     <div class="students-view">
-        <section class="panel-surface control-panel">
-            <div class="control-toolbar">
-                <label class="control-block control-block--search">
-                    <span class="control-label">快速搜索</span>
-                    <div class="search-box">
-                        <i-ep-search class="search-box__icon" />
-                        <input v-model="keyword" type="search" class="search-box__input"
-                            placeholder="支持姓名、拼音首字母；可用逗号隔开">
-                    </div>
-                </label>
-
-                <div class="control-actions">
-                    <div class="control-block">
-                        <span class="control-label">展示方式</span>
-                        <div class="segmented-control">
-                            <button type="button" class="chip-button" :class="{ 'is-active': layoutMode === 'card' }"
-                                @click="layoutMode = 'card'">
-                                <i-ep-grid aria-hidden="true" />
-                                卡片视图
-                            </button>
-                            <button type="button" class="chip-button" :class="{ 'is-active': layoutMode === 'list' }"
-                                @click="layoutMode = 'list'">
-                                <i-ep-list aria-hidden="true" />
-                                列表视图
-                            </button>
-                            <button type="button" class="chip-button" :class="{ 'is-active': layoutMode === 'group' }"
-                                @click="layoutMode = 'group'">
-                                <i-ep-user-filled aria-hidden="true" />
-                                分组卡片
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="control-block">
-                        <span class="control-label">排序方式</span>
-                        <div class="segmented-control sort-control">
-                            <button type="button" class="chip-button" :class="{ 'is-active': isSortFieldActive('points') }"
-                                @click="handleSelectSortField('points')">
-                                按积分
-                            </button>
-                            <button type="button" class="chip-button" :class="{ 'is-active': isSortFieldActive('name') }"
-                                @click="handleSelectSortField('name')">
-                                按姓名
-                            </button>
-                            <span class="sort-divider" aria-hidden="true" />
-                            <button type="button" class="chip-button" :class="{ 'is-active': isSortDescending }"
-                                @click="toggleSortDirection">
-                                倒序
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="control-block">
-                        <span class="control-label">分组入口</span>
-                        <div class="toolbar-row">
-                            <button type="button" class="ghost-button ghost-button--small" :disabled="!hasActiveClass"
-                                @click="openGroupManageDialog">
-                                管理分组
-                            </button>
-                            <button type="button" class="ghost-button ghost-button--small" :disabled="!hasActiveClass"
-                                @click="openGroupImportDialog">
-                                <i-ep-upload-filled aria-hidden="true" />
-                                Excel 导入分组
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="control-block">
-                        <span class="control-label">学生操作</span>
-                        <div class="toolbar-row">
-                            <button type="button" class="primary-button primary-button--small" :disabled="!hasActiveClass"
-                                @click="openAddStudentDialog('single')">
-                                <i-ep-plus />
-                                <span>添加学生</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+        <header class="students-header">
+            <div>
+                <h1>学生管理</h1>
+                <p>{{ studentCards.length }} 名学生 · {{ groupChips.length }} 个小组</p>
             </div>
+            <button type="button" class="primary-button" :disabled="!hasActiveClass" @click="openAddStudentDialog('single')">
+                <i-ep-plus aria-hidden="true" />
+                添加学生
+            </button>
+        </header>
 
-            <div class="group-filter">
-                <span class="control-label">筛选分组</span>
-                <div class="group-chip-row">
-                    <button type="button" class="chip-button group-chip" :class="{ 'is-active': selectedGroupId === null }"
-                        @click="handleSelectGroup(null)">
-                        全部学生
-                        <span>{{ studentCards.length }}</span>
+        <section class="control-panel" aria-label="搜索与筛选学生">
+            <div class="control-toolbar">
+                <label class="search-box">
+                    <i-ep-search class="search-box__icon" aria-hidden="true" />
+                    <input v-model="keyword" type="search" class="search-box__input" aria-label="搜索学生"
+                        placeholder="搜索姓名、拼音首字母；可用逗号隔开">
+                </label>
+                <el-dropdown trigger="click" placement="bottom-end">
+                    <button type="button" class="students-manage-button" :disabled="!hasActiveClass">
+                        <i-ep-operation aria-hidden="true" />
+                        管理
+                        <i-ep-arrow-down aria-hidden="true" />
                     </button>
-                    <button v-for="group in groupChips" :key="group.id" type="button" class="chip-button group-chip"
-                        :class="{ 'is-active': selectedGroupId === group.id }" @click="handleSelectGroup(group.id)">
-                        {{ group.name }}
-                        <span>{{ group.count }}</span>
-                    </button>
-                </div>
+                    <template #dropdown>
+                        <el-dropdown-menu>
+                            <el-dropdown-item @click="openGroupManageDialog">管理分组</el-dropdown-item>
+                            <el-dropdown-item @click="openGroupImportDialog">Excel 导入分组</el-dropdown-item>
+                            <el-dropdown-item divided @click="openAddStudentDialog('batch')">批量添加学生</el-dropdown-item>
+                            <el-dropdown-item @click="openAddStudentDialog('excel')">Excel 导入学生</el-dropdown-item>
+                        </el-dropdown-menu>
+                    </template>
+                </el-dropdown>
+            </div>
+            <div class="group-filter" role="group" aria-label="筛选分组">
+                <button type="button" class="students-filter-button" :aria-pressed="selectedGroupId === null"
+                    @click="handleSelectGroup(null)">
+                    全部学生 <span>{{ studentCards.length }}</span>
+                </button>
+                <button v-for="group in groupChips" :key="group.id" type="button" class="students-filter-button"
+                    :aria-pressed="selectedGroupId === group.id" @click="handleSelectGroup(group.id)">
+                    {{ group.name }} <span>{{ group.count }}</span>
+                </button>
             </div>
         </section>
 
@@ -109,17 +58,55 @@
                 :sort-by="sortBy" :students="filteredStudents" @edit-student="openEdit"
                 @remove-student="requestRemoveStudent" @select-student="handleSelectStudent"
                 @toggle-group-selection="handleToggleGroupSelection" @toggle-multi-select="toggleMultiSelectEnabled"
-                @toggle-select-all="toggleSelectAllStudents" />
+                @toggle-select-all="toggleSelectAllStudents">
+                <template #toolbar>
+                    <div class="students-view-switch" role="group" aria-label="展示方式">
+                        <button type="button" :aria-pressed="layoutMode === 'card'" aria-label="卡片视图" title="卡片视图"
+                            @click="layoutMode = 'card'"><i-ep-grid aria-hidden="true" /></button>
+                        <button type="button" :aria-pressed="layoutMode === 'list'" aria-label="列表视图" title="列表视图"
+                            @click="layoutMode = 'list'"><i-ep-list aria-hidden="true" /></button>
+                        <button type="button" :aria-pressed="layoutMode === 'group'" aria-label="分组视图" title="分组视图"
+                            @click="layoutMode = 'group'"><i-ep-user-filled aria-hidden="true" /></button>
+                    </div>
+                    <el-select v-model="sortBy" class="students-sort" aria-label="排序方式"
+                        popper-class="students-sort-menu" placement="bottom-start" :show-arrow="false" :offset="8">
+                        <el-option v-for="option in studentSortOptions" :key="option.value" :value="option.value" :label="option.label">
+                            <span>{{ option.label }}</span>
+                            <i-ep-check v-if="sortBy === option.value" aria-hidden="true" />
+                        </el-option>
+                    </el-select>
+                </template>
+            </StudentsListPanel>
 
-            <aside class="side-column">
+            <aside v-if="!isCompactViewport" class="side-column">
                 <StudentsSelectionPanel :class-id="activeClassId" :is-archived-semester="isArchivedSemester"
-                    :points-applying="pointsApplying" :selected-student="selectedStudent"
+                    :points-applying="pointsApplying || loading" :selected-student="selectedStudent"
                     :selected-students="selectedStudents" :status-label="selectionStatusLabel"
                     :title="selectedPanelTitle" @locate-student="handleLocateStudent"
                     @clear-selected-students="handleClearSelectedStudents" @open-points="openPointsSelectorForSelected"
                     @remove-selected-student="handleRemoveSelectedStudent" />
             </aside>
         </section>
+
+        <div v-if="isCompactViewport && selectedStudents.length" class="students-mobile-actions" aria-label="已选学生操作">
+            <button type="button" class="students-selection-summary" @click="selectionDetailsVisible = true">
+                <span aria-live="polite">已选 {{ selectedStudents.length }} 人</span>
+                <i-ep-arrow-right aria-hidden="true" />
+            </button>
+            <button type="button" class="students-points-button is-plus" :disabled="isArchivedSemester || pointsApplying || loading"
+                @click="openPointsSelectorForSelected({ tab: 'plus' })"><i-ep-plus aria-hidden="true" />加分</button>
+            <button type="button" class="students-points-button" :disabled="isArchivedSemester || pointsApplying || loading"
+                @click="openPointsSelectorForSelected({ tab: 'minus' })"><i-ep-minus aria-hidden="true" />扣分</button>
+        </div>
+
+        <AppDialogShell v-model="selectionDetailsVisible" title="当前选择" width="480px">
+            <StudentsSelectionPanel v-if="selectionDetailsVisible" :class-id="activeClassId"
+                :is-archived-semester="isArchivedSemester" :points-applying="pointsApplying || loading"
+                :selected-student="selectedStudent" :selected-students="selectedStudents"
+                :status-label="selectionStatusLabel" :title="selectedPanelTitle"
+                @locate-student="handleLocateStudent" @clear-selected-students="handleClearSelectedStudents"
+                @open-points="openPointsSelectorForSelected" @remove-selected-student="handleRemoveSelectedStudent" />
+        </AppDialogShell>
 
         <StudentsAddDialog v-model="addStudentDialogVisible" :default-mode="addStudentDialogMode"
             :disabled="!hasActiveClass" @add-single="handleAddSingle" @add-batch="handleAddBatch"
@@ -139,7 +126,8 @@
             @confirm="confirmRemoveStudent" />
 
         <StudentsPointsRuleDialog v-model="selectorVisible" v-model:tab="selectorTab" :groups="ruleGroups"
-            :loading="pointsApplying || ruleGroupsLoading" @select="handleSelectRule" />
+            :loading="ruleGroupsLoading" :applying="pointsApplying" :error="ruleGroupsError"
+            :target-label="getPointsTargetLabel(selectorTargets)" @retry="ensureRuleGroupsLoaded" @select="handleSelectRule" />
     </div>
 </template>
 
@@ -169,7 +157,8 @@ import StudentsListPanel, {
 } from "@/v3/components/students/StudentsListPanel.vue";
 import StudentsPointsRuleDialog from "@/v3/components/students/StudentsPointsRuleDialog.vue";
 import StudentsSelectionPanel from "@/v3/components/students/StudentsSelectionPanel.vue";
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 
 /** 定义学生页展示布局模式。 */
 type LayoutMode = StudentsListPanelLayoutMode
@@ -218,6 +207,20 @@ const selectorTab = ref<PointsSelectorTab>("plus")
 const selectorTargets = ref<number[]>([])
 const pointsApplying = ref(false)
 const ruleGroupsLoading = ref(false)
+const ruleGroupsError = ref("")
+const selectionDetailsVisible = ref(false)
+const compactViewport = window.matchMedia("(max-width: 920px)")
+const isCompactViewport = ref(compactViewport.matches)
+
+function syncCompactViewport(): void {
+    isCompactViewport.value = compactViewport.matches
+    if (!compactViewport.matches) {
+        selectionDetailsVisible.value = false
+    }
+}
+
+onMounted(() => compactViewport.addEventListener("change", syncCompactViewport))
+onBeforeUnmount(() => compactViewport.removeEventListener("change", syncCompactViewport))
 
 const activeClassId = computed<number | null>(() => cacheStore.getActiveClassId())
 const hasActiveClass = computed<boolean>(() => typeof activeClassId.value === "number")
@@ -236,39 +239,13 @@ const sortBy = computed<StudentsSortOption>({
     set: (value) => cacheStore.setStudentsSort(value)
 })
 
-/** 返回当前激活的排序字段。 */
-const activeSortField = computed<"points" | "name">(() => {
-    if (sortBy.value === "name-asc" || sortBy.value === "name-desc") {
-        return "name"
-    }
-
-    return "points"
-})
-
-/** 返回当前是否为倒序排序。 */
-const isSortDescending = computed<boolean>(() => {
-    return sortBy.value === "name-desc" || sortBy.value === "points-desc"
-})
-
-/** 判断指定排序字段是否处于激活状态。 */
-function isSortFieldActive(field: "points" | "name"): boolean {
-    return activeSortField.value === field
-}
-
-/** 切换当前排序字段，并默认使用正序。 */
-function handleSelectSortField(field: "points" | "name"): void {
-    sortBy.value = field === "name" ? "name-asc" : "points-asc"
-}
-
-/** 切换当前排序方向。 */
-function toggleSortDirection(): void {
-    if (activeSortField.value === "name") {
-        sortBy.value = isSortDescending.value ? "name-asc" : "name-desc"
-        return
-    }
-
-    sortBy.value = isSortDescending.value ? "points-asc" : "points-desc"
-}
+const studentSortOptions: Array<{ value: StudentsSortOption, label: string }> = [
+    { value: "points-desc", label: "积分从高到低" },
+    { value: "points-asc", label: "积分从低到高" },
+    { value: "name-asc", label: "姓名正序" },
+    { value: "name-desc", label: "姓名倒序" },
+    { value: "default", label: "默认顺序" }
+]
 
 /** 将后端性别枚举转换为前端展示性别。 */
 function toUiGender(gender?: ApiGender): UiGender {
@@ -715,12 +692,13 @@ async function ensureRuleGroupsLoaded(): Promise<void> {
     }
 
     ruleGroupsLoading.value = true
+    ruleGroupsError.value = ""
     try {
         ruleGroups.value = await pointsManager.listRuleGroups()
     } catch (error) {
         console.error("加载积分规则失败", error)
         ruleGroups.value = []
-        ElMessage.error("加载积分规则失败")
+        ruleGroupsError.value = "积分规则加载失败，请重试。"
     } finally {
         ruleGroupsLoading.value = false
     }
@@ -745,6 +723,9 @@ function getPointsTargetLabel(studentIds: number[]): string {
 
 /** 打开积分规则选择弹窗。 */
 async function openPointsSelector(studentIds: number[], tab: Exclude<PointsSelectorTab, "all">): Promise<void> {
+    if (pointsApplying.value || loading.value) {
+        return
+    }
     if (isArchivedSemester.value) {
         ElMessage.warning("归档学期不支持积分操作")
         return
@@ -761,15 +742,11 @@ async function openPointsSelector(studentIds: number[], tab: Exclude<PointsSelec
         return
     }
 
-    await ensureRuleGroupsLoaded()
-    if (ruleGroups.value.length === 0) {
-        ElMessage.warning("暂无可用积分规则")
-        return
-    }
-
     selectorTargets.value = validStudentIds
     selectorTab.value = tab
+    selectionDetailsVisible.value = false
     selectorVisible.value = true
+    await ensureRuleGroupsLoaded()
 }
 
 /** 打开当前选中学生的积分操作。 */
@@ -783,6 +760,7 @@ async function handleLocateStudent(studentId: number): Promise<void> {
         return
     }
 
+    selectionDetailsVisible.value = false
     await nextTick()
     const targetElement = document.getElementById(`student-card-${studentId}`)
     if (!targetElement) {
@@ -791,7 +769,7 @@ async function handleLocateStudent(studentId: number): Promise<void> {
     }
 
     targetElement.scrollIntoView({
-        behavior: "smooth",
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
         block: "center",
         inline: "nearest"
     })
@@ -799,7 +777,8 @@ async function handleLocateStudent(studentId: number): Promise<void> {
 
 /** 处理积分规则选择。 */
 async function handleSelectRule(rule: { id: number, name: string, sign: "plus" | "minus", points: number }): Promise<void> {
-    if (!activeClassId.value || selectorTargets.value.length === 0 || pointsApplying.value) {
+    if (!activeClassId.value || isArchivedSemester.value || selectorTargets.value.length === 0
+        || pointsApplying.value || ruleGroupsLoading.value || ruleGroupsError.value) {
         return
     }
 
@@ -1083,10 +1062,23 @@ async function handleConfirmGroupImport(payload: { groups: Array<{ groupName: st
 }
 
 watch(activeClassId, async () => {
+    selectorVisible.value = false
+    selectionDetailsVisible.value = false
+    selectorTargets.value = []
+    selectedStudentIds.value = []
     keyword.value = ""
     selectedGroupId.value = null
     await loadStudentData()
 }, { immediate: true })
+
+watch(isArchivedSemester, () => {
+    selectorVisible.value = false
+    selectorTargets.value = []
+})
+
+watch(selectedStudentIds, (ids) => {
+    if (!ids.length) selectionDetailsVisible.value = false
+})
 
 watch(filteredStudents, () => {
     syncSelectedStudents()
@@ -1096,266 +1088,214 @@ watch(filteredStudents, () => {
 <style scoped>
 .students-view {
     display: grid;
-    gap: 14px;
+    gap: 20px;
+}
+
+.students-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.students-header h1 {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+}
+
+.students-header p {
+    margin: 8px 0 0;
+    color: var(--ta-text-secondary);
+    font-size: 13px;
+}
+
+.students-header svg,
+.students-manage-button svg,
+.students-view-switch svg,
+.students-mobile-actions svg {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
 }
 
 .control-panel {
+    min-width: 0;
     display: grid;
     gap: 14px;
-}
-
-.control-toolbar,
-.group-filter {
-    padding: 14px;
-    border: 1px solid var(--ta-line);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.76);
-    box-shadow: var(--ta-shadow-1);
 }
 
 .control-toolbar {
     display: flex;
-    align-items: stretch;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 12px;
-}
-
-.control-actions,
-.toolbar-row,
-.segmented-control,
-.group-chip-row {
-    display: flex;
     align-items: center;
-}
-
-.control-actions {
-    align-items: flex-end;
-    justify-content: flex-start;
     gap: 10px;
-    flex-wrap: wrap;
-}
-
-.control-actions .chip-button {
-    font-size: 15px !important;
-}
-
-.control-actions :is(.ghost-button, .primary-button) {
-    font-size: 15px !important;
-}
-
-.control-block {
-    min-width: 0;
-    display: grid;
-    gap: 6px;
-}
-
-.control-block--search {
-    min-width: min(320px, 100%);
-    flex: 1;
-}
-
-.control-label {
-    color: var(--ta-text-tertiary);
-    font-size: 12px;
-    line-height: 1;
-}
-
-.control-actions .control-block:nth-child(n + 3) > .control-label {
-    visibility: hidden;
 }
 
 .search-box {
     position: relative;
-    border-radius: 10px;
-    background: #eeeeF2;
-    transition: background-color 140ms ease, box-shadow 140ms ease;
-}
-
-.search-box:hover {
-    background: #e9e9ed;
-}
-
-.search-box:focus-within {
-    background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+    min-width: 0;
+    flex: 1;
 }
 
 .search-box__icon {
     position: absolute;
-    left: 11px;
+    left: 12px;
     top: 50%;
-    z-index: 1;
-    width: 16px;
-    height: 16px;
-    color: var(--ta-text-tertiary);
+    width: 17px;
+    height: 17px;
+    color: var(--ta-text-secondary);
     transform: translateY(-50%);
     pointer-events: none;
 }
 
 .search-box__input {
     width: 100%;
-    min-height: 38px;
-    padding: 0 12px 0 36px;
-    border: 1px solid transparent;
-    border-radius: 10px;
+    min-height: 44px;
+    padding: 0 12px 0 38px;
+    border: 1px solid var(--ta-line-strong);
+    border-radius: 11px;
     color: var(--ta-text);
-    background: transparent;
-    font-size: 14px;
-    outline: 0;
+    background: var(--ta-surface-solid);
+    font-size: 15px;
     -webkit-appearance: none;
 }
 
 .search-box__input::placeholder {
-    color: var(--ta-text-tertiary);
+    color: var(--ta-text-secondary);
 }
 
-.search-box__input:focus {
-    border-color: rgba(0, 122, 255, 0.5);
-    box-shadow: none;
-}
-
-.segmented-control {
-    min-height: 34px;
-    padding: 3px;
-    gap: 2px;
-    border-radius: 10px;
-    background: #e9e9ed;
-}
-
-.chip-button {
-    min-height: 28px;
-    padding: 0 10px;
+.students-manage-button,
+.students-filter-button,
+.students-view-switch button,
+.students-selection-summary,
+.students-points-button {
+    min-height: 36px;
+    padding: 0 12px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 7px;
     border: 0;
-    border-radius: 8px;
+    border-radius: 9px;
     color: var(--ta-text-secondary);
     background: transparent;
-    font-size: 13px;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: background-color 140ms ease, color 140ms ease, transform 100ms ease, box-shadow 140ms ease;
-}
-
-.chip-button svg {
-    width: 15px;
-    height: 15px;
-}
-
-.chip-button.is-active {
-    color: var(--ta-text);
-    background: #ffffff;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
-    font-weight: 620;
-}
-
-.sort-divider {
-    width: 1px;
-    height: 18px;
-    margin: 0 1px;
-    background: rgba(60, 60, 67, 0.14);
-}
-
-.toolbar-row {
-    gap: 7px;
-}
-
-.ghost-button,
-.primary-button {
-    min-height: 38px;
-    padding: 0 13px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    border: 0;
-    border-radius: 10px;
     font-size: 14px;
-    font-weight: 620;
-    white-space: nowrap;
     cursor: pointer;
-    transition: transform 100ms ease, background-color 140ms ease, box-shadow 140ms ease;
+    white-space: nowrap;
+    transition: background-color 140ms ease, color 140ms ease, transform 100ms ease;
 }
 
-.ghost-button {
-    color: var(--ta-text-secondary);
-    background: #ffffff;
-    box-shadow: inset 0 0 0 1px var(--ta-line-strong);
+.students-manage-button {
+    min-height: 44px;
+    border: 1px solid var(--ta-line-strong);
+    background: var(--ta-surface-solid);
 }
 
-.primary-button {
-    color: #ffffff;
-    background: var(--ta-blue);
-    box-shadow: 0 5px 14px rgba(0, 122, 255, 0.18);
-}
-
-.ghost-button:active,
-.primary-button:active,
-.chip-button:active {
-    transform: scale(0.97);
-}
-
-.ghost-button:disabled,
-.primary-button:disabled {
+.students-manage-button:disabled,
+.students-points-button:disabled {
     opacity: 0.42;
+    cursor: not-allowed;
 }
 
 .group-filter {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.students-filter-button[aria-pressed="true"] {
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+}
+
+.students-filter-button span {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.students-view-switch {
+    padding: 3px;
+    display: inline-flex;
+    gap: 2px;
+    border-radius: 10px;
+    background: var(--ta-blue-soft);
+}
+
+.students-view-switch button {
+    min-width: 34px;
+    min-height: 30px;
+    padding: 0 9px;
+    border-radius: 7px;
+}
+
+.students-view-switch button[aria-pressed="true"] {
+    color: var(--ta-blue);
+    background: var(--ta-surface-solid);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.students-sort {
+    width: 152px;
     min-width: 0;
+}
+
+.students-sort :deep(.el-select__wrapper) {
+    min-height: 36px;
+    padding: 0 12px;
+    border-radius: 10px;
+    color: var(--ta-text-secondary);
+    background: var(--ta-surface-solid);
+    box-shadow: inset 0 0 0 1px rgba(0, 122, 255, 0.18) !important;
+    font-size: 13px;
+}
+
+.students-sort :deep(.el-select__wrapper.is-focused) {
+    box-shadow: 0 0 0 3px var(--ta-blue-soft), inset 0 0 0 1px var(--ta-blue) !important;
+}
+
+.students-sort :deep(.el-select__caret) {
+    color: var(--ta-blue);
+}
+
+:global(.students-sort-menu.el-popper) {
+    padding: 5px;
+    border: 1px solid rgba(0, 122, 255, 0.15);
+    border-radius: 13px;
+    background: var(--ta-surface-solid);
+    box-shadow: 0 8px 30px rgba(20, 55, 100, 0.12);
+}
+
+:global(.students-sort-menu .el-select-dropdown__list) {
+    padding: 0;
+}
+
+:global(.students-sort-menu .el-select-dropdown__item) {
+    min-height: 38px;
+    margin: 2px 0;
+    padding: 0 12px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    overflow-x: auto;
-    scrollbar-width: none;
-}
-
-.group-filter::-webkit-scrollbar {
-    display: none;
-}
-
-.group-filter > .control-label {
-    flex: 0 0 auto;
+    justify-content: space-between;
+    gap: 18px;
+    border-radius: 8px;
+    color: var(--ta-text-secondary);
     font-size: 13px;
-    white-space: nowrap;
 }
 
-.group-chip-row {
-    gap: 7px;
-    flex-wrap: nowrap;
+:global(.students-sort-menu .el-select-dropdown__item.is-selected),
+:global(.students-sort-menu .el-select-dropdown__item.is-hovering) {
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
 }
 
-.group-chip {
-    min-height: 32px !important;
-    padding: 0 11px;
-    border-radius: 999px;
-    background: #ffffff;
-    box-shadow: inset 0 0 0 1px var(--ta-line);
-    font-size: 14px !important;
-}
-
-.group-chip.is-active {
-    color: #0065d1;
-    background: #eaf4ff;
-    box-shadow: inset 0 0 0 1px rgba(0, 122, 255, 0.18);
-}
-
-.group-chip span {
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
-    display: inline-grid;
-    place-items: center;
-    border-radius: 999px;
-    color: var(--ta-text-tertiary);
-    background: var(--ta-surface-muted);
-    font-size: 12px;
+:global(.students-sort-menu .el-select-dropdown__item svg) {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
 }
 
 .students-view__notice {
-    min-height: 44px;
     padding: 10px 12px;
     display: flex;
     align-items: center;
@@ -1376,8 +1316,8 @@ watch(filteredStudents, () => {
 .students-layout {
     min-width: 0;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 350px;
-    gap: 14px;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 20px;
     align-items: start;
 }
 
@@ -1391,22 +1331,51 @@ watch(filteredStudents, () => {
     top: 84px;
 }
 
-@media (min-width: 1800px) {
-    .students-layout {
-        grid-template-columns: minmax(0, 1fr) 400px;
-    }
+.students-mobile-actions {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    z-index: 69;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 64px;
+    padding: 8px 12px;
+    border: 1px solid var(--ta-line);
+    border-radius: 15px;
+    background: var(--ta-surface-solid);
+    box-shadow: var(--ta-shadow-1);
 }
 
-@media (min-width: 2300px) {
-    .students-layout {
-        grid-template-columns: minmax(0, 1fr) 450px;
-    }
+.students-selection-summary {
+    min-width: 0;
+    margin-right: auto;
+    padding-left: 0;
+    color: var(--ta-blue);
 }
 
-@media (max-width: 1180px) {
-    .students-layout {
-        grid-template-columns: minmax(0, 1fr) 310px;
-    }
+.students-points-button {
+    border: 1px solid rgba(0, 122, 255, 0.2);
+    color: var(--ta-blue);
+    background: var(--ta-surface-solid);
+}
+
+.students-points-button.is-plus {
+    border-color: var(--ta-blue);
+    color: var(--ta-surface-solid);
+    background: var(--ta-blue);
+}
+
+.students-mobile-actions button {
+    min-height: 44px;
+}
+
+.students-manage-button:not(:disabled):active,
+.students-filter-button:active,
+.students-view-switch button:active,
+.students-mobile-actions button:not(:disabled):active {
+    transform: scale(0.97);
 }
 
 @media (max-width: 920px) {
@@ -1414,71 +1383,30 @@ watch(filteredStudents, () => {
         grid-template-columns: 1fr;
     }
 
-    .side-column {
-        position: static;
-    }
-}
-
-@media (max-width: 660px) {
-    .control-toolbar {
-        padding: 12px;
+    .students-view {
+        padding-bottom: 76px;
     }
 
-    .control-actions {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
+    .students-header h1 {
+        font-size: 25px;
     }
 
-    .control-actions .control-block:nth-child(-n + 2) {
-        grid-column: 1 / -1;
+    .students-filter-button,
+    .students-view-switch button,
+    .students-sort :deep(.el-select__wrapper) {
+        min-height: 44px;
     }
 
-    .control-actions .control-block {
-        width: 100%;
+    :global(.students-sort-menu .el-select-dropdown__item) {
+        min-height: 44px;
     }
 
-    .control-actions .control-block:nth-child(n + 3) > .control-label {
-        display: none;
+    .students-view-switch button {
+        min-width: 44px;
     }
 
-    .control-actions .control-block:nth-child(3),
-    .control-actions .control-block:nth-child(4) {
-        grid-column: span 1;
-    }
-
-    .control-actions .segmented-control,
-    .control-actions .toolbar-row,
-    .control-actions .ghost-button,
-    .control-actions .primary-button {
-        width: 100%;
-    }
-
-    .control-actions .chip-button,
-    .control-actions .toolbar-row > button {
-        min-width: 0;
-        flex: 1 1 0;
-    }
-
-    .control-actions .control-block:nth-child(3) {
-        grid-column: 1 / -1;
-    }
-
-    .control-actions .control-block:nth-child(3) .toolbar-row {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .control-actions .control-block:nth-child(4) {
-        grid-column: 1 / -1;
-    }
-
-    .group-filter {
-        margin-inline: -14px;
-        padding-inline: 14px;
-        border-left: 0;
-        border-right: 0;
-        border-radius: 0;
+    .search-box__input {
+        font-size: 16px;
     }
 }
 </style>

@@ -2,7 +2,10 @@
     <el-dialog
         v-model="visible"
         :width="width"
-        :show-close="showClose"
+        :title="title"
+        :show-close="showClose && !busy"
+        :close-on-click-modal="!busy"
+        :close-on-press-escape="!busy"
         destroy-on-close
         align-center
         append-to-body
@@ -37,6 +40,7 @@ defineOptions({ name: "AppDialogShell" })
 /** 定义通用弹窗壳组件的属性结构。 */
 interface AppDialogShellProps {
     description?: string
+    busy?: boolean
     eyebrow?: string
     modelValue: boolean
     showClose?: boolean
@@ -46,6 +50,7 @@ interface AppDialogShellProps {
 
 const props = withDefaults(defineProps<AppDialogShellProps>(), {
     description: "",
+    busy: false,
     eyebrow: "",
     showClose: true,
     width: "760px"
@@ -80,13 +85,14 @@ const visible = computed({
     max-width: calc(100vw - 24px);
     height: auto !important;
     min-height: 0;
-    max-height: calc(100vh - 40px);
+    max-height: calc(100dvh - 40px);
     overflow: hidden;
     display: flex;
     flex-direction: column;
     border: 1px solid rgba(255, 255, 255, 0.78);
     border-radius: 20px;
     background: rgba(255, 255, 255, 0.97);
+    color: var(--ta-text);
     box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
     backdrop-filter: blur(24px) saturate(160%);
 }
@@ -111,6 +117,16 @@ const visible = computed({
 :global(.app-dialog-shell .el-dialog__headerbtn:hover) {
     color: var(--ta-text);
     background: #e9e9ed;
+}
+
+:global(.app-dialog-shell .el-dialog__body) {
+    min-height: 0;
+    overflow-y: auto;
+}
+
+:global(.app-dialog-shell .el-dialog__header),
+:global(.app-dialog-shell .el-dialog__footer) {
+    flex-shrink: 0;
 }
 
 .app-dialog-shell__header {
@@ -146,7 +162,7 @@ const visible = computed({
 
 .app-dialog-shell__body {
     min-height: 0;
-    max-height: calc(100vh - 180px);
+    max-height: calc(100dvh - 180px);
     flex: 0 1 auto;
     overflow-y: auto;
     padding: 16px 20px 20px;
@@ -158,6 +174,14 @@ const visible = computed({
 }
 
 @media (max-width: 660px) {
+    :global(.app-dialog-shell__overlay.dialog-fade-enter-active .el-overlay-dialog) {
+        animation: app-sheet-enter 200ms ease-out;
+    }
+
+    :global(.app-dialog-shell__overlay.dialog-fade-leave-active .el-overlay-dialog) {
+        animation: app-sheet-exit 160ms ease-in;
+    }
+
     :global(.app-dialog-shell__overlay .el-overlay-dialog) {
         align-items: flex-end;
         padding: 8px;
@@ -166,8 +190,16 @@ const visible = computed({
     :global(.el-dialog.app-dialog-shell) {
         width: 100% !important;
         max-width: none;
-        max-height: calc(100vh - 16px);
+        align-self: flex-end;
+        max-height: calc(100dvh - 16px);
         border-radius: 20px;
+    }
+
+    :global(.app-dialog-shell .el-dialog__headerbtn) {
+        top: 8px;
+        right: 8px;
+        width: 44px;
+        height: 44px;
     }
 
     .app-dialog-shell__header {
@@ -180,6 +212,40 @@ const visible = computed({
 
     .app-dialog-shell__footer {
         padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+    }
+}
+
+@keyframes app-sheet-enter {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes app-sheet-exit {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(16px); }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    :global(.app-dialog-shell__overlay) {
+        backdrop-filter: none;
+    }
+
+    :global(.el-dialog.app-dialog-shell) {
+        background: var(--ta-surface-solid);
+        backdrop-filter: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :global(.app-dialog-shell__overlay .el-overlay-dialog) {
+        animation: none !important;
+    }
+}
+
+@media (prefers-contrast: more) {
+    :global(.el-dialog.app-dialog-shell) {
+        border-color: var(--ta-line-strong);
+        background: var(--ta-surface-solid);
     }
 }
 </style>

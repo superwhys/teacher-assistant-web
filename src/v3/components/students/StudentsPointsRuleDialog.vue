@@ -1,147 +1,51 @@
 <template>
-    <AppDialogShell
-        v-model="visible"
-        title="选择积分规则"
-        eyebrow="积分操作"
-        description="按规则组快速选择本次要执行的加分或扣分项目"
-        width="860px"
-        :show-close="!loading"
-    >
-        <div class="students-points-rule-dialog" v-loading="loading">
-            <div class="mode-switch">
-                <button
-                    type="button"
-                    class="mode-switch__button"
-                    :class="{ 'is-active': currentTab === 'all' }"
-                    :disabled="loading"
-                    @click="currentTab = 'all'"
-                >
-                    全部规则
-                </button>
-                <button
-                    type="button"
-                    class="mode-switch__button"
-                    :class="{ 'is-active': currentTab === 'plus' }"
-                    :disabled="loading"
-                    @click="currentTab = 'plus'"
-                >
-                    加分规则
-                </button>
-                <button
-                    type="button"
-                    class="mode-switch__button"
-                    :class="{ 'is-active': currentTab === 'minus' }"
-                    :disabled="loading"
-                    @click="currentTab = 'minus'"
-                >
-                    扣分规则
-                </button>
+    <AppDialogShell v-model="visible" :title="currentTab === 'minus' ? '选择扣分规则' : currentTab === 'plus' ? '选择加分规则' : '选择积分规则'"
+        eyebrow="积分操作" :description="targetLabel ? `本次操作：${targetLabel}` : '选择本次加分或扣分项目'"
+        width="640px" :busy="applying">
+        <section v-if="loading" class="rules-state" role="status" aria-live="polite">
+            <el-skeleton :rows="4" animated />
+            <p>正在加载积分规则…</p>
+        </section>
+        <section v-else-if="error" class="rules-state" role="alert">
+            <strong>{{ error }}</strong>
+            <button type="button" class="primary-button" @click="emit('retry')">重新加载</button>
+        </section>
+        <div v-else class="students-points-rule-dialog" v-loading="applying" element-loading-text="正在应用积分，请稍候">
+            <div class="rule-sign-switch" role="group" aria-label="积分规则类型">
+                <button type="button" :aria-pressed="currentTab === 'all'" :disabled="applying" @click="currentTab = 'all'">全部规则</button>
+                <button type="button" :aria-pressed="currentTab === 'plus'" :disabled="applying" @click="currentTab = 'plus'">加分规则</button>
+                <button type="button" :aria-pressed="currentTab === 'minus'" :disabled="applying" @click="currentTab = 'minus'">扣分规则</button>
             </div>
 
-            <section class="surface-card">
-                <div class="section-head">
-                    <div>
-                        <h4>规则筛选</h4>
-                        <p>支持按规则名称快速搜索，点击卡片即可立即执行积分操作。</p>
-                    </div>
-                    <div class="meta-tags">
-                        <span class="meta-tag">分组 {{ filteredGroups.length }}</span>
-                        <span class="meta-tag">规则 {{ filteredRuleCount }}</span>
-                    </div>
+            <el-input v-model="keyword" size="large" placeholder="搜索规则名称" aria-label="搜索积分规则" clearable :disabled="applying">
+                <template #prefix><i-ep-search aria-hidden="true" /></template>
+            </el-input>
+
+            <template v-if="filteredGroups.length > 0 && activeGroup">
+                <div class="rule-group-switch" role="group" aria-label="规则分组">
+                    <button v-for="group in filteredGroups" :key="group.id" type="button"
+                        :aria-pressed="activeGroupId === group.id" :disabled="applying" @click="activeGroupId = group.id">
+                        <span v-if="group.icon" aria-hidden="true">{{ group.icon }}</span>
+                        {{ group.name }} <small>{{ group.rules.length }}</small>
+                    </button>
                 </div>
-
-                <label class="field-block">
-                    <span class="field-block__label">搜索规则</span>
-                    <el-input v-model="keyword" size="large" placeholder="请输入规则名称" clearable :disabled="loading">
-                        <template #prefix>
-                            <i-ep-search />
-                        </template>
-                    </el-input>
-                </label>
-            </section>
-
-            <div v-if="filteredGroups.length > 0 && activeGroup" class="selector-layout">
-                <aside class="surface-card group-sidebar">
-                    <div class="section-head section-head--compact">
-                        <div>
-                            <h4>规则分组</h4>
-                            <p>先选分组，再从右侧快速点选规则。</p>
-                        </div>
-                    </div>
-
-                    <div class="group-nav-list">
-                        <button
-                            v-for="group in filteredGroups"
-                            :key="group.id"
-                            type="button"
-                            class="group-nav-item"
-                            :class="{ 'is-active': activeGroupId === group.id }"
-                            :disabled="loading"
-                            @click="activeGroupId = group.id"
-                        >
-                            <span v-if="group.icon" class="group-nav-item__icon">{{ group.icon }}</span>
-                            <span class="group-nav-item__body">
-                                <strong>{{ group.name }}</strong>
-                                <small>{{ group.rules.length }} 项规则</small>
-                            </span>
-                        </button>
-                    </div>
-                </aside>
-
-                <section class="surface-card rules-panel">
-                    <div class="section-head">
-                        <div class="group-head">
-                            <span v-if="activeGroup.icon" class="group-head__icon">{{ activeGroup.icon }}</span>
-                            <div>
-                                <h4>{{ activeGroup.name }}</h4>
-                                    <p>当前分组下可直接选择积分项目。</p>
-                            </div>
-                        </div>
-                        <div class="meta-tags">
-                            <span class="meta-tag">{{ activeGroup.rules.length }} 项</span>
-                        </div>
-                    </div>
-
-                    <div class="rule-grid">
-                        <button
-                            v-for="rule in activeGroup.rules"
-                            :key="rule.id"
-                            type="button"
-                            class="rule-card"
-                            :class="{
-                                'rule-card--plus': rule.sign === 'plus',
-                                'rule-card--minus': rule.sign === 'minus',
-                                'is-loading': loading
-                            }"
-                            :disabled="loading"
-                            @click="handleSelectRule(rule)"
-                        >
-                            <div class="rule-card__body">
-                                <strong>{{ rule.name }}</strong>
-                                <p>{{ `${activeGroup.name} · ${rule.sign === 'plus' ? '加分' : '扣分'}规则` }}</p>
-                            </div>
-                            <div class="rule-card__meta">
-                                <span class="rule-card__points">
-                                    {{ rule.sign === 'plus' ? "+" : "-" }}{{ Math.abs(rule.points) }}
-                                </span>
-                                <i-ep-arrow-right />
-                            </div>
-                        </button>
-                    </div>
-                </section>
-            </div>
-
-            <section v-else class="surface-card empty-card">
+                <div class="rule-grid">
+                    <button v-for="rule in activeGroup.rules" :key="rule.id" type="button" class="rule-card"
+                        :class="{ 'rule-card--minus': rule.sign === 'minus' }" :disabled="applying" @click="handleSelectRule(rule)">
+                        <span class="rule-card__name">{{ rule.name }}</span>
+                        <strong>{{ rule.sign === 'plus' ? '+' : '-' }}{{ Math.abs(rule.points) }}</strong>
+                    </button>
+                </div>
+                <p class="rules-hint">{{ filteredGroups.length }} 个分组 · {{ filteredRuleCount }} 项规则，点击规则立即执行。</p>
+            </template>
+            <section v-else class="rules-state">
                 <strong>当前条件下暂无可用规则</strong>
                 <p>你可以切换加分/扣分页签，或调整搜索关键字后再试。</p>
             </section>
         </div>
-
         <template #footer>
             <div class="dialog-actions">
-                <button type="button" class="ghost-button" :disabled="loading" @click="visible = false">
-                    关闭
-                </button>
+                <button type="button" class="ghost-button" :disabled="applying" @click="visible = false">关闭</button>
             </div>
         </template>
     </AppDialogShell>
@@ -178,17 +82,24 @@ interface StudentsPointsRuleDialogProps {
     tab?: SelectorTab
     groups: RuleGroup[]
     loading?: boolean
+    applying?: boolean
+    error?: string
+    targetLabel?: string
 }
 
 const props = withDefaults(defineProps<StudentsPointsRuleDialogProps>(), {
     tab: "plus",
-    loading: false
+    loading: false,
+    applying: false,
+    error: "",
+    targetLabel: ""
 })
 
 const emit = defineEmits<{
     (event: "update:modelValue", value: boolean): void
     (event: "update:tab", value: SelectorTab): void
     (event: "select", rule: UiRule): void
+    (event: "retry"): void
 }>()
 
 const visible = computed({
@@ -304,7 +215,7 @@ const activeGroup = computed<UiGroup | null>(() => {
 
 /** 处理积分规则点击选择。 */
 function handleSelectRule(rule: UiRule): void {
-    if (props.loading) {
+    if (props.loading || props.applying) {
         return
     }
 
@@ -335,374 +246,151 @@ watch(filteredGroups, (groups) => {
 <style scoped>
 .students-points-rule-dialog {
     display: grid;
-    gap: 18px;
+    gap: 16px;
 }
 
-.mode-switch,
-.dialog-actions,
-.meta-tags,
-.group-head {
+.rules-state {
+    min-height: 210px;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 16px;
+    color: var(--ta-text-secondary);
+    text-align: center;
+}
+
+.rules-state p {
+    margin: 0;
+    font-size: 14px;
+}
+
+.rule-sign-switch,
+.rule-group-switch {
     display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.mode-switch,
-.meta-tags {
+    gap: 4px;
     flex-wrap: wrap;
 }
 
-.mode-switch__button,
-.ghost-button,
-.rule-card {
-    border: none;
-    font: inherit;
-    cursor: pointer;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+.rule-sign-switch {
+    padding: 3px;
+    border-radius: 11px;
+    background: var(--ta-blue-soft);
 }
 
-.mode-switch__button,
-.ghost-button {
-    min-height: 44px;
-    padding: 0 16px;
-    border-radius: 16px;
-}
-
-.mode-switch__button,
-.ghost-button {
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
-    color: #16213e;
-}
-
-.mode-switch__button.is-active {
-    border-color: rgba(85, 104, 255, 0.24);
-    background: rgba(85, 104, 255, 0.12);
-    color: #5568ff;
-}
-
-.mode-switch__button:hover,
-.ghost-button:hover,
-.rule-card:hover {
-    transform: translateY(-2px);
-}
-
-.mode-switch__button:disabled,
-.ghost-button:disabled,
-.rule-card:disabled {
-    opacity: 0.56;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.surface-card {
-    padding: 20px;
-    border: 1px solid rgba(122, 141, 198, 0.16);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.78);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-
-.section-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 14px;
-}
-
-.section-head h4,
-.section-head p {
-    margin: 0;
-}
-
-.section-head h4 {
-    color: #16213e;
-    font-size: 19px;
-}
-
-.section-head p {
-    margin-top: 6px;
-    color: #627099;
-    line-height: 1.7;
-}
-
-.meta-tags {
-    justify-content: flex-end;
-}
-
-.meta-tag {
-    display: inline-flex;
-    align-items: center;
-    min-height: 32px;
+.rule-sign-switch button,
+.rule-group-switch button {
+    min-height: 36px;
     padding: 0 12px;
-    border-radius: 999px;
-    background: rgba(85, 104, 255, 0.1);
-    color: #5568ff;
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.field-block {
-    display: grid;
-    gap: 10px;
-}
-
-.field-block__label {
-    display: block;
-    color: #627099;
+    border: 0;
+    border-radius: 8px;
+    color: var(--ta-text-secondary);
+    background: transparent;
     font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    cursor: pointer;
 }
 
-.selector-layout {
-    display: grid;
-    grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
-    gap: 16px;
-    min-height: 0;
+.rule-sign-switch button {
+    flex: 1;
 }
 
-.group-sidebar,
-.rules-panel {
-    min-height: 0;
+.rule-sign-switch button[aria-pressed="true"] {
+    color: var(--ta-blue);
+    background: var(--ta-surface-solid);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
-.group-sidebar {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    gap: 12px;
+.rule-group-switch button[aria-pressed="true"] {
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
 }
 
-.rules-panel {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    gap: 12px;
-}
-
-.section-head--compact {
-    margin-bottom: 0;
-}
-
-.group-nav-list {
-    display: grid;
-    gap: 10px;
-    min-height: 0;
-    max-height: 52vh;
-    padding-right: 4px;
-    overflow-y: auto;
-}
-
-.group-nav-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-    padding: 14px 16px;
-    border: 1px solid rgba(122, 141, 198, 0.18);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.88);
-    text-align: left;
-}
-
-.group-nav-item.is-active {
-    border-color: rgba(85, 104, 255, 0.24);
-    background: rgba(85, 104, 255, 0.1);
-    box-shadow: 0 10px 22px rgba(85, 104, 255, 0.1);
-}
-
-.group-nav-item__icon {
-    flex-shrink: 0;
-    width: 38px;
-    height: 38px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 14px;
-    background: rgba(85, 104, 255, 0.08);
-    font-size: 19px;
-}
-
-.group-nav-item__body {
-    display: grid;
-    gap: 4px;
-    min-width: 0;
-}
-
-.group-nav-item__body strong,
-.group-nav-item__body small {
-    display: block;
-}
-
-.group-nav-item__body strong {
-    color: #16213e;
-    font-size: 16px;
-    line-height: 1.4;
-}
-
-.group-nav-item__body small {
-    color: #627099;
-    font-size: 13px;
-}
-
-.group-head {
-    align-items: flex-start;
-}
-
-.group-head__icon {
-    flex-shrink: 0;
-    width: 40px;
-    height: 40px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 14px;
-    background: rgba(85, 104, 255, 0.08);
-    font-size: 19px;
+.rule-group-switch small {
+    margin-left: 4px;
+    font-size: 12px;
 }
 
 .rule-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    min-height: 0;
-    max-height: 52vh;
-    padding: 4px 4px 0 0;
-    overflow-y: auto;
+    gap: 10px;
 }
 
 .rule-card {
+    min-width: 0;
+    min-height: 60px;
+    padding: 14px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    width: 100%;
-    min-height: 72px;
-    padding: 14px 16px;
-    border-radius: 20px;
+    gap: 16px;
+    border: 1px solid var(--ta-line);
+    border-radius: 12px;
+    color: var(--ta-text);
+    background: var(--ta-surface-solid);
     text-align: left;
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid rgba(122, 141, 198, 0.18);
-}
-
-.rule-card--plus {
-    box-shadow: 0 10px 24px rgba(85, 104, 255, 0.08);
-}
-
-.rule-card--minus {
-    box-shadow: 0 10px 24px rgba(255, 107, 129, 0.08);
-}
-
-.rule-card--plus:hover {
-    border-color: rgba(85, 104, 255, 0.24);
-    background: rgba(85, 104, 255, 0.06);
-}
-
-.rule-card--minus:hover {
-    border-color: rgba(255, 107, 129, 0.24);
-    background: rgba(255, 107, 129, 0.06);
-}
-
-.rule-card__body {
-    min-width: 0;
-}
-
-.rule-card__body strong {
-    display: block;
-    color: #16213e;
-    font-size: 16px;
-    line-height: 1.45;
-}
-
-.rule-card__body p {
-    margin: 4px 0 0;
-    color: #627099;
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-.rule-card__meta {
-    display: grid;
-    justify-items: end;
-    gap: 8px;
-    flex-shrink: 0;
-    color: #8a96b8;
-}
-
-.rule-card__points {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 64px;
-    min-height: 34px;
-    padding: 0 12px;
-    border-radius: 999px;
     font-size: 15px;
-    font-weight: 800;
+    cursor: pointer;
+    transition: border-color 140ms ease, background-color 140ms ease, transform 100ms ease;
 }
 
-.rule-card--plus .rule-card__points {
-    background: rgba(85, 104, 255, 0.12);
-    color: #5568ff;
+.rule-card__name {
+    overflow-wrap: anywhere;
 }
 
-.rule-card--minus .rule-card__points {
-    background: rgba(255, 107, 129, 0.12);
-    color: #d92d20;
+.rule-card strong {
+    flex-shrink: 0;
+    color: var(--ta-blue);
+    font-variant-numeric: tabular-nums;
 }
 
-.empty-card strong {
-    display: block;
-    font-size: 19px;
+.rule-card--minus strong {
+    color: var(--ta-red);
 }
 
-.empty-card p {
-    margin: 10px 0 0;
-    color: #627099;
-    line-height: 1.7;
+.rule-card:not(:disabled):hover {
+    border-color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+}
+
+.rule-card:not(:disabled):active {
+    transform: scale(0.985);
+}
+
+.rule-card:disabled,
+.rule-sign-switch button:disabled,
+.rule-group-switch button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.rules-hint {
+    margin: 0;
+    color: var(--ta-text-secondary);
+    font-size: 12px;
 }
 
 .dialog-actions {
+    display: flex;
     justify-content: flex-end;
 }
 
-.students-points-rule-dialog :deep(.el-input__wrapper) {
-    border-radius: 16px;
-    box-shadow: none;
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
-}
-
-.students-points-rule-dialog :deep(.el-input__wrapper.is-focus) {
-    border-color: rgba(85, 104, 255, 0.36);
-    box-shadow: 0 0 0 4px rgba(85, 104, 255, 0.08);
-}
-
-@media (max-width: 768px) {
-    .selector-layout {
-        grid-template-columns: 1fr;
-    }
-
-    .section-head,
-    .dialog-actions {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .meta-tags {
-        justify-content: flex-start;
-    }
-
+@media (max-width: 660px) {
     .rule-grid {
         grid-template-columns: 1fr;
-        max-height: none;
-        overflow: visible;
     }
 
-    .group-nav-list {
-        max-height: none;
-        overflow: visible;
+    .rule-sign-switch button,
+    .rule-group-switch button,
+    .dialog-actions .ghost-button {
+        min-height: 44px;
+    }
+
+    .rule-sign-switch button {
+        padding-inline: 8px;
+    }
+
+    .dialog-actions .ghost-button {
+        width: 100%;
     }
 }
 </style>

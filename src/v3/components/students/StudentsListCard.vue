@@ -1,62 +1,37 @@
 <template>
     <article :id="`student-card-${student.id}`" class="student-card"
-        :class="{ 'is-group': displayMode === 'group', 'is-list': displayMode === 'list', 'is-selected': selected }"
-        @click.stop="emit('select', student.id)">
-        <div v-if="selected && displayMode !== 'group'" class="student-card__selected-badge">
-            <i-ep-check />
-        </div>
-        <div class="student-card__accent" :class="student.toneClass" />
+        :class="{ 'is-group': displayMode === 'group', 'is-list': displayMode === 'list', 'is-selected': selected }">
+        <button type="button" class="student-card__select" :aria-pressed="selected"
+            :aria-label="`选择${student.name}，可用积分${student.availablePoints}，总积分${student.totalPoints}`"
+            @click.stop="emit('select', student.id)" />
 
         <div class="student-card__head">
-            <div class="student-card__main">
-                <div class="student-profile">
-                    <div v-if="displayMode !== 'group'" class="student-avatar" :class="student.toneClass">
-                        {{ student.initials }}
-                    </div>
-                    <div class="student-profile__body">
-                        <div v-if="displayMode === 'list'" class="student-profile__inline">
-                            <strong class="student-profile__name">{{ student.name }}</strong>
-                            <p>{{ getGenderLabel(student.gender) }}</p>
-                            <span class="student-profile__score" :style="getScoreStyle(student.toneClass)">
-                                <span class="student-profile__score-label">可用</span>
-                                <span class="student-profile__score-value">{{ student.availablePoints }}</span>
-                                <span class="student-profile__score-separator">/</span>
-                                <span class="student-profile__score-label">总分</span>
-                                <span class="student-profile__score-value">{{ student.totalPoints }}</span>
-                            </span>
-                        </div>
-                        <div v-else-if="displayMode === 'group'">
-                            <strong class="student-profile__name">{{ student.name }}</strong>
-                            <p class="student-profile__group-score">积分 {{ student.totalPoints }}</p>
-                        </div>
-                        <div v-else>
-                            <strong class="student-profile__name">{{ student.name }}</strong>
-                            <div class="student-profile__meta">
-                                <p>{{ getGenderLabel(student.gender) }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="student-card__actions">
-                    <button type="button" class="icon-button" @click.stop="emit('edit', student)">
-                        <i-ep-edit-pen />
-                    </button>
-                    <button type="button" class="icon-button icon-button--danger" @click.stop="emit('remove', student)">
-                        <i-ep-delete />
-                    </button>
-                </div>
+            <div v-if="displayMode !== 'group'" class="student-avatar" aria-hidden="true">{{ student.initials }}</div>
+            <div class="student-profile">
+                <strong class="student-profile__name">{{ student.name }}</strong>
+                <p>{{ getGenderLabel(student.gender) }} · {{ student.groupName }}</p>
             </div>
+        </div>
 
-            <div v-if="displayMode === 'card'" class="student-card__score-row">
-                <span class="student-profile__score" :style="getScoreStyle(student.toneClass)">
-                    <span class="student-profile__score-label">可用</span>
-                    <span class="student-profile__score-value">{{ student.availablePoints }}</span>
-                    <span class="student-profile__score-separator">/</span>
-                    <span class="student-profile__score-label">总分</span>
-                    <span class="student-profile__score-value">{{ student.totalPoints }}</span>
-                </span>
-            </div>
+        <el-dropdown class="student-card__actions" trigger="click" placement="bottom-end">
+            <button type="button" class="student-card__menu" :aria-label="`管理${student.name}`" @click.stop>
+                <i-ep-more-filled aria-hidden="true" />
+            </button>
+            <template #dropdown>
+                <el-dropdown-menu>
+                    <el-dropdown-item @click="emit('edit', student)"><i-ep-edit-pen />编辑学生</el-dropdown-item>
+                    <el-dropdown-item divided @click="emit('remove', student)"><i-ep-delete />删除学生</el-dropdown-item>
+                </el-dropdown-menu>
+            </template>
+        </el-dropdown>
+
+        <div class="student-card__score-row">
+            <template v-if="displayMode !== 'group'">
+                <span class="student-profile__available"><strong>{{ student.availablePoints }}</strong> 可用</span>
+                <span class="student-profile__total">总分 {{ student.totalPoints }}</span>
+            </template>
+            <span v-else class="student-profile__total">积分 {{ student.totalPoints }}</span>
+            <i-ep-circle-check-filled v-if="selected" class="student-card__selected-badge" aria-hidden="true" />
         </div>
     </article>
 </template>
@@ -101,51 +76,6 @@ withDefaults(defineProps<StudentsListCardProps>(), {
 })
 const emit = defineEmits<StudentsListCardEmits>()
 
-/** 定义学生积分标签的配色结构。 */
-interface StudentScoreToneStyle {
-    background: string
-    backgroundSelected: string
-    color: string
-}
-
-const STUDENT_SCORE_TONE_STYLE_MAP: Record<string, StudentScoreToneStyle> = {
-    "tone-blue": {
-        color: "#4f7cff",
-        background: "rgba(79, 124, 255, 0.1)",
-        backgroundSelected: "rgba(79, 124, 255, 0.18)"
-    },
-    "tone-orange": {
-        color: "#ff8a3d",
-        background: "rgba(255, 138, 61, 0.12)",
-        backgroundSelected: "rgba(255, 138, 61, 0.2)"
-    },
-    "tone-emerald": {
-        color: "#18b979",
-        background: "rgba(24, 185, 121, 0.12)",
-        backgroundSelected: "rgba(24, 185, 121, 0.2)"
-    },
-    "tone-rose": {
-        color: "#ff6f91",
-        background: "rgba(255, 111, 145, 0.12)",
-        backgroundSelected: "rgba(255, 111, 145, 0.2)"
-    },
-    "tone-violet": {
-        color: "#8b5cf6",
-        background: "rgba(139, 92, 246, 0.12)",
-        backgroundSelected: "rgba(139, 92, 246, 0.2)"
-    },
-    "tone-cyan": {
-        color: "#06b6d4",
-        background: "rgba(6, 182, 212, 0.12)",
-        backgroundSelected: "rgba(6, 182, 212, 0.2)"
-    },
-    "tone-slate": {
-        color: "#64748b",
-        background: "rgba(100, 116, 139, 0.12)",
-        backgroundSelected: "rgba(100, 116, 139, 0.2)"
-    }
-}
-
 /** 返回性别显示文案。 */
 function getGenderLabel(gender: UiGender): string {
     if (gender === "male") {
@@ -159,139 +89,53 @@ function getGenderLabel(gender: UiGender): string {
     return "性别未知"
 }
 
-/** 返回学生积分标签使用的动态样式。 */
-function getScoreStyle(toneClass: string): Record<string, string> {
-    const defaultToneStyle = STUDENT_SCORE_TONE_STYLE_MAP["tone-blue"] as StudentScoreToneStyle
-    const toneStyle = STUDENT_SCORE_TONE_STYLE_MAP[toneClass] ?? defaultToneStyle
-
-    return {
-        "--student-score-background": toneStyle.background,
-        "--student-score-background-selected": toneStyle.backgroundSelected,
-        "--student-score-color": toneStyle.color
-    }
-}
-
 </script>
 
 <style scoped>
 .student-card {
     position: relative;
     min-width: 0;
-    min-height: 126px;
-    padding: 14px;
-    overflow: hidden;
+    padding: 16px;
+    display: grid;
+    gap: 18px;
     border: 1px solid var(--ta-line);
-    border-radius: 16px;
-    background: #ffffff;
-    cursor: pointer;
+    border-radius: 15px;
+    background: var(--ta-surface-solid);
     transition: border-color 140ms ease, box-shadow 140ms ease, transform 100ms ease;
 }
 
 .student-card:hover {
-    border-color: rgba(0, 122, 255, 0.25);
+    border-color: rgba(0, 122, 255, 0.3);
 }
 
-.student-card:active {
+.student-card:has(.student-card__select:active) {
     transform: scale(0.985);
 }
 
 .student-card.is-selected {
-    border-color: rgba(0, 122, 255, 0.62);
-    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+    border-color: var(--ta-blue);
+    box-shadow: 0 0 0 2px var(--ta-blue-soft);
 }
 
-.student-card.is-list {
-    min-height: 68px;
-    padding: 10px 12px;
-}
-
-.student-card.is-group {
-    min-height: 72px;
-    padding: 11px;
-    background: var(--ta-surface-muted);
-}
-
-.student-card.is-group:hover {
-    background: #ffffff;
-}
-
-.student-card.is-group.is-selected {
-    background: var(--ta-blue-soft);
-}
-
-.student-card__accent {
+.student-card__select {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: var(--ta-blue);
-}
-
-.student-card__accent.tone-orange {
-    background: #ff9f0a;
-}
-
-.student-card__accent.tone-emerald {
-    background: #34c759;
-}
-
-.student-card__accent.tone-rose {
-    background: #ff375f;
-}
-
-.student-card__accent.tone-violet {
-    background: #af52de;
-}
-
-.student-card__accent.tone-cyan {
-    background: #32ade6;
-}
-
-.student-card__accent.tone-slate {
-    background: #8e8e93;
-}
-
-.student-card__selected-badge {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 2;
-    width: 22px;
-    height: 22px;
-    display: grid;
-    place-items: center;
-    border-radius: 50%;
-    color: #ffffff;
-    background: var(--ta-blue);
-    font-size: 13px;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+    cursor: pointer;
 }
 
 .student-card__head {
-    display: grid;
-    gap: 12px;
-}
-
-.student-card__main,
-.student-profile,
-.student-profile__inline,
-.student-card__score-row,
-.student-profile__score,
-.student-card__actions {
+    min-width: 0;
+    padding-right: 25px;
     display: flex;
     align-items: center;
-}
-
-.student-card__main {
-    min-width: 0;
-    align-items: flex-start;
-    justify-content: space-between;
     gap: 10px;
-}
-
-.student-profile {
-    min-width: 0;
-    gap: 10px;
+    pointer-events: none;
 }
 
 .student-avatar {
@@ -300,201 +144,158 @@ function getScoreStyle(toneClass: string): Record<string, string> {
     flex: 0 0 auto;
     display: grid;
     place-items: center;
-    border-radius: 13px;
-    color: #0069d6;
-    background: #e7f3ff;
-    font-size: 16px;
-    font-weight: 700;
+    border-radius: 50%;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+    font-size: 17px;
+    font-weight: 600;
 }
 
-.student-avatar.tone-orange {
-    color: #a84b00;
-    background: #fff0e0;
-}
-
-.student-avatar.tone-emerald {
-    color: #26713c;
-    background: #e9f8ed;
-}
-
-.student-avatar.tone-rose {
-    color: #b42345;
-    background: #fff0f3;
-}
-
-.student-avatar.tone-violet {
-    color: #74409b;
-    background: #f6edfb;
-}
-
-.student-avatar.tone-cyan {
-    color: #087a99;
-    background: #e9f8fc;
-}
-
-.student-avatar.tone-slate {
-    color: #59616d;
-    background: #eff1f4;
-}
-
-.student-profile__body {
+.student-profile {
     min-width: 0;
 }
 
 .student-profile__name {
     display: block;
-    overflow: hidden;
-    font-size: 15px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    color: var(--ta-text);
+    font-size: 17px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
 }
 
-.student-profile__meta p,
-.student-profile__inline p {
+.student-profile p {
     margin: 3px 0 0;
-    color: var(--ta-text-tertiary);
+    color: var(--ta-text-secondary);
     font-size: 12px;
-}
-
-.student-profile__inline {
-    min-width: 0;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.student-profile__inline p {
-    margin: 0;
+    overflow-wrap: anywhere;
 }
 
 .student-card__actions {
-    flex: 0 0 auto;
-    gap: 5px;
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    z-index: 2;
 }
 
-.icon-button {
-    width: 30px;
-    height: 30px;
+.student-card__menu {
+    width: 34px;
+    height: 34px;
     padding: 0;
     display: grid;
     place-items: center;
     border: 0;
     border-radius: 9px;
-    color: var(--ta-text-tertiary);
-    background: var(--ta-surface-muted);
+    color: var(--ta-text-secondary);
+    background: transparent;
     cursor: pointer;
 }
 
-.icon-button:hover {
-    color: var(--ta-text);
+.student-card__menu:hover {
+    background: var(--ta-surface-muted);
 }
 
-.icon-button--danger:hover {
-    color: var(--ta-red);
-    background: var(--ta-red-soft);
-}
-
-.icon-button svg {
-    width: 15px;
-    height: 15px;
+.student-card__menu svg {
+    width: 17px;
+    height: 17px;
 }
 
 .student-card__score-row {
-    justify-content: flex-end;
-}
-
-.student-profile__score {
-    min-height: 30px;
-    padding: 0 9px;
-    gap: 5px;
-    border-radius: 9px;
-    color: var(--student-score-color, var(--ta-blue));
-    background: var(--student-score-background, var(--ta-blue-soft));
-    font-size: 12px;
-    white-space: nowrap;
-}
-
-.student-profile__score-label {
-    color: var(--ta-text-tertiary);
-}
-
-.student-profile__score-value {
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-}
-
-.student-profile__score-separator {
-    color: var(--ta-line-strong);
-}
-
-.student-card:not(.is-list):not(.is-group) .student-avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 15px;
-    font-size: 18px;
-}
-
-.student-card:not(.is-list):not(.is-group) .student-profile__name {
-    font-size: 17px;
-}
-
-.student-card:not(.is-list):not(.is-group) .student-profile__score {
-    min-height: 34px;
-    padding: 0 11px;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
     gap: 6px;
-    font-size: 14px;
+    flex-wrap: wrap;
+    color: var(--ta-text-secondary);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
 }
 
-.student-card.is-list .student-card__head,
-.student-card.is-list .student-card__main {
-    width: 100%;
+.student-profile__available strong {
+    color: var(--ta-text);
+    font-size: 23px;
+    font-weight: 650;
 }
 
-.student-card.is-group .student-card__head,
-.student-card.is-group .student-card__main {
-    width: 100%;
+.student-profile__total {
+    margin-left: auto;
 }
 
-.student-card.is-group .student-card__main {
+.student-card__selected-badge {
+    width: 16px;
+    height: 16px;
+    align-self: center;
+    color: var(--ta-blue);
+}
+
+.student-card.is-list {
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
+    padding-right: 48px;
 }
 
-.student-card.is-group .student-profile {
-    flex: 1;
+.student-card.is-list .student-card__head {
+    padding-right: 0;
+}
+
+.student-card.is-group {
+    gap: 10px;
+    padding: 12px;
 }
 
 .student-card.is-group .student-profile__name {
-    font-size: 14px;
+    font-size: 15px;
 }
 
-.student-profile__group-score {
-    margin: 3px 0 0;
-    color: var(--ta-text-tertiary);
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
+.student-card.is-group .student-profile__total {
+    margin-left: 0;
+    margin-right: auto;
 }
 
-.student-card.is-group .student-card__actions {
-    gap: 3px;
-}
+@media (max-width: 920px) {
+    .student-card__menu {
+        width: 44px;
+        height: 44px;
+    }
 
-.student-card.is-group .icon-button {
-    width: 27px !important;
-    height: 27px !important;
-    min-height: 27px !important;
-    border-radius: 8px;
-}
-
-.student-card.is-list .student-card__main {
-    align-items: center;
-}
-
-.student-card.is-list .student-profile {
-    flex: 1;
+    .student-card__actions {
+        top: 0;
+        right: 0;
+    }
 }
 
 @media (max-width: 660px) {
     .student-card {
-        min-height: 118px;
+        padding: 12px;
+        gap: 15px;
+    }
+
+    .student-card__head {
+        gap: 7px;
+        padding-right: 24px;
+    }
+
+    .student-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 15px;
+    }
+
+    .student-profile__name {
+        font-size: 15px;
+    }
+
+    .student-profile p,
+    .student-card__score-row {
+        font-size: 11px;
+    }
+
+    .student-profile__available strong {
+        font-size: 20px;
+    }
+
+    .student-card.is-list {
+        grid-template-columns: 1fr;
     }
 }
 </style>

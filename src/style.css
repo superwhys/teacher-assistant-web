@@ -466,19 +466,6 @@ body .app-dialog-shell :is(
 }
 
 /* Dialogs use the same surfaces and controls as the workspace. */
-body .el-dialog.app-dialog-shell {
-  height: auto !important;
-  padding: 0 !important;
-  align-self: center;
-  min-height: 0;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  border-radius: 20px;
-  color: var(--ta-text);
-  background: rgba(255, 255, 255, 0.97);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
-  backdrop-filter: blur(24px) saturate(160%);
-}
 
 body .app-dialog-shell :is(
   .surface-card,

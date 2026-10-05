@@ -313,35 +313,15 @@ function getStudentPinyinInitials(name?: string): string {
     }
 }
 
-/** 返回学生姓名对应的姓氏字符。 */
-function getStudentSurname(name?: string): string {
-    const safeName = name?.trim() || ""
-    if (!safeName) {
-        return "#"
-    }
+/** 为学生稳定分配一组相近的蓝色系卡片配色。 */
+function getStudentToneClass(studentId: number, studentName: string): string {
+    const palette = ["tone-sky", "tone-azure", "tone-blue", "tone-cyan", "tone-indigo"] as const
+    const toneSeed = Array.from(studentName).reduce(
+        (seed, character) => seed + (character.codePointAt(0) ?? 0),
+        studentId * 3
+    )
 
-    return safeName.charAt(0) || "#"
-}
-
-/** 返回姓氏用于排序的拼音键。 */
-function getStudentSurnameSortKey(surname: string): string {
-    const safeSurname = surname.trim()
-    if (!safeSurname || safeSurname === "#") {
-        return "#"
-    }
-
-    if (/[a-zA-Z]/.test(safeSurname)) {
-        return safeSurname.toLowerCase()
-    }
-
-    try {
-        return pinyin(safeSurname, {
-            toneType: "none",
-            type: "string"
-        }).replace(/\s+/g, "").toLowerCase() || "#"
-    } catch {
-        return "#"
-    }
+    return palette[Math.abs(toneSeed) % palette.length] ?? "tone-blue"
 }
 
 /** 返回学生的标签集合。 */
@@ -411,39 +391,6 @@ function matchesStudentKeyword(studentId: number, token: string): boolean {
         || searchIndex.tagsLower.includes(normalizedToken)
 }
 
-/** 返回当前学生姓氏到卡片颜色的映射表。 */
-const surnameToneClassMap = computed<Map<string, string>>(() => {
-    const palette = ["tone-blue", "tone-orange", "tone-emerald", "tone-violet"] as const
-    const uniqueSurnames = Array.from(new Set(
-        students.value
-            .map((student) => getStudentSurname(student.name))
-            .filter((surname) => Boolean(surname))
-    ))
-        .sort((left, right) => {
-            const leftKey = getStudentSurnameSortKey(left)
-            const rightKey = getStudentSurnameSortKey(right)
-
-            if (leftKey === rightKey) {
-                return left.localeCompare(right, "zh-CN")
-            }
-
-            if (leftKey === "#") {
-                return 1
-            }
-
-            if (rightKey === "#") {
-                return -1
-            }
-
-            return leftKey.localeCompare(rightKey, "en")
-        })
-
-    return new Map(uniqueSurnames.map((surname, index) => [
-        surname,
-        palette[index % palette.length] ?? "tone-slate"
-    ]))
-})
-
 /** 将接口学生数据转换为页面卡片结构。 */
 function createStudentCardItem(student: StudentDTO): StudentCardItem | null {
     const studentId = typeof student.id === "number" ? student.id : 0
@@ -454,8 +401,6 @@ function createStudentCardItem(student: StudentDTO): StudentCardItem | null {
     }
 
     const groupInfo = getGroupInfo(student)
-    const surname = getStudentSurname(studentName)
-
     return {
         id: studentId,
         name: studentName,
@@ -465,7 +410,7 @@ function createStudentCardItem(student: StudentDTO): StudentCardItem | null {
         groupName: groupInfo.groupName,
         initials: getStudentInitials(studentName),
         tags: getStudentTags(student, groupInfo.groupName),
-        toneClass: surnameToneClassMap.value.get(surname) ?? "tone-slate",
+        toneClass: getStudentToneClass(studentId, studentName),
         totalPoints: typeof student.total_points === "number" ? student.total_points : 0
     }
 }

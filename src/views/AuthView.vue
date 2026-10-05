@@ -120,6 +120,29 @@
                         </template>
 
                         <template v-else-if="activeTab === 'login'">
+                            <div class="login-method-switch" role="group" aria-label="登录方式">
+                                <button
+                                    class="login-method-button"
+                                    :class="{ 'login-method-button-active': loginType === 'password' }"
+                                    type="button"
+                                    :aria-pressed="loginType === 'password'"
+                                    :disabled="loginLoading || loginSendLoading"
+                                    @click="switchLoginType('password')"
+                                >
+                                    密码登录
+                                </button>
+                                <button
+                                    class="login-method-button"
+                                    :class="{ 'login-method-button-active': loginType === 'code' }"
+                                    type="button"
+                                    :aria-pressed="loginType === 'code'"
+                                    :disabled="loginLoading || loginSendLoading"
+                                    @click="switchLoginType('code')"
+                                >
+                                    邮箱验证码登录
+                                </button>
+                            </div>
+
                             <div class="field">
                                 <label class="label" for="login-email">邮箱</label>
                                 <input
@@ -129,36 +152,82 @@
                                     type="email"
                                     placeholder="输入邮箱"
                                     autocomplete="email"
+                                    :disabled="loginLoading || loginSendLoading"
                                     @focus="handleInputFocus"
                                     @blur="handleInputBlur"
                                 />
                             </div>
 
-                            <div class="field">
-                                <label class="label" for="login-password">密码</label>
-                                <div class="password-row">
-                                    <input
-                                        id="login-password"
-                                        v-model="loginForm.password"
-                                        class="input auth-input"
-                                        :type="passwordInputType"
-                                        placeholder="输入密码"
-                                        autocomplete="current-password"
-                                        @focus="handleInputFocus"
-                                        @blur="handleInputBlur"
-                                    />
-                                    <button class="toggle-button" type="button" @click="togglePassword">
-                                        {{ showPassword ? "隐藏" : "显示" }}
-                                    </button>
-                                </div>
+                            <div class="login-credential">
+                                <Transition name="login-field">
+                                    <div
+                                        v-show="loginType === 'password'"
+                                        class="field"
+                                        :inert="loginType !== 'password'"
+                                    >
+                                        <label class="label" for="login-password">密码</label>
+                                        <div class="password-row">
+                                            <input
+                                                id="login-password"
+                                                v-model="loginForm.password"
+                                                class="input auth-input"
+                                                :type="passwordInputType"
+                                                placeholder="输入密码"
+                                                autocomplete="current-password"
+                                                @focus="handleInputFocus"
+                                                @blur="handleInputBlur"
+                                            />
+                                            <button class="toggle-button" type="button" @click="togglePassword">
+                                                {{ showPassword ? "隐藏" : "显示" }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </Transition>
+
+                                <Transition name="login-field">
+                                    <div
+                                        v-show="loginType === 'code'"
+                                        class="field"
+                                        :inert="loginType !== 'code'"
+                                    >
+                                        <label class="label" for="login-code">邮箱验证码</label>
+                                        <div class="code-row">
+                                            <input
+                                                id="login-code"
+                                                v-model="loginForm.code"
+                                                class="input auth-input"
+                                                type="text"
+                                                inputmode="numeric"
+                                                autocomplete="one-time-code"
+                                                placeholder="输入 6 位验证码"
+                                                maxlength="6"
+                                                :disabled="loginLoading"
+                                                @focus="handleInputFocus"
+                                                @blur="handleInputBlur"
+                                            />
+                                            <button
+                                                class="secondary-button send-code-button"
+                                                type="button"
+                                                :disabled="loginSendLoading || loginCountdown > 0 || loginLoading"
+                                                @click="handleSendLoginCode"
+                                            >
+                                                {{ loginSendLoading ? "发送中..." : loginCountdown > 0 ? `${loginCountdown}s` : "获取验证码" }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </Transition>
                             </div>
 
-                            <div class="helper-row">
+                            <div class="helper-row" :class="{ 'login-helper-hidden': loginType === 'code' }">
                                 <button class="link-button" type="button" @click="openResetCard">忘记密码？</button>
                             </div>
 
                             <div class="action-row">
-                                <button class="primary-button primary-button-full" type="submit" :disabled="loginLoading">
+                                <button
+                                    class="primary-button primary-button-full"
+                                    type="submit"
+                                    :disabled="loginLoading || loginSendLoading"
+                                >
                                     {{ loginLoading ? "登录中..." : "登录" }}
                                 </button>
                             </div>
@@ -284,6 +353,7 @@ import { authApi } from "@/api/auth";
 import { useCacheStore } from "@/stores/cacheStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { isApiRequestError } from "@/types/api";
+import type { LoginType } from "@/types/api";
 import { sha256Hex } from "@/utils/crypto";
 
 type AuthTab = "login" | "register";
@@ -294,12 +364,15 @@ const cacheStore = useCacheStore();
 const sessionStore = useSessionStore();
 
 const activeTab = ref<AuthTab>("login");
+const loginType = ref<LoginType>("password");
 const showResetCard = ref(false);
 const loginLoading = ref(false);
 const registerLoading = ref(false);
 const resetLoading = ref(false);
+const loginSendLoading = ref(false);
 const registerSendLoading = ref(false);
 const resetSendLoading = ref(false);
+const loginCountdown = ref(0);
 const registerCountdown = ref(0);
 const resetCountdown = ref(0);
 const showPassword = ref(false);
@@ -308,6 +381,7 @@ const isTyping = ref(false);
 const loginForm = reactive({
     email: "",
     password: "",
+    code: "",
 });
 
 const registerForm = reactive({
@@ -325,8 +399,10 @@ const resetForm = reactive({
     code: "",
 });
 
+let loginCountdownTimer: number | undefined;
 let registerCountdownTimer: number | undefined;
 let resetCountdownTimer: number | undefined;
+let isUnmounted = false;
 
 const redirectPath = computed(() => {
     const target = route.query.redirect;
@@ -358,8 +434,16 @@ const currentPasswordLength = computed(() => {
     if (activeTab.value === "register") {
         return registerForm.password.length;
     }
-    return loginForm.password.length;
+    return loginType.value === "password" ? loginForm.password.length : 0;
 });
+
+/** 清理登录验证码倒计时。 */
+function clearLoginCountdown(): void {
+    if (loginCountdownTimer !== undefined) {
+        window.clearInterval(loginCountdownTimer);
+        loginCountdownTimer = undefined;
+    }
+}
 
 /** 清理注册验证码倒计时。 */
 function clearRegisterCountdown(): void {
@@ -375,6 +459,20 @@ function clearResetCountdown(): void {
         window.clearInterval(resetCountdownTimer);
         resetCountdownTimer = undefined;
     }
+}
+
+/** 启动登录验证码倒计时。 */
+function startLoginCountdown(): void {
+    clearLoginCountdown();
+    loginCountdown.value = 60;
+    loginCountdownTimer = window.setInterval(() => {
+        if (loginCountdown.value <= 1) {
+            clearLoginCountdown();
+            loginCountdown.value = 0;
+            return;
+        }
+        loginCountdown.value -= 1;
+    }, 1000);
 }
 
 /** 启动注册验证码倒计时。 */
@@ -413,7 +511,7 @@ function syncTypingState(): void {
 
 /** 校验邮箱格式是否有效。 */
 function validateEmail(email: string): boolean {
-    return /.+@.+/.test(email);
+    return /^[^\s@]+@[^\s@]+$/.test(email);
 }
 
 /** 根据登录态跳转到目标页面。 */
@@ -421,6 +519,7 @@ async function maybeRedirect(): Promise<void> {
     if (!cacheStore.isAuthenticated) {
         return;
     }
+    clearLoginCountdown();
     clearRegisterCountdown();
     clearResetCountdown();
     await router.replace(redirectPath.value);
@@ -430,6 +529,15 @@ async function maybeRedirect(): Promise<void> {
 function switchTab(tab: AuthTab): void {
     activeTab.value = tab;
     showResetCard.value = false;
+    showPassword.value = false;
+}
+
+/** 切换密码或邮箱验证码登录。 */
+function switchLoginType(type: LoginType): void {
+    if (loginLoading.value || loginSendLoading.value) {
+        return;
+    }
+    loginType.value = type;
     showPassword.value = false;
 }
 
@@ -464,6 +572,37 @@ function handleInputBlur(): void {
 /** 切换密码显示与隐藏状态。 */
 function togglePassword(): void {
     showPassword.value = !showPassword.value;
+}
+
+/** 发送登录验证码。 */
+async function handleSendLoginCode(): Promise<void> {
+    if (loginSendLoading.value || loginCountdown.value > 0 || loginLoading.value) {
+        return;
+    }
+    const email = loginForm.email.trim();
+    if (!email) {
+        ElMessage.error("请先输入邮箱");
+        return;
+    }
+    if (!validateEmail(email)) {
+        ElMessage.error("请输入有效的邮箱地址");
+        return;
+    }
+    loginSendLoading.value = true;
+    try {
+        await authApi.sendEmailCode({ email });
+        if (isUnmounted) {
+            return;
+        }
+        ElMessage.success("验证码已发送，请查收邮箱");
+        startLoginCountdown();
+    } catch (err) {
+        if (!isUnmounted && !isApiRequestError(err)) {
+            ElMessage.error("验证码发送失败，请稍后重试");
+        }
+    } finally {
+        loginSendLoading.value = false;
+    }
 }
 
 /** 发送注册验证码。 */
@@ -518,28 +657,38 @@ async function handleSendResetCode(): Promise<void> {
 
 /** 提交登录请求并写入登录态。 */
 async function handleLogin(): Promise<void> {
-    if (loginLoading.value) {
+    if (loginLoading.value || loginSendLoading.value) {
         return;
     }
     const email = loginForm.email.trim();
     const password = loginForm.password.trim();
-    if (!email || !password) {
-        ElMessage.error("请输入邮箱与密码");
+    const code = loginForm.code.trim();
+    const type = loginType.value;
+    if (!email) {
+        ElMessage.error("请输入邮箱");
         return;
     }
     if (!validateEmail(email)) {
         ElMessage.error("请输入有效的邮箱地址");
         return;
     }
+    if (type === "password" && !password) {
+        ElMessage.error("请输入密码");
+        return;
+    }
+    if (type === "code" && !/^\d{6}$/.test(code)) {
+        ElMessage.error("请输入 6 位数字邮箱验证码");
+        return;
+    }
     loginLoading.value = true;
     let tokenReceived = false;
     try {
-        const hashedPassword = await sha256Hex(password);
+        const hashedPassword = type === "password" ? await sha256Hex(password) : "";
         const res = await authApi.login({
             email,
-            login_type: "password",
+            login_type: type,
             password: hashedPassword,
-            code: "",
+            code: type === "code" ? code : "",
         });
         const token = res.data?.token;
         if (!token) {
@@ -551,10 +700,13 @@ async function handleLogin(): Promise<void> {
         await sessionStore.initialize(true);
         ElMessage.success("登录成功");
         await maybeRedirect();
-    } catch {
+    } catch (err) {
         if (!tokenReceived) {
             sessionStore.reset();
             cacheStore.logout();
+            if (!isApiRequestError(err)) {
+                ElMessage.error("登录失败，请稍后重试");
+            }
         }
     } finally {
         loginLoading.value = false;
@@ -603,6 +755,7 @@ async function handleRegister(): Promise<void> {
         registerCountdown.value = 0;
         ElMessage.success("注册成功，请使用账号登录");
         activeTab.value = "login";
+        loginType.value = "password";
         showPassword.value = false;
         loginForm.email = email;
         loginForm.password = "";
@@ -655,6 +808,7 @@ async function handlePasswordReset(): Promise<void> {
         ElMessage.success("密码重置成功，请使用新密码登录");
         closeResetCard();
         activeTab.value = "login";
+        loginType.value = "password";
         loginForm.email = email;
         loginForm.password = "";
         resetForm.password = "";
@@ -675,6 +829,8 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+    isUnmounted = true;
+    clearLoginCountdown();
     clearRegisterCountdown();
     clearResetCountdown();
 });
@@ -795,6 +951,63 @@ onBeforeUnmount(() => {
     display: flex;
     flex-direction: column;
     gap: 15px;
+}
+
+.login-method-switch {
+    display: flex;
+    gap: 20px;
+    border-bottom: 1px solid var(--ta-line);
+}
+
+.login-method-button {
+    min-height: 44px;
+    padding: 0 0 10px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: var(--ta-text-tertiary);
+    background: transparent;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.login-method-button-active {
+    border-bottom-color: var(--ta-blue);
+    color: var(--ta-blue);
+}
+
+.login-method-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.login-credential {
+    display: grid;
+}
+
+.login-credential > .field {
+    grid-area: 1 / 1;
+}
+
+.login-field-enter-active,
+.login-field-leave-active {
+    transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.login-field-enter-from,
+.login-field-leave-to {
+    opacity: 0;
+}
+
+.login-helper-hidden {
+    visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .login-field-enter-active,
+    .login-field-leave-active {
+        transition: none;
+    }
 }
 
 .field {

@@ -1,6 +1,12 @@
 <template>
-    <article :id="`student-card-${student.id}`" class="student-card"
-        :class="{ 'is-group': displayMode === 'group', 'is-list': displayMode === 'list', 'is-selected': selected }">
+    <article
+        :id="`student-card-${student.id}`"
+        class="student-card"
+        :class="[
+            student.toneClass,
+            { 'is-group': displayMode === 'group', 'is-list': displayMode === 'list', 'is-selected': selected }
+        ]"
+    >
         <button type="button" class="student-card__select" :aria-pressed="selected"
             :aria-label="`选择${student.name}，可用积分${student.availablePoints}，总积分${student.totalPoints}`"
             @click.stop="emit('select', student.id)" />
@@ -93,14 +99,18 @@ function getGenderLabel(gender: UiGender): string {
 
 <style scoped>
 .student-card {
+    --student-card-background: #f5f9ff;
+    --student-card-border: rgba(66, 133, 214, 0.2);
+    --student-avatar-background: #dcecff;
+    --student-avatar-color: #2470bd;
     position: relative;
     min-width: 0;
     padding: 16px;
     display: grid;
     gap: 18px;
-    border: 1px solid var(--ta-line);
+    border: 1px solid var(--student-card-border);
     border-radius: 15px;
-    background: var(--ta-surface-solid);
+    background: var(--student-card-background);
     transition: border-color 140ms ease, box-shadow 140ms ease, transform 100ms ease;
 }
 
@@ -145,10 +155,45 @@ function getGenderLabel(gender: UiGender): string {
     display: grid;
     place-items: center;
     border-radius: 50%;
-    color: var(--ta-blue);
-    background: var(--ta-blue-soft);
+    color: var(--student-avatar-color);
+    background: var(--student-avatar-background);
     font-size: 17px;
     font-weight: 600;
+}
+
+.student-card.tone-sky {
+    --student-card-background: #f3faff;
+    --student-card-border: rgba(52, 145, 210, 0.2);
+    --student-avatar-background: #d9f0ff;
+    --student-avatar-color: #1978b7;
+}
+
+.student-card.tone-azure {
+    --student-card-background: #f2f8ff;
+    --student-card-border: rgba(54, 125, 213, 0.2);
+    --student-avatar-background: #dceaff;
+    --student-avatar-color: #286bc1;
+}
+
+.student-card.tone-blue {
+    --student-card-background: #f5f8ff;
+    --student-card-border: rgba(73, 111, 211, 0.2);
+    --student-avatar-background: #e0e8ff;
+    --student-avatar-color: #4263bd;
+}
+
+.student-card.tone-cyan {
+    --student-card-background: #f2fbfc;
+    --student-card-border: rgba(43, 139, 151, 0.2);
+    --student-avatar-background: #d8f1f3;
+    --student-avatar-color: #287e87;
+}
+
+.student-card.tone-indigo {
+    --student-card-background: #f7f7ff;
+    --student-card-border: rgba(91, 101, 193, 0.2);
+    --student-avatar-background: #e7e7ff;
+    --student-avatar-color: #585daf;
 }
 
 .student-profile {

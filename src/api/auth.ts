@@ -1,5 +1,9 @@
 import { post } from '@/api/api'
-import type { ApiResponse, RegisterRequest, LoginRequest, LoginResponse, SendEmailCodeRequest, VerifySecretRequest, PasswordResetRequest } from '@/types/api'
+import type {
+    ApiResponse, RegisterRequest, LoginRequest, LoginResponse,
+    SendEmailCodeRequest, VerifySecretRequest, PasswordResetRequest,
+    QrLoginCreateRequest, QrLoginCreateResponse, QrLoginPollRequest, QrLoginPollResponse,
+} from '@/types/api'
 import type { UserProfile } from '@/types/user'
 
 export const authApi = {
@@ -8,6 +12,12 @@ export const authApi = {
     },
     login(data: LoginRequest): Promise<ApiResponse<LoginResponse>> {
         return post<LoginResponse>('/auth/login', data)
+    },
+    createQrLogin(data: QrLoginCreateRequest): Promise<ApiResponse<QrLoginCreateResponse>> {
+        return post<QrLoginCreateResponse>('/auth/qr/create', data)
+    },
+    pollQrLogin(data: QrLoginPollRequest): Promise<ApiResponse<QrLoginPollResponse>> {
+        return post<QrLoginPollResponse>('/auth/qr/poll', data)
     },
     sendEmailCode(data: SendEmailCodeRequest): Promise<ApiResponse<null>> {
         return post<null>('/auth/send-code', { email: data.email, scene: 1 })
@@ -19,5 +29,3 @@ export const authApi = {
         return post<string>('/secret/verify', data)
     },
 }
-
-

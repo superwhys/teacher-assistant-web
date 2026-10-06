@@ -34,6 +34,27 @@ export interface LoginResponse {
     token: string;
 }
 
+export interface QrLoginCreateRequest {
+    serial_no: string;
+}
+
+export interface QrLoginCreateResponse {
+    serial_no: string;
+    claim_secret: string;
+    expires_at: number;
+    qr_code: string;
+}
+
+export interface QrLoginPollRequest {
+    serial_no: string;
+    claim_secret: string;
+}
+
+export interface QrLoginPollResponse {
+    status: 'pending' | 'expired' | 'consumed' | 'success';
+    token?: string;
+}
+
 export interface VerifySecretRequest {
     secret: string;
 }

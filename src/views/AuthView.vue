@@ -141,95 +141,110 @@
                                 >
                                     邮箱验证码登录
                                 </button>
-                            </div>
-
-                            <div class="field">
-                                <label class="label" for="login-email">邮箱</label>
-                                <input
-                                    id="login-email"
-                                    v-model="loginForm.email"
-                                    class="input auth-input"
-                                    type="email"
-                                    placeholder="输入邮箱"
-                                    autocomplete="email"
-                                    :disabled="loginLoading || loginSendLoading"
-                                    @focus="handleInputFocus"
-                                    @blur="handleInputBlur"
-                                />
-                            </div>
-
-                            <div class="login-credential">
-                                <Transition name="login-field">
-                                    <div
-                                        v-show="loginType === 'password'"
-                                        class="field"
-                                        :inert="loginType !== 'password'"
-                                    >
-                                        <label class="label" for="login-password">密码</label>
-                                        <div class="password-row">
-                                            <input
-                                                id="login-password"
-                                                v-model="loginForm.password"
-                                                class="input auth-input"
-                                                :type="passwordInputType"
-                                                placeholder="输入密码"
-                                                autocomplete="current-password"
-                                                @focus="handleInputFocus"
-                                                @blur="handleInputBlur"
-                                            />
-                                            <button class="toggle-button" type="button" @click="togglePassword">
-                                                {{ showPassword ? "隐藏" : "显示" }}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </Transition>
-
-                                <Transition name="login-field">
-                                    <div
-                                        v-show="loginType === 'code'"
-                                        class="field"
-                                        :inert="loginType !== 'code'"
-                                    >
-                                        <label class="label" for="login-code">邮箱验证码</label>
-                                        <div class="code-row">
-                                            <input
-                                                id="login-code"
-                                                v-model="loginForm.code"
-                                                class="input auth-input"
-                                                type="text"
-                                                inputmode="numeric"
-                                                autocomplete="one-time-code"
-                                                placeholder="输入 6 位验证码"
-                                                maxlength="6"
-                                                :disabled="loginLoading"
-                                                @focus="handleInputFocus"
-                                                @blur="handleInputBlur"
-                                            />
-                                            <button
-                                                class="secondary-button send-code-button"
-                                                type="button"
-                                                :disabled="loginSendLoading || loginCountdown > 0 || loginLoading"
-                                                @click="handleSendLoginCode"
-                                            >
-                                                {{ loginSendLoading ? "发送中..." : loginCountdown > 0 ? `${loginCountdown}s` : "获取验证码" }}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </Transition>
-                            </div>
-
-                            <div class="helper-row" :class="{ 'login-helper-hidden': loginType === 'code' }">
-                                <button class="link-button" type="button" @click="openResetCard">忘记密码？</button>
-                            </div>
-
-                            <div class="action-row">
                                 <button
-                                    class="primary-button primary-button-full"
-                                    type="submit"
+                                    class="login-method-button"
+                                    :class="{ 'login-method-button-active': loginType === 'qr' }"
+                                    type="button"
+                                    :aria-pressed="loginType === 'qr'"
                                     :disabled="loginLoading || loginSendLoading"
+                                    @click="switchLoginType('qr')"
                                 >
-                                    {{ loginLoading ? "登录中..." : "登录" }}
+                                    小程序登录
                                 </button>
+                            </div>
+
+                            <div class="login-content">
+                                <div v-show="loginType !== 'qr'" class="login-fields" :inert="loginType === 'qr'">
+                                    <div class="field">
+                                        <label class="label" for="login-email">邮箱</label>
+                                        <input
+                                            id="login-email"
+                                            v-model="loginForm.email"
+                                            class="input auth-input"
+                                            type="email"
+                                            placeholder="输入邮箱"
+                                            autocomplete="email"
+                                            :disabled="loginLoading || loginSendLoading"
+                                            @focus="handleInputFocus"
+                                            @blur="handleInputBlur"
+                                        />
+                                    </div>
+
+                                    <div class="login-credential">
+                                        <Transition name="login-field">
+                                            <div
+                                                v-show="loginType === 'password'"
+                                                class="field"
+                                                :inert="loginType !== 'password'"
+                                            >
+                                                <label class="label" for="login-password">密码</label>
+                                                <div class="password-row">
+                                                    <input
+                                                        id="login-password"
+                                                        v-model="loginForm.password"
+                                                        class="input auth-input"
+                                                        :type="passwordInputType"
+                                                        placeholder="输入密码"
+                                                        autocomplete="current-password"
+                                                        @focus="handleInputFocus"
+                                                        @blur="handleInputBlur"
+                                                    />
+                                                    <button class="toggle-button" type="button" @click="togglePassword">
+                                                        {{ showPassword ? "隐藏" : "显示" }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </Transition>
+
+                                        <Transition name="login-field">
+                                            <div
+                                                v-show="loginType === 'code'"
+                                                class="field"
+                                                :inert="loginType !== 'code'"
+                                            >
+                                                <label class="label" for="login-code">邮箱验证码</label>
+                                                <div class="code-row">
+                                                    <input
+                                                        id="login-code"
+                                                        v-model="loginForm.code"
+                                                        class="input auth-input"
+                                                        type="text"
+                                                        inputmode="numeric"
+                                                        autocomplete="one-time-code"
+                                                        placeholder="输入 6 位验证码"
+                                                        maxlength="6"
+                                                        :disabled="loginLoading"
+                                                        @focus="handleInputFocus"
+                                                        @blur="handleInputBlur"
+                                                    />
+                                                    <button
+                                                        class="secondary-button send-code-button"
+                                                        type="button"
+                                                        :disabled="loginSendLoading || loginCountdown > 0 || loginLoading"
+                                                        @click="handleSendLoginCode"
+                                                    >
+                                                        {{ loginSendLoading ? "发送中..." : loginCountdown > 0 ? `${loginCountdown}s` : "获取验证码" }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </Transition>
+                                    </div>
+
+                                    <div class="helper-row" :class="{ 'login-helper-hidden': loginType === 'code' }">
+                                        <button class="link-button" type="button" @click="openResetCard">忘记密码？</button>
+                                    </div>
+
+                                    <div class="action-row">
+                                        <button
+                                            class="primary-button primary-button-full"
+                                            type="submit"
+                                            :disabled="loginLoading || loginSendLoading"
+                                        >
+                                            {{ loginLoading ? "登录中..." : "登录" }}
+                                        </button>
+                                    </div>
+                                </div>
+                                <QrLoginPanel v-if="loginType === 'qr'" @authenticated="handleQrLogin" />
                             </div>
                         </template>
 
@@ -349,6 +364,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import AnimatedCharacters from "@/components/login/AnimatedCharacters.vue";
+import QrLoginPanel from "@/components/login/QrLoginPanel.vue";
 import { authApi } from "@/api/auth";
 import { useCacheStore } from "@/stores/cacheStore";
 import { useSessionStore } from "@/stores/sessionStore";
@@ -357,6 +373,7 @@ import type { LoginType } from "@/types/api";
 import { sha256Hex } from "@/utils/crypto";
 
 type AuthTab = "login" | "register";
+type LoginMethod = LoginType | "qr";
 
 const router = useRouter();
 const route = useRoute();
@@ -364,7 +381,7 @@ const cacheStore = useCacheStore();
 const sessionStore = useSessionStore();
 
 const activeTab = ref<AuthTab>("login");
-const loginType = ref<LoginType>("password");
+const loginType = ref<LoginMethod>("password");
 const showResetCard = ref(false);
 const loginLoading = ref(false);
 const registerLoading = ref(false);
@@ -532,13 +549,14 @@ function switchTab(tab: AuthTab): void {
     showPassword.value = false;
 }
 
-/** 切换密码或邮箱验证码登录。 */
-function switchLoginType(type: LoginType): void {
+/** 切换登录方式。 */
+function switchLoginType(type: LoginMethod): void {
     if (loginLoading.value || loginSendLoading.value) {
         return;
     }
     loginType.value = type;
     showPassword.value = false;
+    isTyping.value = false;
 }
 
 /** 打开重置密码面板。 */
@@ -657,7 +675,7 @@ async function handleSendResetCode(): Promise<void> {
 
 /** 提交登录请求并写入登录态。 */
 async function handleLogin(): Promise<void> {
-    if (loginLoading.value || loginSendLoading.value) {
+    if (loginLoading.value || loginSendLoading.value || loginType.value === "qr") {
         return;
     }
     const email = loginForm.email.trim();
@@ -708,6 +726,28 @@ async function handleLogin(): Promise<void> {
                 ElMessage.error("登录失败，请稍后重试");
             }
         }
+    } finally {
+        loginLoading.value = false;
+    }
+}
+
+/** 使用扫码确认后的凭证初始化会话。 */
+async function handleQrLogin(token: string): Promise<void> {
+    if (isUnmounted || loginLoading.value || loginType.value !== "qr" || activeTab.value !== "login" || showResetCard.value) {
+        return;
+    }
+    if (!token.trim()) {
+        ElMessage.error("扫码登录失败，请刷新二维码重试");
+        return;
+    }
+    loginLoading.value = true;
+    cacheStore.setTokenOnly(token);
+    try {
+        await sessionStore.initialize(true);
+        ElMessage.success("登录成功");
+        await maybeRedirect();
+    } catch {
+        // 保留已确认的登录态，初始化错误由 App 的会话错误页承接。
     } finally {
         loginLoading.value = false;
     }
@@ -983,6 +1023,17 @@ onBeforeUnmount(() => {
 
 .login-credential {
     display: grid;
+}
+
+.login-content {
+    display: grid;
+    min-height: 280px;
+}
+
+.login-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .login-credential > .field {

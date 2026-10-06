@@ -34,14 +34,17 @@ vi.mock('element-plus', () => ({ ElMessage: { success: mocks.success, error: moc
 vi.mock('@/components/login/AnimatedCharacters.vue', () => ({ default: { render: () => null } }))
 
 interface AuthState {
-    loginType: 'password' | 'code'
+    loginType: 'password' | 'code' | 'qr'
     loginForm: { email: string; password: string; code: string }
     loginLoading: boolean
     loginSendLoading: boolean
     loginCountdown: number
     handleLogin: () => Promise<void>
     handleSendLoginCode: () => Promise<void>
-    switchLoginType: (type: 'password' | 'code') => void
+    switchLoginType: (type: 'password' | 'code' | 'qr') => void
+    handleQrLogin: (token: string) => Promise<void>
+    switchTab: (tab: 'login' | 'register') => void
+    openResetCard: () => void
 }
 
 // Exercise the real setup and lifecycle without a browser or decorative animation.
@@ -101,6 +104,51 @@ afterEach(() => {
 })
 
 describe('AuthView login', () => {
+    it('initializes a QR login token and redirects through the existing session flow', async () => {
+        const state = mountAuth()
+        state.switchLoginType('qr')
+        mocks.route.query.redirect = '/students'
+
+        await state.handleQrLogin('qr-token')
+
+        expect(mocks.login).not.toHaveBeenCalled()
+        expect(mocks.sha256Hex).not.toHaveBeenCalled()
+        expect(mocks.cache.setTokenOnly).toHaveBeenCalledWith('qr-token')
+        expect(mocks.initialize).toHaveBeenCalledWith(true)
+        expect(mocks.replace).toHaveBeenCalledWith('/students')
+        expect(mocks.cache.setTokenOnly.mock.invocationCallOrder[0]).toBeLessThan(mocks.initialize.mock.invocationCallOrder[0]!)
+        expect(mocks.initialize.mock.invocationCallOrder[0]).toBeLessThan(mocks.replace.mock.invocationCallOrder[0]!)
+        expect(state.loginLoading).toBe(false)
+    })
+
+    it('does not submit email credentials while QR login is selected', async () => {
+        const state = mountAuth()
+        state.loginForm.email = 'teacher@example.com'
+        state.loginForm.password = 'secret123'
+        state.switchLoginType('qr')
+
+        await state.handleLogin()
+
+        expect(mocks.login).not.toHaveBeenCalled()
+        expect(mocks.error).not.toHaveBeenCalled()
+    })
+
+    it('ignores QR login callbacks after switching method, registering, or resetting a password', async () => {
+        const state = mountAuth()
+        state.switchLoginType('qr')
+        state.switchLoginType('password')
+        await state.handleQrLogin('old-token')
+        state.switchLoginType('qr')
+        state.switchTab('register')
+        await state.handleQrLogin('old-token')
+        state.switchTab('login')
+        state.openResetCard()
+        await state.handleQrLogin('old-token')
+
+        expect(mocks.cache.setTokenOnly).not.toHaveBeenCalled()
+        expect(mocks.initialize).not.toHaveBeenCalled()
+    })
+
     it('keeps password login as the default and hashes the password', async () => {
         const state = mountAuth()
         expect(state.loginType).toBe('password')

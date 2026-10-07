@@ -9,6 +9,8 @@
                 :user-id="userId" :user-initial="userInitial" />
 
             <div class="settings-flow">
+                <SettingsMiniProgramCard :user-id="userId" :wechat-bound="profile?.wechatBound" @bound="onMiniProgramBound" />
+
                 <SettingsClassStatusCard :active-class-id="activeClassId" :classes-loading="classesLoading"
                     :current-class-name="currentClassName" :current-semester-name="currentSemesterName"
                     :semester-notice-text="semesterNoticeText" :semester-permission-text="semesterPermissionText"
@@ -44,6 +46,7 @@ import SettingsAccountCard from "@/v3/components/settings/SettingsAccountCard.vu
 import SettingsClassStatusCard from "@/v3/components/settings/SettingsClassStatusCard.vue";
 import SettingsFeedbackCard from "@/v3/components/settings/SettingsFeedbackCard.vue";
 import SettingsLockCard from "@/v3/components/settings/SettingsLockCard.vue";
+import SettingsMiniProgramCard from "@/v3/components/settings/SettingsMiniProgramCard.vue";
 import SettingsNextSemesterDialog from "@/v3/components/settings/SettingsNextSemesterDialog.vue";
 import SettingsRenameClassDialog from "@/v3/components/settings/SettingsRenameClassDialog.vue";
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -82,6 +85,13 @@ const activeClassName = computed(() => cacheStore.getActiveClassName())
 const activeSemesterName = computed(() => cacheStore.getActiveSemesterName())
 const activeSemesterStatus = computed(() => cacheStore.getActiveSemesterStatus())
 const hasPwd = computed(() => cacheStore.hasLockPassword())
+
+function onMiniProgramBound(): void {
+    if (!cacheStore.profile) return
+    cacheStore.updateProfile({ ...cacheStore.profile, wechatBound: true })
+    cacheStore.bumpDataVersion()
+    ElMessage.success("小程序绑定成功")
+}
 
 /** 返回头像占位用的用户名首字。 */
 const userInitial = computed(() => {

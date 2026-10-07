@@ -1,10 +1,10 @@
 <template>
-    <section class="qr-login-panel" aria-label="小程序扫码登录">
-        <p class="qr-instruction">使用微信扫一扫，在小程序中确认登录</p>
+    <section class="qr-login-panel" :aria-label="isBinding ? '扫码绑定小程序' : '小程序扫码登录'">
+        <p class="qr-instruction">{{ isBinding ? '使用微信扫一扫，在小程序中确认绑定，无需验证码' : '使用微信扫一扫，在小程序中确认登录' }}</p>
         <div class="qr-image-box" :aria-busy="status === 'loading'">
-            <img v-if="qrCode && status === 'pending'" class="qr-image" :src="qrCode" alt="微信小程序登录二维码" />
+            <img v-if="qrCode && status === 'pending'" class="qr-image" :src="qrCode" :alt="isBinding ? '微信小程序绑定二维码' : '微信小程序登录二维码'" />
             <div v-else class="qr-placeholder" role="status">
-                {{ status === 'loading' ? '二维码加载中...' : status === 'success' ? '已确认，正在登录...' : errorMessage }}
+                {{ status === 'loading' ? '二维码加载中...' : status === 'success' ? isBinding ? '小程序绑定成功' : '已确认，正在登录...' : errorMessage }}
             </div>
         </div>
         <p class="qr-status" aria-live="polite">
@@ -22,13 +22,15 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { authApi } from "@/api/auth";
 import { isApiRequestError } from "@/types/api";
 
 type QrStatus = "idle" | "loading" | "pending" | "expired" | "consumed" | "error" | "success";
 
-const emit = defineEmits<{ authenticated: [token: string] }>();
+const props = withDefaults(defineProps<{ purpose?: "login" | "bind" }>(), { purpose: "login" });
+const emit = defineEmits<{ authenticated: [token: string]; bound: [] }>();
+const isBinding = computed(() => props.purpose === "bind");
 const status = ref<QrStatus>("idle");
 const qrCode = ref("");
 const remainingSeconds = ref(0);
@@ -105,7 +107,8 @@ async function pollSession(version: number): Promise<void> {
     }
     pollInFlight = true;
     try {
-        const response = await authApi.pollQrLogin({ serial_no: serialNo, claim_secret: claimSecret });
+        const request = { serial_no: serialNo, claim_secret: claimSecret };
+        const response = isBinding.value ? await authApi.pollQrBinding(request) : await authApi.pollQrLogin(request);
         if (!isCurrent(version)) {
             return;
         }
@@ -124,8 +127,14 @@ async function pollSession(version: number): Promise<void> {
             errorMessage.value = "登录结果已领取，请刷新二维码重新扫码";
             return;
         }
-        if (result?.status !== "success" || typeof result.token !== "string" || !result.token.trim()) {
-            failSession("扫码登录结果异常，请刷新二维码重试");
+        if (result?.status === "success" && isBinding.value) {
+            stopSession();
+            status.value = "success";
+            emit("bound");
+            return;
+        }
+        if (result?.status !== "success" || !("token" in result) || typeof result.token !== "string" || !result.token.trim()) {
+            failSession(isBinding.value ? "绑定结果异常，请刷新二维码重试" : "扫码登录结果异常，请刷新二维码重试");
             return;
         }
         stopSession();
@@ -159,7 +168,8 @@ async function createQrCode(): Promise<void> {
     try {
         const bytes = crypto.getRandomValues(new Uint8Array(16));
         const nextSerial = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
-        const response = await authApi.createQrLogin({ serial_no: nextSerial });
+        const request = { serial_no: nextSerial };
+        const response = isBinding.value ? await authApi.createQrBinding(request) : await authApi.createQrLogin(request);
         if (!isCurrent(version)) {
             return;
         }

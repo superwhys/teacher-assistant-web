@@ -3,6 +3,7 @@ import type {
     ApiResponse, RegisterRequest, LoginRequest, LoginResponse,
     SendEmailCodeRequest, VerifySecretRequest, PasswordResetRequest,
     QrLoginCreateRequest, QrLoginCreateResponse, QrLoginPollRequest, QrLoginPollResponse,
+    QrBindingPollResponse,
 } from '@/types/api'
 import type { UserProfile } from '@/types/user'
 
@@ -18,6 +19,12 @@ export const authApi = {
     },
     pollQrLogin(data: QrLoginPollRequest): Promise<ApiResponse<QrLoginPollResponse>> {
         return post<QrLoginPollResponse>('/auth/qr/poll', data)
+    },
+    createQrBinding(data: QrLoginCreateRequest): Promise<ApiResponse<QrLoginCreateResponse>> {
+        return post<QrLoginCreateResponse>('/auth/wechat/bind-qr/create', data)
+    },
+    pollQrBinding(data: QrLoginPollRequest): Promise<ApiResponse<QrBindingPollResponse>> {
+        return post<QrBindingPollResponse>('/auth/wechat/bind-qr/poll', data)
     },
     sendEmailCode(data: SendEmailCodeRequest): Promise<ApiResponse<null>> {
         return post<null>('/auth/send-code', { email: data.email, scene: 1 })

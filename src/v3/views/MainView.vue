@@ -101,7 +101,12 @@
                 </div>
             </header>
 
-            <section class="main-view__content" :aria-label="currentNavItem?.label || '内容区'">
+            <div v-if="cacheStore.profile?.wechatBound === false" class="mini-program-notice" role="status">
+                <span>当前账号尚未绑定小程序，请前往设置页完成绑定。</span>
+                <RouterLink :to="sessionStore.canAccess('/settings') ? '/settings#mini-program-binding' : '/settings/mini-program'">前往绑定</RouterLink>
+            </div>
+
+            <section class="main-view__content" :aria-label="route.path === '/settings/mini-program' ? '绑定小程序' : currentNavItem?.label || '内容区'">
                 <RouterView />
             </section>
 
@@ -1179,6 +1184,28 @@ onBeforeUnmount(() => {
     flex: 1;
 }
 
+.mini-program-notice {
+    position: sticky;
+    top: 70px;
+    z-index: 23;
+    padding: 12px clamp(18px, 2vw, 48px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: #a53400;
+    background: var(--ta-orange-soft);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.mini-program-notice a {
+    flex-shrink: 0;
+    color: var(--ta-blue);
+    font-weight: 600;
+    text-decoration: none;
+}
+
 .main-view__content :deep(.tools-standalone-page-frame) {
     min-height: calc(100vh - 138px);
 }
@@ -1311,6 +1338,11 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 920px) {
+    .mini-program-notice {
+        top: 112px;
+        padding-inline: 14px;
+    }
+
     .main-view,
     .main-view.is-aside-collapsed {
         display: block;

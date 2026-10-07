@@ -8,6 +8,7 @@ type UserInfoApi = {
     status?: number | null
     role_id?: number | null
     roleId?: number | null
+    wechat_bound?: boolean | null
     created_at?: string | number | null
     createdAt?: number | null
     updated_at?: string | number | null
@@ -61,6 +62,7 @@ export function normalizeUserProfile(raw: unknown, fallbackEmail?: string): User
         avatar: typeof u.avatar === 'string' ? u.avatar : null,
         status: typeof u.status === 'number' ? u.status : null,
         roleId,
+        wechatBound: typeof u.wechat_bound === 'boolean' ? u.wechat_bound : undefined,
         createdAt,
         updatedAt,
     }

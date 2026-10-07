@@ -5,6 +5,7 @@ export interface UserProfile {
     avatar?: string | null;
     status?: number | null;
     roleId?: number | null;
+    wechatBound?: boolean;
     createdAt?: number;
     updatedAt?: number;
 }

@@ -55,6 +55,10 @@ export interface QrLoginPollResponse {
     token?: string;
 }
 
+export interface QrBindingPollResponse {
+    status: 'pending' | 'expired' | 'success';
+}
+
 export interface VerifySecretRequest {
     secret: string;
 }

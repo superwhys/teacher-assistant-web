@@ -53,6 +53,10 @@ const routes = [
         component: () => import('@/v3/views/SettingsView.vue'),
       },
       {
+        path: 'settings/mini-program',
+        component: () => import('@/v3/views/SettingsMiniProgramView.vue'),
+      },
+      {
         path: 'no-access',
         component: () => import('@/v3/views/NoAccessView.vue'),
       },
@@ -131,7 +135,7 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
-  scrollBehavior: () => ({ top: 0 }),
+  scrollBehavior: (to) => to.hash ? { el: to.hash, top: 190 } : { top: 0 },
 });
 
 router.beforeEach(async (to) => {

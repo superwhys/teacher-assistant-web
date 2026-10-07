@@ -63,7 +63,7 @@ export const useSessionStore = defineStore('session', () => {
     }
 
     function canAccess(path: string): boolean {
-        return canAccessPath(sidebar.value, path)
+        return path === '/settings/mini-program' || canAccessPath(sidebar.value, path)
     }
 
     return { sidebar, role, initialized, loading, error, firstRoute, initialize, reset, canAccess }

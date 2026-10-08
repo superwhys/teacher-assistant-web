@@ -7,9 +7,14 @@
                         <h4>创建新分组</h4>
                         <p>支持先建组再分配成员，也可以稍后通过导入批量整理。</p>
                     </div>
-                    <button type="button" class="ghost-button" :disabled="!active" @click="emit('open-import')">
-                        Excel 导入分组
-                    </button>
+                    <div class="meta-tags">
+                        <button type="button" class="ghost-button" :disabled="!active" @click="emit('open-random')">
+                            自动分组
+                        </button>
+                        <button type="button" class="ghost-button" :disabled="!active" @click="emit('open-import')">
+                            Excel 导入分组
+                        </button>
+                    </div>
                 </div>
 
                 <div class="action-row">
@@ -136,6 +141,7 @@ const emit = defineEmits<{
     (e: "delete-group", payload: { groupId: number }): void
     (e: "save-members", payload: { groupId: number, memberIds: number[] }): void
     (e: "open-import"): void
+    (e: "open-random"): void
 }>()
 
 const visible = computed({

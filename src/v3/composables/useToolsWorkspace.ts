@@ -4,6 +4,10 @@ import { studentManager } from "@/managers/student";
 import { useCacheStore } from "@/stores/cacheStore";
 import type { Prize } from "@/types/mall";
 import type { StudentDTO } from "@/types/student";
+import {
+    createStageTimerState, isValidTimerStages, restoreStageTimer, stageTimerProgress,
+    syncStageTimer, timerStageDurationMs, toggleStageTimer as toggleStageTimerState, type TimerStage
+} from "@/utils/stageTimer";
 import { ElMessage } from "element-plus";
 import { computed, reactive, ref, watch } from "vue";
 
@@ -132,7 +136,11 @@ function persistSharedTimerState(): void {
         remainingSeconds: sharedTimerState.remainingSeconds
     }
 
-    window.localStorage.setItem(TOOLS_TIMER_STORAGE_KEY, JSON.stringify(persistedState))
+    try {
+        window.localStorage.setItem(TOOLS_TIMER_STORAGE_KEY, JSON.stringify(persistedState))
+    } catch (error) {
+        console.error("保存计时器缓存失败", error)
+    }
 }
 
 /** 关闭计时结束提醒弹窗。 */
@@ -204,6 +212,7 @@ function startSharedTimerTick(): void {
 
 /** 应用共享计时器的预设时长。 */
 function applySharedTimerPreset(minutes: number): void {
+    selectTimerMode("single")
     const safeMinutes = Math.max(1, Math.floor(minutes))
     dismissTimerFinishedReminder()
     stopSharedTimerTick()
@@ -214,6 +223,7 @@ function applySharedTimerPreset(minutes: number): void {
 
 /** 切换共享计时器的时长单位。 */
 function toggleSharedTimerPresetUnit(): void {
+    selectTimerMode("single")
     const nextPresetUnit: TimerPresetUnit = sharedTimerState.presetUnit === "minute" ? "second" : "minute"
     dismissTimerFinishedReminder()
     stopSharedTimerTick()
@@ -224,6 +234,7 @@ function toggleSharedTimerPresetUnit(): void {
 
 /** 切换共享计时器的运行状态。 */
 function toggleSharedTimer(): void {
+    selectTimerMode("single")
     if (sharedTimerState.isRunning) {
         stopSharedTimerTick()
         return
@@ -261,7 +272,145 @@ function resumeSharedTimer(): void {
     startSharedTimerTick()
 }
 
-resumeSharedTimer()
+const TOOLS_STAGE_TIMER_STORAGE_KEY = "teacher-assistant:v3:tools:stage-timer"
+
+/** 读取阶段流程，同时保留上次选择的计时模式。 */
+function loadPersistedStageTimer() {
+    try {
+        const raw = canUseLocalStorage() ? window.localStorage.getItem(TOOLS_STAGE_TIMER_STORAGE_KEY) : null
+        const saved = raw ? JSON.parse(raw) as { state?: unknown, mode?: unknown } : null
+        return {
+            state: restoreStageTimer(saved?.state, Date.now()),
+            mode: saved?.mode === "stages" ? "stages" as const : "single" as const
+        }
+    } catch (error) {
+        console.error("读取多阶段计时缓存失败", error)
+        return { state: createStageTimerState(), mode: "single" as const }
+    }
+}
+
+const restoredStageTimer = loadPersistedStageTimer()
+const sharedStageTimerState = reactive(restoredStageTimer.state)
+const timerMode = ref<"single" | "stages">(restoredStageTimer.mode)
+let stageTimerIntervalId: number | null = null
+
+function persistStageTimer(): void {
+    try {
+        if (canUseLocalStorage()) {
+            window.localStorage.setItem(TOOLS_STAGE_TIMER_STORAGE_KEY, JSON.stringify({
+                state: sharedStageTimerState,
+                mode: timerMode.value
+            }))
+        }
+    } catch (error) {
+        console.error("保存多阶段计时缓存失败", error)
+    }
+}
+
+function stopStageTimerTick(): void {
+    if (stageTimerIntervalId !== null) {
+        window.clearInterval(stageTimerIntervalId)
+        stageTimerIntervalId = null
+    }
+}
+
+/** 根据实际截止时间推进流程，而非累计 interval 次数。 */
+function syncSharedStageTimer(): void {
+    if (!sharedStageTimerState.isRunning) return
+    const previousStageIndex = sharedStageTimerState.stageIndex
+    const next = syncStageTimer(sharedStageTimerState, Date.now())
+    Object.assign(sharedStageTimerState, next)
+    if (!next.isRunning) {
+        stopStageTimerTick()
+        ElMessage.success("全部阶段已完成")
+    }
+    if (!next.isRunning || next.stageIndex !== previousStageIndex) persistStageTimer()
+}
+
+function startStageTimerTick(): void {
+    if (typeof window === "undefined" || stageTimerIntervalId !== null || !sharedStageTimerState.isRunning) return
+    stageTimerIntervalId = window.setInterval(syncSharedStageTimer, 250)
+}
+
+function pauseStageTimer(): void {
+    syncSharedStageTimer()
+    sharedStageTimerState.isRunning = false
+    sharedStageTimerState.endAtMs = null
+    stopStageTimerTick()
+    persistStageTimer()
+}
+
+/** 两种模式共享同一个课堂计时入口，切换时暂停原模式。 */
+function selectTimerMode(mode: "single" | "stages"): void {
+    if (mode === "stages") stopSharedTimerTick()
+    else pauseStageTimer()
+    timerMode.value = mode
+    persistStageTimer()
+}
+
+if (timerMode.value === "stages") {
+    stopSharedTimerTick()
+    startStageTimerTick()
+} else {
+    pauseStageTimer()
+    resumeSharedTimer()
+}
+
+if (typeof window !== "undefined") {
+    // 模块级共享计时器在路由切换后继续运行；页面重新可见时立即校准。
+    document.addEventListener("visibilitychange", syncSharedStageTimer)
+    window.addEventListener("pageshow", syncSharedStageTimer)
+}
+
+if (import.meta.hot) {
+    import.meta.hot.dispose(() => {
+        stopStageTimerTick()
+        if (sharedTimerState.intervalId !== null) window.clearInterval(sharedTimerState.intervalId)
+        document.removeEventListener("visibilitychange", syncSharedStageTimer)
+        window.removeEventListener("pageshow", syncSharedStageTimer)
+    })
+}
+
+export function useStageTimer() {
+    const state = sharedStageTimerState
+    const progress = computed(() => stageTimerProgress(state))
+    const editable = computed(() => !state.isRunning && state.stageIndex === 0
+        && state.remainingMs === timerStageDurationMs(state.stages[0]!))
+
+    function configureStages(stages: TimerStage[]): void {
+        if (!editable.value || !isValidTimerStages(stages)) return
+        Object.assign(state, createStageTimerState(stages))
+        persistStageTimer()
+    }
+
+    function toggleStages(): void {
+        if (!state.isRunning) selectTimerMode("stages")
+        Object.assign(state, toggleStageTimerState(state, Date.now()))
+        if (state.isRunning) startStageTimerTick()
+        else stopStageTimerTick()
+        persistStageTimer()
+    }
+
+    function resetStages(): void {
+        stopStageTimerTick()
+        Object.assign(state, createStageTimerState(state.stages))
+        persistStageTimer()
+    }
+
+    return {
+        configureStages,
+        editable,
+        progress,
+        resetStages,
+        selectTimerMode,
+        state,
+        timerMode,
+        toggleStages,
+        displayTime: computed(() => formatDisplayTime(Math.ceil(state.remainingMs / 1000))),
+        totalTime: computed(() => formatDisplayTime(Math.ceil(progress.value.totalMs / 1000))),
+        remainingTime: computed(() => formatDisplayTime(Math.ceil(progress.value.remainingMs / 1000)))
+    }
+}
 
 /** 将接口学生数据转换为点名卡片预览结构。 */
 function normalizeStudentPreview(student: StudentDTO): RollCallPreviewStudent | null {

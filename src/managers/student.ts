@@ -1,5 +1,5 @@
 import { studentApi } from "@/api/student"
-import type { ApiGender, CreateStudentReq, StudentDTO, StudentGroupDTO } from "@/types/student"
+import type { ApiGender, ApplyRandomGroupsReq, CreateStudentReq, StudentDTO, StudentGroupDTO } from "@/types/student"
 
 export const studentManager = {
     // delete 删除学生
@@ -35,6 +35,13 @@ export const studentManager = {
     async listGroups(classId: number): Promise<StudentGroupDTO[]> {
         const resp = await studentApi.listGroups(classId)
         return resp.data?.groups ?? []
+    },
+    async applyRandomGroups(data: ApplyRandomGroupsReq): Promise<StudentGroupDTO[]> {
+        const resp = await studentApi.applyRandomGroups(data)
+        if (!resp.data?.groups?.length) {
+            throw new Error("分组已提交，但未收到有效结果，请刷新页面核对")
+        }
+        return resp.data.groups
     },
     // listungrouped 获取未分组学生列表
     async listUngrouped(classId: number): Promise<StudentDTO[]> {

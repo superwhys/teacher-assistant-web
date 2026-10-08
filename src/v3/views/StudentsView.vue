@@ -27,6 +27,8 @@
                     <template #dropdown>
                         <el-dropdown-menu>
                             <el-dropdown-item @click="openGroupManageDialog">管理分组</el-dropdown-item>
+                            <el-dropdown-item :disabled="loading || isArchivedSemester || randomGroupingSaving || !studentCards.length"
+                                @click="openRandomGroupDialog">自动分组</el-dropdown-item>
                             <el-dropdown-item @click="openGroupImportDialog">Excel 导入分组</el-dropdown-item>
                             <el-dropdown-item divided @click="openAddStudentDialog('batch')">批量添加学生</el-dropdown-item>
                             <el-dropdown-item @click="openAddStudentDialog('excel')">Excel 导入学生</el-dropdown-item>
@@ -114,7 +116,12 @@
 
         <StudentsGroupManageDialog v-model="groupManageVisible" :active="hasActiveClass" :class-id="activeClassId"
             :groups="uiGroups" @create-group="handleCreateGroup" @delete-group="handleDeleteGroup"
-            @save-members="handleSaveGroupMembers" @open-import="groupImportVisible = true" />
+            @save-members="handleSaveGroupMembers" @open-import="groupImportVisible = true"
+            @open-random="openRandomGroupDialog" />
+
+        <StudentsRandomGroupDialog v-model="randomGroupVisible" :active="hasActiveClass && !isArchivedSemester && !loading"
+            :busy="randomGroupingSaving" :error="randomGroupingError" :existing-group-count="groups.length"
+            :students="randomGroupStudents" @confirm="handleApplyRandomGroups" @clear-error="randomGroupingError = ''" />
 
         <StudentsGroupImportDialog v-model="groupImportVisible" :active="hasActiveClass" :students="uiAllStudents"
             :groups="uiGroups" @confirm="handleConfirmGroupImport" />
@@ -133,12 +140,14 @@
 
 <script setup lang="ts">
 import type { UiGender, UiStudent } from "@/components/class/ClassStudentList.vue";
+import { ApiRequestError } from "@/types/api";
 import { pointsManager } from "@/managers/points";
 import { studentManager } from "@/managers/student";
 import { useCacheStore } from "@/stores/cacheStore";
 import type { RuleGroup } from "@/types/points";
 import type {
     ApiGender,
+    ApplyRandomGroupsReq,
     CreateStudentReq,
     StudentDTO,
     StudentGroupDTO,
@@ -151,6 +160,7 @@ import StudentsConfirmDialog from "@/v3/components/students/StudentsConfirmDialo
 import StudentsEditDialog from "@/v3/components/students/StudentsEditDialog.vue";
 import StudentsGroupImportDialog from "@/v3/components/students/StudentsGroupImportDialog.vue";
 import StudentsGroupManageDialog, { type UiGroup } from "@/v3/components/students/StudentsGroupManageDialog.vue";
+import StudentsRandomGroupDialog from "@/v3/components/students/StudentsRandomGroupDialog.vue";
 import StudentsListPanel, {
     type StudentsListPanelItem,
     type StudentsListPanelLayoutMode
@@ -197,6 +207,9 @@ const addStudentDialogVisible = ref(false)
 const addStudentDialogMode = ref<StudentAddMode>("single")
 const groupManageVisible = ref(false)
 const groupImportVisible = ref(false)
+const randomGroupVisible = ref(false)
+const randomGroupingSaving = ref(false)
+const randomGroupingError = ref("")
 const editStudentVisible = ref(false)
 const deleteStudentDialogVisible = ref(false)
 const editingStudent = ref<UiStudent | null>(null)
@@ -211,6 +224,8 @@ const ruleGroupsError = ref("")
 const selectionDetailsVisible = ref(false)
 const compactViewport = window.matchMedia("(max-width: 920px)")
 const isCompactViewport = ref(compactViewport.matches)
+let studentLoadRequestId = 0
+let studentsViewActive = true
 
 function syncCompactViewport(): void {
     isCompactViewport.value = compactViewport.matches
@@ -220,12 +235,20 @@ function syncCompactViewport(): void {
 }
 
 onMounted(() => compactViewport.addEventListener("change", syncCompactViewport))
-onBeforeUnmount(() => compactViewport.removeEventListener("change", syncCompactViewport))
+onBeforeUnmount(() => {
+    compactViewport.removeEventListener("change", syncCompactViewport)
+    studentsViewActive = false
+    studentLoadRequestId += 1
+})
 
 const activeClassId = computed<number | null>(() => cacheStore.getActiveClassId())
 const hasActiveClass = computed<boolean>(() => typeof activeClassId.value === "number")
 const activeSemesterStatus = computed<number | null>(() => cacheStore.getActiveSemesterStatus())
 const isArchivedSemester = computed<boolean>(() => hasActiveClass.value && activeSemesterStatus.value === 2)
+const randomGroupStudents = computed(() => students.value.map(student => ({
+    id: student.id ?? 0,
+    name: student.name?.trim() || "未命名学生"
+})))
 
 /** 返回当前学生页的布局缓存值。 */
 const layoutMode = computed<LayoutMode>({
@@ -595,20 +618,25 @@ function syncSelectedStudents(): void {
 
 /** 加载当前班级的学生与分组数据。 */
 async function loadStudentData(): Promise<void> {
-    if (!activeClassId.value) {
+    const requestId = ++studentLoadRequestId
+    const classId = activeClassId.value
+    if (!classId) {
         students.value = []
         groups.value = []
         selectedStudentIds.value = []
         studentSearchIndexMap.value = new Map()
+        loading.value = false
         return
     }
 
     loading.value = true
     try {
         const [studentList, groupList] = await Promise.all([
-            studentManager.list(activeClassId.value),
-            studentManager.listGroups(activeClassId.value)
+            studentManager.list(classId),
+            studentManager.listGroups(classId)
         ])
+
+        if (requestId !== studentLoadRequestId || classId !== activeClassId.value || !studentsViewActive) return
 
         students.value = studentList
         groups.value = groupList
@@ -623,10 +651,11 @@ async function loadStudentData(): Promise<void> {
         rebuildStudentSearchIndexMap()
         syncSelectedStudents()
     } catch (error) {
+        if (requestId !== studentLoadRequestId || classId !== activeClassId.value || !studentsViewActive) return
         console.error("加载学生管理数据失败", error)
         ElMessage.error("加载学生管理数据失败")
     } finally {
-        loading.value = false
+        if (requestId === studentLoadRequestId) loading.value = false
     }
 }
 
@@ -837,6 +866,52 @@ function openGroupImportDialog(): void {
     groupImportVisible.value = true
 }
 
+/** 预览全班随机分组，提交时由后端一次性替换。 */
+function openRandomGroupDialog(): void {
+    if (!activeClassId.value || isArchivedSemester.value || loading.value || randomGroupingSaving.value) return
+    if (!students.value.length) {
+        ElMessage.info("请先添加学生")
+        return
+    }
+    groupManageVisible.value = false
+    randomGroupingError.value = ""
+    randomGroupVisible.value = true
+}
+
+async function handleApplyRandomGroups(randomGroups: ApplyRandomGroupsReq["groups"]): Promise<void> {
+    const classId = activeClassId.value
+    const semesterId = cacheStore.getActiveSemesterId()
+    const userId = cacheStore.profile?.id
+    if (!classId || isArchivedSemester.value || loading.value || randomGroupingSaving.value) return
+    const contextIsCurrent = () => studentsViewActive && classId === activeClassId.value
+        && semesterId === cacheStore.getActiveSemesterId() && userId === cacheStore.profile?.id
+        && !isArchivedSemester.value
+    randomGroupingSaving.value = true
+    randomGroupingError.value = ""
+    try {
+        const savedGroups = await studentManager.applyRandomGroups({ class_id: classId, groups: randomGroups })
+        if (!contextIsCurrent()) return
+        studentLoadRequestId += 1
+        loading.value = false
+        groups.value = savedGroups
+        const groupByStudentId = new Map(savedGroups.flatMap(group => (group.students ?? [])
+            .map(student => [student.id, group.id] as const)))
+        students.value = students.value.map(student => ({ ...student, group_id: groupByStudentId.get(student.id) }))
+        selectedGroupId.value = null
+        selectedStudentIds.value = []
+        rebuildStudentSearchIndexMap()
+        cacheStore.bumpDataVersion()
+        randomGroupVisible.value = false
+        ElMessage.success(`已替换为 ${savedGroups.length} 个随机分组`)
+    } catch (error) {
+        if (!contextIsCurrent()) return
+        randomGroupingError.value = error instanceof ApiRequestError
+            ? error.message : "保存结果未获确认，请刷新页面核对分组后再操作"
+    } finally {
+        randomGroupingSaving.value = false
+    }
+}
+
 /** 打开编辑学生弹窗。 */
 function openEdit(student: StudentCardItem): void {
     editingStudent.value = {
@@ -1007,6 +1082,7 @@ async function handleConfirmGroupImport(payload: { groups: Array<{ groupName: st
 }
 
 watch(activeClassId, async () => {
+    randomGroupVisible.value = false
     selectorVisible.value = false
     selectionDetailsVisible.value = false
     selectorTargets.value = []
@@ -1017,8 +1093,13 @@ watch(activeClassId, async () => {
 }, { immediate: true })
 
 watch(isArchivedSemester, () => {
+    randomGroupVisible.value = false
     selectorVisible.value = false
     selectorTargets.value = []
+})
+
+watch(() => cacheStore.getActiveSemesterId(), () => {
+    randomGroupVisible.value = false
 })
 
 watch(selectedStudentIds, (ids) => {

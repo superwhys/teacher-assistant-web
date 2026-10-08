@@ -2,6 +2,7 @@ import { get, post, put, del } from '@/api/api'
 import type { ApiResponse } from '@/types/api'
 import type {
     AddStudentsToGroupReq,
+    ApplyRandomGroupsReq,
     CreateStudentGroupReq,
     CreateStudentReq,
     ListStudentGroupsResp,
@@ -42,6 +43,9 @@ export const studentApi = {
     },
     listGroups(classId: number): Promise<ApiResponse<ListStudentGroupsResp>> {
         return get<ListStudentGroupsResp>('/student/group/list', { class_id: classId })
+    },
+    applyRandomGroups(data: ApplyRandomGroupsReq): Promise<ApiResponse<ListStudentGroupsResp>> {
+        return post<ListStudentGroupsResp>('/student/group/random/apply', data)
     },
     addStudentsToGroup(data: AddStudentsToGroupReq): Promise<ApiResponse<null>> {
         return post<null>('/student/group/add_students', data)

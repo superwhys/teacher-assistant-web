@@ -59,6 +59,12 @@ export type CreateStudentGroupReq = {
     name: string
 }
 
+/** 确认随机分组后，原子替换当前班级全部分组。 */
+export type ApplyRandomGroupsReq = {
+    class_id: number
+    groups: Array<{ name: string, student_ids: number[] }>
+}
+
 /**
  * 学生组结构
  */
@@ -126,4 +132,3 @@ export type Student = {
     studentName: string
     gender: Gender
 }
-

@@ -51,4 +51,25 @@ export type RemovePrizeFromLotteryPoolReq = {
     name: string
 }
 
+export type LotteryRecordDTO = {
+    id: number
+    pool_id: number
+    client_id: string
+    prize_name: string
+    drawn_at: number
+    student_id: number
+    student_name: string
+    student_class_id: number
+}
+
+export type CreateLotteryRecordItem = {
+    client_id: string
+    prize_name: string
+    drawn_at: number
+    student_id?: number
+}
+
+export type LotteryRecordsResp = {
+    records: LotteryRecordDTO[]
+}
 

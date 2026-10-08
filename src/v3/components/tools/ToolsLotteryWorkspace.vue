@@ -3,7 +3,8 @@
         <div class="tools-lottery-workspace__toolbar">
             <div class="lottery-toolbar__pool">
                 <span class="lottery-toolbar__eyebrow">奖池</span>
-                <el-select v-model="currentPoolId" placeholder="选择奖池" size="large" class="lottery-toolbar__select">
+                <el-select v-model="currentPoolId" placeholder="选择奖池" size="large" class="lottery-toolbar__select"
+                    :disabled="isLoading || isRolling || isSavingRecord || studentSaving">
                     <el-option v-for="pool in pools" :key="pool.id" :label="pool.name" :value="pool.id" />
                     <template #empty>
                         <div class="lottery-toolbar__empty">
@@ -36,11 +37,19 @@
         <div class="tools-lottery-workspace__stage">
             <ToolsLotteryDisplayPanel :current-name="currentName" :current-pool-name="currentPool?.name ?? ''"
                 :enabled-prize-count="enabledPrizes.length" :is-rolling="isRolling" :is-selected="isSelected"
+                :saving="isSavingRecord"
+                :loading="recordsLoading"
+                :has-class="Boolean(currentClassId)"
+                :current-class-name="currentClassName"
                 @toggle-rolling="toggleRolling" @draw-once="drawOnce" />
 
             <div class="tools-lottery-workspace__side">
                 <ToolsLotteryPoolPanel :prizes="prizes" @edit-prize="openEditDialog" @toggle-prize="toggleEnabled" />
-                <ToolsLotteryHistoryPanel :records="records" @clear-records="openClearRecordsDialog" />
+                <ToolsLotteryHistoryPanel :records="records" :loading="recordsLoading" :load-error="recordsLoadError"
+                    :pending-persistence-failed="historyStore.pendingPersistenceFailed"
+                    :has-class="Boolean(currentClassId)"
+                    :busy="isRolling || isSavingRecord || studentSaving" @clear-records="openClearRecordsDialog"
+                    @retry="refreshRecords" @bind-student="openStudentDialog" />
             </div>
         </div>
 
@@ -70,6 +79,19 @@
             @selection-change="handleImportSelectionChange"
         />
 
+        <ToolsLotteryStudentDialog
+            v-model="studentDialogVisible"
+            v-model:student-id="selectedStudentId"
+            :prize-name="selectedRecord?.prizeName ?? ''"
+            :students="studentOptions"
+            :class-name="currentClassName"
+            :loading="studentsLoading"
+            :load-error="studentsLoadError"
+            :saving="studentSaving"
+            @retry="loadStudentOptions"
+            @save="saveRecordStudent"
+        />
+
         <StudentsConfirmDialog
             v-model="clearAllDialogVisible"
             title="清空奖池"
@@ -84,8 +106,8 @@
             v-model="clearRecordsDialogVisible"
             title="清空记录"
             eyebrow="风险操作"
-            description="清空后当前奖池的抽奖历史将被立即移除，但不会影响奖池中的奖品。"
-            message="确定清空当前奖池的抽奖历史吗？"
+            :description="`清空后${currentClassName}在当前奖池的抽奖历史将被移除，不影响其他班级的记录和奖池中的奖品。`"
+            :message="`确定清空${currentClassName}在当前奖池的抽奖历史吗？`"
             confirm-text="确认清空"
             @confirm="clearRecords"
         />
@@ -94,8 +116,11 @@
 
 <script setup lang="ts">
 import { mallApi } from "@/api/mall";
+import { studentManager } from "@/managers/student";
 import { lotteryManager, type UiLotteryPool, type UiLotteryPrize } from "@/managers/lottery";
 import { useLotteryHistoryStore } from "@/stores/lotteryHistoryStore";
+import { useCacheStore } from "@/stores/cacheStore";
+import type { StudentDTO } from "@/types/student";
 import type { DrawRecord } from "@/types/lottery";
 import { isApiRequestError } from "@/types/api";
 import type { ShopItem } from "@/types/shopItem";
@@ -106,6 +131,7 @@ import ToolsLotteryImportDialog from "@/v3/components/tools/ToolsLotteryImportDi
 import ToolsLotteryPoolDialog from "@/v3/components/tools/ToolsLotteryPoolDialog.vue";
 import ToolsLotteryPoolPanel from "@/v3/components/tools/ToolsLotteryPoolPanel.vue";
 import ToolsLotteryPrizeDialog from "@/v3/components/tools/ToolsLotteryPrizeDialog.vue";
+import ToolsLotteryStudentDialog from "@/v3/components/tools/ToolsLotteryStudentDialog.vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from "vue";
 
@@ -135,12 +161,23 @@ interface PoolFormState {
 }
 
 const historyStore = useLotteryHistoryStore()
+const cacheStore = useCacheStore()
 
 const isLoading = ref(false)
 const prizes = ref<UiLotteryPrize[]>([])
 const records = ref<DrawRecord[]>([])
 const pools = ref<UiLotteryPool[]>([])
 const currentPoolId = ref<string | null>(null)
+const recordsLoading = ref(false)
+const recordsLoadError = ref(false)
+const isSavingRecord = ref(false)
+const studentDialogVisible = ref(false)
+const selectedRecord = ref<DrawRecord | null>(null)
+const selectedStudentId = ref<number | null>(null)
+const studentOptions = ref<StudentDTO[]>([])
+const studentsLoading = ref(false)
+const studentsLoadError = ref(false)
+const studentSaving = ref(false)
 
 const prizeDialogVisible = ref(false)
 const prizeEditMode = ref<PrizeEditMode>("add")
@@ -172,6 +209,13 @@ const isSelected = ref(false)
 
 let rollingTimer: number | undefined
 let selectedTimer: number | undefined
+let recordsRequest = 0
+let poolRequest = 0
+let studentsRequest = 0
+let initializing = false
+let rollingContext: { poolId: string, classId: number } | null = null
+const currentClassId = computed(() => cacheStore.getActiveClassId())
+const currentClassName = computed(() => cacheStore.getActiveClassName() || "当前班级")
 
 /** 返回当前选中的奖池。 */
 const currentPool = computed<UiLotteryPool | null>(() => {
@@ -205,15 +249,114 @@ async function reloadPools(ensureDefault = false): Promise<boolean> {
 
 /** 刷新当前奖池的奖品列表和历史记录。 */
 async function refreshCurrentPoolState(): Promise<void> {
-    if (!currentPoolId.value) {
+    const poolId = currentPoolId.value
+    const requestId = ++poolRequest
+    if (!poolId) {
         prizes.value = []
         records.value = []
         return
     }
 
-    const currentPoolData = await lotteryManager.getPool(currentPoolId.value)
-    prizes.value = currentPoolData?.prizes ?? []
-    records.value = historyStore.getRecords(currentPoolId.value)
+    const results = await Promise.allSettled([
+        lotteryManager.getPool(poolId),
+        refreshRecords(),
+    ])
+    if (requestId !== poolRequest || poolId !== currentPoolId.value) return
+    const poolResult = results[0]
+    if (poolResult.status === "fulfilled") {
+        prizes.value = poolResult.value?.prizes ?? []
+    } else if (!isApiRequestError(poolResult.reason)) {
+        console.error(poolResult.reason)
+        ElMessage.error("加载奖品失败")
+    }
+}
+
+/** 同步待上传记录并加载数据库中的历史。 */
+async function refreshRecords(): Promise<void> {
+    const poolId = currentPoolId.value
+    const classId = currentClassId.value
+    if (!poolId || !classId || isRolling.value) return
+    const requestId = ++recordsRequest
+    recordsLoading.value = true
+    recordsLoadError.value = false
+    try {
+        await historyStore.loadRecords(poolId, classId)
+    } catch (error) {
+        if (requestId === recordsRequest && poolId === currentPoolId.value && classId === currentClassId.value) {
+            recordsLoadError.value = true
+            if (!isApiRequestError(error)) {
+                console.error(error)
+                ElMessage.error("加载或同步抽奖记录失败，请重试")
+            }
+        }
+    } finally {
+        if (requestId === recordsRequest && poolId === currentPoolId.value && classId === currentClassId.value) {
+            records.value = historyStore.getRecords(poolId, classId)
+            recordsLoading.value = false
+        }
+    }
+}
+
+/** 打开中奖学生编辑草稿。 */
+async function openStudentDialog(record: DrawRecord): Promise<void> {
+    if (!record.serverId || !currentClassId.value || record.studentClassId !== currentClassId.value || studentSaving.value) return
+    selectedRecord.value = record
+    selectedStudentId.value = record.studentId ?? null
+    studentOptions.value = []
+    studentDialogVisible.value = true
+    await loadStudentOptions()
+}
+
+/** 仅加载记录所属班级的学生，忽略已过期的请求。 */
+async function loadStudentOptions(): Promise<void> {
+    const classId = selectedRecord.value?.studentClassId
+    if (!classId || classId !== currentClassId.value) return
+    const requestId = ++studentsRequest
+    studentsLoading.value = true
+    studentsLoadError.value = false
+    try {
+        const students = await studentManager.list(classId)
+        if (requestId !== studentsRequest || !studentDialogVisible.value || classId !== currentClassId.value) return
+        studentOptions.value = students.filter(item => item.id && item.name && item.class_id === classId)
+        const record = selectedRecord.value
+        if (record?.studentId && selectedStudentId.value === record.studentId
+            && !studentOptions.value.some(item => item.id === record.studentId)) {
+            studentOptions.value.unshift({ id: record.studentId, name: record.studentName || "已绑定学生" })
+        }
+    } catch (error) {
+        if (requestId !== studentsRequest) return
+        studentsLoadError.value = true
+        if (!isApiRequestError(error)) {
+            console.error(error)
+            ElMessage.error("加载学生列表失败")
+        }
+    } finally {
+        if (requestId === studentsRequest) studentsLoading.value = false
+    }
+}
+
+/** 保存学生绑定；失败时保留当前草稿。 */
+async function saveRecordStudent(): Promise<void> {
+    const record = selectedRecord.value
+    const poolId = currentPoolId.value
+    const classId = record?.studentClassId
+    if (!record?.serverId || !poolId || !classId || classId !== currentClassId.value || studentSaving.value || studentsLoading.value) return
+    studentSaving.value = true
+    try {
+        await historyStore.updateStudent(poolId, record.serverId, selectedStudentId.value, classId)
+        if (poolId !== currentPoolId.value || classId !== currentClassId.value) return
+        records.value = historyStore.getRecords(poolId, classId)
+        studentDialogVisible.value = false
+        ElMessage.success(selectedStudentId.value ? "已绑定中奖学生" : "已解除学生绑定")
+    } catch (error) {
+        if (poolId !== currentPoolId.value || classId !== currentClassId.value) return
+        if (!isApiRequestError(error)) {
+            console.error(error)
+            ElMessage.error("保存中奖学生失败")
+        }
+    } finally {
+        studentSaving.value = false
+    }
 }
 
 /** 加载商城奖品列表用于导入。 */
@@ -572,6 +715,11 @@ function triggerSelectedEffect(): void {
 
 /** 开始抽奖滚动展示。 */
 function startRolling(): void {
+    if (isLoading.value || isSavingRecord.value || recordsLoading.value) return
+    if (!currentClassId.value || !currentPoolId.value) {
+        ElMessage.warning("请先选择班级和奖池")
+        return
+    }
     if (enabledPrizes.value.length === 0) {
         ElMessage.warning("请先添加并启用至少一个奖品")
         return
@@ -581,6 +729,7 @@ function startRolling(): void {
         return
     }
 
+    rollingContext = { poolId: currentPoolId.value, classId: currentClassId.value }
     isRolling.value = true
     rollingTimer = window.setInterval(() => {
         const randomPrize = pickRandomOne()
@@ -594,12 +743,15 @@ function stopRolling(): void {
         return
     }
 
+    const context = rollingContext
+    rollingContext = null
     isRolling.value = false
     if (rollingTimer !== undefined) {
         window.clearInterval(rollingTimer)
         rollingTimer = undefined
     }
 
+    if (!context || context.classId !== currentClassId.value || context.poolId !== currentPoolId.value) return
     const pickedPrize = weightedRandom(enabledPrizes.value)
     if (!pickedPrize) {
         ElMessage.warning("没有可抽取的奖品")
@@ -607,11 +759,29 @@ function stopRolling(): void {
     }
 
     currentName.value = pickedPrize.name
-    if (currentPoolId.value) {
-        historyStore.addRecord(currentPoolId.value, pickedPrize.name)
-        records.value = historyStore.getRecords(currentPoolId.value)
-    }
+    void saveDrawRecord(pickedPrize.name, context.poolId, context.classId)
     triggerSelectedEffect()
+}
+
+/** 抽奖结束后保存结果，失败时保留待同步记录。 */
+async function saveDrawRecord(prizeName: string, poolId: string, classId: number): Promise<void> {
+    if (isSavingRecord.value) return
+    isSavingRecord.value = true
+    try {
+        await historyStore.addRecord(poolId, prizeName, classId)
+    } catch (error) {
+        if (poolId !== currentPoolId.value || classId !== currentClassId.value) return
+        recordsLoadError.value = true
+        if (!isApiRequestError(error)) {
+            console.error(error)
+            ElMessage.error("抽奖记录未同步，请重试")
+        }
+    } finally {
+        if (poolId === currentPoolId.value && classId === currentClassId.value) {
+            records.value = historyStore.getRecords(poolId, classId)
+        }
+        isSavingRecord.value = false
+    }
 }
 
 /** 切换抽奖滚动状态。 */
@@ -626,7 +796,13 @@ function toggleRolling(): void {
 
 /** 直接抽取一次奖品。 */
 function drawOnce(): void {
-    if (isRolling.value) {
+    if (isLoading.value || isRolling.value || isSavingRecord.value || recordsLoading.value) {
+        return
+    }
+    const poolId = currentPoolId.value
+    const classId = currentClassId.value
+    if (!poolId || !classId) {
+        ElMessage.warning("请先选择班级和奖池")
         return
     }
 
@@ -637,10 +813,7 @@ function drawOnce(): void {
     }
 
     currentName.value = pickedPrize.name
-    if (currentPoolId.value) {
-        historyStore.addRecord(currentPoolId.value, pickedPrize.name)
-        records.value = historyStore.getRecords(currentPoolId.value)
-    }
+    void saveDrawRecord(pickedPrize.name, poolId, classId)
     triggerSelectedEffect()
 }
 
@@ -671,37 +844,79 @@ function clearAll(): void {
 /** 清空当前奖池的抽奖历史。 */
 function clearRecords(): void {
     void (async () => {
-        clearRecordsDialogVisible.value = false
-        if (!currentPoolId.value) {
+        const poolId = currentPoolId.value
+        const classId = currentClassId.value
+        if (!poolId || !classId || isSavingRecord.value || recordsLoading.value || isLoading.value) {
             return
         }
 
-        historyStore.clearRecords(currentPoolId.value)
-        records.value = historyStore.getRecords(currentPoolId.value)
-        ElMessage.success("已清空抽奖历史")
+        isLoading.value = true
+        try {
+            await historyStore.clearRecords(poolId, classId)
+            clearRecordsDialogVisible.value = false
+            if (poolId === currentPoolId.value && classId === currentClassId.value) {
+                records.value = historyStore.getRecords(poolId, classId)
+                recordsLoadError.value = false
+                ElMessage.success("已清空当前班级的抽奖历史")
+            }
+        } catch (error) {
+            if (!isApiRequestError(error)) {
+                console.error(error)
+                ElMessage.error("清空抽奖历史失败")
+            }
+        } finally {
+            isLoading.value = false
+        }
     })()
 }
 
 /** 初始化新版抽奖器工作区。 */
 async function initializeWorkspace(): Promise<void> {
+    initializing = true
     isLoading.value = true
     try {
-        await historyStore.hydrate()
-        const poolChanged = await reloadPools(true)
-        if (!poolChanged) {
-            await refreshCurrentPoolState()
-        }
+        historyStore.hydrate(currentClassId.value)
+        await reloadPools(true)
+        if (!initializing) return
+        await refreshCurrentPoolState()
     } catch (error) {
-        if (!isApiRequestError(error)) {
+        if (initializing && !isApiRequestError(error)) {
             console.error(error)
             ElMessage.error("加载抽奖器数据失败")
         }
     } finally {
-        isLoading.value = false
+        if (initializing) {
+            initializing = false
+            isLoading.value = false
+        }
     }
 }
 
-watch(() => currentPoolId.value, () => {
+watch([() => currentPoolId.value, currentClassId], ([, classId], [, previousClassId]) => {
+    if (initializing && classId === previousClassId) return
+    if (initializing) {
+        initializing = false
+        isLoading.value = false
+    }
+    recordsRequest += 1
+    studentsRequest += 1
+    recordsLoading.value = false
+    recordsLoadError.value = false
+    clearRecordsDialogVisible.value = false
+    if (rollingTimer !== undefined) {
+        window.clearInterval(rollingTimer)
+        rollingTimer = undefined
+    }
+    rollingContext = null
+    isRolling.value = false
+    isSelected.value = false
+    prizes.value = []
+    records.value = []
+    currentName.value = ""
+    studentDialogVisible.value = false
+    selectedRecord.value = null
+    studentOptions.value = []
+    if (classId !== previousClassId) historyStore.hydrate(classId)
     void refreshCurrentPoolState()
 })
 

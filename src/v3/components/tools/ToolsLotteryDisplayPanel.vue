@@ -17,11 +17,11 @@
         </div>
 
         <div class="display-actions">
-            <button type="button" class="primary-button" :disabled="enabledPrizeCount === 0"
+            <button type="button" class="primary-button" :disabled="!isRolling && (!hasClass || enabledPrizeCount === 0 || saving || loading)"
                 @click="emit('toggleRolling')">
-                {{ isRolling ? "停止抽奖" : "开始抽奖" }}
+                {{ isRolling ? "停止抽奖" : saving ? "保存记录中…" : loading ? "加载记录中…" : "开始抽奖" }}
             </button>
-            <button type="button" class="ghost-button" :disabled="isRolling || enabledPrizeCount === 0"
+            <button type="button" class="ghost-button" :disabled="!hasClass || isRolling || enabledPrizeCount === 0 || saving || loading"
                 @click="emit('drawOnce')">
                 抽取 1 次
             </button>
@@ -41,6 +41,10 @@ interface ToolsLotteryDisplayPanelProps {
     enabledPrizeCount: number
     isRolling: boolean
     isSelected: boolean
+    saving: boolean
+    loading: boolean
+    hasClass: boolean
+    currentClassName: string
 }
 
 const props = defineProps<ToolsLotteryDisplayPanelProps>()
@@ -65,19 +69,22 @@ const statusLabel = computed<string>(() => {
 
 /** 返回展示区底部的状态说明。 */
 const statusMeta = computed<string>(() => {
+    if (!props.hasClass) {
+        return "请先在页面顶部选择班级"
+    }
     if (!props.currentPoolName) {
         return "请先创建或选择一个奖池"
     }
 
     if (props.enabledPrizeCount === 0) {
-        return `${props.currentPoolName} · 暂无可用奖品`
+        return `${props.currentClassName} · ${props.currentPoolName} · 暂无可用奖品`
     }
 
     if (props.isRolling) {
-        return `${props.currentPoolName} · 点击停止抽奖查看结果`
+        return `${props.currentClassName} · ${props.currentPoolName} · 点击停止抽奖查看结果`
     }
 
-    return `${props.currentPoolName} · ${props.enabledPrizeCount} 个奖品可抽`
+    return `${props.currentClassName} · ${props.currentPoolName} · ${props.enabledPrizeCount} 个奖品可抽`
 })
 </script>
 

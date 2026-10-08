@@ -13,6 +13,11 @@ export type DrawRecord = {
     prizeId: string
     prizeName: string
     drawnAt: number
+    serverId?: number
+    studentId?: number
+    studentName?: string
+    studentClassId?: number
+    syncPending?: boolean
 }
 
 export type PrizePool = {
@@ -22,5 +27,4 @@ export type PrizePool = {
     records: DrawRecord[]
     createdAt: number
 }
-
 

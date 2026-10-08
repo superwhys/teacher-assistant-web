@@ -1,5 +1,6 @@
 import { lotteryApi } from '@/api/lottery'
-import type { LotteryPoolDTO, LotteryPrizeDTO } from '@/types/lotteryApi'
+import type { LotteryPoolDTO, LotteryPrizeDTO, LotteryRecordDTO } from '@/types/lotteryApi'
+import type { DrawRecord } from '@/types/lottery'
 import type { ShopItem } from '@/types/shopItem'
 
 export type UiLotteryPrize = {
@@ -53,7 +54,53 @@ function assertPoolId(poolId: string | number): number {
     return id
 }
 
+function assertClassId(classId: number): number {
+    if (!Number.isSafeInteger(classId) || classId <= 0) throw new Error('请先选择班级')
+    return classId
+}
+
+function normalizeRecord(dto: LotteryRecordDTO, classId: number): DrawRecord {
+    if (!dto?.id || !dto.client_id || !dto.prize_name || !Number.isFinite(dto.drawn_at)) {
+        throw new Error('抽奖记录返回数据异常')
+    }
+    if (dto.student_class_id !== classId) throw new Error('抽奖记录班级不匹配')
+    return {
+        id: dto.client_id,
+        prizeId: dto.prize_name,
+        prizeName: dto.prize_name,
+        drawnAt: dto.drawn_at,
+        serverId: dto.id,
+        studentId: dto.student_id || undefined,
+        studentName: dto.student_name || undefined,
+        studentClassId: dto.student_class_id,
+    }
+}
+
 export const lotteryManager = {
+    async listRecords(poolId: string | number, classId: number): Promise<DrawRecord[]> {
+        const response = await lotteryApi.listRecords(assertPoolId(poolId), assertClassId(classId))
+        return (response.data?.records ?? []).map(record => normalizeRecord(record, classId))
+    },
+
+    async createRecords(poolId: string | number, classId: number, records: DrawRecord[]): Promise<DrawRecord[]> {
+        const response = await lotteryApi.createRecords(assertPoolId(poolId), assertClassId(classId), records.map(record => ({
+            client_id: record.id,
+            prize_name: record.prizeName,
+            drawn_at: record.drawnAt,
+            student_id: record.studentId,
+        })))
+        return (response.data?.records ?? []).map(record => normalizeRecord(record, classId))
+    },
+
+    async updateRecordStudent(recordId: number, classId: number, studentId: number | null): Promise<DrawRecord> {
+        const response = await lotteryApi.updateRecordStudent(recordId, assertClassId(classId), studentId)
+        return normalizeRecord(response.data, classId)
+    },
+
+    async clearRecords(poolId: string | number, classId: number): Promise<void> {
+        await lotteryApi.clearRecords(assertPoolId(poolId), assertClassId(classId))
+    },
+
     async listPools(): Promise<UiLotteryPool[]> {
         const resp = await lotteryApi.listPools()
         const pools = resp.data?.pools ?? []
@@ -182,5 +229,3 @@ export const lotteryManager = {
         return await this.addPrizes(id, prizes)
     },
 }
-
-

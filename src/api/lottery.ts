@@ -9,9 +9,24 @@ import type {
     RemovePrizeFromLotteryPoolReq,
     UpdateLotteryPoolReq,
     UpdatePrizeInLotteryPoolReq,
+    CreateLotteryRecordItem,
+    LotteryRecordDTO,
+    LotteryRecordsResp,
 } from '@/types/lotteryApi'
 
 export const lotteryApi = {
+    listRecords(poolId: number, classId: number): Promise<ApiResponse<LotteryRecordsResp>> {
+        return get<LotteryRecordsResp>('/lottery/records/list', { pool_id: poolId, class_id: classId })
+    },
+    createRecords(poolId: number, classId: number, records: CreateLotteryRecordItem[]): Promise<ApiResponse<LotteryRecordsResp>> {
+        return post<LotteryRecordsResp>('/lottery/records/create', { pool_id: poolId, class_id: classId, records })
+    },
+    updateRecordStudent(recordId: number, classId: number, studentId: number | null): Promise<ApiResponse<LotteryRecordDTO>> {
+        return put<LotteryRecordDTO>(`/lottery/records/${recordId}/student`, { class_id: classId, student_id: studentId ?? 0 })
+    },
+    clearRecords(poolId: number, classId: number): Promise<ApiResponse<null>> {
+        return post<null>('/lottery/records/clear', { pool_id: poolId, class_id: classId })
+    },
     listPools(): Promise<ApiResponse<ListLotteryPoolsResp>> {
         return get<ListLotteryPoolsResp>('/lottery/pools/list')
     },
@@ -37,5 +52,3 @@ export const lotteryApi = {
         return post<null>('/lottery/pools/remove-prize', data)
     },
 }
-
-

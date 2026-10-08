@@ -8,6 +8,7 @@
                     v-if="records.length > 0"
                     type="button"
                     class="history-clear-button"
+                    :disabled="loading || busy"
                     @click="emit('clearRecords')"
                 >
                     清空
@@ -15,23 +16,42 @@
             </div>
         </div>
 
+        <div v-if="loadError || pendingCount > 0" class="history-status">
+            <span>{{ pendingCount > 0 ? `${pendingCount} 条记录待同步` : "记录加载失败" }}</span>
+            <el-button link type="primary" :loading="loading" :disabled="busy" @click="emit('retry')">重试</el-button>
+        </div>
+        <div v-else-if="loading" class="history-status">正在加载记录…</div>
+        <p v-if="pendingPersistenceFailed && pendingCount > 0" class="history-storage-warning">
+            待同步记录仅保留在当前页面，请重试同步后再关闭页面。
+        </p>
+
         <div v-if="records.length > 0" class="history-list">
             <article v-for="record in records" :key="record.id" class="history-item">
                 <div class="history-item__content">
                     <strong>{{ record.prizeName }}</strong>
                     <span>{{ formatRecordTime(record.drawnAt) }}</span>
+                    <span v-if="record.studentId" class="history-item__student">中奖学生：{{ record.studentName || "已绑定学生" }}</span>
                 </div>
+                <button
+                    type="button"
+                    class="history-student-button"
+                    :disabled="!record.serverId || busy || loading"
+                    @click="emit('bindStudent', record)"
+                >
+                    {{ record.syncPending ? "待同步" : record.studentId ? "更改学生" : "绑定学生" }}
+                </button>
             </article>
         </div>
 
-        <div v-else class="empty-state empty-state--history">
-            <strong>暂无记录</strong>
-            <p>抽奖结果会显示在这里。</p>
+        <div v-else-if="!loading && !loadError" class="empty-state empty-state--history">
+            <strong>{{ hasClass ? "暂无记录" : "请先选择班级" }}</strong>
+            <p>{{ hasClass ? "当前班级的抽奖结果会显示在这里。" : "选择班级后可查看该班的抽奖记录。" }}</p>
         </div>
     </section>
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import type { DrawRecord } from "@/types/lottery";
 
 defineOptions({ name: "ToolsLotteryHistoryPanel" })
@@ -39,17 +59,28 @@ defineOptions({ name: "ToolsLotteryHistoryPanel" })
 /** 定义抽奖历史面板属性。 */
 interface ToolsLotteryHistoryPanelProps {
     records: DrawRecord[]
+    loading: boolean
+    loadError: boolean
+    busy: boolean
+    pendingPersistenceFailed: boolean
+    hasClass: boolean
 }
 
-defineProps<ToolsLotteryHistoryPanelProps>()
+const props = defineProps<ToolsLotteryHistoryPanelProps>()
 
 const emit = defineEmits<{
     (e: "clearRecords"): void
+    (e: "bindStudent", record: DrawRecord): void
+    (e: "retry"): void
 }>()
+
+const pendingCount = computed(() => props.records.filter(record => record.syncPending).length)
 
 /** 将抽奖记录时间格式化为可读文本。 */
 function formatRecordTime(timestamp: number): string {
-    return new Date(timestamp).toLocaleTimeString("zh-CN", {
+    return new Date(timestamp).toLocaleString("zh-CN", {
+        month: "2-digit",
+        day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
@@ -129,6 +160,49 @@ function formatRecordTime(timestamp: number): string {
     min-height: 48px;
     padding: 8px 2px;
     border-top: 1px solid var(--ta-line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.history-item__content {
+    min-width: 0;
+}
+
+.history-student-button {
+    flex: none;
+    min-height: 32px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 8px;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.history-student-button:disabled,
+.history-clear-button:disabled {
+    opacity: 0.42;
+    cursor: default;
+}
+
+.history-status {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--ta-text-tertiary);
+    font-size: 12px;
+}
+
+.history-storage-warning {
+    margin: 6px 0 0;
+    color: var(--ta-red);
+    font-size: 12px;
+    line-height: 1.5;
 }
 
 .history-item:first-child {
@@ -138,6 +212,10 @@ function formatRecordTime(timestamp: number): string {
 .history-item__content strong,
 .history-item__content span {
     display: block;
+}
+
+.history-item__content .history-item__student {
+    color: var(--ta-text-secondary);
 }
 
 .history-item__content strong {

@@ -11,6 +11,25 @@ const stages: TimerStage[] = [
 ]
 
 describe('multi-stage classroom timer', () => {
+    it('distinguishes a never-started timer from an immediately paused timer through restoration and reset', () => {
+        const initial = createStageTimerState(stages)
+        expect(initial.hasStarted).toBe(false)
+        const started = toggleStageTimer(initial, 1000)
+        const paused = toggleStageTimer(started, 1000)
+        expect(paused).toMatchObject({ remainingMs: 3000, isRunning: false, hasStarted: true })
+        expect(restoreStageTimer(paused, 90000).hasStarted).toBe(true)
+        expect(createStageTimerState(paused.stages).hasStarted).toBe(false)
+    })
+
+    it('infers whether legacy stage caches have started and rejects invalid new flags', () => {
+        const { hasStarted: _hasStarted, ...legacy } = createStageTimerState(stages)
+        expect(restoreStageTimer(legacy, 1000).hasStarted).toBe(false)
+        expect(restoreStageTimer({ ...legacy, remainingMs: 2500 }, 1000).hasStarted).toBe(true)
+        expect(restoreStageTimer({ ...legacy, stageIndex: 1, remainingMs: 5000 }, 1000).hasStarted).toBe(true)
+        expect(restoreStageTimer({ ...legacy, isRunning: true, endAtMs: 4000 }, 1000).hasStarted).toBe(true)
+        expect(restoreStageTimer({ ...legacy, hasStarted: 'yes' }, 1000)).toEqual(createStageTimerState())
+    })
+
     it('advances on the exact deadline without resetting the next deadline to the tick time', () => {
         const started = toggleStageTimer(createStageTimerState(stages), 1000)
         const next = syncStageTimer(started, 4500)

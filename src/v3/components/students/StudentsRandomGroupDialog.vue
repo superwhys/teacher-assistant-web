@@ -119,6 +119,13 @@ watch([mode, amountInput, () => props.students.map(student => student.id).join("
     gap: 14px;
 }
 
+.dialog-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
 .group-mode {
     display: flex;
     gap: 6px;

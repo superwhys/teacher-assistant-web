@@ -6,7 +6,7 @@ import type { Prize } from "@/types/mall";
 import type { StudentDTO } from "@/types/student";
 import {
     createStageTimerState, isValidTimerStages, restoreStageTimer, stageTimerProgress,
-    syncStageTimer, timerStageDurationMs, toggleStageTimer as toggleStageTimerState, type TimerStage
+    syncStageTimer, toggleStageTimer as toggleStageTimerState, type TimerStage
 } from "@/utils/stageTimer";
 import { ElMessage } from "element-plus";
 import { computed, reactive, ref, watch } from "vue";
@@ -27,6 +27,7 @@ type TimerPresetUnit = "minute" | "second"
 interface TimerState {
     intervalId: number | null
     endAtMs: number | null
+    hasStarted: boolean
     isRunning: boolean
     presetMinutes: number
     presetUnit: TimerPresetUnit
@@ -36,6 +37,7 @@ interface TimerState {
 /** 定义计时器本地缓存结构。 */
 interface PersistedTimerState {
     endAtMs: number | null
+    hasStarted: boolean
     isRunning: boolean
     presetMinutes: number
     presetUnit: TimerPresetUnit
@@ -49,6 +51,7 @@ function createDefaultTimerState(): TimerState {
     return {
         endAtMs: null,
         intervalId: null,
+        hasStarted: false,
         isRunning: false,
         presetMinutes: 15,
         presetUnit: "minute",
@@ -94,6 +97,9 @@ function loadPersistedTimerState(): TimerState {
         }
 
         const parsedState = JSON.parse(rawValue) as Partial<PersistedTimerState>
+        if (parsedState.hasStarted !== undefined && typeof parsedState.hasStarted !== "boolean") {
+            return defaultState
+        }
         const presetMinutes = Math.max(1, Math.floor(Number(parsedState.presetMinutes ?? defaultState.presetMinutes)))
         const presetUnit = normalizeTimerPresetUnit(parsedState.presetUnit)
         const isRunning = Boolean(parsedState.isRunning)
@@ -109,6 +115,7 @@ function loadPersistedTimerState(): TimerState {
         return {
             endAtMs: isRunning && remainingSeconds > 0 ? endAtMs : null,
             intervalId: null,
+            hasStarted: parsedState.hasStarted ?? (isRunning || remainingSeconds < resolvePresetSeconds(presetMinutes, presetUnit)),
             isRunning: isRunning && remainingSeconds > 0,
             presetMinutes,
             presetUnit,
@@ -130,6 +137,7 @@ function persistSharedTimerState(): void {
 
     const persistedState: PersistedTimerState = {
         endAtMs: sharedTimerState.endAtMs,
+        hasStarted: sharedTimerState.hasStarted,
         isRunning: sharedTimerState.isRunning,
         presetMinutes: sharedTimerState.presetMinutes,
         presetUnit: sharedTimerState.presetUnit,
@@ -218,6 +226,7 @@ function applySharedTimerPreset(minutes: number): void {
     stopSharedTimerTick()
     sharedTimerState.presetMinutes = safeMinutes
     sharedTimerState.remainingSeconds = resolvePresetSeconds(safeMinutes, sharedTimerState.presetUnit)
+    sharedTimerState.hasStarted = false
     persistSharedTimerState()
 }
 
@@ -229,6 +238,7 @@ function toggleSharedTimerPresetUnit(): void {
     stopSharedTimerTick()
     sharedTimerState.presetUnit = nextPresetUnit
     sharedTimerState.remainingSeconds = resolvePresetSeconds(sharedTimerState.presetMinutes, nextPresetUnit)
+    sharedTimerState.hasStarted = false
     persistSharedTimerState()
 }
 
@@ -246,6 +256,7 @@ function toggleSharedTimer(): void {
 
     dismissTimerFinishedReminder()
     sharedTimerState.endAtMs = Date.now() + (sharedTimerState.remainingSeconds * 1000)
+    sharedTimerState.hasStarted = true
     sharedTimerState.isRunning = true
     persistSharedTimerState()
     startSharedTimerTick()
@@ -374,8 +385,7 @@ if (import.meta.hot) {
 export function useStageTimer() {
     const state = sharedStageTimerState
     const progress = computed(() => stageTimerProgress(state))
-    const editable = computed(() => !state.isRunning && state.stageIndex === 0
-        && state.remainingMs === timerStageDurationMs(state.stages[0]!))
+    const editable = computed(() => !state.isRunning && !state.hasStarted)
 
     function configureStages(stages: TimerStage[]): void {
         if (!editable.value || !isValidTimerStages(stages)) return
@@ -454,7 +464,7 @@ export function useSharedTimer() {
             return "已结束"
         }
 
-        return "待开始"
+        return timerState.hasStarted ? "已暂停" : "待开始"
     })
 
     /** 返回计时器状态色值类名。 */
@@ -549,6 +559,7 @@ export function useToolsWorkspace() {
         timerDisplayTime,
         timerPresetOptions,
         timerPresetUnitLabel,
+        timerProgressPercent,
         timerState,
         timerStatusLabel,
         timerStatusToneClass,
@@ -670,6 +681,7 @@ export function useToolsWorkspace() {
         timerDisplayTime,
         timerPresetOptions,
         timerPresetUnitLabel,
+        timerProgressPercent,
         timerState,
         timerStatusLabel,
         timerStatusToneClass,

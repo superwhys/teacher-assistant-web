@@ -52,58 +52,58 @@
         </aside>
 
         <main class="main-view__main">
-            <div class="mobile-topbar">
-                <div class="mobile-brand">
-                    <span class="brand-card__badge" aria-hidden="true"><i-ep-chat-dot-square /></span>
-                    <strong>教师助手</strong>
-                </div>
-                <div class="mobile-actions">
-                    <button v-if="showHeaderTimerBubble" type="button" class="mobile-timer-pill"
-                        @click="openTimerPage">
-                        {{ timerDisplayTime }}
-                    </button>
-                    <RouterLink v-if="sessionStore.canAccess('/settings')" to="/settings" class="mobile-account" aria-label="进入设置">
-                        {{ userInitial }}
-                    </RouterLink>
-                </div>
-            </div>
-
-            <header class="main-view__header">
-                <div class="context-bar">
-                    <ClassSwitchButton :active-class-id="activeClassId" :trigger-label="currentClassName"
-                        @switched="handleClassSwitched" />
-                    <SemesterSwitchButton :active-class-id="activeClassId" :current-semester-id="currentSemesterId"
-                        :trigger-label="currentSemesterName" @switched="handleSemesterSwitched" />
-                    <span class="context-divider" aria-hidden="true" />
-                    <span v-for="item in statusChips" :key="item.id" class="context-status"
-                        :class="item.toneClass">
-                        {{ item.label }}
-                    </span>
+            <div class="main-view__sticky-top">
+                <div class="mobile-topbar">
+                    <div class="mobile-brand">
+                        <span class="brand-card__badge" aria-hidden="true"><i-ep-chat-dot-square /></span>
+                        <strong>教师助手</strong>
+                    </div>
+                    <div class="mobile-actions">
+                        <RouterLink v-if="sessionStore.canAccess('/settings')" to="/settings" class="mobile-account" aria-label="进入设置">
+                            {{ userInitial }}
+                        </RouterLink>
+                    </div>
                 </div>
 
-                <div class="header-actions">
-                    <button v-if="showHeaderTimerBubble" type="button" class="timer-pill" @click="openTimerPage">
-                        <Clock aria-hidden="true" />
-                        <strong>{{ timerDisplayTime }}</strong>
-                    </button>
-                    <button type="button" class="header-actions__button is-icon" aria-label="立即锁屏"
-                        title="立即锁屏" @click="lockNow">
-                        <Lock aria-hidden="true" />
-                    </button>
-                    <RouterLink v-if="sessionStore.canAccess('/settings')" to="/settings" class="header-actions__button header-settings-link">
-                        <Setting aria-hidden="true" />
-                        <span>进入设置</span>
-                    </RouterLink>
-                    <RouterLink v-if="sessionStore.canAccess('/points')" to="/points" class="header-actions__button is-primary">
-                        <StarFilled aria-hidden="true" />
-                        <span>进入积分中心</span>
-                    </RouterLink>
-                </div>
-            </header>
+                <header class="main-view__header">
+                    <div class="context-bar">
+                        <ClassSwitchButton :active-class-id="activeClassId" :trigger-label="currentClassName"
+                            @switched="handleClassSwitched" />
+                        <SemesterSwitchButton :active-class-id="activeClassId" :current-semester-id="currentSemesterId"
+                            :trigger-label="currentSemesterName" @switched="handleSemesterSwitched" />
+                        <span class="context-divider" aria-hidden="true" />
+                        <span v-for="item in statusChips" :key="item.id" class="context-status"
+                            :class="item.toneClass">
+                            {{ item.label }}
+                        </span>
+                    </div>
 
-            <div v-if="cacheStore.profile?.wechatBound === false" class="mini-program-notice" role="status">
-                <span>当前账号尚未绑定小程序，请前往设置页完成绑定。</span>
-                <RouterLink :to="sessionStore.canAccess('/settings') ? '/settings#mini-program-binding' : '/settings/mini-program'">前往绑定</RouterLink>
+                    <div class="header-actions">
+                        <button type="button" class="header-actions__button is-icon" aria-label="立即锁屏"
+                            title="立即锁屏" @click="lockNow">
+                            <Lock aria-hidden="true" />
+                        </button>
+                        <RouterLink v-if="sessionStore.canAccess('/settings')" to="/settings" class="header-actions__button header-settings-link">
+                            <Setting aria-hidden="true" />
+                            <span>进入设置</span>
+                        </RouterLink>
+                        <RouterLink v-if="sessionStore.canAccess('/points')" to="/points" class="header-actions__button is-primary">
+                            <StarFilled aria-hidden="true" />
+                            <span>进入积分中心</span>
+                        </RouterLink>
+                    </div>
+                </header>
+
+                <div v-if="showTimerStrip" class="main-view__timer-strip">
+                    <FloatingTimerStrip :caption="timerStrip.caption" :title="timerStrip.title"
+                        :countdown="timerStrip.countdown" :progress="timerStrip.progress" :paused="timerStrip.paused"
+                        @open="openTimerPage" />
+                </div>
+
+                <div v-if="cacheStore.profile?.wechatBound === false" class="mini-program-notice" role="status">
+                    <span>当前账号尚未绑定小程序，请前往设置页完成绑定。</span>
+                    <RouterLink :to="sessionStore.canAccess('/settings') ? '/settings#mini-program-binding' : '/settings/mini-program'">前往绑定</RouterLink>
+                </div>
             </div>
 
             <section class="main-view__content" :aria-label="route.path === '/settings/mini-program' ? '绑定小程序' : currentNavItem?.label || '内容区'">
@@ -163,16 +163,17 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowDown, Clock, Expand, Fold, HomeFilled, Lock, Menu, Present, Setting, StarFilled, Timer, Tools, UserFilled } from "@element-plus/icons-vue";
+import { ArrowDown, Expand, Fold, HomeFilled, Lock, Menu, Present, Setting, StarFilled, Timer, Tools, UserFilled } from "@element-plus/icons-vue";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import ClassSwitchButton from "@/v3/components/ClassSwitchButton.vue";
 import SemesterSwitchButton from "@/v3/components/SemesterSwitchButton.vue";
 import TeachersDayWelcomeDialog from "@/v3/components/TeachersDayWelcomeDialog.vue";
+import FloatingTimerStrip from "@/v3/components/tools/FloatingTimerStrip.vue";
 import { classManager } from "@/managers/class";
 import { useCacheStore } from "@/stores/cacheStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { getTeachersDayWelcomeStorageKey, isTeachersDay } from "@/utils/teachersDayWelcome";
-import { useSharedTimer } from "@/v3/composables/useToolsWorkspace";
+import { useSharedTimer, useStageTimer } from "@/v3/composables/useToolsWorkspace";
 import type { ClassDTO, SemesterDTO } from "@/types/class";
 import { ElMessage } from "element-plus";
 import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from "vue";
@@ -198,7 +199,8 @@ const route = useRoute();
 const router = useRouter()
 const cacheStore = useCacheStore()
 const sessionStore = useSessionStore()
-const { closeTimerFinishedDialog, timerDisplayTime, timerFinishedDialogVisible, timerState } = useSharedTimer()
+const { closeTimerFinishedDialog, timerDisplayTime, timerFinishedDialogVisible, timerProgressPercent, timerState } = useSharedTimer()
+const { state: stageTimerState, timerMode, progress: stageProgress, displayTime: stageDisplayTime } = useStageTimer()
 const classes = ref<ClassDTO[]>([])
 const classesLoading = ref(false)
 const ASIDE_COLLAPSED_STORAGE_KEY = "teacher-assistant-aside-collapsed"
@@ -554,14 +556,30 @@ const currentNavItem = computed<NavItem | null>(() => {
     return navItems.value.find((item) => route.path.startsWith(item.to)) ?? navItems.value[0] ?? null
 })
 
-/** 返回是否展示顶部计时气泡。 */
-const showHeaderTimerBubble = computed<boolean>(() => {
-    if (!timerState.isRunning || !sessionStore.canAccess("/tools")) {
-        return false
+/** 统一展示当前模式的倒计时；多阶段进度按整个流程计算。 */
+const timerStrip = computed(() => {
+    if (timerMode.value === "stages") {
+        return {
+            active: stageTimerState.hasStarted && stageTimerState.remainingMs > 0,
+            caption: `多阶段计时 · 第 ${stageTimerState.stageIndex + 1} / ${stageTimerState.stages.length} 阶段`,
+            title: stageTimerState.stages[stageTimerState.stageIndex]?.name || "课堂流程",
+            countdown: stageDisplayTime.value,
+            progress: stageProgress.value.percent,
+            paused: !stageTimerState.isRunning
+        }
     }
-
-    return route.path !== "/tools" && route.path !== "/tools/timer"
+    return {
+        active: timerState.hasStarted && timerState.remainingSeconds > 0,
+        caption: "单段计时",
+        title: "课堂倒计时",
+        countdown: timerDisplayTime.value,
+        progress: timerProgressPercent.value,
+        paused: !timerState.isRunning
+    }
 })
+
+const showTimerStrip = computed<boolean>(() => timerStrip.value.active && cacheStore.isAuthenticated
+    && sessionStore.canAccess("/tools") && !unlockDialogVisible.value)
 
 /** 处理当前用户菜单点击事件。 */
 async function handleUserMenuCommand(command: string): Promise<void> {
@@ -850,7 +868,6 @@ onBeforeUnmount(() => {
 .aside-nav__item:active,
 .aside-user:active,
 .header-actions__button:active,
-.timer-pill:active,
 .mobile-nav__item:active {
     transform: scale(0.975);
 }
@@ -1016,14 +1033,25 @@ onBeforeUnmount(() => {
     flex-direction: column;
 }
 
+.main-view__sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 24;
+}
+
+.main-view__timer-strip {
+    padding: 0 clamp(18px, 3vw, 34px) 12px;
+    display: flex;
+    justify-content: center;
+}
+
 .mobile-topbar,
 .mobile-nav {
     display: none;
 }
 
 .main-view__header {
-    position: sticky;
-    top: 0;
+    position: relative;
     z-index: 24;
     min-height: 70px;
     padding: 10px clamp(18px, 3vw, 34px);
@@ -1135,8 +1163,7 @@ onBeforeUnmount(() => {
     flex: 0 0 auto;
 }
 
-.header-actions__button svg,
-.timer-pill svg {
+.header-actions__button svg {
     width: 16px;
     height: 16px;
 }
@@ -1157,26 +1184,6 @@ onBeforeUnmount(() => {
     padding: 0;
 }
 
-.timer-pill,
-.mobile-timer-pill {
-    min-height: 38px;
-    padding: 0 11px;
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    border: 0;
-    border-radius: 11px;
-    color: #005ecb;
-    background: #e8f3ff;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-.timer-pill strong,
-.mobile-timer-pill {
-    font-variant-numeric: tabular-nums;
-}
-
 .main-view__content {
     width: 100%;
     min-width: 0;
@@ -1185,9 +1192,6 @@ onBeforeUnmount(() => {
 }
 
 .mini-program-notice {
-    position: sticky;
-    top: 70px;
-    z-index: 23;
     padding: 12px clamp(18px, 2vw, 48px);
     display: flex;
     align-items: center;
@@ -1338,8 +1342,15 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 920px) {
+    .main-view__sticky-top {
+        z-index: 35;
+    }
+
+    .main-view__timer-strip {
+        padding: 0 14px 10px;
+    }
+
     .mini-program-notice {
-        top: 112px;
         padding-inline: 14px;
     }
 
@@ -1353,9 +1364,6 @@ onBeforeUnmount(() => {
     }
 
     .mobile-topbar {
-        position: sticky;
-        top: 0;
-        z-index: 35;
         height: 54px;
         padding: 0 14px;
         display: flex;
@@ -1397,7 +1405,6 @@ onBeforeUnmount(() => {
     }
 
     .main-view__header {
-        top: 54px;
         min-height: 58px;
         padding: 8px 14px;
         gap: 8px;
@@ -1476,7 +1483,6 @@ onBeforeUnmount(() => {
 @media (max-width: 660px) {
     .context-divider,
     .context-status,
-    .timer-pill,
     .header-settings-link {
         display: none;
     }

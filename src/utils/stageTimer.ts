@@ -9,6 +9,7 @@ export interface StageTimerState {
     stageIndex: number
     remainingMs: number
     endAtMs: number | null
+    hasStarted: boolean
     isRunning: boolean
 }
 
@@ -26,6 +27,7 @@ export function createStageTimerState(stages: TimerStage[] = [
         stageIndex: 0,
         remainingMs: timerStageDurationMs(stages[0]!),
         endAtMs: null,
+        hasStarted: false,
         isRunning: false
     }
 }
@@ -63,7 +65,7 @@ export function toggleStageTimer(state: StageTimerState, now: number): StageTime
         return { ...synced, endAtMs: null, isRunning: false }
     }
     const ready = state.remainingMs > 0 ? state : createStageTimerState(state.stages)
-    return { ...ready, endAtMs: now + ready.remainingMs, isRunning: true }
+    return { ...ready, endAtMs: now + ready.remainingMs, hasStarted: true, isRunning: true }
 }
 
 export function stageTimerProgress(state: StageTimerState): { totalMs: number, remainingMs: number, percent: number } {
@@ -82,6 +84,7 @@ export function restoreStageTimer(value: unknown, now: number): StageTimerState 
         || typeof saved.remainingMs !== "number" || !Number.isFinite(saved.remainingMs)
         || saved.remainingMs < 0 || saved.remainingMs > timerStageDurationMs(saved.stages[saved.stageIndex!]!)
         || (!saved.isRunning && saved.remainingMs === 0 && saved.stageIndex !== saved.stages.length - 1)
+        || (saved.hasStarted !== undefined && typeof saved.hasStarted !== "boolean")
         || typeof saved.isRunning !== "boolean"
         || (saved.isRunning && (typeof saved.endAtMs !== "number" || !Number.isFinite(saved.endAtMs)))) {
         return createStageTimerState()
@@ -91,6 +94,8 @@ export function restoreStageTimer(value: unknown, now: number): StageTimerState 
         stageIndex: saved.stageIndex!,
         remainingMs: saved.remainingMs,
         endAtMs: saved.isRunning ? saved.endAtMs! : null,
+        hasStarted: saved.hasStarted ?? (saved.isRunning || saved.stageIndex! > 0
+            || saved.remainingMs < timerStageDurationMs(saved.stages[saved.stageIndex!]!)),
         isRunning: saved.isRunning
     }
     const synced = syncStageTimer(state, now)

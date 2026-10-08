@@ -14,6 +14,7 @@ const stages = [
     { name: '展示', duration: 4, unit: 'second' as const },
 ]
 const stageStorageKey = 'teacher-assistant:v3:tools:stage-timer'
+const singleStorageKey = 'teacher-assistant:v3:tools:timer'
 
 beforeEach(() => {
     vi.resetModules()
@@ -44,6 +45,61 @@ afterEach(() => {
 })
 
 describe('shared multi-stage timer controls', () => {
+    it('retains a started single timer after an immediate pause and reload until reset', async () => {
+        const single = (await import('../useToolsWorkspace')).useSharedTimer()
+        expect(single.timerState.hasStarted).toBe(false)
+        single.toggleTimer()
+        single.toggleTimer()
+        expect(single.timerState).toMatchObject({ isRunning: false, remainingSeconds: 900, hasStarted: true })
+        vi.resetModules()
+        const restored = (await import('../useToolsWorkspace')).useSharedTimer()
+        expect(restored.timerState).toMatchObject({ isRunning: false, remainingSeconds: 900, hasStarted: true })
+        restored.resetTimer()
+        expect(restored.timerState.hasStarted).toBe(false)
+        expect(JSON.parse(storage.get(singleStorageKey)!).hasStarted).toBe(false)
+        restored.toggleTimer()
+        restored.applyTimerPreset(5)
+        expect(restored.timerState).toMatchObject({ remainingSeconds: 300, hasStarted: false })
+    })
+
+    it('retains a started stage timer after an immediate pause and reload until reset', async () => {
+        const flow = (await import('../useToolsWorkspace')).useStageTimer()
+        flow.configureStages(stages)
+        expect(flow.state.hasStarted).toBe(false)
+        flow.toggleStages()
+        flow.toggleStages()
+        expect(flow.state).toMatchObject({ isRunning: false, remainingMs: 2000, hasStarted: true })
+        expect(flow.editable.value).toBe(false)
+        flow.configureStages([{ name: '覆盖', duration: 1, unit: 'minute' }])
+        expect(flow.state.stages).toEqual(stages)
+        vi.resetModules()
+        const restored = (await import('../useToolsWorkspace')).useStageTimer()
+        expect(restored.state).toMatchObject({ isRunning: false, remainingMs: 2000, hasStarted: true })
+        expect(restored.editable.value).toBe(false)
+        restored.resetStages()
+        expect(restored.state.hasStarted).toBe(false)
+        expect(restored.editable.value).toBe(true)
+        expect(JSON.parse(storage.get(stageStorageKey)!).state.hasStarted).toBe(false)
+        restored.configureStages([{ name: '练习', duration: 1, unit: 'minute' }])
+        expect(restored.state).toMatchObject({ remainingMs: 60000, hasStarted: false })
+    })
+
+    it('infers whether legacy single timer caches have started and rejects invalid new flags', async () => {
+        const preset = { presetMinutes: 1, presetUnit: 'minute', endAtMs: null, isRunning: false }
+        for (const [saved, hasStarted] of [
+            [{ ...preset, remainingSeconds: 60 }, false],
+            [{ ...preset, remainingSeconds: 40 }, true],
+            [{ ...preset, remainingSeconds: 60, isRunning: true, endAtMs: Date.now() + 60000 }, true],
+            [{ ...preset, remainingSeconds: 40, hasStarted: 'yes' }, false],
+        ] as const) {
+            vi.clearAllTimers()
+            vi.resetModules()
+            storage.set(singleStorageKey, JSON.stringify(saved))
+            const single = (await import('../useToolsWorkspace')).useSharedTimer()
+            expect(single.timerState.hasStarted).toBe(hasStarted)
+        }
+    })
+
     it('keeps single and multi-stage timers mutually exclusive and resumes paused progress', async () => {
         const { useSharedTimer, useStageTimer } = await import('../useToolsWorkspace')
         const single = useSharedTimer()

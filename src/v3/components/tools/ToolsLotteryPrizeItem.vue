@@ -13,6 +13,7 @@
             <div class="prize-item__tags">
                 <span v-if="item.source === 'shop'" class="tag tag--sky">商城</span>
                 <span class="tag tag--amber">权重 {{ item.weight }}</span>
+                <span v-if="item.enabled" class="tag tag--sky">概率 {{ probabilityLabel }}</span>
             </div>
         </div>
         <el-switch
@@ -25,6 +26,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import type { UiLotteryPrize } from "@/managers/lottery";
 
 defineOptions({ name: "ToolsLotteryPrizeItem" })
@@ -32,9 +34,16 @@ defineOptions({ name: "ToolsLotteryPrizeItem" })
 /** 定义抽奖器奖品卡片属性。 */
 interface ToolsLotteryPrizeItemProps {
     item: UiLotteryPrize
+    probability: number
 }
 
 const props = defineProps<ToolsLotteryPrizeItemProps>()
+
+/** 将单次抽取概率格式化为百分比。 */
+const probabilityLabel = computed(() => {
+    const percentage = props.probability * 100
+    return percentage > 0 && percentage < 0.01 ? "<0.01%" : `${percentage.toFixed(2)}%`
+})
 
 const emit = defineEmits<{
     (e: "edit", item: UiLotteryPrize): void
@@ -118,9 +127,9 @@ function handleToggleEnabled(): void {
 .prize-item__tags {
     min-width: 0;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 5px;
-    overflow: hidden;
 }
 
 .tag {

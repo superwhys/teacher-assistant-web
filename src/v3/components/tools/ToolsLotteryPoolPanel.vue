@@ -8,6 +8,7 @@
         <div class="prize-section__body">
             <div v-if="prizes.length > 0" class="prize-list">
                 <ToolsLotteryPrizeItem v-for="item in prizes" :key="item.name" :item="item"
+                    :probability="totalWeight > 0 && item.enabled && item.weight > 0 ? item.weight / totalWeight : 0"
                     @edit="emit('editPrize', $event)" @toggle-enabled="emit('togglePrize', $event)" />
             </div>
 
@@ -21,6 +22,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import type { UiLotteryPrize } from "@/managers/lottery";
 import ToolsLotteryPrizeItem from "@/v3/components/tools/ToolsLotteryPrizeItem.vue";
 
@@ -31,7 +33,14 @@ interface ToolsLotteryPoolPanelProps {
     prizes: UiLotteryPrize[]
 }
 
-defineProps<ToolsLotteryPoolPanelProps>()
+const props = defineProps<ToolsLotteryPoolPanelProps>()
+
+/** 返回参与抽取的已启用奖品总权重。 */
+const totalWeight = computed(() => {
+    return props.prizes
+        .filter((item) => item.enabled && item.weight > 0)
+        .reduce((sum, item) => sum + item.weight, 0)
+})
 
 const emit = defineEmits<{
     (e: "editPrize", item: UiLotteryPrize): void

@@ -13,7 +13,7 @@
             <div class="prize-item__tags">
                 <span v-if="item.source === 'shop'" class="tag tag--sky">商城</span>
                 <span class="tag tag--amber">权重 {{ item.weight }}</span>
-                <span v-if="item.enabled" class="tag tag--sky">概率 {{ probabilityLabel }}</span>
+                <span v-if="item.enabled && showProbability" class="tag tag--sky">本次 {{ probabilityLabel }}</span>
             </div>
         </div>
         <el-switch
@@ -35,6 +35,7 @@ defineOptions({ name: "ToolsLotteryPrizeItem" })
 interface ToolsLotteryPrizeItemProps {
     item: UiLotteryPrize
     probability: number
+    showProbability: boolean
 }
 
 const props = defineProps<ToolsLotteryPrizeItemProps>()

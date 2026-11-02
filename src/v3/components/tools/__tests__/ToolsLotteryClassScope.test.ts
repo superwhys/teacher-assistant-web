@@ -40,10 +40,14 @@ interface WorkspaceState {
     recordsLoading: boolean
     isLoading: boolean
     isRolling: boolean
+    currentName: string
+    currentPoolId: string
+    drawProbabilities: Record<string, number>
     studentDialogVisible: boolean
     selectedStudentId: number | null
     drawOnce: () => void
     startRolling: () => void
+    stopRolling: () => void
     openStudentDialog: (record: DrawRecord) => Promise<void>
     saveRecordStudent: () => Promise<void>
 }
@@ -94,9 +98,102 @@ afterEach(() => {
     app?.unmount()
     app = undefined
     vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+    vi.useRealTimers()
 })
 
 describe('lottery page class context', () => {
+    it.each(['drawOnce', 'stopRolling'] as const)('reduces today’s repeated prize probability for %s', async (drawMethod) => {
+        mocks.getPool.mockResolvedValue({ id: '4', name: '课堂奖励', prizes: [
+            { name: '贴纸', enabled: true, weight: 1 },
+            { name: '铅笔', enabled: true, weight: 1 },
+        ] })
+        mocks.listRecords.mockResolvedValue([{ ...record(23), drawnAt: Date.now() }])
+        vi.spyOn(Math, 'random').mockReturnValue(0.4)
+        const page = await mountWorkspace()
+        await vi.waitFor(() => expect(page.isLoading).toBe(false))
+        expect(page.drawProbabilities['贴纸']).toBeCloseTo(1 / 3)
+        expect(page.drawProbabilities['铅笔']).toBeCloseTo(2 / 3)
+        if (drawMethod === 'stopRolling') page.startRolling()
+        page[drawMethod]()
+        expect(page.currentName).toBe('铅笔')
+        expect(mocks.createRecords).toHaveBeenCalledWith('4', 23, [expect.objectContaining({ prizeName: '铅笔' })])
+    })
+
+    it('still allows the same prize to win again', async () => {
+        mocks.listRecords.mockResolvedValue([{ ...record(23), drawnAt: Date.now() }])
+        vi.spyOn(Math, 'random').mockReturnValue(0)
+        const page = await mountWorkspace()
+        await vi.waitFor(() => expect(page.isLoading).toBe(false))
+        page.drawOnce()
+        expect(page.currentName).toBe('贴纸')
+        expect(mocks.createRecords).toHaveBeenCalled()
+    })
+
+    it('counts a locally pending result when saving the record fails', async () => {
+        mocks.getPool.mockResolvedValue({ id: '4', name: '课堂奖励', prizes: [
+            { name: '贴纸', enabled: true, weight: 1 },
+            { name: '铅笔', enabled: true, weight: 1 },
+        ] })
+        mocks.listRecords.mockResolvedValue([])
+        mocks.createRecords.mockRejectedValueOnce(new Error('offline'))
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        vi.spyOn(Math, 'random').mockReturnValue(0.4)
+        const page = await mountWorkspace()
+        await vi.waitFor(() => expect(page.isLoading).toBe(false))
+        page.drawOnce()
+        expect(page.currentName).toBe('贴纸')
+        await vi.waitFor(() => expect(page.records[0]?.syncPending).toBe(true))
+        expect(page.drawProbabilities['贴纸']).toBeCloseTo(1 / 3)
+        page.drawOnce()
+        expect(page.currentName).toBe('铅笔')
+    })
+
+    it('restores probabilities at local midnight while the page stays open', async () => {
+        vi.useFakeTimers()
+        window.setTimeout = globalThis.setTimeout
+        window.clearTimeout = globalThis.clearTimeout
+        vi.setSystemTime(new Date(2026, 10, 2, 23, 59, 58))
+        mocks.getPool.mockResolvedValue({ id: '4', name: '课堂奖励', prizes: [
+            { name: '贴纸', enabled: true, weight: 1 },
+            { name: '铅笔', enabled: true, weight: 1 },
+        ] })
+        mocks.listRecords.mockResolvedValue([{ ...record(23), drawnAt: Date.now() }])
+        vi.spyOn(Math, 'random').mockReturnValue(0.4)
+        const page = await mountWorkspace()
+        await vi.waitFor(() => expect(page.isLoading).toBe(false))
+        expect(page.drawProbabilities['贴纸']).toBeCloseTo(1 / 3)
+        await vi.advanceTimersByTimeAsync(2000)
+        expect(page.drawProbabilities['贴纸']).toBe(0.5)
+        page.drawOnce()
+        expect(page.currentName).toBe('贴纸')
+    })
+
+    it('uses only the selected class and pool history for daily probabilities', async () => {
+        mocks.getPool.mockResolvedValue({ id: '4', name: '课堂奖励', prizes: [
+            { name: '贴纸', enabled: true, weight: 1 },
+            { name: '铅笔', enabled: true, weight: 1 },
+        ] })
+        mocks.listRecords.mockImplementation(async (poolId: string, classId: number) => (
+            poolId === '4' && classId === 23 ? [{ ...record(23), drawnAt: Date.now() }] : []
+        ))
+        const page = await mountWorkspace()
+        await vi.waitFor(() => expect(page.isLoading).toBe(false))
+        expect(page.drawProbabilities['贴纸']).toBeCloseTo(1 / 3)
+        cache.classId = 24
+        await nextTick()
+        await vi.waitFor(() => expect(page.recordsLoading).toBe(false))
+        expect(page.drawProbabilities['贴纸']).toBe(0.5)
+        cache.classId = 23
+        await nextTick()
+        await vi.waitFor(() => expect(page.recordsLoading).toBe(false))
+        expect(page.drawProbabilities['贴纸']).toBeCloseTo(1 / 3)
+        page.currentPoolId = '5'
+        await nextTick()
+        await vi.waitFor(() => expect(page.recordsLoading).toBe(false))
+        expect(page.drawProbabilities['贴纸']).toBe(0.5)
+    })
+
     it('recovers from switching class during initial loading without an old response overwriting the new history', async () => {
         let finishOld!: (records: DrawRecord[]) => void
         mocks.listRecords.mockImplementationOnce(() => new Promise<DrawRecord[]>(resolve => { finishOld = resolve }))

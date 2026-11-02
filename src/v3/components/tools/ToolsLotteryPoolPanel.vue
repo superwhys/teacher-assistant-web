@@ -2,13 +2,19 @@
     <aside class="tools-lottery-pool-panel">
         <div class="prize-section__head">
             <h3>奖品</h3>
-            <span class="prize-section__count">{{ prizes.length }}</span>
+            <div class="prize-section__actions">
+                <button type="button" class="prize-section__toggle" :aria-pressed="showProbability"
+                    @click="showProbability = !showProbability">
+                    {{ showProbability ? "隐藏概率" : "显示概率" }}
+                </button>
+                <span class="prize-section__count">{{ prizes.length }}</span>
+            </div>
         </div>
 
         <div class="prize-section__body">
             <div v-if="prizes.length > 0" class="prize-list">
                 <ToolsLotteryPrizeItem v-for="item in prizes" :key="item.name" :item="item"
-                    :probability="totalWeight > 0 && item.enabled && item.weight > 0 ? item.weight / totalWeight : 0"
+                    :probability="probabilities[item.name] ?? 0" :show-probability="showProbability"
                     @edit="emit('editPrize', $event)" @toggle-enabled="emit('togglePrize', $event)" />
             </div>
 
@@ -22,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { ref } from "vue";
 import type { UiLotteryPrize } from "@/managers/lottery";
 import ToolsLotteryPrizeItem from "@/v3/components/tools/ToolsLotteryPrizeItem.vue";
 
@@ -31,16 +37,12 @@ defineOptions({ name: "ToolsLotteryPoolPanel" })
 /** 定义抽奖器左侧奖池面板属性。 */
 interface ToolsLotteryPoolPanelProps {
     prizes: UiLotteryPrize[]
+    probabilities: Record<string, number>
 }
 
-const props = defineProps<ToolsLotteryPoolPanelProps>()
+defineProps<ToolsLotteryPoolPanelProps>()
 
-/** 返回参与抽取的已启用奖品总权重。 */
-const totalWeight = computed(() => {
-    return props.prizes
-        .filter((item) => item.enabled && item.weight > 0)
-        .reduce((sum, item) => sum + item.weight, 0)
-})
+const showProbability = ref(true)
 
 const emit = defineEmits<{
     (e: "editPrize", item: UiLotteryPrize): void
@@ -72,6 +74,24 @@ const emit = defineEmits<{
 .prize-section__head h3 {
     margin: 0;
     font-size: 17px;
+}
+
+.prize-section__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.prize-section__toggle {
+    min-height: 28px;
+    padding: 4px 8px;
+    border: 1px solid var(--ta-line);
+    border-radius: 8px;
+    color: var(--ta-text-secondary);
+    background: var(--ta-surface-muted);
+    font-size: 12px;
+    white-space: nowrap;
+    cursor: pointer;
 }
 
 .prize-section__count {

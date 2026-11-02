@@ -44,7 +44,8 @@
                 @toggle-rolling="toggleRolling" @draw-once="drawOnce" />
 
             <div class="tools-lottery-workspace__side">
-                <ToolsLotteryPoolPanel :prizes="prizes" @edit-prize="openEditDialog" @toggle-prize="toggleEnabled" />
+                <ToolsLotteryPoolPanel :prizes="prizes" :probabilities="drawProbabilities"
+                    @edit-prize="openEditDialog" @toggle-prize="toggleEnabled" />
                 <ToolsLotteryHistoryPanel :records="records" :loading="recordsLoading" :load-error="recordsLoadError"
                     :pending-persistence-failed="historyStore.pendingPersistenceFailed"
                     :has-class="Boolean(currentClassId)"
@@ -122,6 +123,7 @@ import { useLotteryHistoryStore } from "@/stores/lotteryHistoryStore";
 import { useCacheStore } from "@/stores/cacheStore";
 import type { StudentDTO } from "@/types/student";
 import type { DrawRecord } from "@/types/lottery";
+import { dailyLotteryPrizes } from "@/utils/lottery";
 import { isApiRequestError } from "@/types/api";
 import type { ShopItem } from "@/types/shopItem";
 import StudentsConfirmDialog from "@/v3/components/students/StudentsConfirmDialog.vue";
@@ -206,9 +208,11 @@ const clearRecordsDialogVisible = ref(false)
 const isRolling = ref(false)
 const currentName = ref("")
 const isSelected = ref(false)
+const drawTime = ref(Date.now())
 
 let rollingTimer: number | undefined
 let selectedTimer: number | undefined
+let dayTimer: number | undefined
 let recordsRequest = 0
 let poolRequest = 0
 let studentsRequest = 0
@@ -226,6 +230,23 @@ const currentPool = computed<UiLotteryPool | null>(() => {
 const enabledPrizes = computed<UiLotteryPrize[]>(() => {
     return prizes.value.filter((item) => item.enabled && item.weight > 0)
 })
+
+/** 抽取和概率展示共用当天降权后的候选奖品。 */
+const drawPrizes = computed(() => dailyLotteryPrizes(prizes.value, records.value, drawTime.value))
+const drawProbabilities = computed<Record<string, number>>(() => {
+    const total = drawPrizes.value.reduce((sum, prize) => sum + prize.weight, 0)
+    const probabilities: Record<string, number> = Object.create(null)
+    for (const prize of drawPrizes.value) probabilities[prize.name] = prize.weight / total
+    return probabilities
+})
+
+/** 页面停留跨天时也恢复当天权重。 */
+function refreshDrawDay(): void {
+    drawTime.value = Date.now()
+    const nextDay = new Date(drawTime.value)
+    nextDay.setHours(24, 0, 0, 0)
+    dayTimer = window.setTimeout(refreshDrawDay, nextDay.getTime() - drawTime.value)
+}
 
 /** 重新加载奖池列表并确保当前奖池有效。 */
 async function reloadPools(ensureDefault = false): Promise<boolean> {
@@ -752,7 +773,8 @@ function stopRolling(): void {
     }
 
     if (!context || context.classId !== currentClassId.value || context.poolId !== currentPoolId.value) return
-    const pickedPrize = weightedRandom(enabledPrizes.value)
+    drawTime.value = Date.now()
+    const pickedPrize = weightedRandom(drawPrizes.value)
     if (!pickedPrize) {
         ElMessage.warning("没有可抽取的奖品")
         return
@@ -806,7 +828,8 @@ function drawOnce(): void {
         return
     }
 
-    const pickedPrize = weightedRandom(enabledPrizes.value)
+    drawTime.value = Date.now()
+    const pickedPrize = weightedRandom(drawPrizes.value)
     if (!pickedPrize) {
         ElMessage.warning("没有可抽取的奖品")
         return
@@ -921,6 +944,7 @@ watch([() => currentPoolId.value, currentClassId], ([, classId], [, previousClas
 })
 
 onMounted(() => {
+    refreshDrawDay()
     void initializeWorkspace()
 })
 
@@ -930,6 +954,9 @@ onBeforeUnmount(() => {
     }
     if (selectedTimer !== undefined) {
         window.clearTimeout(selectedTimer)
+    }
+    if (dayTimer !== undefined) {
+        window.clearTimeout(dayTimer)
     }
 })
 </script>

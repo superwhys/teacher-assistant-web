@@ -88,7 +88,7 @@
                         <strong>数据预览</strong>
                         <p>当前共预览 {{ previewRows.length }} 条数据，可确认后导出为 Excel。</p>
                     </div>
-                    <button type="button" class="ghost-button ghost-button--small" :disabled="previewBusy" @click="refreshPreview">
+                    <button type="button" class="ghost-button ghost-button--small" :disabled="!canImportExport || (previewBusy)" @click="refreshPreview">
                         刷新预览
                     </button>
                 </div>
@@ -126,7 +126,7 @@
                 <button
                     type="button"
                     class="primary-button"
-                    :disabled="!canExport || exportLoading"
+                    :disabled="!canImportExport || (!canExport || exportLoading)"
                     @click="handleExport"
                 >
                     {{ exportLoading ? "正在导出..." : "确认导出" }}
@@ -137,11 +137,14 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { pointsManager } from "@/managers/points";
 import type { ExportPointsRecordsPreviewReq, ExportSort, ExportType } from "@/types/points";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import { ElMessage } from "element-plus";
 import { computed, ref, watch } from "vue";
+
+const { canImportExport, allowImportExport } = useBusinessAccess()
 
 defineOptions({ name: "PointsExportDialog" })
 
@@ -217,6 +220,7 @@ const previewRows = computed(() => {
 })
 
 const canExport = computed(() => {
+    if (!canImportExport.value) return false
     if (!props.activeClassId) {
         return false
     }
@@ -276,6 +280,7 @@ function buildPreviewRequest(): ExportPointsRecordsPreviewReq | null {
 
 /** 刷新导出预览数据。 */
 async function refreshPreview(): Promise<void> {
+    if (!allowImportExport()) return
     const request = buildPreviewRequest()
     if (!request) {
         previewKey.value = ""
@@ -324,6 +329,7 @@ function buildExportFileName(): string {
 
 /** 执行最终 Excel 导出。 */
 async function handleExport(): Promise<void> {
+    if (!allowImportExport()) return
     if (!canExport.value) {
         ElMessage.warning("请先生成可导出的预览数据")
         return
@@ -332,6 +338,7 @@ async function handleExport(): Promise<void> {
     exportLoading.value = true
     try {
         const blob = await pointsManager.exportRuleRecords(previewKey.value)
+        if (!allowImportExport()) return
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement("a")
         link.href = url
@@ -354,6 +361,7 @@ let previewTimer: number | null = null
 
 /** 为预览刷新增加轻量防抖，减少接口请求频率。 */
 function schedulePreviewRefresh(): void {
+    if (!canImportExport.value) return
     if (!visible.value) {
         return
     }

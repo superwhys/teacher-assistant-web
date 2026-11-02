@@ -39,7 +39,7 @@
 
                         <div class="record-card__aside">
                             <span class="record-card__points">{{ getRecordPoints(record) }} 积分</span>
-                            <button type="button" class="record-card__undo" @click="emit('undo', record)">
+                            <button type="button" class="record-card__undo" @click="emit('undo', record)" :disabled="!canWrite">
                                 撤销
                             </button>
                         </div>
@@ -62,8 +62,11 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import type { Prize, PrizeRecord } from "@/types/mall"
 import { formatChineseDateTime } from "@/utils/date"
+
+const { canWrite } = useBusinessAccess()
 
 defineOptions({ name: "ShopRecordsPanel" })
 

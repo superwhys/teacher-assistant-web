@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia } from 'pinia'
 import { createRenderer, nextTick, reactive, ssrContextKey, type App } from 'vue'
 import type { DrawRecord } from '@/types/lottery'
+import type { UserEntitlement } from '@/types/user'
 
 const mocks = vi.hoisted(() => ({
     listPools: vi.fn(), getPool: vi.fn(), listRecords: vi.fn(), createRecords: vi.fn(),
@@ -9,7 +10,14 @@ const mocks = vi.hoisted(() => ({
     warning: vi.fn(), error: vi.fn(), success: vi.fn(),
 }))
 
-let cache: { classId: number | null, profile: { id: number }, getActiveClassId: () => number | null, getActiveClassName: () => string }
+let cache: {
+    classId: number | null
+    profile: { id: number, entitlement: UserEntitlement }
+    getActiveClassId: () => number | null
+    getActiveClassName: () => string
+}
+const businessSession = reactive({ canWrite: true, canPrepare: true, canImportExport: true, entitlementMessage: '试用已到期，仅可查看' })
+vi.mock('@/stores/sessionStore', () => ({ useSessionStore: () => businessSession }))
 vi.mock('@/stores/cacheStore', () => ({ useCacheStore: () => cache }))
 vi.mock('@/managers/lottery', () => ({ lotteryManager: mocks }))
 vi.mock('@/managers/student', () => ({ studentManager: { list: mocks.listStudents } }))
@@ -73,9 +81,20 @@ async function mountWorkspace(): Promise<WorkspaceState> {
 }
 
 beforeEach(() => {
+    Object.assign(businessSession, { canWrite: true, canPrepare: true, canImportExport: true })
     vi.resetAllMocks()
     cache = reactive({
-        classId: 23 as number | null, profile: { id: 7 },
+        classId: 23 as number | null,
+        profile: {
+            id: 7,
+            entitlement: {
+                state: 'permanent' as const,
+                permanent: true,
+                trial_started_at: null,
+                trial_expires_at: null,
+                paid_expires_at: null,
+            },
+        },
         getActiveClassId() { return this.classId },
         getActiveClassName() { return this.classId === 23 ? '一年级一班' : '二年级一班' },
     })
@@ -252,5 +271,21 @@ describe('lottery page class context', () => {
         expect(mocks.createRecords).not.toHaveBeenCalled()
         expect(page.records).toEqual([])
         expect(page.isRolling).toBe(false)
+    })
+})
+
+
+describe('lottery commercial access', () => {
+    it('cancels an in-progress roll at expiry without generating or saving a result', async () => {
+        const state = await mountWorkspace()
+        await vi.waitFor(() => expect(state.isLoading).toBe(false))
+        state.startRolling()
+        expect(state.isRolling).toBe(true)
+        Object.assign(businessSession, { canWrite: false, canPrepare: false, canImportExport: false })
+        expect(state.isRolling).toBe(false)
+        state.stopRolling()
+        state.drawOnce()
+        expect(mocks.createRecords).not.toHaveBeenCalled()
+        expect(mocks.warning).toHaveBeenCalledWith(businessSession.entitlementMessage)
     })
 })

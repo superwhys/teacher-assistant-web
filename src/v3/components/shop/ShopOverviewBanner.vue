@@ -21,7 +21,7 @@
             </div>
 
             <div class="shop-overview-banner__actions">
-                <button type="button" class="banner-button" @click="emit('openImport')">
+                <button type="button" class="banner-button" @click="emit('openImport')" :disabled="!canWrite">
                     <i-ep-upload-filled />
                     导入奖品
                 </button>
@@ -29,7 +29,7 @@
                     <i-ep-tickets />
                     查看兑换记录
                 </button>
-                <button type="button" class="banner-button banner-button--primary" @click="emit('addPrize')">
+                <button type="button" class="banner-button banner-button--primary" @click="emit('addPrize')" :disabled="!canWrite">
                     <i-ep-plus />
                     新增奖品
                 </button>
@@ -47,6 +47,9 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
+const { canWrite } = useBusinessAccess()
+
 defineOptions({ name: "ShopOverviewBanner" })
 
 /** 定义商城概览指标结构。 */

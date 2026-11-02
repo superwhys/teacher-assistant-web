@@ -25,8 +25,8 @@
             </button>
             <template #dropdown>
                 <el-dropdown-menu>
-                    <el-dropdown-item @click="emit('edit', student)"><i-ep-edit-pen />编辑学生</el-dropdown-item>
-                    <el-dropdown-item divided @click="emit('remove', student)"><i-ep-delete />删除学生</el-dropdown-item>
+                    <el-dropdown-item @click="canWrite && emit('edit', student)" :disabled="!canWrite"><i-ep-edit-pen />编辑学生</el-dropdown-item>
+                    <el-dropdown-item divided @click="canWrite && emit('remove', student)" :disabled="!canWrite"><i-ep-delete />删除学生</el-dropdown-item>
                 </el-dropdown-menu>
             </template>
         </el-dropdown>
@@ -43,6 +43,7 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import type { UiGender, UiStudent } from "@/components/class/ClassStudentList.vue";
 
 /** 定义学生卡片展示结构。 */
@@ -62,6 +63,8 @@ export type StudentsListCardItem = UiStudent & {
     /** 表示学生累计获得的总积分。 */
     totalPoints: number
 }
+
+const { canWrite } = useBusinessAccess()
 
 /** 定义学生卡片属性结构。 */
 interface StudentsListCardProps {

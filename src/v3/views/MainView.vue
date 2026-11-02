@@ -94,16 +94,25 @@
                     </div>
                 </header>
 
+                <div v-if="showEntitlementNotice || showMiniProgramNotice" class="main-view__notices">
+                    <AccountEntitlementNotice v-if="showEntitlementNotice" />
+                    <AppNoticeBar v-if="showMiniProgramNotice" title="尚未绑定小程序"
+                        description="前往设置页完成绑定，即可在小程序中使用当前账号。" tone="warning">
+                        <template #action>
+                            <RouterLink class="app-notice-bar__action"
+                                :to="sessionStore.canAccess('/settings') ? '/settings#mini-program-binding' : '/settings/mini-program'">
+                                前往绑定
+                            </RouterLink>
+                        </template>
+                    </AppNoticeBar>
+                </div>
+
                 <div v-if="showTimerStrip" class="main-view__timer-strip">
                     <FloatingTimerStrip :caption="timerStrip.caption" :title="timerStrip.title"
                         :countdown="timerStrip.countdown" :progress="timerStrip.progress" :paused="timerStrip.paused"
                         @open="openTimerPage" />
                 </div>
 
-                <div v-if="cacheStore.profile?.wechatBound === false" class="mini-program-notice" role="status">
-                    <span>当前账号尚未绑定小程序，请前往设置页完成绑定。</span>
-                    <RouterLink :to="sessionStore.canAccess('/settings') ? '/settings#mini-program-binding' : '/settings/mini-program'">前往绑定</RouterLink>
-                </div>
             </div>
 
             <section class="main-view__content" :aria-label="route.path === '/settings/mini-program' ? '绑定小程序' : currentNavItem?.label || '内容区'">
@@ -165,6 +174,8 @@
 <script setup lang="ts">
 import { ArrowDown, Expand, Fold, HomeFilled, Lock, Menu, Present, Setting, StarFilled, Timer, Tools, UserFilled } from "@element-plus/icons-vue";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
+import AppNoticeBar from "@/v3/components/AppNoticeBar.vue";
+import AccountEntitlementNotice from "@/v3/components/settings/AccountEntitlementNotice.vue";
 import ClassSwitchButton from "@/v3/components/ClassSwitchButton.vue";
 import SemesterSwitchButton from "@/v3/components/SemesterSwitchButton.vue";
 import TeachersDayWelcomeDialog from "@/v3/components/TeachersDayWelcomeDialog.vue";
@@ -199,6 +210,9 @@ const route = useRoute();
 const router = useRouter()
 const cacheStore = useCacheStore()
 const sessionStore = useSessionStore()
+const showEntitlementNotice = computed(() => route.path !== "/settings"
+    && sessionStore.entitlementState !== "permanent" && sessionStore.entitlementState !== "paid_active")
+const showMiniProgramNotice = computed(() => cacheStore.profile?.wechatBound === false)
 const { closeTimerFinishedDialog, timerDisplayTime, timerFinishedDialogVisible, timerProgressPercent, timerState } = useSharedTimer()
 const { state: stageTimerState, timerMode, progress: stageProgress, displayTime: stageDisplayTime } = useStageTimer()
 const classes = ref<ClassDTO[]>([])
@@ -283,7 +297,7 @@ const statusChips = computed<ChipItem[]>(() => {
     if (currentSemesterStatus.value === 1) {
         return [
             { id: "latest", label: "最新学期", toneClass: "status-chip--sky" },
-            { id: "allowed", label: "允许积分操作", toneClass: "status-chip--green" },
+            { id: "allowed", label: sessionStore.canWrite ? "允许积分操作" : "积分操作已关闭", toneClass: sessionStore.canWrite ? "status-chip--green" : "status-chip--amber" },
         ]
     }
 
@@ -731,6 +745,12 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.main-view__notices {
+    display: grid;
+    gap: 10px;
+    padding: 0 clamp(18px, 3vw, 34px) 12px;
+}
+
 .main-view {
     --sidebar-width: 236px;
     min-height: 100vh;
@@ -1191,25 +1211,6 @@ onBeforeUnmount(() => {
     flex: 1;
 }
 
-.mini-program-notice {
-    padding: 12px clamp(18px, 2vw, 48px);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    color: #a53400;
-    background: var(--ta-orange-soft);
-    font-size: 13px;
-    line-height: 1.6;
-}
-
-.mini-program-notice a {
-    flex-shrink: 0;
-    color: var(--ta-blue);
-    font-weight: 600;
-    text-decoration: none;
-}
-
 .main-view__content :deep(.tools-standalone-page-frame) {
     min-height: calc(100vh - 138px);
 }
@@ -1350,7 +1351,7 @@ onBeforeUnmount(() => {
         padding: 0 14px 10px;
     }
 
-    .mini-program-notice {
+    .main-view__notices {
         padding-inline: 14px;
     }
 

@@ -48,7 +48,7 @@
                             clearable
                             size="large"
                             style="width: 100%;"
-                        >
+                         :disabled="!canWrite">
                             <el-option
                                 v-for="student in students"
                                 :key="student.id"
@@ -74,7 +74,7 @@
                             :min="1"
                             :max="Math.max(1, maxCount)"
                             style="width: 100%;"
-                        />
+                        :disabled="!canWrite" />
                     </el-form-item>
                 </el-form>
 
@@ -98,7 +98,7 @@
                 <button type="button" class="dialog-button" @click="visible = false">
                     取消
                 </button>
-                <button type="button" class="dialog-button dialog-button--primary" @click="emit('confirm')">
+                <button type="button" class="dialog-button dialog-button--primary" @click="emit('confirm')" :disabled="!canWrite">
                     确认兑换
                 </button>
             </div>
@@ -107,9 +107,12 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { computed } from "vue"
 import AppDialogShell from "@/v3/components/AppDialogShell.vue"
 import { getShopIconComponent, getShopVisualClass } from "@/v3/components/shop/shopIcons"
+
+const { canWrite } = useBusinessAccess()
 
 defineOptions({ name: "ShopExchangeDialog" })
 

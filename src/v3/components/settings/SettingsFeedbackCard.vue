@@ -8,11 +8,11 @@
         <div class="settings-section__body">
             <label class="field-block">
                 <span class="field-block__label">反馈内容</span>
-                <el-input v-model="feedbackContentModel" type="textarea" :rows="6" resize="vertical" maxlength="1000"
+                <el-input v-model="feedbackContentModel" :disabled="!canWrite || feedbackSubmitting" type="textarea" :rows="6" resize="vertical" maxlength="1000"
                     show-word-limit placeholder="例如：希望设置页支持更明显的学期权限提示，或者锁屏页展示当前班级信息。" />
             </label>
             <div class="toolbar compact-toolbar">
-                <button type="button" class="primary-button" :disabled="feedbackSubmitting" @click="emit('submit')">
+                <button type="button" class="primary-button" :disabled="!canWrite || feedbackSubmitting" @click="emit('submit')">
                     {{ feedbackSubmitting ? "提交中..." : "提交反馈" }}
                 </button>
                 <button type="button" class="ghost-button" :disabled="feedbackSubmitting || !feedbackContent.trim()"
@@ -28,6 +28,7 @@ import { computed } from "vue";
 
 /** 定义反馈卡片属性。 */
 interface SettingsFeedbackCardProps {
+    canWrite: boolean
     feedbackContent: string
     feedbackSubmitting: boolean
 }

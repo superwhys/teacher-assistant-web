@@ -25,6 +25,11 @@ const mocks = vi.hoisted(() => ({
     },
     session: {
         toolsAllowed: true,
+        canWrite: true,
+        canPrepare: true,
+        canImportExport: true,
+        entitlementState: 'permanent',
+        entitlementMessage: '',
         sidebar: [],
         initialize: vi.fn(),
         canAccess(path: string) { return path !== '/tools' || this.toolsAllowed },
@@ -44,7 +49,7 @@ vi.mock('vue-router', () => ({
     useRoute: () => mocks.route,
     useRouter: () => ({ push: mocks.push, replace: mocks.replace }),
 }))
-vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), error: vi.fn() } }))
+vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } }))
 vi.mock('element-plus/es', () => ({ ElMessage: { success: vi.fn(), error: vi.fn() } }))
 vi.mock('element-plus/es/components/base/style/css', () => ({}))
 vi.mock('element-plus/es/components/avatar/style/css', () => ({}))

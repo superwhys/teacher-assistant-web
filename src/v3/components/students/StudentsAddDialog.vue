@@ -4,17 +4,17 @@
         <div class="students-add-dialog">
             <div class="mode-switch">
                 <button type="button" class="mode-switch__button" :class="{ 'is-active': addMode === 'single' }"
-                    :disabled="excelImporting"
+                    :disabled="!canPrepare || (excelImporting)"
                     @click="addMode = 'single'">
                     单个添加
                 </button>
                 <button type="button" class="mode-switch__button" :class="{ 'is-active': addMode === 'batch' }"
-                    :disabled="excelImporting"
+                    :disabled="!canImportExport || (excelImporting)"
                     @click="addMode = 'batch'">
                     批量添加
                 </button>
                 <button type="button" class="mode-switch__button" :class="{ 'is-active': addMode === 'excel' }"
-                    :disabled="excelImporting"
+                    :disabled="!canImportExport || (excelImporting)"
                     @click="addMode = 'excel'">
                     Excel 导入
                 </button>
@@ -101,7 +101,7 @@
                 element-loading-text="正在解析学生文件..."
             >
                 <el-upload ref="uploadRef" drag accept=".xls,.xlsx" :auto-upload="false" :show-file-list="false"
-                    :before-upload="beforeExcelUpload" :on-change="handleExcelChange" :disabled="disabled || excelImporting"
+                    :before-upload="beforeExcelUpload" :on-change="handleExcelChange" :disabled="!canImportExport || (disabled || excelImporting)"
                     class="v3-upload">
                     <i-ep-upload-filled class="v3-upload__icon" />
                     <strong class="v3-upload__title">
@@ -118,7 +118,7 @@
                             <h4>导入说明</h4>
                             <p>推荐先下载模板再批量整理学生名单。</p>
                         </div>
-                        <button type="button" class="text-button" :disabled="disabled || excelImporting" @click="downloadTemplate">
+                        <button type="button" class="text-button" :disabled="!canImportExport || (disabled || excelImporting)" @click="downloadTemplate">
                             下载模板
                         </button>
                     </div>
@@ -161,12 +161,12 @@
                     取消
                 </button>
 
-                <button v-if="addMode === 'single'" type="button" class="primary-button" :disabled="disabled"
+                <button v-if="addMode === 'single'" type="button" class="primary-button" :disabled="!canPrepare || (disabled)"
                     @click="addStudentSingle">
                     添加学生
                 </button>
 
-                <button v-else-if="addMode === 'batch'" type="button" class="primary-button" :disabled="disabled"
+                <button v-else-if="addMode === 'batch'" type="button" class="primary-button" :disabled="!canImportExport || (disabled)"
                     @click="addStudentBatch">
                     批量添加
                 </button>
@@ -176,7 +176,7 @@
                         清空
                     </button>
                     <button type="button" class="primary-button"
-                        :disabled="disabled || excelImporting || excelParsedStudents.length === 0" @click="confirmExcelImport">
+                        :disabled="!canImportExport || (disabled || excelImporting || excelParsedStudents.length === 0)" @click="confirmExcelImport">
                         确认导入
                     </button>
                 </div>
@@ -186,6 +186,7 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import type { UploadFile, UploadInstance, UploadRawFile } from "element-plus";
 import { ElMessage } from "element-plus";
 import { computed, ref, watch } from "vue";
@@ -194,6 +195,8 @@ import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 
 /** 定义学生新增弹窗的展示模式。 */
 export type StudentAddMode = "single" | "batch" | "excel"
+
+const { canPrepare, canImportExport, allowPrepare, allowImportExport } = useBusinessAccess()
 
 /** 定义学生新增弹窗属性结构。 */
 interface StudentsAddDialogProps {
@@ -349,6 +352,7 @@ function getGenderText(gender?: ApiGender): string {
 
 /** 处理单个新增学生。 */
 function addStudentSingle(): void {
+    if (!allowPrepare()) return
     if (props.disabled) {
         return
     }
@@ -366,6 +370,7 @@ function addStudentSingle(): void {
 
 /** 处理批量新增学生。 */
 function addStudentBatch(): void {
+    if (!allowImportExport()) return
     if (props.disabled) {
         return
     }
@@ -382,6 +387,7 @@ function addStudentBatch(): void {
 
 /** 解析上传的 Excel 文件并生成学生预览数据。 */
 async function importExcelFromFile(file: File): Promise<boolean> {
+    if (!allowImportExport()) return false
     if (props.disabled || excelImporting.value) {
         return false
     }
@@ -472,6 +478,7 @@ function clearExcelPreview(): void {
 
 /** 确认导入解析后的 Excel 学生数据。 */
 function confirmExcelImport(): void {
+    if (!allowImportExport()) return
     if (props.disabled) {
         return
     }
@@ -488,6 +495,7 @@ function confirmExcelImport(): void {
 
 /** 下载学生 Excel 导入模板。 */
 async function downloadTemplate(): Promise<void> {
+    if (!allowImportExport()) return
     const templateData = [
         { 姓名: "张三", 性别: "男" },
         { 姓名: "李四", 性别: "女" },
@@ -499,6 +507,7 @@ async function downloadTemplate(): Promise<void> {
     const worksheet = XLSX.utils.json_to_sheet(templateData)
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "学生名单模板")
+    if (!allowImportExport()) return
     XLSX.writeFile(workbook, "学生名单导入模板.xlsx")
     ElMessage.success("模板下载成功")
 }

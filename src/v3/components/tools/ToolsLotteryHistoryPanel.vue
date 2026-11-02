@@ -35,7 +35,7 @@
                 <button
                     type="button"
                     class="history-student-button"
-                    :disabled="!record.serverId || busy || loading"
+                    :disabled="!canWrite || (!record.serverId || busy || loading)"
                     @click="emit('bindStudent', record)"
                 >
                     {{ record.syncPending ? "待同步" : record.studentId ? "更改学生" : "绑定学生" }}
@@ -51,8 +51,11 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { computed } from "vue";
 import type { DrawRecord } from "@/types/lottery";
+
+const { canWrite } = useBusinessAccess()
 
 defineOptions({ name: "ToolsLotteryHistoryPanel" })
 

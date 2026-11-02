@@ -13,7 +13,7 @@
         </div>
 
         <template #actions>
-            <button type="button" class="action-button action-button--primary" :disabled="disabled" @click="emit('random')">
+            <button type="button" class="action-button action-button--primary" :disabled="!canWrite || (disabled)" @click="emit('random')">
                 随机点名
             </button>
             <button type="button" class="action-button" @click="emit('openStudents')">
@@ -27,7 +27,10 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import ToolsCardPanel from "@/v3/components/tools/ToolsCardPanel.vue";
+
+const { canWrite } = useBusinessAccess()
 
 defineOptions({ name: "ToolsRollCallCard" })
 

@@ -11,7 +11,6 @@
                     <span class="status-chip" :class="isLoginExpired ? 'status-chip--rose' : 'status-chip--emerald'">
                         {{ isLoginExpired ? "登录已过期" : "已登录" }}
                     </span>
-                    <span v-if="isTrial" class="status-chip status-chip--amber">{{ trialStatusText }}</span>
                     <span class="status-chip status-chip--sky">{{ hasPwd ? "已设置锁屏密码" : "未设置锁屏密码" }}</span>
                 </div>
             </div>
@@ -30,13 +29,14 @@
                 </div>
                 <div class="settings-profile__fact">
                     <span>账号状态</span>
-                    <strong>{{ isLoginExpired ? "需要重新登录" : "可以正常使用" }}</strong>
+                    <strong>{{ isLoginExpired ? "需要重新登录" : "已登录" }}</strong>
                 </div>
                 <div class="settings-profile__fact settings-profile__fact--wide">
                     <span>使用建议</span>
                     <strong>{{ semesterNoticeText }}</strong>
                 </div>
             </div>
+            <AccountEntitlementNotice class="settings-profile__entitlement" />
         </template>
 
         <div v-else class="empty-state">
@@ -47,6 +47,8 @@
 </template>
 
 <script setup lang="ts">
+import AccountEntitlementNotice from "@/v3/components/settings/AccountEntitlementNotice.vue";
+
 /** 定义账号信息卡片属性。 */
 interface SettingsAccountCardProps {
     currentClassName: string
@@ -55,10 +57,8 @@ interface SettingsAccountCardProps {
     hasProfile: boolean
     hasPwd: boolean
     isLoginExpired: boolean
-    isTrial: boolean
     semesterNoticeText: string
     semesterStatusToneClass: string
-    trialStatusText: string
     userAvatar: string | null
     userEmail: string
     userId: string
@@ -69,6 +69,12 @@ defineProps<SettingsAccountCardProps>()
 </script>
 
 <style scoped>
+.settings-profile__entitlement {
+    grid-column: 1 / -1;
+    width: 100%;
+    box-sizing: border-box;
+}
+
 .settings-profile {
     padding: 10px 4px 26px;
     display: grid;

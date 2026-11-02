@@ -79,10 +79,12 @@ export type CloudBackupsMap = Record<CloudSyncType, number[]>
 
 export class ApiRequestError extends Error {
     readonly isApiRequestError = true;
+    readonly code?: number;
 
-    constructor(message: string) {
+    constructor(message: string, code?: number) {
         super(message);
         this.name = "ApiRequestError";
+        this.code = code;
     }
 }
 

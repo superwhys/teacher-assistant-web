@@ -47,12 +47,12 @@
                     </div>
 
                     <div class="points-actions-grid">
-                        <button type="button" class="selection-points-button selection-points-button--plus" :disabled="isPointsActionDisabled"
+                        <button type="button" class="selection-points-button selection-points-button--plus" :disabled="!canWrite || (isPointsActionDisabled)"
                             @click="emit('open-points', { tab: 'plus' })">
                             <i-ep-plus />
                             <span>{{ pointsApplying ? "处理中..." : "单人加分" }}</span>
                         </button>
-                        <button type="button" class="selection-points-button selection-points-button--minus" :disabled="isPointsActionDisabled"
+                        <button type="button" class="selection-points-button selection-points-button--minus" :disabled="!canWrite || (isPointsActionDisabled)"
                             @click="emit('open-points', { tab: 'minus' })">
                             <i-ep-minus />
                             <span>{{ pointsApplying ? "处理中..." : "单人扣分" }}</span>
@@ -102,12 +102,12 @@
                     </div>
 
                     <div class="points-actions-grid">
-                        <button type="button" class="selection-points-button selection-points-button--plus" :disabled="isPointsActionDisabled"
+                        <button type="button" class="selection-points-button selection-points-button--plus" :disabled="!canWrite || (isPointsActionDisabled)"
                             @click="emit('open-points', { tab: 'plus' })">
                             <i-ep-plus />
                             <span>{{ pointsApplying ? "处理中..." : `批量加分（${selectedStudents.length}）` }}</span>
                         </button>
-                        <button type="button" class="selection-points-button selection-points-button--minus" :disabled="isPointsActionDisabled"
+                        <button type="button" class="selection-points-button selection-points-button--minus" :disabled="!canWrite || (isPointsActionDisabled)"
                             @click="emit('open-points', { tab: 'minus' })">
                             <i-ep-minus />
                             <span>{{ pointsApplying ? "处理中..." : `批量扣分（${selectedStudents.length}）` }}</span>
@@ -146,12 +146,15 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import type { UiGender } from "@/components/class/ClassStudentList.vue";
 import { pointsManager } from "@/managers/points";
 import type { Record as PointsApplyRecord } from "@/types/points";
 import { formatChineseDateTime } from "@/utils/date";
 import type { StudentsListCardItem } from "@/v3/components/students/StudentsListCard.vue";
 import { computed, ref, watch } from "vue";
+
+const { canWrite, canPrepare } = useBusinessAccess()
 
 /** 定义学生选择面板属性结构。 */
 interface StudentsSelectionPanelProps {
@@ -246,6 +249,10 @@ function getRecordTimeLabel(record: PointsApplyRecord): string {
 
 /** 加载当前单选学生最近 5 条积分记录。 */
 async function loadRecentRecords(): Promise<void> {
+    if (canPrepare.value && !canWrite.value) {
+        recentRecords.value = []
+        return
+    }
     const currentFetchSeq = ++recordsFetchSeq
     if (!props.classId || !props.selectedStudent) {
         recentRecords.value = []

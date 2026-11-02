@@ -17,12 +17,12 @@
         </div>
 
         <div class="display-actions">
-            <button type="button" class="primary-button" :disabled="!isRolling && (!hasClass || enabledPrizeCount === 0 || saving || loading)"
-                @click="emit('toggleRolling')">
+            <button type="button" class="primary-button" :disabled="!canWrite || (!isRolling && (!hasClass || enabledPrizeCount === 0 || saving || loading))"
+                @click="canWrite && emit('toggleRolling')">
                 {{ isRolling ? "停止抽奖" : saving ? "保存记录中…" : loading ? "加载记录中…" : "开始抽奖" }}
             </button>
-            <button type="button" class="ghost-button" :disabled="!hasClass || isRolling || enabledPrizeCount === 0 || saving || loading"
-                @click="emit('drawOnce')">
+            <button type="button" class="ghost-button" :disabled="!canWrite || (!hasClass || isRolling || enabledPrizeCount === 0 || saving || loading)"
+                @click="canWrite && emit('drawOnce')">
                 抽取 1 次
             </button>
         </div>
@@ -30,7 +30,10 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { computed } from "vue";
+
+const { canWrite } = useBusinessAccess()
 
 defineOptions({ name: "ToolsLotteryDisplayPanel" })
 

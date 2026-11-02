@@ -21,7 +21,7 @@
                     :auto-upload="false"
                     :show-file-list="false"
                     :before-upload="beforeImportUpload"
-                    :disabled="parsing"
+                    :disabled="!canImportExport || (parsing)"
                     :on-change="handleImportChange"
                 >
                     <i-ep-upload-filled class="import-dropzone__icon" />
@@ -33,7 +33,7 @@
             <aside class="import-guide">
                 <div class="import-guide__head">
                     <span class="import-guide__eyebrow">推荐表头</span>
-                    <button type="button" class="text-button" :disabled="parsing" @click="downloadTemplate">
+                    <button type="button" class="text-button" :disabled="!canImportExport || (parsing)" @click="downloadTemplate">
                         下载模板
                     </button>
                 </div>
@@ -74,7 +74,7 @@
                 <button
                     type="button"
                     class="dialog-button dialog-button--primary"
-                    :disabled="importParsedItems.length === 0 || parsing"
+                    :disabled="!canImportExport || (importParsedItems.length === 0 || parsing)"
                     @click="confirmImport"
                 >
                     确认导入
@@ -85,11 +85,14 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { ref, computed } from "vue"
 import { ElMessage } from "element-plus"
 import type { UploadInstance } from "element-plus"
 import type { CreatePrizeReq } from "@/types/mall"
 import AppDialogShell from "@/v3/components/AppDialogShell.vue"
+
+const { canImportExport, allowImportExport } = useBusinessAccess()
 
 defineOptions({ name: "ShopImportDialog" })
 
@@ -126,6 +129,7 @@ const visible = computed({
 
 /** 处理 Excel 文件解析逻辑。 */
 async function handleImportFile(file: File): Promise<void> {
+    if (!allowImportExport()) return
     const requestId = ++lastParseRequestId
     parsing.value = true
 
@@ -222,6 +226,7 @@ function clearImport(): void {
 
 /** 下载商城导入模板。 */
 async function downloadTemplate(): Promise<void> {
+    if (!allowImportExport()) return
     if (parsing.value) {
         return
     }
@@ -234,12 +239,14 @@ async function downloadTemplate(): Promise<void> {
     const worksheet = XLSX.utils.json_to_sheet(template)
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "商品清单")
+    if (!allowImportExport()) return
     XLSX.writeFile(workbook, "积分商城商品模板.xlsx")
     ElMessage.success("模板下载成功")
 }
 
 /** 确认提交导入结果。 */
 function confirmImport(): void {
+    if (!allowImportExport()) return
     if (parsing.value) {
         return
     }

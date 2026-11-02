@@ -438,8 +438,8 @@ const panelDesc = computed(() => {
         return "请输入邮箱验证码并设置新密码。";
     }
     return activeTab.value === "login"
-        ? "首次登录可免费试用 7 天。"
-        : "注册成功后即可使用邮箱密码登录系统。";
+        ? "新账号可先准备班级、学生和分组，自主开启 14 天免费试用。"
+        : "注册后可先准备资料，准备就绪后再开启 14 天免费试用。";
 });
 
 const passwordInputType = computed(() => showPassword.value ? "text" : "password");

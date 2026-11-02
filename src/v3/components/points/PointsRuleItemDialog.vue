@@ -10,13 +10,13 @@
             <div class="dialog-form dialog-form--points">
                 <label class="field-block">
                     <span class="field-label">积分项名称</span>
-                    <el-input v-model="form.name" size="large" placeholder="例如：主动发言" />
+                    <el-input v-model="form.name" size="large" placeholder="例如：主动发言" :disabled="!canWrite" />
                 </label>
 
                 <div class="dialog-form__row">
                     <label class="field-block">
                         <span class="field-label">分值</span>
-                        <el-input-number v-model="form.points" size="large" :min="1" :max="99" :step="1" class="field-full" />
+                        <el-input-number v-model="form.points" size="large" :min="1" :max="99" :step="1" class="field-full" :disabled="!canWrite" />
                     </label>
 
                     <div class="field-block">
@@ -49,7 +49,7 @@
                 <button type="button" class="ghost-button" :disabled="loading" @click="visible = false">
                     取消
                 </button>
-                <button type="button" class="primary-button" :disabled="loading" @click="handleSave">
+                <button type="button" class="primary-button" :disabled="!canWrite || (loading)" @click="handleSave">
                     {{ loading ? "保存中..." : "保存积分项" }}
                 </button>
             </div>
@@ -58,8 +58,11 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import { computed, reactive, watch } from "vue";
+
+const { canWrite, allowWrite } = useBusinessAccess()
 
 defineOptions({ name: "PointsRuleItemDialog" })
 
@@ -105,6 +108,7 @@ function syncFormState(): void {
 
 /** 提交当前积分项表单。 */
 function handleSave(): void {
+    if (!allowWrite()) return
     emit("save", {
         name: form.name,
         points: form.points,

@@ -1,10 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { reactive } from 'vue'
 
 vi.mock('@/api/mall', () => ({ mallApi: {} }))
 vi.mock('@/managers/lottery', () => ({ lotteryManager: {} }))
 vi.mock('@/managers/student', () => ({ studentManager: {} }))
+const businessSession = reactive({ canWrite: true, canPrepare: true, canImportExport: true, entitlementMessage: '试用已到期，仅可查看' })
+vi.mock('@/stores/sessionStore', () => ({ useSessionStore: () => businessSession }))
 vi.mock('@/stores/cacheStore', () => ({ useCacheStore: () => ({}) }))
-vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn() } }))
+vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), warning: vi.fn() } }))
 
 let storage: Map<string, string>
 let events: Map<string, () => void>
@@ -17,6 +20,7 @@ const stageStorageKey = 'teacher-assistant:v3:tools:stage-timer'
 const singleStorageKey = 'teacher-assistant:v3:tools:timer'
 
 beforeEach(() => {
+    Object.assign(businessSession, { canWrite: true, canPrepare: true, canImportExport: true })
     vi.resetModules()
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-10-08T08:00:00Z'))
@@ -184,5 +188,41 @@ describe('shared multi-stage timer controls', () => {
         expect(() => flow.toggleStages()).not.toThrow()
         vi.advanceTimersByTime(2500)
         expect(flow.state).toMatchObject({ stageIndex: 1, remainingMs: 2500, isRunning: true })
+    })
+})
+
+
+describe('classroom timers commercial access', () => {
+    it('does not start or configure classroom tools during preparation', async () => {
+        Object.assign(businessSession, { canWrite: false, canPrepare: true, canImportExport: false })
+        const { useSharedTimer, useStageTimer } = await import('../useToolsWorkspace')
+        const single = useSharedTimer()
+        const flow = useStageTimer()
+        const originalStages = JSON.stringify(flow.state.stages)
+        single.applyTimerPreset(5)
+        single.toggleTimer()
+        flow.configureStages(stages)
+        flow.toggleStages()
+        expect(single.timerState).toMatchObject({ isRunning: false, presetMinutes: 15 })
+        expect(flow.state.isRunning).toBe(false)
+        expect(JSON.stringify(flow.state.stages)).toBe(originalStages)
+        expect(flow.editable.value).toBe(false)
+    })
+
+    it('pauses a running timer immediately at expiry and refuses reset or restart', async () => {
+        const { useSharedTimer, useStageTimer } = await import('../useToolsWorkspace')
+        const single = useSharedTimer()
+        const flow = useStageTimer()
+        flow.configureStages(stages)
+        flow.toggleStages()
+        vi.advanceTimersByTime(1000)
+        Object.assign(businessSession, { canWrite: false, canPrepare: false, canImportExport: false })
+        expect(flow.state).toMatchObject({ isRunning: false, remainingMs: 1000 })
+        flow.resetStages()
+        flow.toggleStages()
+        single.toggleTimer()
+        vi.advanceTimersByTime(30000)
+        expect(flow.state).toMatchObject({ isRunning: false, remainingMs: 1000, hasStarted: true })
+        expect(single.timerState.isRunning).toBe(false)
     })
 })

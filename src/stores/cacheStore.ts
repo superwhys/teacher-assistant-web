@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import type { StudentsLayoutMode, StudentsSortOption } from '@/types/student'
 import type { UserProfile } from '@/types/user'
 import { generateSaltBase64, hashPassword, verifyPassword } from '@/utils/crypto'
+import { computeTrialFromProfile } from '@/utils/userProfile'
 
 const GLOBAL_CACHE_KEY = 'ta_cache_global_v1'
 const USER_CACHE_PREFIX = 'ta_cache:'
@@ -405,13 +406,14 @@ export const useCacheStore = defineStore('cache', () => {
     function setAuth(
         tokenValue: string,
         user: UserProfile,
-        trial: boolean,
-        expiresAt?: number | null,
+        _trial = false,
+        _expiresAt?: number | null,
     ): void {
         token.value = tokenValue
         profile.value = user
-        isTrial.value = trial
-        trialExpiresAt.value = typeof expiresAt === 'number' ? expiresAt : null
+        const trial = computeTrialFromProfile(user)
+        isTrial.value = trial.trial
+        trialExpiresAt.value = trial.expiresAt
         isExpired.value = false
         loadUserScopedCache(user?.id)
     }
@@ -431,6 +433,9 @@ export const useCacheStore = defineStore('cache', () => {
 
     function updateProfile(user: UserProfile): void {
         profile.value = user
+        const trial = computeTrialFromProfile(user)
+        isTrial.value = trial.trial
+        trialExpiresAt.value = trial.expiresAt
     }
 
     function setExpired(expired: boolean): void {

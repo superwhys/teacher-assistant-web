@@ -2,10 +2,13 @@ import { ApiRequestError, type ApiResponse } from "@/types/api";
 import { ElMessage } from "element-plus";
 import { useCacheStore } from "@/stores/cacheStore";
 import router from "@/routers";
+import { allowsEntitlementRequest, effectiveEntitlementState, entitlementMessage } from "@/utils/entitlement";
+import { notifyEntitlementRejected } from "@/utils/entitlementEvents";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 const UNAUTHORIZED_CODE = 100401;
 const PERMISSION_DENIED_CODE = 100403;
+const COMMERCIAL_DENIED_CODES = new Set([200402, 200403, 200404]);
 const UNAUTHORIZED_MESSAGE_COOLDOWN = 3000;
 
 let isRedirectingToAuth = false;
@@ -74,6 +77,8 @@ function handleUnauthorized(
 ): never {
     const errorMessage = message || "登录已过期，请重新登录";
 
+    if (token && cacheStore.token !== token) throw new ApiRequestError("账号已切换，请刷新页面");
+
     if (!isDuplicateUnauthorized(token ?? null)) {
         cacheStore.logout();
         showMessage(errorMessage, "error");
@@ -86,10 +91,28 @@ function handleUnauthorized(
 /**
  * 处理权限不足；保留当前登录状态，不跳转登录页。
  */
-function handlePermissionDenied(message?: string): never {
+function handlePermissionDenied(message?: string, code = PERMISSION_DENIED_CODE, token?: string | null): never {
     const errorMessage = message || "您的账号没有使用该功能的权限";
+    if (token && COMMERCIAL_DENIED_CODES.has(code)) {
+        const cache = useCacheStore();
+        if (cache.token === token && cache.profile?.entitlement) {
+            const state = code === 200402 ? "trial_expired" : (code === 200404 ? "paid_expired" : "not_started");
+            cache.updateProfile({ ...cache.profile, roleCode: cache.profile.roleCode === 'admin' ? null : cache.profile.roleCode, entitlement: { ...cache.profile.entitlement, state } });
+        }
+        notifyEntitlementRejected(token, code);
+    }
     showMessage(errorMessage, "error");
-    throw new ApiRequestError(errorMessage);
+    throw new ApiRequestError(errorMessage, code);
+}
+
+function assertCommercialAccess(url: string, method: string, token: string | null): void {
+    const cache = useCacheStore();
+    if (!token || allowsEntitlementRequest(cache.profile, method, url)) return;
+    const state = effectiveEntitlementState(cache.profile);
+    const code = state === "trial_expired" ? 200402 : (state === "paid_expired" ? 200404 : 200403);
+    const message = entitlementMessage(state);
+    showMessage(message, "warning");
+    throw new ApiRequestError(message, code);
 }
 
 /**
@@ -101,8 +124,8 @@ function handleResponse<T>(response: ApiResponse<T>, token?: string | null): Api
         return handleUnauthorized(cacheStore, response.message, token);
     }
 
-    if (response.code === PERMISSION_DENIED_CODE) {
-        return handlePermissionDenied(response.message);
+    if (response.code === PERMISSION_DENIED_CODE || COMMERCIAL_DENIED_CODES.has(response.code)) {
+        return handlePermissionDenied(response.message, response.code, token);
     }
 
     if (response.code === 0 || response.code === 200) {
@@ -110,7 +133,7 @@ function handleResponse<T>(response: ApiResponse<T>, token?: string | null): Api
     }
 
     showMessage(response.message || "操作失败", "error");
-    throw new ApiRequestError(response.message || "请求失败");
+    throw new ApiRequestError(response.message || "请求失败", response.code);
 }
 
 /**
@@ -144,6 +167,7 @@ async function request<T>(
 ): Promise<ApiResponse<T>> {
     const cacheStore = useCacheStore();
     const authToken = cacheStore.token;
+    assertCommercialAccess(url, options.method || "GET", authToken);
     const response = await fetch(`${API_BASE_URL}${url}`, {
         headers: buildHeaders(authToken, options.headers),
         ...options,
@@ -160,7 +184,7 @@ async function request<T>(
 
     if (response.status === 403) {
         const forbiddenResponse = await safeParseJson<T>(response);
-        handlePermissionDenied(forbiddenResponse?.message);
+        handlePermissionDenied(forbiddenResponse?.message, forbiddenResponse?.code || PERMISSION_DENIED_CODE, authToken);
     }
 
     if (!response.ok) {
@@ -171,6 +195,8 @@ async function request<T>(
     }
 
     const jsonResponse = (await safeParseJson<T>(response)) as ApiResponse<T>;
+
+    if (authToken && cacheStore.token !== authToken) throw new ApiRequestError("账号已切换，请刷新页面");
 
     return handleResponse<T>(jsonResponse, authToken);
 }
@@ -184,6 +210,7 @@ async function requestBlob(
 ): Promise<Blob> {
     const cacheStore = useCacheStore();
     const authToken = cacheStore.token;
+    assertCommercialAccess(url, options.method || "GET", authToken);
     const response = await fetch(`${API_BASE_URL}${url}`, {
         headers: buildHeaders(authToken, options.headers),
         ...options,
@@ -200,7 +227,7 @@ async function requestBlob(
 
     if (response.status === 403) {
         const forbiddenResponse = await safeParseJson<unknown>(response);
-        handlePermissionDenied(forbiddenResponse?.message);
+        handlePermissionDenied(forbiddenResponse?.message, forbiddenResponse?.code || PERMISSION_DENIED_CODE, authToken);
     }
 
     if (!response.ok) {
@@ -210,7 +237,9 @@ async function requestBlob(
         throw new ApiRequestError(errorMessage);
     }
 
-    return await response.blob();
+    const blob = await response.blob();
+    if (authToken && cacheStore.token !== authToken) throw new ApiRequestError("账号已切换，请刷新页面");
+    return blob;
 }
 
 /**

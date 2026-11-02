@@ -5,7 +5,7 @@
                 <h1>学生管理</h1>
                 <p>{{ studentCards.length }} 名学生 · {{ groupChips.length }} 个小组</p>
             </div>
-            <button type="button" class="primary-button" :disabled="!hasActiveClass" @click="openAddStudentDialog('single')">
+            <button type="button" class="primary-button" :disabled="!hasActiveClass || !canPrepare" @click="openAddStudentDialog('single')">
                 <i-ep-plus aria-hidden="true" />
                 添加学生
             </button>
@@ -27,11 +27,11 @@
                     <template #dropdown>
                         <el-dropdown-menu>
                             <el-dropdown-item @click="openGroupManageDialog">管理分组</el-dropdown-item>
-                            <el-dropdown-item :disabled="loading || isArchivedSemester || randomGroupingSaving || !studentCards.length"
+                            <el-dropdown-item :disabled="!canWrite || loading || isArchivedSemester || randomGroupingSaving || !studentCards.length"
                                 @click="openRandomGroupDialog">自动分组</el-dropdown-item>
-                            <el-dropdown-item @click="openGroupImportDialog">Excel 导入分组</el-dropdown-item>
-                            <el-dropdown-item divided @click="openAddStudentDialog('batch')">批量添加学生</el-dropdown-item>
-                            <el-dropdown-item @click="openAddStudentDialog('excel')">Excel 导入学生</el-dropdown-item>
+                            <el-dropdown-item :disabled="!canImportExport" @click="openGroupImportDialog">Excel 导入分组</el-dropdown-item>
+                            <el-dropdown-item divided :disabled="!canImportExport" @click="openAddStudentDialog('batch')">批量添加学生</el-dropdown-item>
+                            <el-dropdown-item :disabled="!canImportExport" @click="openAddStudentDialog('excel')">Excel 导入学生</el-dropdown-item>
                         </el-dropdown-menu>
                     </template>
                 </el-dropdown>
@@ -95,9 +95,9 @@
                 <span aria-live="polite">已选 {{ selectedStudents.length }} 人</span>
                 <i-ep-arrow-right aria-hidden="true" />
             </button>
-            <button type="button" class="students-points-button is-plus" :disabled="isArchivedSemester || pointsApplying || loading"
+            <button type="button" class="students-points-button is-plus" :disabled="!canWrite || isArchivedSemester || pointsApplying || loading"
                 @click="openPointsSelectorForSelected({ tab: 'plus' })"><i-ep-plus aria-hidden="true" />加分</button>
-            <button type="button" class="students-points-button" :disabled="isArchivedSemester || pointsApplying || loading"
+            <button type="button" class="students-points-button" :disabled="!canWrite || isArchivedSemester || pointsApplying || loading"
                 @click="openPointsSelectorForSelected({ tab: 'minus' })"><i-ep-minus aria-hidden="true" />扣分</button>
         </div>
 
@@ -111,19 +111,19 @@
         </AppDialogShell>
 
         <StudentsAddDialog v-model="addStudentDialogVisible" :default-mode="addStudentDialogMode"
-            :disabled="!hasActiveClass" @add-single="handleAddSingle" @add-batch="handleAddBatch"
+            :disabled="!hasActiveClass || !canPrepare" @add-single="handleAddSingle" @add-batch="handleAddBatch"
             @add-excel="handleAddExcel" />
 
         <StudentsGroupManageDialog v-model="groupManageVisible" :active="hasActiveClass" :class-id="activeClassId"
             :groups="uiGroups" @create-group="handleCreateGroup" @delete-group="handleDeleteGroup"
-            @save-members="handleSaveGroupMembers" @open-import="groupImportVisible = true"
+            @save-members="handleSaveGroupMembers" @open-import="openGroupImportDialog"
             @open-random="openRandomGroupDialog" />
 
-        <StudentsRandomGroupDialog v-model="randomGroupVisible" :active="hasActiveClass && !isArchivedSemester && !loading"
+        <StudentsRandomGroupDialog v-model="randomGroupVisible" :active="canWrite && hasActiveClass && !isArchivedSemester && !loading"
             :busy="randomGroupingSaving" :error="randomGroupingError" :existing-group-count="groups.length"
             :students="randomGroupStudents" @confirm="handleApplyRandomGroups" @clear-error="randomGroupingError = ''" />
 
-        <StudentsGroupImportDialog v-model="groupImportVisible" :active="hasActiveClass" :students="uiAllStudents"
+        <StudentsGroupImportDialog v-model="groupImportVisible" :active="canImportExport && hasActiveClass" :students="uiAllStudents"
             :groups="uiGroups" @confirm="handleConfirmGroupImport" />
 
         <StudentsEditDialog v-model="editStudentVisible" :student="editingStudent" @save="handleSaveStudentEdit" />
@@ -139,6 +139,7 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import type { UiGender, UiStudent } from "@/components/class/ClassStudentList.vue";
 import { ApiRequestError } from "@/types/api";
 import { pointsManager } from "@/managers/points";
@@ -194,6 +195,7 @@ interface StudentSearchIndexItem {
     tagsLower: string
 }
 
+const { canWrite, canPrepare, canImportExport, allowWrite, allowPrepare, allowImportExport } = useBusinessAccess()
 const cacheStore = useCacheStore()
 const loading = ref(false)
 const students = ref<StudentDTO[]>([])
@@ -697,6 +699,7 @@ function getPointsTargetLabel(studentIds: number[]): string {
 
 /** 打开积分规则选择弹窗。 */
 async function openPointsSelector(studentIds: number[], tab: Exclude<PointsSelectorTab, "all">): Promise<void> {
+    if (!allowWrite()) return
     if (pointsApplying.value || loading.value) {
         return
     }
@@ -751,6 +754,7 @@ async function handleLocateStudent(studentId: number): Promise<void> {
 
 /** 处理积分规则选择。 */
 async function handleSelectRule(rule: { id: number, name: string, sign: "plus" | "minus", points: number }): Promise<void> {
+    if (!allowWrite()) return
     if (!activeClassId.value || isArchivedSemester.value || selectorTargets.value.length === 0
         || pointsApplying.value || ruleGroupsLoading.value || ruleGroupsError.value) {
         return
@@ -852,6 +856,7 @@ function handleSelectGroup(groupId: number | null): void {
 
 /** 打开新增学生弹窗并设置默认模式。 */
 function openAddStudentDialog(mode: StudentAddMode): void {
+    if (!(mode === "single" ? allowPrepare() : allowImportExport())) return
     addStudentDialogMode.value = mode
     addStudentDialogVisible.value = true
 }
@@ -863,11 +868,13 @@ function openGroupManageDialog(): void {
 
 /** 打开分组导入弹窗。 */
 function openGroupImportDialog(): void {
+    if (!allowImportExport()) return
     groupImportVisible.value = true
 }
 
 /** 预览全班随机分组，提交时由后端一次性替换。 */
 function openRandomGroupDialog(): void {
+    if (!allowWrite()) return
     if (!activeClassId.value || isArchivedSemester.value || loading.value || randomGroupingSaving.value) return
     if (!students.value.length) {
         ElMessage.info("请先添加学生")
@@ -879,6 +886,7 @@ function openRandomGroupDialog(): void {
 }
 
 async function handleApplyRandomGroups(randomGroups: ApplyRandomGroupsReq["groups"]): Promise<void> {
+    if (!allowWrite()) return
     const classId = activeClassId.value
     const semesterId = cacheStore.getActiveSemesterId()
     const userId = cacheStore.profile?.id
@@ -914,6 +922,7 @@ async function handleApplyRandomGroups(randomGroups: ApplyRandomGroupsReq["group
 
 /** 打开编辑学生弹窗。 */
 function openEdit(student: StudentCardItem): void {
+    if (!allowWrite()) return
     editingStudent.value = {
         id: student.id,
         name: student.name,
@@ -924,12 +933,14 @@ function openEdit(student: StudentCardItem): void {
 
 /** 打开删除学生确认弹窗。 */
 function requestRemoveStudent(student: StudentCardItem): void {
+    if (!allowWrite()) return
     pendingDeleteStudent.value = student
     deleteStudentDialogVisible.value = true
 }
 
 /** 确认删除当前待删除学生。 */
 async function confirmRemoveStudent(): Promise<void> {
+    if (!allowWrite()) return
     if (!pendingDeleteStudent.value) {
         return
     }
@@ -948,6 +959,7 @@ async function confirmRemoveStudent(): Promise<void> {
 
 /** 处理单个新增学生。 */
 async function handleAddSingle(payload: { name: string, gender: ApiGender }): Promise<void> {
+    if (!allowPrepare()) return
     if (!activeClassId.value) {
         ElMessage.error("请先选择班级")
         return
@@ -960,6 +972,7 @@ async function handleAddSingle(payload: { name: string, gender: ApiGender }): Pr
 
 /** 处理批量新增学生。 */
 async function handleAddBatch(payload: { students: CreateStudentReq[] }): Promise<void> {
+    if (!allowImportExport()) return
     if (!activeClassId.value) {
         ElMessage.error("请先选择班级")
         return
@@ -977,6 +990,7 @@ async function handleAddExcel(payload: { students: CreateStudentReq[] }): Promis
 
 /** 处理保存学生编辑。 */
 async function handleSaveStudentEdit(payload: { id: number, name: string, gender: ApiGender }): Promise<void> {
+    if (!allowWrite()) return
     await studentManager.update(payload.id, payload.name, payload.gender)
     editStudentVisible.value = false
     editingStudent.value = null
@@ -986,6 +1000,7 @@ async function handleSaveStudentEdit(payload: { id: number, name: string, gender
 
 /** 处理创建学生分组。 */
 async function handleCreateGroup(payload: { name: string }): Promise<void> {
+    if (!allowPrepare()) return
     if (!activeClassId.value) {
         return
     }
@@ -997,6 +1012,7 @@ async function handleCreateGroup(payload: { name: string }): Promise<void> {
 
 /** 处理删除学生分组。 */
 async function handleDeleteGroup(payload: { groupId: number }): Promise<void> {
+    if (!allowWrite()) return
     await studentManager.deleteGroup(payload.groupId)
     ElMessage.success("已删除分组")
     await loadStudentData()
@@ -1004,6 +1020,7 @@ async function handleDeleteGroup(payload: { groupId: number }): Promise<void> {
 
 /** 将分组成员变更应用到接口层。 */
 async function applyGroupMembers(groupId: number, targetMemberIds: number[]): Promise<void> {
+    if (!allowPrepare()) return
     if (!activeClassId.value) {
         return
     }
@@ -1040,6 +1057,7 @@ async function applyGroupMembers(groupId: number, targetMemberIds: number[]): Pr
 
 /** 处理保存分组成员。 */
 async function handleSaveGroupMembers(payload: { groupId: number, memberIds: number[] }): Promise<void> {
+    if (!allowPrepare()) return
     await applyGroupMembers(payload.groupId, payload.memberIds)
     ElMessage.success("已保存分组成员")
     await loadStudentData()
@@ -1047,6 +1065,7 @@ async function handleSaveGroupMembers(payload: { groupId: number, memberIds: num
 
 /** 处理 Excel 分组导入确认。 */
 async function handleConfirmGroupImport(payload: { groups: Array<{ groupName: string, memberNames: string[] }> }): Promise<void> {
+    if (!allowImportExport()) return
     if (!activeClassId.value) {
         return
     }
@@ -1057,6 +1076,7 @@ async function handleConfirmGroupImport(payload: { groups: Array<{ groupName: st
     })
 
     for (const group of payload.groups) {
+        if (!allowImportExport()) return
         const memberIds = group.memberNames
             .map((name) => nameToId.get(name) ?? 0)
             .filter((studentId) => studentId > 0)

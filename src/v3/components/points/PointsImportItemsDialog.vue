@@ -22,7 +22,7 @@
                     :show-file-list="false"
                     :before-upload="handleBeforeUpload"
                     :on-change="handleUploadChange"
-                    :disabled="loading"
+                    :disabled="!canImportExport || (loading)"
                 >
                     <i-ep-upload-filled class="upload-panel__icon" />
                     <p class="upload-panel__title">
@@ -37,7 +37,7 @@
             <section class="guide-card">
                 <div class="guide-card__head">
                     <strong>导入说明</strong>
-                    <button type="button" class="text-button" :disabled="loading" @click="downloadTemplate">
+                    <button type="button" class="text-button" :disabled="!canImportExport || (loading)" @click="downloadTemplate">
                         下载模板
                     </button>
                 </div>
@@ -83,7 +83,7 @@
                     <button
                         type="button"
                         class="primary-button"
-                        :disabled="loading || parsedRows.length === 0"
+                        :disabled="!canImportExport || (loading || parsedRows.length === 0)"
                         @click="confirmImport"
                     >
                         确认导入
@@ -95,6 +95,7 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { pointsManager } from "@/managers/points";
 import { isApiRequestError } from "@/types/api";
 import { parseItemsExcelToRows, type ImportItemRow } from "@/utils/pointsImport";
@@ -102,6 +103,8 @@ import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import { ElMessage } from "element-plus";
 import type { UploadFile, UploadInstance, UploadRawFile } from "element-plus";
 import { computed, ref, watch } from "vue";
+
+const { canImportExport, allowImportExport } = useBusinessAccess()
 
 defineOptions({ name: "PointsImportItemsDialog" })
 
@@ -192,6 +195,7 @@ function handleCancel(): void {
 
 /** 解析上传的 Excel 文件。 */
 async function parseImportFile(file: File): Promise<boolean> {
+    if (!allowImportExport()) return false
     if (loading.value) {
         return false
     }
@@ -236,6 +240,7 @@ async function handleUploadChange(file: UploadFile): Promise<void> {
 
 /** 执行积分项导入。 */
 async function confirmImport(): Promise<void> {
+    if (!allowImportExport()) return
     if (parsedRows.value.length === 0) {
         ElMessage.warning("暂无可导入的数据")
         return
@@ -314,6 +319,7 @@ async function confirmImport(): Promise<void> {
 
 /** 下载积分项导入模板。 */
 async function downloadTemplate(): Promise<void> {
+    if (!allowImportExport()) return
     const templateRows = [
         { 组名: "课堂表现", 项目名: "主动发言", 分值: 2 },
         { 组名: "课堂表现", 项目名: "课堂违纪", 分值: -2 },
@@ -324,6 +330,7 @@ async function downloadTemplate(): Promise<void> {
     const worksheet = XLSX.utils.json_to_sheet(templateRows)
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "积分项导入模板")
+    if (!allowImportExport()) return
     XLSX.writeFile(workbook, "积分项导入模板.xlsx")
     ElMessage.success("模板下载成功")
 }

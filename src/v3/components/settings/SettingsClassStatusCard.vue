@@ -2,7 +2,7 @@
     <article class="settings-section">
         <div class="settings-section__intro">
             <h3>班级与学期</h3>
-            <p>查看当前班级、当前学期和课堂操作权限，也可以在这里修改班级名称。</p>
+            <p>查看当前班级、当前学期和课堂操作权限。</p>
         </div>
         <div class="settings-section__body">
             <div class="class-summary-list">
@@ -14,9 +14,9 @@
                 <div class="summary-item summary-item--wide"><span>使用建议</span><strong>{{ semesterNoticeText }}</strong></div>
             </div>
             <div class="toolbar compact-toolbar">
-                <button type="button" class="ghost-button" :disabled="!activeClassId || classesLoading"
+                <button type="button" class="ghost-button" :disabled="!canWrite || !activeClassId || classesLoading"
                     @click="emit('open-rename-class')">修改班级名称</button>
-                <button type="button" class="ghost-button" :disabled="!activeClassId || classesLoading"
+                <button type="button" class="ghost-button" :disabled="!canWrite || !activeClassId || classesLoading"
                     @click="emit('open-next-semester')">切换到新学期</button>
                 <button type="button" class="ghost-button" @click="emit('go-dashboard')">返回工作台</button>
             </div>
@@ -27,6 +27,7 @@
 <script setup lang="ts">
 /** 定义班级状态卡片属性。 */
 interface SettingsClassStatusCardProps {
+    canWrite: boolean
     activeClassId: number | null
     classesLoading: boolean
     currentClassName: string

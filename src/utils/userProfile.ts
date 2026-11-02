@@ -1,4 +1,5 @@
 import type { UserProfile } from '@/types/user'
+import { normalizeEntitlement } from '@/utils/entitlement'
 
 type UserInfoApi = {
     id?: number | string | null
@@ -8,6 +9,9 @@ type UserInfoApi = {
     status?: number | null
     role_id?: number | null
     roleId?: number | null
+    roleCode?: string | null
+    role?: { code?: string | null } | null
+    entitlement?: unknown
     wechat_bound?: boolean | null
     created_at?: string | number | null
     createdAt?: number | null
@@ -62,6 +66,8 @@ export function normalizeUserProfile(raw: unknown, fallbackEmail?: string): User
         avatar: typeof u.avatar === 'string' ? u.avatar : null,
         status: typeof u.status === 'number' ? u.status : null,
         roleId,
+        roleCode: typeof u.role?.code === 'string' ? u.role.code : (typeof u.roleCode === 'string' ? u.roleCode : null),
+        entitlement: normalizeEntitlement(u.entitlement),
         wechatBound: typeof u.wechat_bound === 'boolean' ? u.wechat_bound : undefined,
         createdAt,
         updatedAt,
@@ -69,13 +75,10 @@ export function normalizeUserProfile(raw: unknown, fallbackEmail?: string): User
 }
 
 export function computeTrialFromProfile(profile: UserProfile): { trial: boolean; expiresAt: number | null } {
-    const trial = !profile.roleId
-    if (!trial) return { trial: false, expiresAt: null }
-
-    const createdAt = (typeof profile.createdAt === 'number' && Number.isFinite(profile.createdAt))
-        ? profile.createdAt
-        : Math.floor(Date.now() / 1000)
-
-    return { trial: true, expiresAt: createdAt + 7 * 24 * 60 * 60 }
+    const trial = profile.entitlement?.state === 'trial_active' || profile.entitlement?.state === 'trial_expired'
+    const expiresAt = profile.entitlement?.trial_expires_at
+        ? parseDateToSeconds(profile.entitlement.trial_expires_at) ?? null
+        : null
+    return { trial, expiresAt: trial ? expiresAt : null }
 }
 

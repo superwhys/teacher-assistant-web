@@ -8,26 +8,26 @@
                     <el-option v-for="pool in pools" :key="pool.id" :label="pool.name" :value="pool.id" />
                     <template #empty>
                         <div class="lottery-toolbar__empty">
-                            <button type="button" class="text-button" @click="openAddPoolDialog">新建奖池</button>
+                            <button type="button" class="text-button" @click="openAddPoolDialog" :disabled="!canWrite">新建奖池</button>
                         </div>
                     </template>
                 </el-select>
-                <button type="button" class="icon-button" title="新建奖池" @click="openAddPoolDialog">
+                <button type="button" class="icon-button" title="新建奖池" @click="openAddPoolDialog" :disabled="!canWrite">
                     <i-ep-plus />
                 </button>
-                <button type="button" class="icon-button" title="编辑奖池" :disabled="currentPool === null" @click="openCurrentPoolDialog">
+                <button type="button" class="icon-button" title="编辑奖池" :disabled="!canWrite || (currentPool === null)" @click="openCurrentPoolDialog">
                     <i-ep-edit />
                 </button>
             </div>
 
             <div class="lottery-toolbar__actions">
-                <button type="button" class="ghost-button" @click="openAddDialog">
+                <button type="button" class="ghost-button" @click="openAddDialog" :disabled="!canWrite">
                     添加奖品
                 </button>
-                <button type="button" class="ghost-button" @click="openImportDialog">
+                <button type="button" class="ghost-button" @click="openImportDialog" :disabled="!canImportExport">
                     商城导入
                 </button>
-                <button type="button" class="ghost-button danger" :disabled="prizes.length === 0"
+                <button type="button" class="ghost-button danger" :disabled="!canWrite || (prizes.length === 0)"
                     @click="openClearAllDialog">
                     清空奖池
                 </button>
@@ -116,6 +116,7 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { mallApi } from "@/api/mall";
 import { studentManager } from "@/managers/student";
 import { lotteryManager, type UiLotteryPool, type UiLotteryPrize } from "@/managers/lottery";
@@ -136,6 +137,8 @@ import ToolsLotteryPrizeDialog from "@/v3/components/tools/ToolsLotteryPrizeDial
 import ToolsLotteryStudentDialog from "@/v3/components/tools/ToolsLotteryStudentDialog.vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from "vue";
+
+const { canWrite, canImportExport, allowWrite, allowImportExport } = useBusinessAccess()
 
 defineOptions({ name: "ToolsLotteryWorkspace" })
 
@@ -253,7 +256,7 @@ async function reloadPools(ensureDefault = false): Promise<boolean> {
     const previousPoolId = currentPoolId.value
     const list = await lotteryManager.listPools()
 
-    if (ensureDefault && list.length === 0) {
+    if (ensureDefault && canWrite.value && list.length === 0) {
         const createdPool = await lotteryManager.createPool("默认奖池")
         pools.value = [createdPool]
         currentPoolId.value = createdPool.id
@@ -320,6 +323,7 @@ async function refreshRecords(): Promise<void> {
 
 /** 打开中奖学生编辑草稿。 */
 async function openStudentDialog(record: DrawRecord): Promise<void> {
+    if (!allowWrite()) return
     if (!record.serverId || !currentClassId.value || record.studentClassId !== currentClassId.value || studentSaving.value) return
     selectedRecord.value = record
     selectedStudentId.value = record.studentId ?? null
@@ -358,6 +362,7 @@ async function loadStudentOptions(): Promise<void> {
 
 /** 保存学生绑定；失败时保留当前草稿。 */
 async function saveRecordStudent(): Promise<void> {
+    if (!allowWrite()) return
     const record = selectedRecord.value
     const poolId = currentPoolId.value
     const classId = record?.studentClassId
@@ -409,6 +414,7 @@ async function loadShopItems(): Promise<void> {
 
 /** 打开新增奖品弹窗。 */
 function openAddDialog(): void {
+    if (!allowWrite()) return
     prizeEditMode.value = "add"
     prizeForm.id = ""
     prizeForm.name = ""
@@ -419,6 +425,7 @@ function openAddDialog(): void {
 
 /** 打开编辑奖品弹窗。 */
 function openEditDialog(item: UiLotteryPrize): void {
+    if (!allowWrite()) return
     prizeEditMode.value = "edit"
     prizeForm.id = item.name
     prizeForm.name = item.name
@@ -429,6 +436,7 @@ function openEditDialog(item: UiLotteryPrize): void {
 
 /** 删除当前编辑中的奖品。 */
 function handleDeleteCurrentPrize(): void {
+    if (!allowWrite()) return
     if (prizeEditMode.value !== "edit" || !prizeForm.id) {
         return
     }
@@ -444,6 +452,7 @@ function handleDeleteCurrentPrize(): void {
 
 /** 保存奖品表单。 */
 async function savePrize(): Promise<void> {
+    if (!allowWrite()) return
     if (!prizeForm.name.trim()) {
         ElMessage.warning("请输入奖品名称")
         return
@@ -503,6 +512,7 @@ async function savePrize(): Promise<void> {
 
 /** 删除指定奖品。 */
 async function deletePrize(item: UiLotteryPrize): Promise<void> {
+    if (!allowWrite()) return
     try {
         await ElMessageBox.confirm(`确定删除奖品「${item.name}」吗？`, "删除确认", {
             type: "warning"
@@ -532,6 +542,7 @@ async function deletePrize(item: UiLotteryPrize): Promise<void> {
 
 /** 切换奖品启用状态。 */
 function toggleEnabled(item: UiLotteryPrize): void {
+    if (!allowWrite()) return
     void (async () => {
         if (!currentPoolId.value) {
             return
@@ -554,6 +565,7 @@ function toggleEnabled(item: UiLotteryPrize): void {
 
 /** 打开新增奖池弹窗。 */
 function openAddPoolDialog(): void {
+    if (!allowWrite()) return
     poolEditMode.value = "add"
     poolForm.id = ""
     poolForm.name = ""
@@ -562,6 +574,7 @@ function openAddPoolDialog(): void {
 
 /** 打开编辑奖池弹窗。 */
 function openEditPoolDialog(pool: UiLotteryPool): void {
+    if (!allowWrite()) return
     poolEditMode.value = "edit"
     poolForm.id = pool.id
     poolForm.name = pool.name
@@ -570,6 +583,7 @@ function openEditPoolDialog(pool: UiLotteryPool): void {
 
 /** 打开当前选中奖池的编辑弹窗。 */
 function openCurrentPoolDialog(): void {
+    if (!allowWrite()) return
     if (!currentPool.value) {
         return
     }
@@ -579,6 +593,7 @@ function openCurrentPoolDialog(): void {
 
 /** 保存奖池表单。 */
 function savePool(): void {
+    if (!allowWrite()) return
     if (!poolForm.name.trim()) {
         ElMessage.warning("请输入奖池名称")
         return
@@ -613,11 +628,13 @@ function savePool(): void {
 
 /** 删除奖池时给出当前能力提示。 */
 function deletePool(): void {
+    if (!allowWrite()) return
     ElMessage.warning("当前后端接口暂不支持删除奖池")
 }
 
 /** 打开商城奖品导入弹窗。 */
 function openImportDialog(): void {
+    if (!allowImportExport()) return
     importSelection.value = []
     importWeightStrategy.value = "fixed"
     importDialogVisible.value = true
@@ -640,11 +657,13 @@ function openImportDialog(): void {
 
 /** 打开清空奖池确认弹窗。 */
 function openClearAllDialog(): void {
+    if (!allowWrite()) return
     clearAllDialogVisible.value = true
 }
 
 /** 打开清空记录确认弹窗。 */
 function openClearRecordsDialog(): void {
+    if (!allowWrite()) return
     clearRecordsDialogVisible.value = true
 }
 
@@ -655,6 +674,7 @@ function handleImportSelectionChange(rows: ShopItem[]): void {
 
 /** 将选中的商城奖品导入当前奖池。 */
 function confirmImport(overwrite = false): void {
+    if (!allowImportExport()) return
     if (importSelection.value.length === 0) {
         ElMessage.warning("请选择要导入的商品")
         return
@@ -736,6 +756,7 @@ function triggerSelectedEffect(): void {
 
 /** 开始抽奖滚动展示。 */
 function startRolling(): void {
+    if (!allowWrite()) return
     if (isLoading.value || isSavingRecord.value || recordsLoading.value) return
     if (!currentClassId.value || !currentPoolId.value) {
         ElMessage.warning("请先选择班级和奖池")
@@ -773,6 +794,7 @@ function stopRolling(): void {
     }
 
     if (!context || context.classId !== currentClassId.value || context.poolId !== currentPoolId.value) return
+    if (!allowWrite()) return
     drawTime.value = Date.now()
     const pickedPrize = weightedRandom(drawPrizes.value)
     if (!pickedPrize) {
@@ -787,6 +809,7 @@ function stopRolling(): void {
 
 /** 抽奖结束后保存结果，失败时保留待同步记录。 */
 async function saveDrawRecord(prizeName: string, poolId: string, classId: number): Promise<void> {
+    if (!allowWrite()) return
     if (isSavingRecord.value) return
     isSavingRecord.value = true
     try {
@@ -818,6 +841,7 @@ function toggleRolling(): void {
 
 /** 直接抽取一次奖品。 */
 function drawOnce(): void {
+    if (!allowWrite()) return
     if (isLoading.value || isRolling.value || isSavingRecord.value || recordsLoading.value) {
         return
     }
@@ -828,6 +852,7 @@ function drawOnce(): void {
         return
     }
 
+    if (!allowWrite()) return
     drawTime.value = Date.now()
     const pickedPrize = weightedRandom(drawPrizes.value)
     if (!pickedPrize) {
@@ -842,6 +867,7 @@ function drawOnce(): void {
 
 /** 清空当前奖池中的全部奖品。 */
 function clearAll(): void {
+    if (!allowWrite()) return
     void (async () => {
         clearAllDialogVisible.value = false
         if (!currentPoolId.value) {
@@ -866,6 +892,7 @@ function clearAll(): void {
 
 /** 清空当前奖池的抽奖历史。 */
 function clearRecords(): void {
+    if (!allowWrite()) return
     void (async () => {
         const poolId = currentPoolId.value
         const classId = currentClassId.value
@@ -914,6 +941,16 @@ async function initializeWorkspace(): Promise<void> {
         }
     }
 }
+
+watch(canWrite, (allowed) => {
+    if (allowed) return
+    rollingContext = null
+    isRolling.value = false
+    if (rollingTimer !== undefined) {
+        window.clearInterval(rollingTimer)
+        rollingTimer = undefined
+    }
+}, { flush: "sync" })
 
 watch([() => currentPoolId.value, currentClassId], ([, classId], [, previousClassId]) => {
     if (initializing && classId === previousClassId) return

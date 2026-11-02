@@ -4,7 +4,7 @@
         class="prize-item"
         :class="{ 'is-disabled': item.enabled === false }"
         @click="handleEdit"
-    >
+     :disabled="!canWrite">
         <div class="prize-item__icon">
             <i-ep-trophy />
         </div>
@@ -21,13 +21,16 @@
             size="large"
             @click.stop
             @change="handleToggleEnabled"
-        />
+        :disabled="!canWrite" />
     </button>
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { computed } from "vue";
 import type { UiLotteryPrize } from "@/managers/lottery";
+
+const { canWrite } = useBusinessAccess()
 
 defineOptions({ name: "ToolsLotteryPrizeItem" })
 

@@ -2,8 +2,8 @@
     <ToolsStandalonePageFrame>
         <section class="tools-timer-page__content">
             <div class="tools-timer-page__modes" role="group" aria-label="计时模式">
-                <button type="button" :aria-pressed="timerMode === 'single'" @click="selectTimerMode('single')">单段计时</button>
-                <button type="button" :aria-pressed="timerMode === 'stages'" @click="selectTimerMode('stages')">多阶段计时</button>
+                <button type="button" :aria-pressed="timerMode === 'single'" @click="selectTimerMode('single')" :disabled="!canWrite">单段计时</button>
+                <button type="button" :aria-pressed="timerMode === 'stages'" @click="selectTimerMode('stages')" :disabled="!canWrite">多阶段计时</button>
             </div>
             <ToolsTimerCard v-if="timerMode === 'single'" :display-time="timerDisplayTime" :is-running="timerState.isRunning"
                 :preset-minutes="timerState.presetMinutes" :preset-options="timerPresetOptions"
@@ -21,10 +21,13 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import ToolsStandalonePageFrame from "@/v3/components/tools/ToolsStandalonePageFrame.vue";
 import ToolsTimerCard from "@/v3/components/tools/ToolsTimerCard.vue";
 import ToolsStageTimerCard from "@/v3/components/tools/ToolsStageTimerCard.vue";
 import { useSharedTimer, useStageTimer } from "@/v3/composables/useToolsWorkspace";
+
+const { canWrite } = useBusinessAccess()
 
 defineOptions({ name: "ToolsTimerPage" })
 

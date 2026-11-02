@@ -4,9 +4,7 @@
             <div>
                 <h3>学生名册</h3>
                 <p class="panel-description">
-                    {{ layoutMode === "group"
-                        ? "点击分组卡片可全选该组学生，再次点击可取消该组选择；组内学生仍支持单独选择。"
-                        : "选择学生后即可加减分；更多菜单中可编辑或删除学生。" }}
+                    {{ rosterDescription }}
                 </p>
             </div>
             <span class="panel-meta">当前显示 {{ students.length }} 人</span>
@@ -120,6 +118,7 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { computed } from "vue";
 import { pinyin } from "pinyin-pro";
 import type { StudentsSortOption } from "@/types/student";
@@ -163,6 +162,18 @@ interface StudentsListPanelEmits {
 const props = withDefaults(defineProps<StudentsListPanelProps>(), {
     groups: () => []
 })
+const { canWrite, canPrepare } = useBusinessAccess()
+const rosterDescription = computed(() => {
+    if (!canWrite.value) {
+        return canPrepare.value
+            ? "可逐个添加学生和维护分组，开启试用后可使用积分和学生编辑功能。"
+            : "当前仅可查看学生与分组信息。"
+    }
+    return props.layoutMode === "group"
+        ? "点击分组卡片可全选该组学生，再次点击可取消该组选择；组内学生仍支持单独选择。"
+        : "选择学生后即可加减分；更多菜单中可编辑或删除学生。"
+})
+
 const emit = defineEmits<StudentsListPanelEmits>()
 
 /** 定义按首字母分组后的学生列表结构。 */

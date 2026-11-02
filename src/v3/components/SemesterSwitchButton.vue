@@ -51,7 +51,7 @@
         <template #footer>
             <div class="dialog-actions">
                 <button type="button" class="ghost-button" @click="dialogVisible = false">取消</button>
-                <button type="button" class="primary-button" :disabled="semesterSwitching" @click="applySemesterSwitch">
+                <button type="button" class="primary-button" :disabled="!canWrite || semesterSwitching" @click="applySemesterSwitch">
                     {{ semesterSwitching ? "切换中..." : "应用切换" }}
                 </button>
             </div>
@@ -60,11 +60,14 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess"
 import { classManager } from "@/managers/class"
 import type { SemesterDTO } from "@/types/class"
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import { ElMessage } from "element-plus"
 import { computed, ref, watch } from "vue"
+
+const { canWrite, allowWrite } = useBusinessAccess()
 
 /** 定义可切换的学期选项结构。 */
 interface SemesterOption {
@@ -127,6 +130,7 @@ async function loadSemesters(): Promise<void> {
 
 /** 应用当前选中的学期。 */
 async function applySemesterSwitch(): Promise<void> {
+    if (!allowWrite() || semesterSwitching.value) return
     const classId = props.activeClassId
 
     if (!classId) {

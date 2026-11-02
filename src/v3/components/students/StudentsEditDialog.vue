@@ -11,7 +11,7 @@
                 <div class="form-grid">
                     <label class="field-block field-block--full">
                         <span class="field-block__label">姓名</span>
-                        <el-input v-model="editName" size="large" placeholder="请输入学生姓名" />
+                        <el-input v-model="editName" size="large" placeholder="请输入学生姓名" :disabled="!canWrite" />
                     </label>
 
                     <div class="field-block field-block--full">
@@ -52,7 +52,7 @@
                 <button type="button" class="ghost-button" @click="visible = false">
                     取消
                 </button>
-                <button type="button" class="primary-button" @click="handleSave">
+                <button type="button" class="primary-button" @click="handleSave" :disabled="!canWrite">
                     保存
                 </button>
             </div>
@@ -61,11 +61,14 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { ElMessage } from "element-plus";
 import { computed, ref, watch } from "vue";
 import type { ApiGender } from "@/types/student";
 import type { UiStudent } from "@/components/class/ClassStudentList.vue";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
+
+const { canWrite, allowWrite } = useBusinessAccess()
 
 /** 定义学生编辑弹窗属性结构。 */
 interface StudentsEditDialogProps {
@@ -116,6 +119,7 @@ watch(
 
 /** 校验并提交学生编辑结果。 */
 function handleSave(): void {
+    if (!allowWrite()) return
     if (!props.student) {
         return
     }

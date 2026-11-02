@@ -20,7 +20,7 @@
                     :show-file-list="false"
                     :before-upload="beforeUpload"
                     :on-change="handleChange"
-                    :disabled="!active || importing"
+                    :disabled="!canImportExport || (!active || importing)"
                     class="v3-upload"
                 >
                     <i-ep-upload-filled class="v3-upload__icon" />
@@ -39,7 +39,7 @@
                         <h4>导入说明</h4>
                         <p>推荐先下载模板，再按“一个分组一行成员”的形式整理数据。</p>
                     </div>
-                    <button type="button" class="text-button" :disabled="!active" @click="downloadTemplate">
+                    <button type="button" class="text-button" :disabled="!canImportExport || (!active)" @click="downloadTemplate">
                         下载模板
                     </button>
                 </div>
@@ -114,7 +114,7 @@
                     <button
                         type="button"
                         class="primary-button"
-                        :disabled="!active || importing || parsedGroups.length === 0"
+                        :disabled="!canImportExport || (!active || importing || parsedGroups.length === 0)"
                         @click="confirmImport"
                     >
                         确认导入
@@ -126,12 +126,15 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import type { UploadFile, UploadInstance, UploadRawFile } from "element-plus";
 import { ElMessage } from "element-plus";
 import { computed, ref } from "vue";
 import type { UiStudent } from "@/components/class/ClassStudentList.vue";
 import type { UiGroup } from "@/v3/components/students/StudentsGroupManageDialog.vue";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
+
+const { canImportExport, allowImportExport } = useBusinessAccess()
 
 /** 定义分组导入解析成员结构。 */
 interface ParsedGroupMember {
@@ -192,6 +195,7 @@ function findFirst<T extends Record<string, unknown>>(row: T, keys: string[]): u
 
 /** 解析上传的分组 Excel 文件。 */
 async function importFromFile(file: File): Promise<boolean> {
+    if (!allowImportExport()) return false
     if (!props.active || importing.value) {
         return false
     }
@@ -302,6 +306,7 @@ function clearPreview(): void {
 
 /** 下载分组导入模板文件。 */
 async function downloadTemplate(): Promise<void> {
+    if (!allowImportExport()) return
     const templateData = [
         { 分组名称: "第一组", 学生姓名: "张三" },
         { 分组名称: "第一组", 学生姓名: "李四" },
@@ -313,6 +318,7 @@ async function downloadTemplate(): Promise<void> {
     const worksheet = XLSX.utils.json_to_sheet(templateData)
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "分组导入模板")
+    if (!allowImportExport()) return
     XLSX.writeFile(workbook, "分组导入模板.xlsx")
     ElMessage.success("模板下载成功")
 }
@@ -341,6 +347,7 @@ function getMemberTooltipContent(member: ParsedGroupMember): string {
 
 /** 确认提交当前解析后的分组导入结果。 */
 function confirmImport(): void {
+    if (!allowImportExport()) return
     if (!props.active || parsedGroups.value.length === 0) {
         return
     }

@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import type { DrawRecord } from '@/types/lottery'
 import { useCacheStore } from '@/stores/cacheStore'
 import { lotteryManager } from '@/managers/lottery'
+import { ApiRequestError } from '@/types/api'
+import { effectiveEntitlementState, entitlementMessage, hasCommercialAccess } from '@/utils/entitlement'
 
 const STORAGE_KEY_BASE = 'ta_lottery_pending_v2'
 
@@ -44,6 +46,15 @@ export const useLotteryHistoryStore = defineStore('lotteryHistory', () => {
     let scopeVersion = 0
     let hydratedClassId: number | null = null
     let hydratedKey = ''
+
+    function canWriteHistory(): boolean {
+        return hasCommercialAccess(effectiveEntitlementState(cacheStore.profile))
+    }
+
+    function assertWriteAccess(): void {
+        const state = effectiveEntitlementState(cacheStore.profile)
+        if (!hasCommercialAccess(state)) throw new ApiRequestError(entitlementMessage(state))
+    }
 
     function getStorageKey(classId: number | null): string {
         if (!classId) return ''
@@ -135,13 +146,14 @@ export const useLotteryHistoryStore = defineStore('lotteryHistory', () => {
     }
 
     async function syncRecords(poolId: string): Promise<void> {
+        if (!canWriteHistory()) return
         const scope = currentScope()
         const classId = assertClassId(scope.classId)
         const taskKey = `${scope.key}:${scope.version}:${poolId}`
         const existing = syncTasks.get(taskKey)
         if (existing) return existing
         const task = (async () => {
-            while (isCurrentScope(scope) && (data.value.byPoolId[poolId]?.length ?? 0) > 0) {
+            while (canWriteHistory() && isCurrentScope(scope) && (data.value.byPoolId[poolId]?.length ?? 0) > 0) {
                 const batch = data.value.byPoolId[poolId]!.slice(0, 200)
                 const saved = await lotteryManager.createRecords(poolId, classId, batch)
                 if (!isCurrentScope(scope)) return
@@ -185,6 +197,7 @@ export const useLotteryHistoryStore = defineStore('lotteryHistory', () => {
     }
 
     async function addRecord(poolId: string, prizeName: string, classId?: number): Promise<DrawRecord> {
+        assertWriteAccess()
         const validClassId = assertClassId(classId)
         if (hydratedClassId !== validClassId || hydratedKey !== getStorageKey(validClassId)) hydrate(validClassId)
         const pid = String(poolId ?? '').trim()
@@ -208,6 +221,7 @@ export const useLotteryHistoryStore = defineStore('lotteryHistory', () => {
     }
 
     async function clearRecords(poolId: string, classId?: number): Promise<void> {
+        assertWriteAccess()
         const validClassId = assertClassId(classId)
         if (hydratedClassId !== validClassId || hydratedKey !== getStorageKey(validClassId)) hydrate(validClassId)
         const scope = currentScope()
@@ -216,6 +230,7 @@ export const useLotteryHistoryStore = defineStore('lotteryHistory', () => {
         const syncing = syncTasks.get(`${scope.key}:${scope.version}:${pid}`)
         if (syncing) await syncing.catch(() => undefined)
         if (!isCurrentScope(scope)) return
+        assertWriteAccess()
         const scopedData = data.value
         const scopedRemote = remoteByPoolId.value
         await lotteryManager.clearRecords(pid, validClassId)
@@ -226,6 +241,7 @@ export const useLotteryHistoryStore = defineStore('lotteryHistory', () => {
     }
 
     async function updateStudent(poolId: string, recordId: number, studentId: number | null, classId: number): Promise<void> {
+        assertWriteAccess()
         assertClassId(classId)
         if (hydratedClassId !== classId || hydratedKey !== getStorageKey(classId)) hydrate(classId)
         const scope = currentScope()

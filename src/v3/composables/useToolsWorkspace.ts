@@ -1,3 +1,4 @@
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { mallApi } from "@/api/mall";
 import { lotteryManager, type UiLotteryPool } from "@/managers/lottery";
 import { studentManager } from "@/managers/student";
@@ -9,7 +10,7 @@ import {
     syncStageTimer, toggleStageTimer as toggleStageTimerState, type TimerStage
 } from "@/utils/stageTimer";
 import { ElMessage } from "element-plus";
-import { computed, reactive, ref, watch } from "vue";
+import { computed, effectScope, reactive, ref, watch } from "vue";
 
 /** 定义点名卡片学生预览结构。 */
 interface RollCallPreviewStudent {
@@ -359,12 +360,31 @@ function selectTimerMode(mode: "single" | "stages"): void {
     persistStageTimer()
 }
 
-if (timerMode.value === "stages") {
-    stopSharedTimerTick()
-    startStageTimerTick()
-} else {
-    pauseStageTimer()
-    resumeSharedTimer()
+let timerAccess: ReturnType<typeof useBusinessAccess> | null = null
+const timerAccessScope = effectScope(true)
+
+/** 共享计时器跨页面运行，商业权益监听也由模块统一持有。 */
+function ensureTimerAccess() {
+    if (timerAccess) return timerAccess
+    timerAccess = useBusinessAccess()
+    const access = timerAccess
+    timerAccessScope.run(() => {
+        watch(access.canWrite, (allowed) => {
+            if (!allowed) {
+                stopSharedTimerTick()
+                pauseStageTimer()
+                return
+            }
+            if (timerMode.value === "stages") {
+                stopSharedTimerTick()
+                startStageTimerTick()
+            } else {
+                pauseStageTimer()
+                resumeSharedTimer()
+            }
+        }, { immediate: true, flush: "sync" })
+    })
+    return access
 }
 
 if (typeof window !== "undefined") {
@@ -375,6 +395,7 @@ if (typeof window !== "undefined") {
 
 if (import.meta.hot) {
     import.meta.hot.dispose(() => {
+        timerAccessScope.stop()
         stopStageTimerTick()
         if (sharedTimerState.intervalId !== null) window.clearInterval(sharedTimerState.intervalId)
         document.removeEventListener("visibilitychange", syncSharedStageTimer)
@@ -383,17 +404,20 @@ if (import.meta.hot) {
 }
 
 export function useStageTimer() {
+    const access = ensureTimerAccess()
     const state = sharedStageTimerState
     const progress = computed(() => stageTimerProgress(state))
-    const editable = computed(() => !state.isRunning && !state.hasStarted)
+    const editable = computed(() => access.canWrite.value && !state.isRunning && !state.hasStarted)
 
     function configureStages(stages: TimerStage[]): void {
+        if (!access.allowWrite()) return
         if (!editable.value || !isValidTimerStages(stages)) return
         Object.assign(state, createStageTimerState(stages))
         persistStageTimer()
     }
 
     function toggleStages(): void {
+        if (!access.allowWrite()) return
         if (!state.isRunning) selectTimerMode("stages")
         Object.assign(state, toggleStageTimerState(state, Date.now()))
         if (state.isRunning) startStageTimerTick()
@@ -402,6 +426,7 @@ export function useStageTimer() {
     }
 
     function resetStages(): void {
+        if (!access.allowWrite()) return
         stopStageTimerTick()
         Object.assign(state, createStageTimerState(state.stages))
         persistStageTimer()
@@ -412,7 +437,9 @@ export function useStageTimer() {
         editable,
         progress,
         resetStages,
-        selectTimerMode,
+        selectTimerMode: (mode: "single" | "stages") => {
+            if (access.allowWrite()) selectTimerMode(mode)
+        },
         state,
         timerMode,
         toggleStages,
@@ -449,6 +476,7 @@ function formatDisplayTime(totalSeconds: number): string {
 
 /** 提供课堂计时器的共享状态与交互。 */
 export function useSharedTimer() {
+    const access = ensureTimerAccess()
     const timerState = sharedTimerState
 
     /** 返回计时器展示文案。 */
@@ -504,21 +532,25 @@ export function useSharedTimer() {
 
     /** 应用新的计时器预设时长。 */
     function applyTimerPreset(minutes: number): void {
+        if (!access.allowWrite()) return
         applySharedTimerPreset(minutes)
     }
 
     /** 切换计时器运行状态。 */
     function toggleTimer(): void {
+        if (!access.allowWrite()) return
         toggleSharedTimer()
     }
 
     /** 重置当前计时器到预设时长。 */
     function resetTimer(): void {
+        if (!access.allowWrite()) return
         resetSharedTimer()
     }
 
     /** 切换当前计时器的单位。 */
     function toggleTimerPresetUnit(): void {
+        if (!access.allowWrite()) return
         toggleSharedTimerPresetUnit()
     }
 
@@ -546,6 +578,7 @@ export function useSharedTimer() {
 
 /** 提供课堂工具工作区的共享状态与交互。 */
 export function useToolsWorkspace() {
+    const { allowWrite } = useBusinessAccess()
     const cacheStore = useCacheStore()
 
     const students = ref<RollCallPreviewStudent[]>([])
@@ -654,6 +687,7 @@ export function useToolsWorkspace() {
 
     /** 随机抽取当前班级中的一名学生预览。 */
     function drawRandomStudent(): void {
+        if (!allowWrite()) return
         if (students.value.length === 0) {
             ElMessage.warning("请先在学生管理中维护当前班级名册")
             return

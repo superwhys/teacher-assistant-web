@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
     createRecords: vi.fn(),
     clearRecords: vi.fn(),
     updateRecordStudent: vi.fn(),
-    profile: { id: 7 },
+    profile: { id: 7, entitlement: { state: 'permanent', permanent: true, trial_started_at: null, trial_expires_at: null, paid_expires_at: null } },
 }))
 
 vi.mock('@/stores/cacheStore', () => ({ useCacheStore: () => ({ profile: mocks.profile }) }))
@@ -29,6 +29,8 @@ function pendingRecords(poolId = '4'): DrawRecord[] {
 beforeEach(() => {
     vi.resetAllMocks()
     mocks.profile.id = 7
+    mocks.profile.entitlement.state = 'permanent'
+    mocks.profile.entitlement.permanent = true
     setActivePinia(createPinia())
     storage = new Map()
     vi.stubGlobal('window', { localStorage: {
@@ -48,6 +50,23 @@ afterEach(() => {
 })
 
 describe('lottery database history', () => {
+    it('keeps pending records readable without uploading or mutating them after expiry', async () => {
+        const pending = record('pending-expired')
+        storage.set(pendingKey, JSON.stringify({ byPoolId: { '4': [pending] } }))
+        mocks.profile.entitlement.state = 'trial_expired'
+        mocks.profile.entitlement.permanent = false
+        const history = useLotteryHistoryStore()
+        await history.loadRecords('4', 23)
+        expect(mocks.listRecords).toHaveBeenCalledOnce()
+        expect(mocks.createRecords).not.toHaveBeenCalled()
+        expect(history.getRecords('4', 23)).toEqual([expect.objectContaining({ id: pending.id, syncPending: true })])
+        await expect(history.addRecord('4', '新奖品', 23)).rejects.toThrow('到期')
+        await expect(history.clearRecords('4', 23)).rejects.toThrow('到期')
+        await expect(history.updateStudent('4', 21, 1, 23)).rejects.toThrow('到期')
+        expect(mocks.clearRecords).not.toHaveBeenCalled()
+        expect(mocks.updateRecordStudent).not.toHaveBeenCalled()
+        expect(pendingRecords()).toEqual([pending])
+    })
     it('does not adopt another class scope when two class loads start before their hydration awaits resume', async () => {
         let finishClassA!: (records: DrawRecord[]) => void
         mocks.listRecords.mockImplementation(async (_poolId: string, classId: number) => {

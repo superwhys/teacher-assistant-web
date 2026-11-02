@@ -2,7 +2,7 @@
     <div class="shop-view">
         <ShopOverviewBanner :active-class-name="activeClassName" :active-semester-name="activeSemesterName"
             :can-mutate-shop="canMutateShop" :is-archived-semester="isArchivedSemester" :metric-items="overviewMetrics"
-            :prize-count="prizes.length" @add-prize="openAddPrizeDialog" @open-import="importDialogVisible = true"
+            :prize-count="prizes.length" @add-prize="openAddPrizeDialog" @open-import="openImportDialog"
             @view-records="handleViewRecords" />
 
         <div v-if="isArchivedSemester" class="shop-view__notice">
@@ -56,6 +56,7 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { computed, onMounted, reactive, ref, watch } from "vue"
 import { ElMessage } from "element-plus"
 import { studentManager } from "@/managers/student"
@@ -72,6 +73,10 @@ import ShopPrizeShelf from "@/v3/components/shop/ShopPrizeShelf.vue"
 import ShopRecordsPanel from "@/v3/components/shop/ShopRecordsPanel.vue"
 
 defineOptions({ name: "ShopView" })
+
+function openImportDialog(): void {
+    if (allowImportExport()) importDialogVisible.value = true
+}
 
 /** 定义商城页签结构。 */
 type ShopViewTab = "overview" | "records"
@@ -118,6 +123,7 @@ interface ShopExchangePrizeInfo {
     stock: number
 }
 
+const { canWrite, allowWrite, allowImportExport } = useBusinessAccess()
 const cacheStore = useCacheStore()
 
 const activeTab = ref<ShopViewTab>("overview")
@@ -175,7 +181,7 @@ const hasActiveClass = computed<boolean>(() => typeof activeClassId.value === "n
 const isArchivedSemester = computed<boolean>(() => hasActiveClass.value && activeSemesterStatus.value === 2)
 
 /** 返回商城当前是否允许兑换。 */
-const canMutateShop = computed<boolean>(() => hasActiveClass.value && !isArchivedSemester.value)
+const canMutateShop = computed<boolean>(() => canWrite.value && hasActiveClass.value && !isArchivedSemester.value)
 
 /** 返回商品 ID 映射表。 */
 const prizeIdMap = computed<Record<number, Prize>>(() => {
@@ -344,6 +350,7 @@ function toNumber(value: unknown, fallback = 0): number {
 
 /** 打开新增商品弹窗。 */
 function openAddPrizeDialog(): void {
+    if (!allowWrite()) return
     itemDialogMode.value = "add"
     itemForm.id = 0
     itemForm.name = ""
@@ -356,6 +363,7 @@ function openAddPrizeDialog(): void {
 
 /** 打开编辑商品弹窗。 */
 function openEditPrizeDialog(prize: Prize): void {
+    if (!allowWrite()) return
     itemDialogMode.value = "edit"
     itemForm.id = toNumber(prize.id, 0)
     itemForm.name = prize.name?.trim() || ""
@@ -368,6 +376,7 @@ function openEditPrizeDialog(prize: Prize): void {
 
 /** 保存商品新增或编辑结果。 */
 async function savePrize(): Promise<void> {
+    if (!allowWrite()) return
     if (!itemForm.name.trim()) {
         ElMessage.warning("请输入商品名称")
         return
@@ -425,12 +434,14 @@ async function savePrize(): Promise<void> {
 
 /** 请求删除指定商品。 */
 function requestDeletePrize(prize: Prize): void {
+    if (!allowWrite()) return
     pendingDeletePrize.value = prize
     deleteDialogVisible.value = true
 }
 
 /** 确认删除当前商品。 */
 async function confirmDeletePrize(): Promise<void> {
+    if (!allowWrite()) return
     const prize = pendingDeletePrize.value
     deleteDialogVisible.value = false
     if (!prize) {
@@ -457,6 +468,7 @@ async function confirmDeletePrize(): Promise<void> {
 
 /** 打开兑换弹窗。 */
 async function openExchangeDialog(prize: Prize): Promise<void> {
+    if (!allowWrite()) return
     if (!activeClassId.value) {
         ElMessage.warning("请先选择班级")
         return
@@ -486,6 +498,7 @@ async function openExchangeDialog(prize: Prize): Promise<void> {
 
 /** 确认提交兑换请求。 */
 async function confirmExchange(): Promise<void> {
+    if (!allowWrite()) return
     if (!activeClassId.value) {
         ElMessage.warning("请先选择班级")
         return
@@ -543,12 +556,14 @@ async function confirmExchange(): Promise<void> {
 
 /** 请求撤销兑换记录。 */
 function requestUndoExchange(record: PrizeRecord): void {
+    if (!allowWrite()) return
     pendingUndoRecord.value = record
     undoDialogVisible.value = true
 }
 
 /** 确认撤销当前兑换记录。 */
 async function confirmUndoExchange(): Promise<void> {
+    if (!allowWrite()) return
     const record = pendingUndoRecord.value
     undoDialogVisible.value = false
     if (!record) {
@@ -576,6 +591,7 @@ async function confirmUndoExchange(): Promise<void> {
 
 /** 批量导入商品。 */
 async function confirmImport(items: CreatePrizeReq[]): Promise<void> {
+    if (!allowImportExport()) return
     if (items.length === 0) {
         ElMessage.warning("当前没有可导入的商品")
         return
@@ -583,6 +599,7 @@ async function confirmImport(items: CreatePrizeReq[]): Promise<void> {
 
     let successCount = 0
     for (const item of items) {
+        if (!allowImportExport()) return
         try {
             await shopManager.createPrize(item)
             successCount += 1

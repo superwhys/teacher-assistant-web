@@ -8,8 +8,8 @@
     >
         <div class="tools-timer-card__content">
             <div v-if="showModeSwitch" class="tools-timer-card__modes" role="group" aria-label="计时模式">
-                <button type="button" :aria-pressed="mode === 'single'" @click="emit('selectMode', 'single')">单段计时</button>
-                <button type="button" :aria-pressed="mode === 'stages'" @click="emit('selectMode', 'stages')">多阶段计时</button>
+                <button type="button" :aria-pressed="mode === 'single'" @click="emit('selectMode', 'single')" :disabled="!canWrite">单段计时</button>
+                <button type="button" :aria-pressed="mode === 'stages'" @click="emit('selectMode', 'stages')" :disabled="!canWrite">多阶段计时</button>
             </div>
 
             <div v-if="mode === 'stages'" class="tools-timer-card__stage">
@@ -25,7 +25,7 @@
 
             <div v-if="mode === 'single'" class="tools-timer-card__unit-switch">
                 <span class="tools-timer-card__unit-label">当前单位：{{ presetUnitLabel }}</span>
-                <button type="button" class="action-button" @click="emit('toggleUnit')">
+                <button type="button" class="action-button" @click="emit('toggleUnit')" :disabled="!canWrite">
                     切换为{{ nextPresetUnitLabel }}
                 </button>
             </div>
@@ -38,7 +38,7 @@
                     class="preset-button"
                     :class="{ 'is-active': item === presetMinutes }"
                     @click="emit('selectPreset', item)"
-                >
+                 :disabled="!canWrite">
                     {{ item }} {{ presetUnitLabel }}
                 </button>
             </div>
@@ -48,17 +48,17 @@
                     <span class="tools-timer-card__custom-label">自定义时长</span>
                     <span class="tools-timer-card__custom-stepper">
                         <button type="button" class="custom-stepper__button" aria-label="减少自定义时长"
-                            @click="adjustCustomPreset(-1)">
+                            @click="adjustCustomPreset(-1)" :disabled="!canWrite">
                             <i-ep-minus />
                         </button>
                         <span class="custom-stepper__value">
                             <input v-model.number="customPresetValue" type="number" :min="1" :max="customPresetMax"
                                 inputmode="numeric" aria-label="自定义时长" @change="handleCustomPresetChange"
-                                @blur="handleCustomPresetChange" @keyup.enter="handleCustomPresetChange">
+                                @blur="handleCustomPresetChange" @keyup.enter="handleCustomPresetChange" :disabled="!canWrite">
                             <span>{{ presetUnitLabel }}</span>
                         </span>
                         <button type="button" class="custom-stepper__button" aria-label="增加自定义时长"
-                            @click="adjustCustomPreset(1)">
+                            @click="adjustCustomPreset(1)" :disabled="!canWrite">
                             <i-ep-plus />
                         </button>
                     </span>
@@ -67,10 +67,10 @@
         </div>
 
         <template #actions>
-            <button type="button" class="action-button action-button--primary" @click="emit('toggle')">
+            <button type="button" class="action-button action-button--primary" @click="emit('toggle')" :disabled="!canWrite">
                 {{ toggleLabel }}
             </button>
-            <button type="button" class="action-button" @click="emit('reset')">
+            <button type="button" class="action-button" @click="emit('reset')" :disabled="!canWrite">
                 重置
             </button>
             <button v-if="showOpenPageAction" type="button" class="action-button" @click="emit('openTimer')">
@@ -81,8 +81,11 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import ToolsCardPanel from "@/v3/components/tools/ToolsCardPanel.vue";
 import { computed, ref, watch } from "vue";
+
+const { canWrite } = useBusinessAccess()
 
 defineOptions({ name: "ToolsTimerCard" })
 

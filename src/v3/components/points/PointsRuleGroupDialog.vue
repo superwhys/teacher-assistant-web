@@ -10,7 +10,7 @@
             <div class="dialog-form dialog-form--points">
                 <label class="field-block">
                     <span class="field-label">规则组名称</span>
-                    <el-input v-model="formName" size="large" placeholder="例如：课堂表现" />
+                    <el-input v-model="formName" size="large" placeholder="例如：课堂表现" :disabled="!canWrite" />
                 </label>
             </div>
         </section>
@@ -20,7 +20,7 @@
                 <button type="button" class="ghost-button" :disabled="loading" @click="visible = false">
                     取消
                 </button>
-                <button type="button" class="primary-button" :disabled="loading" @click="handleSave">
+                <button type="button" class="primary-button" :disabled="!canWrite || (loading)" @click="handleSave">
                     {{ loading ? "保存中..." : "保存规则组" }}
                 </button>
             </div>
@@ -29,8 +29,11 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import { computed, ref, watch } from "vue";
+
+const { canWrite, allowWrite } = useBusinessAccess()
 
 defineOptions({ name: "PointsRuleGroupDialog" })
 
@@ -63,6 +66,7 @@ function syncFormState(): void {
 
 /** 提交当前规则组名称。 */
 function handleSave(): void {
+    if (!allowWrite()) return
     emit("save", formName.value)
 }
 

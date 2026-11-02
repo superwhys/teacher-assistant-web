@@ -14,7 +14,7 @@
                 <el-select
                     :model-value="studentId"
                     :loading="loading"
-                    :disabled="saving || loading"
+                    :disabled="!canWrite || (saving || loading)"
                     filterable
                     clearable
                     placeholder="不绑定学生"
@@ -32,16 +32,19 @@
         <template #footer>
             <div class="dialog-actions">
                 <el-button :disabled="saving" @click="visible = false">取消</el-button>
-                <el-button type="primary" :loading="saving" :disabled="loading" @click="emit('save')">保存</el-button>
+                <el-button type="primary" :loading="saving" :disabled="!canWrite || (loading)" @click="emit('save')">保存</el-button>
             </div>
         </template>
     </AppDialogShell>
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { computed } from "vue";
 import type { StudentDTO } from "@/types/student";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
+
+const { canWrite } = useBusinessAccess()
 
 defineOptions({ name: "ToolsLotteryStudentDialog" })
 

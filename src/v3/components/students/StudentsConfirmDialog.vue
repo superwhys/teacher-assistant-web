@@ -15,7 +15,7 @@
                 <button type="button" class="ghost-button" @click="visible = false">
                     {{ cancelText }}
                 </button>
-                <button type="button" class="danger-button" @click="handleConfirm">
+                <button type="button" class="danger-button" @click="handleConfirm" :disabled="!canWrite">
                     {{ confirmText }}
                 </button>
             </div>
@@ -24,8 +24,11 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { computed } from "vue";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
+
+const { canWrite, allowWrite } = useBusinessAccess()
 
 /** 定义确认弹窗属性结构。 */
 interface StudentsConfirmDialogProps {
@@ -57,7 +60,7 @@ const visible = computed({
 
 /** 确认当前风险操作。 */
 function handleConfirm(): void {
-    emit("confirm")
+    allowWrite() && emit("confirm")
 }
 </script>
 

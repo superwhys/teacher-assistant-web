@@ -4,7 +4,7 @@
             <article class="metric-card metric-card--blue">
                 <span>积分规则组</span>
                 <strong>{{ ruleGroups.length }}</strong>
-                <small>支持直接新增、编辑、删除</small>
+                <small>{{ canMutatePoints ? "支持直接新增、编辑、删除" : "当前仅可查看积分规则" }}</small>
             </article>
 
             <article class="metric-card metric-card--gold">
@@ -54,7 +54,7 @@
         <PointsImportRecordsDialog v-model="importRecordsDialogVisible"
             :active-class-id="canMutatePoints ? activeClassId : null" @changed="handleRecordsChanged" />
 
-        <PointsExportDialog v-model="exportDialogVisible" :active-class-id="activeClassId"
+        <PointsExportDialog v-model="exportDialogVisible" :active-class-id="canImportExport ? activeClassId : null"
             :active-class-name="activeClassName" :group-options="studentGroupOptions" :rule-options="flatRules" />
 
         <PointsRuleGroupDialog v-model="groupDialogVisible" :initial-name="groupForm.name"
@@ -69,6 +69,7 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { pointsManager } from "@/managers/points";
 import { studentManager } from "@/managers/student";
 import { useCacheStore } from "@/stores/cacheStore";
@@ -148,6 +149,7 @@ interface RuleFormSubmitPayload {
     sign: "plus" | "minus"
 }
 
+const { canWrite, canImportExport, allowWrite, allowImportExport } = useBusinessAccess()
 const cacheStore = useCacheStore()
 const route = useRoute()
 
@@ -222,7 +224,7 @@ const activeClassName = computed<string>(() => cacheStore.getActiveClassName()?.
 const activeSemesterStatus = computed<number | null>(() => cacheStore.getActiveSemesterStatus())
 const hasActiveClass = computed<boolean>(() => typeof activeClassId.value === "number")
 const isArchivedSemester = computed<boolean>(() => hasActiveClass.value && activeSemesterStatus.value === 2)
-const canMutatePoints = computed<boolean>(() => hasActiveClass.value && !isArchivedSemester.value)
+const canMutatePoints = computed<boolean>(() => canWrite.value && hasActiveClass.value && !isArchivedSemester.value)
 
 const flatRules = computed<FlatRuleItem[]>(() => {
     return ruleGroups.value.flatMap((group) => {
@@ -635,6 +637,7 @@ async function refreshPointsPage(): Promise<void> {
 
 /** 打开积分导入弹窗，并在归档学期下进行提示。 */
 function handleOpenImportItemsDialog(): void {
+    if (!allowImportExport()) return
     if (!hasActiveClass.value) {
         ElMessage.warning("请先选择班级")
         return
@@ -649,6 +652,7 @@ function handleOpenImportItemsDialog(): void {
 
 /** 打开积分导入弹窗，并在归档学期下进行提示。 */
 function handleOpenImportRecordsDialog(): void {
+    if (!allowImportExport()) return
     if (!hasActiveClass.value) {
         ElMessage.warning("请先选择班级")
         return
@@ -663,6 +667,7 @@ function handleOpenImportRecordsDialog(): void {
 
 /** 打开积分导出弹窗，并按需加载学生分组。 */
 async function handleOpenExportDialog(): Promise<void> {
+    if (!allowImportExport()) return
     if (!hasActiveClass.value) {
         ElMessage.warning("请先选择班级")
         return
@@ -692,6 +697,7 @@ function handleSelectRankingTab(tab: "total" | "item"): void {
 
 /** 打开新增规则组弹窗。 */
 function openCreateGroupDialog(): void {
+    if (!allowWrite()) return
     if (isArchivedSemester.value) {
         ElMessage.warning("归档学期不支持新增规则组")
         return
@@ -707,6 +713,7 @@ function openCreateGroupDialog(): void {
 
 /** 打开编辑规则组弹窗。 */
 function openEditGroupDialog(): void {
+    if (!allowWrite()) return
     if (isArchivedSemester.value) {
         ElMessage.warning("归档学期不支持编辑规则组")
         return
@@ -727,6 +734,7 @@ function openEditGroupDialog(): void {
 
 /** 打开新增积分项弹窗。 */
 function openCreateRuleDialog(): void {
+    if (!allowWrite()) return
     if (isArchivedSemester.value) {
         ElMessage.warning("归档学期不支持新增积分项")
         return
@@ -749,6 +757,7 @@ function openCreateRuleDialog(): void {
 
 /** 打开编辑积分项弹窗。 */
 function openEditRuleDialog(rule: Rule): void {
+    if (!allowWrite()) return
     if (isArchivedSemester.value) {
         ElMessage.warning("归档学期不支持编辑积分项")
         return
@@ -766,6 +775,7 @@ function openEditRuleDialog(rule: Rule): void {
 
 /** 保存规则组。 */
 async function saveGroup(groupNameValue: string): Promise<void> {
+    if (!allowWrite()) return
     if (isArchivedSemester.value) {
         ElMessage.warning("归档学期不支持保存规则组")
         return
@@ -810,6 +820,7 @@ async function saveGroup(groupNameValue: string): Promise<void> {
 
 /** 保存积分项。 */
 async function saveRule(formValue: RuleFormSubmitPayload): Promise<void> {
+    if (!allowWrite()) return
     if (isArchivedSemester.value) {
         ElMessage.warning("归档学期不支持保存积分项")
         return
@@ -870,6 +881,7 @@ async function saveRule(formValue: RuleFormSubmitPayload): Promise<void> {
 
 /** 请求删除当前规则组。 */
 function requestDeleteGroup(): void {
+    if (!allowWrite()) return
     if (isArchivedSemester.value) {
         ElMessage.warning("归档学期不支持删除规则组")
         return
@@ -886,6 +898,7 @@ function requestDeleteGroup(): void {
 
 /** 请求删除指定积分项。 */
 function requestDeleteRule(rule: Rule): void {
+    if (!allowWrite()) return
     if (isArchivedSemester.value) {
         ElMessage.warning("归档学期不支持删除积分项")
         return
@@ -898,6 +911,7 @@ function requestDeleteRule(rule: Rule): void {
 
 /** 确认执行删除动作。 */
 async function confirmDelete(): Promise<void> {
+    if (!allowWrite()) return
     if (isArchivedSemester.value) {
         ElMessage.warning("归档学期不支持删除积分规则")
         return
@@ -975,6 +989,7 @@ function goToNextHistoryPage(): void {
 
 /** 撤回指定积分记录。 */
 async function undoRecord(record: PointsApplyRecord): Promise<void> {
+    if (!allowWrite()) return
     const recordId = toNumber(record.id, 0)
     if (!recordId || !canUndoRecord(record)) {
         return
@@ -995,6 +1010,7 @@ async function undoRecord(record: PointsApplyRecord): Promise<void> {
 
 /** 撤回最近一次积分规则操作。 */
 async function undoLatestRecord(): Promise<void> {
+    if (!allowWrite()) return
     if (!canMutatePoints.value || !activeClassId.value) {
         ElMessage.warning("当前状态不支持撤回积分记录")
         return

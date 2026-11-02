@@ -3,15 +3,16 @@
         <section class="settings-content">
             <SettingsAccountCard :current-class-name="currentClassName" :current-semester-name="currentSemesterName"
                 :display-name="displayName" :has-profile="Boolean(profile)" :has-pwd="hasPwd"
-                :is-login-expired="isLoginExpired" :is-trial="isTrial"
+                :is-login-expired="isLoginExpired"
                 :semester-notice-text="semesterNoticeText" :semester-status-tone-class="semesterStatusToneClass"
-                :trial-status-text="trialStatusText" :user-avatar="userAvatar" :user-email="userEmail"
+                :user-avatar="userAvatar" :user-email="userEmail"
                 :user-id="userId" :user-initial="userInitial" />
 
             <div class="settings-flow">
                 <SettingsMiniProgramCard :user-id="userId" :wechat-bound="profile?.wechatBound" @bound="onMiniProgramBound" />
 
                 <SettingsClassStatusCard :active-class-id="activeClassId" :classes-loading="classesLoading"
+                    :can-write="sessionStore.canWrite"
                     :current-class-name="currentClassName" :current-semester-name="currentSemesterName"
                     :semester-notice-text="semesterNoticeText" :semester-permission-text="semesterPermissionText"
                     :semester-permission-tone-class="semesterPermissionToneClass"
@@ -23,7 +24,8 @@
                     @clear-password="onClearLockPassword" @lock-now="onLockNow" @save-password="onSaveLockPassword" />
 
                 <SettingsFeedbackCard v-model:feedback-content="feedbackContent"
-                    :feedback-submitting="feedbackSubmitting" @clear="onClearFeedback" @submit="onSubmitFeedback" />
+                    :can-write="sessionStore.canWrite" :feedback-submitting="feedbackSubmitting"
+                    @clear="onClearFeedback" @submit="onSubmitFeedback" />
             </div>
         </section>
 
@@ -41,6 +43,7 @@
 import { submitOpinion } from "@/api/opinion";
 import { classManager } from "@/managers/class";
 import { useCacheStore } from "@/stores/cacheStore";
+import { useSessionStore } from "@/stores/sessionStore";
 import type { ClassDTO } from "@/types/class";
 import SettingsAccountCard from "@/v3/components/settings/SettingsAccountCard.vue";
 import SettingsClassStatusCard from "@/v3/components/settings/SettingsClassStatusCard.vue";
@@ -54,6 +57,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
 const cacheStore = useCacheStore()
+const sessionStore = useSessionStore()
 const router = useRouter()
 
 const classes = ref<ClassDTO[]>([])
@@ -77,7 +81,6 @@ const displayName = computed(() => cacheStore.displayName || "未登录")
 const userEmail = computed(() => profile.value?.email ?? "")
 const userAvatar = computed(() => profile.value?.avatar ?? null)
 const userId = computed(() => profile.value?.id ?? "")
-const isTrial = computed(() => cacheStore.isTrial)
 const isLoginExpired = computed(() => cacheStore.isExpired)
 const isAuthenticated = computed(() => cacheStore.isAuthenticated)
 const activeClassId = computed(() => cacheStore.getActiveClassId())
@@ -150,11 +153,13 @@ const semesterStatusText = computed(() => {
 
 /** 返回当前学期权限文案。 */
 const semesterPermissionText = computed(() => {
+    if (!sessionStore.canWrite) return "积分操作已关闭"
     return currentSemesterStatus.value === 2 ? "积分操作已关闭" : "允许积分操作"
 })
 
 /** 返回当前学期的说明文本。 */
 const semesterNoticeText = computed(() => {
+    if (!sessionStore.canWrite) return sessionStore.entitlementMessage
     return currentSemesterStatus.value === 2
         ? "当前学期已归档，仅支持查看历史记录和排行榜。"
         : "当前学期状态正常。"
@@ -167,47 +172,7 @@ const semesterStatusToneClass = computed(() => {
 
 /** 返回学期权限标签对应的样式类名。 */
 const semesterPermissionToneClass = computed(() => {
-    return currentSemesterStatus.value === 2 ? "status-chip--amber" : "status-chip--emerald"
-})
-
-/** 返回试用状态文案。 */
-const trialStatusText = computed(() => {
-    if (!isTrial.value) {
-        return "正式账号"
-    }
-
-    const expiresAt = cacheStore.trialExpiresAt
-    if (typeof expiresAt !== "number") {
-        return "试用账号"
-    }
-
-    const secondsLeft = expiresAt - Math.floor(Date.now() / 1000)
-    if (secondsLeft <= 0) {
-        return "试用已过期"
-    }
-
-    const days = Math.floor(secondsLeft / 86400)
-    const hours = Math.floor((secondsLeft % 86400) / 3600)
-    const minutes = Math.floor((secondsLeft % 3600) / 60)
-    const parts: string[] = []
-
-    if (days > 0) {
-        parts.push(`${days}天`)
-    }
-
-    if (hours > 0) {
-        parts.push(`${hours}小时`)
-    }
-
-    if (days === 0 && minutes > 0) {
-        parts.push(`${minutes}分钟`)
-    }
-
-    if (parts.length === 0) {
-        parts.push("不到1分钟")
-    }
-
-    return `试用剩余 ${parts.join("")}`
+    return !sessionStore.canWrite || currentSemesterStatus.value === 2 ? "status-chip--amber" : "status-chip--emerald"
 })
 
 /** 将当前班级和学期信息同步到缓存。 */
@@ -255,6 +220,7 @@ async function loadClassesFromApi(): Promise<void> {
 
 /** 打开修改班级名称弹窗。 */
 function openRenameClassDialog(): void {
+    if (!ensureCanWrite()) return
     if (!activeClassId.value) {
         ElMessage.warning("当前没有可操作的班级")
         return
@@ -272,6 +238,7 @@ function onRenameClassDialogClosed(): void {
 
 /** 提交修改班级名称的请求。 */
 async function confirmRenameClass(): Promise<void> {
+    if (!ensureCanWrite()) return
     if (!activeClassId.value || renameClassLoading.value) {
         return
     }
@@ -306,6 +273,7 @@ async function confirmRenameClass(): Promise<void> {
 
 /** 打开新学期弹窗。 */
 function openNextSemesterDialog(): void {
+    if (!ensureCanWrite()) return
     if (!activeClassId.value) {
         ElMessage.warning("当前没有可操作的班级")
         return
@@ -323,6 +291,7 @@ function onNextSemesterDialogClosed(): void {
 
 /** 提交切换到新学期的请求。 */
 async function confirmNextSemester(): Promise<void> {
+    if (!ensureCanWrite()) return
     if (!activeClassId.value || nextSemesterLoading.value) {
         return
     }
@@ -440,12 +409,14 @@ function onLockNow(): void {
 
 /** 提交当前填写的意见反馈。 */
 async function onSubmitFeedback(): Promise<void> {
+    if (feedbackSubmitting.value || !ensureCanWrite()) return
     const content = feedbackContent.value.trim()
     if (!content) {
         ElMessage.warning("请输入反馈内容")
         return
     }
 
+    feedbackSubmitting.value = true
     try {
         await ElMessageBox.confirm("确定提交这条反馈吗？", "确认提交", {
             type: "info",
@@ -453,17 +424,25 @@ async function onSubmitFeedback(): Promise<void> {
             cancelButtonText: "取消",
         })
     } catch {
+        feedbackSubmitting.value = false
         return
     }
 
-    feedbackSubmitting.value = true
     try {
+        if (!ensureCanWrite()) return
         await submitOpinion({ content })
         feedbackContent.value = ""
         ElMessage.success("反馈已提交，感谢你的建议")
     } finally {
         feedbackSubmitting.value = false
     }
+}
+
+/** 保护弹窗打开期间发生到期的业务写操作。 */
+function ensureCanWrite(): boolean {
+    if (sessionStore.canWrite) return true
+    ElMessage.warning(sessionStore.entitlementMessage)
+    return false
 }
 
 /** 清空当前反馈输入内容。 */

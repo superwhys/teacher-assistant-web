@@ -13,7 +13,7 @@
                 <div class="form-grid">
                     <label class="field-block field-block--full">
                         <span class="field-block__label">奖池名称</span>
-                        <el-input v-model="form.name" size="large" placeholder="请输入奖池名称" />
+                        <el-input v-model="form.name" size="large" placeholder="请输入奖池名称" :disabled="!canWrite" />
                     </label>
                 </div>
             </section>
@@ -32,10 +32,10 @@
             <div class="dialog-actions">
                 <button type="button" class="ghost-button" @click="visible = false">取消</button>
                 <div class="dialog-actions__group">
-                    <button v-if="mode === 'edit'" type="button" class="danger-button" @click="emit('delete')">
+                    <button v-if="mode === 'edit'" type="button" class="danger-button" @click="emit('delete')" :disabled="!canWrite">
                         删除（暂不支持）
                     </button>
-                    <button type="button" class="primary-button" @click="emit('save')">保存</button>
+                    <button type="button" class="primary-button" @click="emit('save')" :disabled="!canWrite">保存</button>
                 </div>
             </div>
         </template>
@@ -43,8 +43,11 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { computed } from "vue";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
+
+const { canWrite } = useBusinessAccess()
 
 defineOptions({ name: "ToolsLotteryPoolDialog" })
 

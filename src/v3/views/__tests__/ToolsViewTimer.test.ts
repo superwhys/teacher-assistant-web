@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createRenderer, nextTick, ssrContextKey, type App } from 'vue'
+import { createRenderer, nextTick, reactive, ssrContextKey, type App } from 'vue'
 
 const mocks = vi.hoisted(() => ({
     push: vi.fn(),
@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/api/mall', () => ({ mallApi: { listPrizes: mocks.listPrizes } }))
 vi.mock('@/managers/lottery', () => ({ lotteryManager: { listPools: mocks.listPools } }))
 vi.mock('@/managers/student', () => ({ studentManager: { list: mocks.listStudents } }))
+const businessSession = reactive({ canWrite: true, canPrepare: true, canImportExport: true, entitlementMessage: '试用已到期，仅可查看' })
+vi.mock('@/stores/sessionStore', () => ({ useSessionStore: () => businessSession }))
 vi.mock('@/stores/cacheStore', () => ({ useCacheStore: () => ({
     getActiveClassId: () => null,
     getActiveSemesterId: () => null,
@@ -69,6 +71,7 @@ async function mountTools() {
 }
 
 beforeEach(() => {
+    Object.assign(businessSession, { canWrite: true, canPrepare: true, canImportExport: true })
     vi.resetAllMocks()
     vi.resetModules()
     vi.useFakeTimers()

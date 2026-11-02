@@ -13,23 +13,23 @@
                 <div class="form-grid">
                     <label class="field-block field-block--full">
                         <span class="field-block__label">奖品名称</span>
-                        <el-input v-model="form.name" size="large" placeholder="请输入奖品名称" />
+                        <el-input v-model="form.name" size="large" placeholder="请输入奖品名称" :disabled="!canWrite" />
                     </label>
 
                     <label class="field-block">
                         <span class="field-block__label">权重</span>
-                        <el-input-number v-model="form.weight" :min="1" :step="1" size="large" class="weight-input" />
+                        <el-input-number v-model="form.weight" :min="1" :step="1" size="large" class="weight-input" :disabled="!canWrite" />
                     </label>
 
                     <div class="field-block">
                         <span class="field-block__label">启用状态</span>
                         <div class="status-switch">
                             <button type="button" class="status-switch__button" :class="{ 'is-active': form.enabled }"
-                                @click="form.enabled = true">
+                                @click="form.enabled = true" :disabled="!canWrite">
                                 启用
                             </button>
                             <button type="button" class="status-switch__button" :class="{ 'is-active': !form.enabled }"
-                                @click="form.enabled = false">
+                                @click="form.enabled = false" :disabled="!canWrite">
                                 停用
                             </button>
                         </div>
@@ -51,10 +51,10 @@
             <div class="dialog-actions">
                 <button type="button" class="ghost-button" @click="visible = false">取消</button>
                 <div class="dialog-actions__group">
-                    <button v-if="mode === 'edit'" type="button" class="danger-button" @click="emit('delete')">
+                    <button v-if="mode === 'edit'" type="button" class="danger-button" @click="emit('delete')" :disabled="!canWrite">
                         删除
                     </button>
-                    <button type="button" class="primary-button" @click="emit('save')">保存</button>
+                    <button type="button" class="primary-button" @click="emit('save')" :disabled="!canWrite">保存</button>
                 </div>
             </div>
         </template>
@@ -62,8 +62,11 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { computed } from "vue";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
+
+const { canWrite } = useBusinessAccess()
 
 defineOptions({ name: "ToolsLotteryPrizeDialog" })
 

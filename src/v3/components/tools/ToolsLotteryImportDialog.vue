@@ -89,7 +89,7 @@
                     <button
                         type="button"
                         class="ghost-button"
-                        :disabled="selectionCount === 0"
+                        :disabled="!canImportExport || (selectionCount === 0)"
                         @click="emit('confirm', false)"
                     >
                         追加导入
@@ -97,7 +97,7 @@
                     <button
                         type="button"
                         class="danger-button"
-                        :disabled="selectionCount === 0"
+                        :disabled="!canImportExport || (selectionCount === 0)"
                         @click="emit('confirm', true)"
                     >
                         覆盖现有
@@ -109,9 +109,12 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { computed } from "vue";
 import type { ShopItem } from "@/types/shopItem";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
+
+const { canImportExport } = useBusinessAccess()
 
 defineOptions({ name: "ToolsLotteryImportDialog" })
 

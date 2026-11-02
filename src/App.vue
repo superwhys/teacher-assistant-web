@@ -1,11 +1,20 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { watch } from 'vue'
 import { useCacheStore } from '@/stores/cacheStore'
 import { useSessionStore } from '@/stores/sessionStore'
 
 const router = useRouter()
 const cacheStore = useCacheStore()
 const sessionStore = useSessionStore()
+
+watch(() => sessionStore.entitlementState, async () => {
+    const path = router.currentRoute.value.path
+    if (sessionStore.initialized && !sessionStore.error && path !== '/auth' && path !== '/no-access'
+        && !sessionStore.canAccess(path)) {
+        await router.replace(sessionStore.firstRoute || '/no-access')
+    }
+})
 
 async function retrySession() {
     try {

@@ -22,40 +22,43 @@
                     <span class="stage-timer__number">{{ index + 1 }}</span>
                     <label class="stage-timer__name">
                         <span class="sr-only">第 {{ index + 1 }} 阶段名称</span>
-                        <input v-model="stage.name" type="text" maxlength="60" :disabled="!editable" placeholder="阶段名称" />
+                        <input v-model="stage.name" type="text" maxlength="60" :disabled="!canWrite || (!editable)" placeholder="阶段名称" />
                     </label>
                     <label class="stage-timer__duration">
                         <span class="sr-only">第 {{ index + 1 }} 阶段时长</span>
                         <input v-model.number="stage.duration" type="number" min="1" max="999" step="1"
-                            :disabled="!editable" inputmode="numeric" />
+                            :disabled="!canWrite || (!editable)" inputmode="numeric" />
                     </label>
-                    <select v-model="stage.unit" :disabled="!editable" :aria-label="`第 ${index + 1} 阶段时长单位`">
+                    <select v-model="stage.unit" :disabled="!canWrite || (!editable)" :aria-label="`第 ${index + 1} 阶段时长单位`">
                         <option value="minute">分钟</option>
                         <option value="second">秒</option>
                     </select>
-                    <button type="button" class="stage-timer__remove" :disabled="!editable || draftStages.length === 1"
+                    <button type="button" class="stage-timer__remove" :disabled="!canWrite || (!editable || draftStages.length === 1)"
                         :aria-label="`删除第 ${index + 1} 阶段`" @click="draftStages.splice(index, 1)">删除</button>
                 </li>
             </ol>
             <div v-if="editable" class="stage-timer__edit-actions">
                 <button type="button" class="action-button" :disabled="draftStages.length >= 20" @click="addStage">添加阶段</button>
-                <button type="button" class="action-button" :disabled="!dirty" @click="saveStages">保存阶段</button>
+                <button type="button" class="action-button" :disabled="!canWrite || (!dirty)" @click="saveStages">保存阶段</button>
             </div>
             <p v-if="error" class="stage-timer__error" role="alert">{{ error }}</p>
         </div>
         <template #actions>
-            <button type="button" class="action-button action-button--primary" @click="toggle">
+            <button type="button" class="action-button action-button--primary" @click="toggle" :disabled="!canWrite">
                 {{ isRunning ? "暂停流程" : completed ? "重新开始" : editable ? (dirty ? "保存并开始" : "开始流程") : "继续流程" }}
             </button>
-            <button type="button" class="action-button" @click="reset">重置流程</button>
+            <button type="button" class="action-button" @click="reset" :disabled="!canWrite">重置流程</button>
         </template>
     </ToolsCardPanel>
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { computed, ref, watch } from "vue";
 import { isValidTimerStages, type TimerStage } from "@/utils/stageTimer";
 import ToolsCardPanel from "@/v3/components/tools/ToolsCardPanel.vue";
+
+const { canWrite } = useBusinessAccess()
 
 const props = defineProps<{
     stages: TimerStage[]

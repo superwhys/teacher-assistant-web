@@ -17,7 +17,7 @@
                 <button type="button" :aria-pressed="currentTab === 'minus'" :disabled="applying" @click="currentTab = 'minus'">扣分规则</button>
             </div>
 
-            <el-input v-model="keyword" size="large" placeholder="搜索规则名称" aria-label="搜索积分规则" clearable :disabled="applying">
+            <el-input v-model="keyword" size="large" placeholder="搜索规则名称" aria-label="搜索积分规则" clearable :disabled="!canWrite || (applying)">
                 <template #prefix><i-ep-search aria-hidden="true" /></template>
             </el-input>
 
@@ -31,7 +31,7 @@
                 </div>
                 <div class="rule-grid">
                     <button v-for="rule in activeGroup.rules" :key="rule.id" type="button" class="rule-card"
-                        :class="{ 'rule-card--minus': rule.sign === 'minus' }" :disabled="applying" @click="handleSelectRule(rule)">
+                        :class="{ 'rule-card--minus': rule.sign === 'minus' }" :disabled="!canWrite || (applying)" @click="handleSelectRule(rule)">
                         <span class="rule-card__name">{{ rule.name }}</span>
                         <strong>{{ rule.sign === 'plus' ? '+' : '-' }}{{ Math.abs(rule.points) }}</strong>
                     </button>
@@ -52,9 +52,12 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import type { Rule, RuleGroup } from "@/types/points";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import { computed, ref, watch } from "vue";
+
+const { canWrite, allowWrite } = useBusinessAccess()
 
 /** 定义积分规则弹窗页签类型。 */
 type SelectorTab = "all" | "plus" | "minus"
@@ -215,6 +218,7 @@ const activeGroup = computed<UiGroup | null>(() => {
 
 /** 处理积分规则点击选择。 */
 function handleSelectRule(rule: UiRule): void {
+    if (!allowWrite()) return
     if (props.loading || props.applying) {
         return
     }

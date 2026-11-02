@@ -18,7 +18,8 @@
                     <button type="button" class="tab-button" :class="{ 'is-active': activeTab === 'switch' }" @click="activeTab = 'switch'">
                         切换班级
                     </button>
-                    <button type="button" class="tab-button" :class="{ 'is-active': activeTab === 'create' }" @click="activeTab = 'create'">
+                    <button type="button" class="tab-button" :class="{ 'is-active': activeTab === 'create' }"
+                        :disabled="!canPrepare" @click="canPrepare && (activeTab = 'create')">
                         创建班级
                     </button>
                 </div>
@@ -55,17 +56,17 @@
                     <div class="create-form">
                         <label class="field-block">
                             <span class="field-block__label">班级名称</span>
-                            <el-input v-model="createClassName" placeholder="例如：一年级三班" />
+                            <el-input v-model="createClassName" :disabled="!canPrepare || createClassLoading" placeholder="例如：一年级三班" />
                         </label>
 
                         <label class="field-block">
                             <span class="field-block__label">学期名称</span>
-                            <el-input v-model="createSemesterName" placeholder="例如：2025-2026学年上学期" />
+                            <el-input v-model="createSemesterName" :disabled="!canPrepare || createClassLoading" placeholder="例如：2025-2026学年上学期" />
                         </label>
                     </div>
 
                     <div class="create-actions">
-                        <button type="button" class="primary-button" :disabled="createClassLoading" @click="handleCreateClass">
+                        <button type="button" class="primary-button" :disabled="!canPrepare || createClassLoading" @click="handleCreateClass">
                             {{ createClassLoading ? "创建中..." : "创建" }}
                         </button>
                     </div>
@@ -83,11 +84,14 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess"
 import { classManager } from "@/managers/class"
 import type { ClassDTO } from "@/types/class"
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import { ElMessage } from "element-plus"
 import { computed, ref, watch } from "vue"
+
+const { canPrepare, allowPrepare } = useBusinessAccess()
 
 /** 定义班级切换选项结构。 */
 interface ClassOption {
@@ -166,6 +170,7 @@ function applyClassSwitch(): void {
 
 /** 创建班级并自动切换到新班级。 */
 async function handleCreateClass(): Promise<void> {
+    if (!allowPrepare()) return
     if (createClassLoading.value) {
         return
     }
@@ -362,6 +367,13 @@ watch(dialogVisible, async (visible) => {
 .ghost-button:hover,
 .primary-button:hover {
     transform: translateY(-2px);
+}
+
+.tab-button:disabled,
+.primary-button:disabled {
+    opacity: 0.56;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .switch-dialog :deep(.el-input__wrapper) {

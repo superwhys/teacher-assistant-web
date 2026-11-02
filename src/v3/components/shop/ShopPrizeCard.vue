@@ -8,11 +8,11 @@
                 </button>
                 <template #dropdown>
                     <el-dropdown-menu>
-                        <el-dropdown-item command="edit">
+                        <el-dropdown-item :disabled="!canWrite" command="edit">
                             <i-ep-edit />
                             <span>编辑商品</span>
                         </el-dropdown-item>
-                        <el-dropdown-item command="delete" divided class="shop-card-actions-menu__danger">
+                        <el-dropdown-item :disabled="!canWrite" command="delete" divided class="shop-card-actions-menu__danger">
                             <i-ep-delete />
                             <span>删除商品</span>
                         </el-dropdown-item>
@@ -48,9 +48,12 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { computed } from "vue"
 import type { Prize } from "@/types/mall"
 import { getShopIconComponent, getShopVisualClass } from "@/v3/components/shop/shopIcons"
+
+const { canWrite } = useBusinessAccess()
 
 defineOptions({ name: "ShopPrizeCard" })
 

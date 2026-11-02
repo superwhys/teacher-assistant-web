@@ -21,7 +21,7 @@
                 <button
                     type="button"
                     class="toolbar-action-button"
-                    :disabled="!hasActiveClass"
+                    :disabled="!canImportExport || (!hasActiveClass)"
                     @click="emit('open-export')"
                 >
                     <i-ep-download />
@@ -191,8 +191,11 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import type { Rule, RuleGroup } from "@/types/points";
 import { computed, ref } from "vue";
+
+const { canImportExport } = useBusinessAccess()
 
 defineOptions({ name: "PointsRulesManagePanel" })
 

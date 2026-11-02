@@ -6,21 +6,21 @@
             <section class="editor-form">
                 <el-form :model="form" label-position="top">
                     <el-form-item label="商品名称" required>
-                        <el-input v-model="form.name" placeholder="例如：免作业券" />
+                        <el-input v-model="form.name" placeholder="例如：免作业券" :disabled="!canWrite" />
                     </el-form-item>
 
                     <div class="editor-form__grid">
                         <el-form-item label="兑换积分" required>
-                            <el-input-number v-model="form.points" :min="1" :step="10" style="width: 100%;" />
+                            <el-input-number v-model="form.points" :min="1" :step="10" style="width: 100%;" :disabled="!canWrite" />
                         </el-form-item>
 
                         <el-form-item label="库存数量" required>
-                            <el-input-number v-model="form.stock" :min="mode === 'add' ? 1 : 0" style="width: 100%;" />
+                            <el-input-number v-model="form.stock" :min="mode === 'add' ? 1 : 0" style="width: 100%;" :disabled="!canWrite" />
                         </el-form-item>
                     </div>
 
                     <el-form-item label="商品图标">
-                        <el-select v-model="form.icon" placeholder="请选择图标" style="width: 100%;">
+                        <el-select v-model="form.icon" placeholder="请选择图标" style="width: 100%;" :disabled="!canWrite">
                             <el-option v-for="option in shopIconOptions" :key="option.value" :label="option.label"
                                 :value="option.value">
                                 <div class="icon-option">
@@ -33,7 +33,7 @@
 
                     <el-form-item label="商品描述">
                         <el-input v-model="form.description" type="textarea" :rows="4"
-                            placeholder="例如：可用于奖励课堂表现优异的同学。" />
+                            placeholder="例如：可用于奖励课堂表现优异的同学。" :disabled="!canWrite" />
                     </el-form-item>
                 </el-form>
             </section>
@@ -66,7 +66,7 @@
                 <button type="button" class="dialog-button" @click="visible = false">
                     取消
                 </button>
-                <button type="button" class="dialog-button dialog-button--primary" @click="emit('save')">
+                <button type="button" class="dialog-button dialog-button--primary" @click="emit('save')" :disabled="!canWrite">
                     {{ mode === "add" ? "创建商品" : "保存修改" }}
                 </button>
             </div>
@@ -75,9 +75,12 @@
 </template>
 
 <script setup lang="ts">
+import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { computed } from "vue"
 import AppDialogShell from "@/v3/components/AppDialogShell.vue"
 import { getShopIconComponent, getShopVisualClass, shopIconOptions } from "@/v3/components/shop/shopIcons"
+
+const { canWrite } = useBusinessAccess()
 
 defineOptions({ name: "ShopPrizeEditorDialog" })
 

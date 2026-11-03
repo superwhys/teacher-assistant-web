@@ -2,6 +2,7 @@ import { lotteryApi } from '@/api/lottery'
 import type { LotteryPoolDTO, LotteryPrizeDTO, LotteryRecordDTO } from '@/types/lotteryApi'
 import type { DrawRecord } from '@/types/lottery'
 import type { ShopItem } from '@/types/shopItem'
+import { isValidLotteryWeight } from '@/utils/lottery'
 
 export type UiLotteryPrize = {
     name: string
@@ -149,7 +150,8 @@ export const lotteryManager = {
             .map((p) => {
                 const name = String(p?.name ?? '').trim()
                 if (!name) return null
-                const weight = Math.max(0, toNumber(p?.weight, 0))
+                const weight = p?.weight
+                if (!isValidLotteryWeight(weight)) throw new Error('权重必须为正整数')
                 return {
                     name,
                     weight,
@@ -177,11 +179,12 @@ export const lotteryManager = {
         const id = assertPoolId(poolId)
         const name = String(prizeName ?? '').trim()
         if (!name) throw new Error('奖品名称不能为空')
+        if (updates.weight !== undefined && !isValidLotteryWeight(updates.weight)) throw new Error('权重必须为正整数')
         await lotteryApi.updatePrizeInPool({
             pool_id: id,
             name,
             enabled: updates.enabled !== undefined ? Boolean(updates.enabled) : undefined,
-            weight: updates.weight !== undefined ? Math.max(0, toNumber(updates.weight, 0)) : undefined,
+            weight: updates.weight,
         })
     },
 
@@ -200,6 +203,7 @@ export const lotteryManager = {
         const to = String(toName ?? '').trim()
         if (!from || !to) throw new Error('奖品名称不能为空')
         if (from === to) return
+        if (!isValidLotteryWeight(payload.weight)) throw new Error('权重必须为正整数')
 
         await this.removePrize(poolId, from)
         await this.addPrize(poolId, { name: to, enabled: payload.enabled, weight: payload.weight, source: 'custom' })

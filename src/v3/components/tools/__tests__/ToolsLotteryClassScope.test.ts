@@ -3,10 +3,12 @@ import { createPinia } from 'pinia'
 import { createRenderer, nextTick, reactive, ssrContextKey, type App } from 'vue'
 import type { DrawRecord } from '@/types/lottery'
 import type { UserEntitlement } from '@/types/user'
+import type { UiLotteryPrize } from '@/managers/lottery'
 
 const mocks = vi.hoisted(() => ({
     listPools: vi.fn(), getPool: vi.fn(), listRecords: vi.fn(), createRecords: vi.fn(),
     clearRecords: vi.fn(), updateRecordStudent: vi.fn(), listStudents: vi.fn(),
+    addPrize: vi.fn(), updatePrize: vi.fn(), renamePrize: vi.fn(),
     warning: vi.fn(), error: vi.fn(), success: vi.fn(),
 }))
 
@@ -34,6 +36,19 @@ vi.mock('element-plus/es/components/base/style/css', () => ({}))
 vi.mock('element-plus/es/components/loading/style/css', () => ({}))
 vi.mock('element-plus/es/components/select/style/css', () => ({}))
 vi.mock('element-plus/es/components/option/style/css', () => ({}))
+vi.mock('element-plus/es/components/button/style/css', () => ({}))
+vi.mock('element-plus/es/components/dialog/style/css', () => ({}))
+vi.mock('element-plus/es/components/form/style/css', () => ({}))
+vi.mock('element-plus/es/components/form-item/style/css', () => ({}))
+vi.mock('element-plus/es/components/input/style/css', () => ({}))
+vi.mock('element-plus/es/components/input-number/style/css', () => ({}))
+vi.mock('element-plus/es/components/radio-button/style/css', () => ({}))
+vi.mock('element-plus/es/components/radio-group/style/css', () => ({}))
+vi.mock('element-plus/es/components/scrollbar/style/css', () => ({}))
+vi.mock('element-plus/es/components/switch/style/css', () => ({}))
+vi.mock('element-plus/es/components/table/style/css', () => ({}))
+vi.mock('element-plus/es/components/table-column/style/css', () => ({}))
+vi.mock('element-plus/es/components/tag/style/css', () => ({}))
 vi.mock('@/v3/components/students/StudentsConfirmDialog.vue', () => ({ default: { render: () => null } }))
 vi.mock('@/v3/components/tools/ToolsLotteryDisplayPanel.vue', () => ({ default: { render: () => null } }))
 vi.mock('@/v3/components/tools/ToolsLotteryHistoryPanel.vue', () => ({ default: { render: () => null } }))
@@ -53,6 +68,12 @@ interface WorkspaceState {
     drawProbabilities: Record<string, number>
     studentDialogVisible: boolean
     selectedStudentId: number | null
+    addDialogVisible?: boolean
+    prizeDialogVisible?: boolean
+    prizeForm: { name: string, weight: number | null | undefined, enabled: boolean }
+    openAddDialog: () => void
+    openEditDialog: (prize: UiLotteryPrize) => void
+    savePrize: () => Promise<void>
     drawOnce: () => void
     startRolling: () => void
     stopRolling: () => void
@@ -71,8 +92,10 @@ function record(classId: number): DrawRecord {
     return { id: `class-${classId}`, serverId: classId, prizeId: '贴纸', prizeName: '贴纸', drawnAt: 1780000000000, studentClassId: classId }
 }
 
-async function mountWorkspace(): Promise<WorkspaceState> {
-    const Workspace = (await import('../ToolsLotteryWorkspace.vue')).default
+async function mountWorkspace(version: 'legacy' | 'v3' = 'v3'): Promise<WorkspaceState> {
+    const Workspace = version === 'legacy'
+        ? (await import('@/components/tools/LotteryView.vue')).default
+        : (await import('../ToolsLotteryWorkspace.vue')).default
     app = renderer.createApp({ ...Workspace, render: () => null })
     app.use(createPinia())
     app.provide(ssrContextKey, { modules: new Set() })
@@ -271,6 +294,35 @@ describe('lottery page class context', () => {
         expect(mocks.createRecords).not.toHaveBeenCalled()
         expect(page.records).toEqual([])
         expect(page.isRolling).toBe(false)
+    })
+})
+
+describe.each(['legacy', 'v3'] as const)('%s lottery prize form weights', (version) => {
+    it.each(['add', 'edit'] as const)('retains invalid %s input for correction and saves weight 1', async (mode) => {
+        const page = await mountWorkspace(version)
+        await vi.waitFor(() => expect(page.isLoading).toBe(false))
+        if (mode === 'add') {
+            page.openAddDialog()
+            page.prizeForm.name = '贴纸'
+        } else {
+            page.openEditDialog({ name: '贴纸', weight: 7, enabled: false })
+        }
+        for (const weight of [0, -1, 1.5, null, undefined, NaN, Infinity]) {
+            page.prizeForm.weight = weight
+            await page.savePrize()
+            expect(mocks.warning).toHaveBeenLastCalledWith('权重必须为正整数')
+            expect(page.addDialogVisible ?? page.prizeDialogVisible).toBe(true)
+            expect(mocks.addPrize).not.toHaveBeenCalled()
+            expect(mocks.updatePrize).not.toHaveBeenCalled()
+        }
+        page.prizeForm.weight = 1
+        await page.savePrize()
+        if (mode === 'add') {
+            expect(mocks.addPrize).toHaveBeenCalledWith('4', { name: '贴纸', weight: 1, enabled: true, source: 'custom' })
+        } else {
+            expect(mocks.updatePrize).toHaveBeenCalledWith('4', '贴纸', { weight: 1, enabled: false })
+        }
+        expect(page.addDialogVisible ?? page.prizeDialogVisible).toBe(false)
     })
 })
 

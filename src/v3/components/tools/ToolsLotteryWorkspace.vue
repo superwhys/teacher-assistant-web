@@ -124,7 +124,7 @@ import { useLotteryHistoryStore } from "@/stores/lotteryHistoryStore";
 import { useCacheStore } from "@/stores/cacheStore";
 import type { StudentDTO } from "@/types/student";
 import type { DrawRecord } from "@/types/lottery";
-import { dailyLotteryPrizes } from "@/utils/lottery";
+import { dailyLotteryPrizes, isValidLotteryWeight } from "@/utils/lottery";
 import { isApiRequestError } from "@/types/api";
 import type { ShopItem } from "@/types/shopItem";
 import StudentsConfirmDialog from "@/v3/components/students/StudentsConfirmDialog.vue";
@@ -458,8 +458,8 @@ async function savePrize(): Promise<void> {
         return
     }
 
-    if (prizeForm.weight <= 0) {
-        ElMessage.warning("权重必须大于 0")
+    if (!isValidLotteryWeight(prizeForm.weight)) {
+        ElMessage.warning("权重必须为正整数")
         return
     }
 

@@ -1,5 +1,9 @@
 import type { DrawRecord, Prize } from '@/types/lottery'
 
+export function isValidLotteryWeight(weight: unknown): weight is number {
+    return typeof weight === 'number' && Number.isSafeInteger(weight) && weight >= 1
+}
+
 /** 按当前自然日中奖次数降低有效权重，保留奖池中的原始配置。 */
 export function dailyLotteryPrizes<T extends Pick<Prize, 'name' | 'weight' | 'enabled'>>(
     prizes: T[],

@@ -18,7 +18,7 @@
 
                     <label class="field-block">
                         <span class="field-block__label">权重</span>
-                        <el-input-number v-model="form.weight" :min="1" :step="1" size="large" class="weight-input" :disabled="!canWrite" />
+                        <el-input-number v-model="form.weight" :min="1" :step="1" step-strictly size="large" class="weight-input" :disabled="!canWrite" />
                     </label>
 
                     <div class="field-block">

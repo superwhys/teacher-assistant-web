@@ -263,7 +263,7 @@ const avatarMood = computed(() => {
 });
 const starters = [
     { label: "看看班级这一周", prompt: "总结本周班级积分", icon: DataAnalysis, tone: "agent-starter__icon--0" },
-    { label: "为学生的进步加分", prompt: "给第三组按作业完成规则加分", icon: Star, tone: "agent-starter__icon--1" },
+    { label: "为学生的进步加分", prompt: "为学生的进步加分", icon: Star, tone: "agent-starter__icon--1" },
     { label: "兑换一份小奖励", prompt: "查看可以兑换的奖品", icon: Present, tone: "agent-starter__icon--2" },
 ];
 const actionStateLabels: Record<AgentAction["status"], string> = {

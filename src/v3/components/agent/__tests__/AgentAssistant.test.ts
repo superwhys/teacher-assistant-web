@@ -36,6 +36,7 @@ interface AssistantState {
     visible: boolean;
     draft: string;
     messages: AgentChatMessage[];
+    starters: { label: string; prompt: string }[];
     sendMessage(prompt?: string): Promise<void>;
     canConfirm(action: AgentAction): boolean;
     actionLabel(action: AgentAction): string;
@@ -108,6 +109,17 @@ afterEach(() => {
 });
 
 describe("AgentAssistant server interaction", () => {
+    it("sends the progress starter without choosing a group or rule for the teacher", async () => {
+        const state = mountAssistant();
+        mocks.send.mockResolvedValueOnce(true);
+        const starter = state.starters.find((item) => item.label === "为学生的进步加分");
+        expect(starter).toBeDefined();
+
+        await state.sendMessage(starter!.prompt);
+
+        expect(mocks.send).toHaveBeenCalledExactlyOnceWith("为学生的进步加分");
+    });
+
     it("closes the panel subscription without cancelling the server run", async () => {
         const state = mountAssistant();
         chatState.responding.value = true;

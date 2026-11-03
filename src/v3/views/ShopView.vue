@@ -57,11 +57,12 @@
 
 <script setup lang="ts">
 import { useBusinessAccess } from "@/composables/useBusinessAccess";
-import { computed, onMounted, reactive, ref, watch } from "vue"
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { ElMessage } from "element-plus"
 import { studentManager } from "@/managers/student"
 import { shopManager } from "@/managers/shop"
 import { useCacheStore } from "@/stores/cacheStore"
+import { AGENT_ACTION_SUCCEEDED_EVENT, type AgentActionSucceededDetail } from "@/utils/agentEvents"
 import type { CreatePrizeReq, Prize, PrizeRecord } from "@/types/mall"
 import type { StudentDTO } from "@/types/student"
 import StudentsConfirmDialog from "@/v3/components/students/StudentsConfirmDialog.vue"
@@ -703,6 +704,39 @@ function handleViewRecords(): void {
 async function handleRecordsPageChange(page: number): Promise<void> {
     await loadRecordsPage(page)
 }
+
+let pendingAgentRecordsRefresh: AgentActionSucceededDetail | null = null
+
+function matchesAgentScope(scope: AgentActionSucceededDetail): boolean {
+    return scope.userId === cacheStore.profile?.id && scope.classId === cacheStore.getActiveClassId()
+        && scope.semesterId === cacheStore.getActiveSemesterId()
+}
+
+function handleAgentActionSucceeded(event: CustomEvent<AgentActionSucceededDetail>): void {
+    const scope = event.detail
+    if (!matchesAgentScope(scope)) return
+    const refreshStudents = studentsLoadedForClassId !== null || exchangeDialogVisible.value
+    studentsLoadedForClassId = null
+    if (refreshStudents) void ensureStudentsLoaded()
+    if (scope.kind === "redeem") {
+        void refreshPrizes()
+        if (recordsLoading.value) pendingAgentRecordsRefresh = scope
+        else void loadRecordsPage(recordsCurrentPage.value)
+    }
+}
+
+watch(recordsLoading, (loading) => {
+    if (loading || !pendingAgentRecordsRefresh) return
+    const scope = pendingAgentRecordsRefresh
+    pendingAgentRecordsRefresh = null
+    if (matchesAgentScope(scope)) void loadRecordsPage(recordsCurrentPage.value)
+})
+
+onMounted(() => window.addEventListener(AGENT_ACTION_SUCCEEDED_EVENT, handleAgentActionSucceeded))
+onBeforeUnmount(() => {
+    window.removeEventListener(AGENT_ACTION_SUCCEEDED_EVENT, handleAgentActionSucceeded)
+    pendingAgentRecordsRefresh = null
+})
 
 onMounted(async () => {
     await Promise.all([

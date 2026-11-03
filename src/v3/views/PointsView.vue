@@ -82,8 +82,9 @@ import type {
 } from "@/types/points";
 import type { StudentGroupDTO } from "@/types/student";
 import { formatChineseDateTime } from "@/utils/date";
+import { AGENT_ACTION_SUCCEEDED_EVENT, type AgentActionSucceededDetail } from "@/utils/agentEvents";
 import { ElMessage } from "element-plus";
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import PointsDeleteConfirmDialog from "@/v3/components/points/PointsDeleteConfirmDialog.vue";
 import PointsContentPanel from "@/v3/components/points/PointsContentPanel.vue";
@@ -171,6 +172,8 @@ const hasLoadedHistoryRecords = ref(false)
 const totalRankingDirty = ref(true)
 const ruleRankingDirty = ref(true)
 const historyRecordsDirty = ref(true)
+let rankingRequestId = 0
+let historyRequestId = 0
 
 const importItemsDialogVisible = ref(false)
 const importRecordsDialogVisible = ref(false)
@@ -487,26 +490,37 @@ async function loadRuleGroups(): Promise<void> {
 
 /** 根据当前排行榜筛选条件加载数据。 */
 async function loadRankingData(): Promise<void> {
-    if (!activeClassId.value) {
+    const requestId = ++rankingRequestId
+    const scope = {
+        userId: cacheStore.profile?.id, classId: activeClassId.value, semesterId: cacheStore.getActiveSemesterId(),
+        tab: activeRankingTab.value, ruleId: selectedRankingRuleId.value, range: rankingTimeRange.value,
+    }
+    const isCurrent = () => requestId === rankingRequestId && scope.userId === cacheStore.profile?.id
+        && scope.classId === activeClassId.value && scope.semesterId === cacheStore.getActiveSemesterId()
+        && scope.tab === activeRankingTab.value && (scope.tab !== "item" || scope.ruleId === selectedRankingRuleId.value)
+        && scope.range === rankingTimeRange.value
+    if (!scope.classId) {
         totalRankingItems.value = []
         ruleRankingItems.value = []
+        rankingLoading.value = false
         return
     }
 
     rankingLoading.value = true
     try {
-        if (activeRankingTab.value === "item") {
-            if (!selectedRankingRuleId.value) {
+        if (scope.tab === "item") {
+            if (!scope.ruleId) {
                 ruleRankingItems.value = []
                 return
             }
 
             const response = await pointsManager.getRuleRanking({
-                class_id: activeClassId.value,
-                rule_id: selectedRankingRuleId.value,
-                time_range: rankingTimeRange.value,
+                class_id: scope.classId,
+                rule_id: scope.ruleId,
+                time_range: scope.range,
                 limit: 10
             })
+            if (!isCurrent()) return
             ruleRankingItems.value = response.items ?? []
             hasLoadedRuleRanking.value = true
             ruleRankingDirty.value = false
@@ -514,14 +528,16 @@ async function loadRankingData(): Promise<void> {
         }
 
         const response = await pointsManager.getClassRanking({
-            class_id: activeClassId.value,
-            time_range: rankingTimeRange.value,
+            class_id: scope.classId,
+            time_range: scope.range,
             limit: 10
         })
+        if (!isCurrent()) return
         totalRankingItems.value = response.items ?? []
         hasLoadedTotalRanking.value = true
         totalRankingDirty.value = false
     } catch (error) {
+        if (!isCurrent()) return
         console.error("加载排行榜失败", error)
         if (activeRankingTab.value === "item") {
             ruleRankingItems.value = []
@@ -530,27 +546,37 @@ async function loadRankingData(): Promise<void> {
         }
         ElMessage.error("加载排行榜失败")
     } finally {
-        rankingLoading.value = false
+        if (requestId === rankingRequestId) rankingLoading.value = false
     }
 }
 
 /** 加载积分记录数据。 */
 async function loadHistoryRecords(): Promise<void> {
-    if (!activeClassId.value) {
+    const requestId = ++historyRequestId
+    const scope = {
+        userId: cacheStore.profile?.id, classId: activeClassId.value, semesterId: cacheStore.getActiveSemesterId(),
+        keyword: historyKeyword.value.trim(), sign: historySign.value, page: historyPage.value,
+    }
+    const isCurrent = () => requestId === historyRequestId && scope.userId === cacheStore.profile?.id
+        && scope.classId === activeClassId.value && scope.semesterId === cacheStore.getActiveSemesterId()
+        && scope.keyword === historyKeyword.value.trim() && scope.sign === historySign.value && scope.page === historyPage.value
+    if (!scope.classId) {
         historyRecords.value = []
         historyTotal.value = 0
+        recordsLoading.value = false
         return
     }
 
     recordsLoading.value = true
     try {
         const response = await pointsManager.listApplyRecords({
-            class_id: activeClassId.value,
-            name: historyKeyword.value.trim() || undefined,
-            type: historySign.value === "plus" ? 1 : (historySign.value === "minus" ? 2 : undefined),
-            offset: (historyPage.value - 1) * historyPageSize,
+            class_id: scope.classId,
+            name: scope.keyword || undefined,
+            type: scope.sign === "plus" ? 1 : (scope.sign === "minus" ? 2 : undefined),
+            offset: (scope.page - 1) * historyPageSize,
             limit: historyPageSize
         })
+        if (!isCurrent()) return
         historyRecords.value = (response.items ?? [])
             .slice()
             .sort((left, right) => getRecordTimestamp(right) - getRecordTimestamp(left))
@@ -558,12 +584,13 @@ async function loadHistoryRecords(): Promise<void> {
         hasLoadedHistoryRecords.value = true
         historyRecordsDirty.value = false
     } catch (error) {
+        if (!isCurrent()) return
         console.error("加载积分记录失败", error)
         historyRecords.value = []
         historyTotal.value = 0
         ElMessage.error("加载积分记录失败")
     } finally {
-        recordsLoading.value = false
+        if (requestId === historyRequestId) recordsLoading.value = false
     }
 }
 
@@ -964,6 +991,20 @@ async function handleRecordsChanged(): Promise<void> {
     }
     await Promise.all(tasks)
 }
+
+function handleAgentActionSucceeded(event: CustomEvent<AgentActionSucceededDetail>): void {
+    const scope = event.detail
+    if (scope.userId !== cacheStore.profile?.id || scope.classId !== cacheStore.getActiveClassId()
+        || scope.semesterId !== cacheStore.getActiveSemesterId()) return
+    void handleRecordsChanged()
+}
+
+onMounted(() => window.addEventListener(AGENT_ACTION_SUCCEEDED_EVENT, handleAgentActionSucceeded))
+onBeforeUnmount(() => {
+    window.removeEventListener(AGENT_ACTION_SUCCEEDED_EVENT, handleAgentActionSucceeded)
+    rankingRequestId += 1
+    historyRequestId += 1
+})
 
 /** 处理积分记录类型切换。 */
 function handleSelectHistorySign(sign: "all" | "plus" | "minus"): void {

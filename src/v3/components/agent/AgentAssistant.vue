@@ -1,28 +1,27 @@
 <template>
     <button ref="launcherRef" type="button" class="agent-launcher" :class="{ 'is-open': visible }"
-        aria-label="打开 AI 助手" title="AI 助手" aria-haspopup="dialog" :aria-expanded="visible"
+        aria-label="打开小 Y" title="找小 Y 帮忙" aria-haspopup="dialog" :aria-expanded="visible"
         aria-controls="agent-assistant-panel" @click="visible = !visible">
-        <MagicStick aria-hidden="true" />
-        <span class="agent-launcher__dot" aria-hidden="true" />
+        <XiaoYAvatar :size="56" :animated="!visible" />
+        <span class="agent-launcher__label" aria-hidden="true">小 Y</span>
     </button>
 
     <ElDrawer v-model="visible" class="agent-panel" modal-class="agent-panel-layer"
-        title="AI 助手" direction="rtl" size="440px" append-to-body
-        :modal="false" :lock-scroll="false" :show-close="false" :close-on-click-modal="false"
-        :z-index="1800" aria-modal="false" id="agent-assistant-panel"
-        @opened="handleOpened" @closed="handleClosed" @close="finishReply">
+        title="小 Y" direction="rtl" size="440px" append-to-body
+        :show-close="false" :z-index="1800" id="agent-assistant-panel"
+        @opened="handleOpened" @closed="handleClosed">
         <template #header>
             <div class="agent-header">
-                <span class="agent-avatar"><MagicStick aria-hidden="true" /></span>
+                <span class="agent-avatar"><XiaoYAvatar :size="48" :animated="visible" :mood="avatarMood" /></span>
                 <div class="agent-header__title">
-                    <h2>AI 助手 <span class="agent-demo-badge">演示版</span></h2>
+                    <h2>小 Y <span class="agent-status-badge">{{ statusLabel }}</span></h2>
                     <p>你的课堂小帮手</p>
                 </div>
                 <button type="button" class="agent-icon-button" aria-label="新建对话" title="新建对话"
-                    @click="resetConversation">
+                    :disabled="!scopeReady || loading || sending || responding || !!actionBusyId" @click="startNewConversation">
                     <RefreshRight aria-hidden="true" />
                 </button>
-                <button type="button" class="agent-icon-button" aria-label="关闭 AI 助手" title="关闭"
+                <button type="button" class="agent-icon-button" aria-label="关闭小 Y" title="关闭"
                     @click="visible = false">
                     <Close aria-hidden="true" />
                 </button>
@@ -36,114 +35,160 @@
             <span :title="semesterName">{{ semesterName }}</span>
         </div>
 
+        <div v-if="!scopeReady" class="agent-notice" role="status">
+            请先在页面顶部选择班级和学期，再开始对话。
+        </div>
+        <div v-if="error && scopeReady" class="agent-error" role="alert">
+            <WarningFilled aria-hidden="true" />
+            <span>{{ error }}</span>
+            <button type="button" :disabled="loading || sending" @click="reconnect">重新同步</button>
+        </div>
+
         <div ref="conversationRef" class="agent-conversation" @scroll="handleScroll">
-            <div v-if="messages.length === 0" class="agent-welcome">
-                <div class="agent-welcome__mark"><MagicStick aria-hidden="true" /></div>
+            <div v-if="loading" class="agent-loading" role="status">
+                <Loading aria-hidden="true" />正在同步对话…
+            </div>
+            <div v-else-if="messages.length === 0" class="agent-welcome">
+                <div class="agent-welcome__mark"><XiaoYAvatar :size="76" /></div>
                 <span class="agent-eyebrow">让日常教学，轻松一点</span>
                 <h3>你好，老师<br />今天想先处理什么？</h3>
-                <p>查一查班级表现，记录一次进步，<br />或为学生兑换一份小奖励。</p>
+                <p>我是小 Y，你的课堂小帮手。<br />查班级、记积分，或兑换一份小奖励。</p>
                 <div class="agent-starters">
-                    <button v-for="(prompt, index) in DEMO_PROMPTS" :key="prompt" type="button"
-                        class="agent-starter" @click="sendMessage(prompt)">
-                        <span class="agent-starter__icon" :class="`agent-starter__icon--${index}`">
-                            <component :is="starterIcons[index]" aria-hidden="true" />
+                    <button v-for="starter in starters" :key="starter.prompt" type="button"
+                        class="agent-starter" :disabled="!canSend" @click="sendMessage(starter.prompt)">
+                        <span class="agent-starter__icon" :class="starter.tone">
+                            <component :is="starter.icon" aria-hidden="true" />
                         </span>
-                        <span><strong>{{ starterLabels[index] }}</strong><small>{{ prompt }}</small></span>
+                        <span><strong>{{ starter.label }}</strong><small>{{ starter.prompt }}</small></span>
                         <ArrowRight aria-hidden="true" />
                     </button>
                 </div>
             </div>
 
-            <div v-else class="agent-messages" role="log" aria-label="与 AI 助手的模拟对话"
+            <div v-else class="agent-messages" role="log" aria-label="与小 Y 的对话"
                 aria-live="polite" :aria-busy="responding">
-                <div class="agent-timeline-label">本次对话 · 示例数据</div>
+                <div class="agent-timeline-label">当前班级 · {{ semesterName }}</div>
                 <article v-for="message in messages" :key="message.id" class="agent-message"
-                    :class="`agent-message--${message.role}`" :aria-label="message.role === 'user' ? '你' : 'AI 助手'">
+                    :class="`agent-message--${message.role}`" :aria-label="message.role === 'user' ? '你' : '小 Y'">
                     <div v-if="message.role === 'assistant'" class="agent-message__sender">
-                        <MagicStick aria-hidden="true" /><span>AI 助手</span>
+                        <XiaoYAvatar :size="24" /><span>小 Y</span>
                     </div>
-                    <div v-if="message.reply && message.complete" class="agent-tool-status">
-                        <CircleCheck aria-hidden="true" />{{ message.reply.steps[message.reply.steps.length - 1] }}
-                    </div>
-                    <p v-if="message.text" class="agent-message__text">{{ message.text }}</p>
-
-                    <template v-if="message.complete && message.reply">
-                        <div v-if="message.reply.stats" class="agent-stats">
-                            <div v-for="stat in message.reply.stats" :key="stat.label" class="agent-stat">
-                                <span>{{ stat.label }}</span><strong>{{ stat.value }}</strong><small>{{ stat.detail }}</small>
-                            </div>
-                        </div>
-                        <div v-if="message.reply.rows" class="agent-data-list">
-                            <div v-for="(row, index) in message.reply.rows" :key="row.name" class="agent-data-row">
-                                <span class="agent-data-row__avatar">{{ row.name.slice(-2) }}</span>
-                                <span class="agent-data-row__name"><strong>{{ row.name }}</strong><small>{{ row.detail }}</small></span>
-                                <span class="agent-data-row__value">{{ row.value }}</span>
-                                <span v-if="!message.reply.action" class="agent-data-row__rank">{{ index + 1 }}</span>
-                            </div>
-                        </div>
-
-                        <div v-if="message.reply.action" class="agent-action" :class="`is-${message.actionState}`">
-                            <div class="agent-action__heading">
-                                <component :is="message.reply.action.kind === 'points' ? Star : Present" aria-hidden="true" />
-                                <strong>{{ message.reply.action.title }}</strong>
-                                <span>{{ actionStateLabels[message.actionState] }}</span>
-                            </div>
-                            <p>{{ message.reply.action.description }}</p>
-                            <dl>
-                                <div v-for="detail in message.reply.action.details" :key="detail.label">
-                                    <dt>{{ detail.label }}</dt><dd>{{ detail.value }}</dd>
+                    <AgentMarkdown v-if="message.role === 'assistant' && message.text && !message.actions.length"
+                        :content="message.text" />
+                    <p v-else-if="message.role === 'user' && message.text" class="agent-message__text">{{ message.text }}</p>
+                    <details v-if="message.cards.length || (message.actions.length && message.text)" class="agent-query-details"
+                        :open="message.complete && !message.text && !message.actions.length">
+                        <summary>
+                            <ArrowRight aria-hidden="true" />
+                            <span>{{ message.actions.length ? '操作说明' : '查询详情' }}</span>
+                            <span v-if="message.cards.length" class="agent-query-details__count">{{ message.cards.length }} 项查询</span>
+                        </summary>
+                        <AgentMarkdown v-if="message.actions.length && message.text" class="agent-action-explanation"
+                            :content="message.text" />
+                        <div v-for="(card, cardIndex) in message.cards" :key="`${message.runId}-${cardIndex}`" class="agent-data-card">
+                            <h4 v-if="card.title">{{ card.title }}</h4>
+                            <div v-if="card.stats?.length" class="agent-stats">
+                                <div v-for="stat in card.stats" :key="stat.label" class="agent-stat">
+                                    <span>{{ stat.label }}</span>
+                                    <strong>{{ stat.value }}</strong>
+                                    <small v-if="stat.detail">{{ stat.detail }}</small>
                                 </div>
-                            </dl>
-                            <div v-if="message.actionState === 'pending'" class="agent-action__buttons">
-                                <button type="button" class="agent-secondary-button" :disabled="responding"
-                                    @click="resolveAction(message, false)">暂不执行</button>
-                                <button type="button" class="agent-primary-button" :disabled="responding"
-                                    @click="resolveAction(message, true)">
-                                    <Check aria-hidden="true" />{{ message.reply.action.confirmLabel }}
+                            </div>
+                            <div v-if="card.rows?.length" class="agent-data-list">
+                                <div v-for="row in card.rows" :key="row.id" class="agent-data-row">
+                                    <span class="agent-data-row__avatar">{{ row.name.slice(-2) }}</span>
+                                    <span class="agent-data-row__name">
+                                        <strong>{{ row.name }}</strong><small>{{ row.detail }}</small>
+                                    </span>
+                                    <span class="agent-data-row__value">{{ row.value }}</span>
+                                </div>
+                            </div>
+                            <p v-if="card.note" class="agent-data-card__note">{{ card.note }}</p>
+                        </div>
+                    </details>
+
+                    <div v-for="action in message.actions" :key="action.id" class="agent-action"
+                        :class="`is-${action.status}`">
+                        <div class="agent-action__heading">
+                            <component :is="action.kind === 'points' ? Star : Present" aria-hidden="true" />
+                            <strong>{{ action.title }}</strong>
+                            <span>{{ actionLabel(action) }}</span>
+                        </div>
+                        <p>{{ action.description }}</p>
+                        <div v-if="action.rows?.length" class="agent-data-list agent-action__students">
+                            <div v-for="(row, rowIndex) in action.rows" :key="`${action.id}-${rowIndex}`" class="agent-data-row">
+                                <span class="agent-data-row__name">
+                                    <strong>{{ row.name }}</strong><small>{{ row.detail }}</small>
+                                </span>
+                                <span class="agent-data-row__value">{{ row.value }}</span>
+                            </div>
+                        </div>
+                        <dl>
+                            <div v-for="detail in action.details" :key="detail.label">
+                                <dt>{{ detail.label }}</dt><dd>{{ detail.value }}</dd>
+                            </div>
+                        </dl>
+                        <template v-if="action.status === 'pending'">
+                            <p class="agent-action__expiry">
+                                {{ isExpired(action) ? '预览已过期，请重新生成' : `请在 ${formatTime(action.expires_at)} 前确认` }}
+                            </p>
+                            <p v-if="!canWrite && !isExpired(action)" class="agent-action__expiry">
+                                当前为只读状态，暂不能确认写入。
+                            </p>
+                            <div class="agent-action__buttons">
+                                <button type="button" class="agent-secondary-button"
+                                    :disabled="loading || !!actionBusyId" @click="handleActionDecision(action, 'reject')">暂不执行</button>
+                                <button type="button" class="agent-primary-button"
+                                    :disabled="!canConfirm(action)" @click="handleActionDecision(action, 'confirm')">
+                                    <Loading v-if="actionBusyId === action.id" class="agent-busy-icon" aria-hidden="true" />
+                                    <Check v-else aria-hidden="true" />
+                                    {{ actionBusyId === action.id ? '处理中…' : action.kind === 'points' ? '确认执行' : '确认兑换' }}
                                 </button>
                             </div>
-                            <div v-else class="agent-action__result">
-                                <CircleCheck v-if="message.actionState === 'confirmed'" aria-hidden="true" />
-                                <span>{{ actionResultLabels[message.actionState] }}</span>
-                            </div>
+                        </template>
+                        <div v-else class="agent-action__result">
+                            <CircleCheck v-if="action.status === 'succeeded'" aria-hidden="true" />
+                            <span>{{ action.result?.summary || actionResultLabels[action.status] }}</span>
                         </div>
-                    </template>
+                    </div>
+                    <p v-if="message.error" class="agent-message__error" role="status">{{ message.error }}</p>
                 </article>
             </div>
 
-            <div v-if="responding" class="agent-thinking" role="status">
-                <Loading aria-hidden="true" /><span>{{ currentStep }}…</span>
-                <button type="button" @click="stopReply">停止</button>
+            <div v-if="responding || sending" class="agent-thinking" role="status">
+                <Loading aria-hidden="true" /><span>{{ stepLabel }}</span>
+                <button type="button" :disabled="sending || stopping" @click="cancel">{{ stopping ? '停止中…' : '停止' }}</button>
             </div>
         </div>
 
-        <div v-if="latestSuggestions.length && !responding" class="agent-suggestions" aria-label="继续提问">
-            <button v-for="suggestion in latestSuggestions" :key="suggestion" type="button"
-                @click="sendMessage(suggestion)">{{ suggestion }}<ArrowRight aria-hidden="true" /></button>
+        <div v-if="messages.length && !responding && !loading" class="agent-suggestions" aria-label="继续提问">
+            <button v-for="starter in starters" :key="starter.prompt" type="button" :disabled="!canSend"
+                @click="sendMessage(starter.prompt)">{{ starter.label }}<ArrowRight aria-hidden="true" /></button>
         </div>
 
         <form class="agent-composer" @submit.prevent="sendMessage()">
             <div class="agent-composer__input">
-                <textarea ref="inputRef" v-model="draft" rows="2" maxlength="1000" aria-label="发送给 AI 助手的消息"
-                    placeholder="试着问我，或者描述你想做的事…" @keydown="handleInputKeydown" />
+                <textarea ref="inputRef" v-model="draft" rows="2" maxlength="1000" aria-label="发送给小 Y 的消息"
+                    :disabled="!scopeReady || loading" placeholder="试着问我，或者描述你想做的事…"
+                    @keydown="handleInputKeydown" />
                 <div class="agent-composer__toolbar">
-                    <span><span class="agent-mode-dot" />课堂助手</span>
-                    <button v-if="responding" type="button" class="agent-send-button" aria-label="停止回复" @click="stopReply">
+                    <span><span class="agent-mode-dot" />小 Y · 课堂助手</span>
+                    <button v-if="responding" type="button" class="agent-send-button" aria-label="停止回复" :disabled="stopping" @click="cancel">
                         <span class="agent-stop-icon" />
                     </button>
-                    <button v-else type="submit" class="agent-send-button" :disabled="!draft.trim()" aria-label="发送消息">
+                    <button v-else type="submit" class="agent-send-button" :disabled="!canSend || !draft.trim()" aria-label="发送消息">
                         <Top aria-hidden="true" />
                     </button>
                 </div>
             </div>
             <div class="agent-composer__hint"><span>Enter 发送 · Shift + Enter 换行</span><span>{{ draft.length }}/1000</span></div>
-            <p class="agent-demo-note"><InfoFilled aria-hidden="true" />当前为模拟体验，使用示例数据，不会修改真实数据</p>
+            <p class="agent-data-note"><InfoFilled aria-hidden="true" />AI 建议请核对，积分操作和兑换需确认后执行</p>
         </form>
     </ElDrawer>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { ElDrawer } from "element-plus";
 import {
     ArrowRight,
@@ -153,14 +198,19 @@ import {
     DataAnalysis,
     InfoFilled,
     Loading,
-    MagicStick,
     Present,
     RefreshRight,
     School,
     Star,
     Top,
+    WarningFilled,
 } from "@element-plus/icons-vue";
-import { createDemoReply, DEMO_PROMPTS, type DemoReply } from "./agentDemo";
+import type { AgentAction } from "@/types/agent";
+import { notifyAgentActionSucceeded } from "@/utils/agentEvents";
+import { useAgentChat } from "@/v3/composables/useAgentChat";
+import AgentMarkdown from "./AgentMarkdown.vue";
+import XiaoYAvatar from "./XiaoYAvatar.vue";
+import { toChatMessages } from "./agentPresentation";
 
 const props = withDefaults(defineProps<{
     classId?: number | null;
@@ -168,150 +218,120 @@ const props = withDefaults(defineProps<{
     semesterId?: number | null;
     semesterName?: string;
     userId?: string;
+    canWrite?: boolean;
 }>(), {
-    className: "示例班级",
-    semesterName: "当前学期",
+    className: "请选择班级",
+    semesterName: "请选择学期",
+    canWrite: false,
 });
-
-type ActionState = "pending" | "confirmed" | "cancelled" | "expired";
-interface ChatMessage {
-    id: number;
-    role: "user" | "assistant";
-    text: string;
-    complete: boolean;
-    actionState: ActionState;
-    reply?: DemoReply;
-}
 
 const visible = ref(false);
 const draft = ref("");
-const messages = ref<ChatMessage[]>([]);
-const responding = ref(false);
-const currentStep = ref("");
+const now = ref(Date.now());
 const launcherRef = ref<HTMLButtonElement>();
 const inputRef = ref<HTMLTextAreaElement>();
 const conversationRef = ref<HTMLElement>();
-const starterIcons = [DataAnalysis, Star, Present];
-const starterLabels = ["看看班级这一周", "为学生的进步加分", "兑换一份小奖励"];
-const actionStateLabels: Record<ActionState, string> = {
-    pending: "待确认",
-    confirmed: "演示完成",
-    cancelled: "已取消",
-    expired: "已失效",
-};
-const actionResultLabels: Record<ActionState, string> = {
-    pending: "",
-    confirmed: "模拟执行完成 · 真实数据未修改",
-    cancelled: "已取消，本次操作未执行",
-    expired: "已开始新的提问，请重新生成预览",
-};
-let nextMessageId = 0;
-let phaseTimer: number | undefined;
-let streamTimer: number | undefined;
-let activeReply: ChatMessage | undefined;
 let followLatest = true;
+let expiryTimer: number | undefined;
 
-const latestSuggestions = computed(() => messages.value[messages.value.length - 1]?.reply?.suggestions ?? []);
+const chat = useAgentChat(
+    () => ({ userId: props.userId, classId: props.classId, semesterId: props.semesterId }),
+    (action) => {
+        if (props.userId && props.classId && props.semesterId) {
+            notifyAgentActionSucceeded({
+                userId: props.userId,
+                classId: props.classId,
+                semesterId: props.semesterId,
+                kind: action.kind,
+            });
+        }
+    },
+);
+const {
+    conversation, loading, sending, responding, streamConnected, error, actionBusyId, stopping,
+    currentStep, reconnect, cancel,
+} = chat;
+const messages = computed(() => toChatMessages(conversation.value));
+const scopeReady = computed(() => !!props.userId && !!props.classId && !!props.semesterId);
+const canSend = computed(() => scopeReady.value && !loading.value && !sending.value && !responding.value && !actionBusyId.value);
+const statusLabel = computed(() => loading.value ? "同步中" : responding.value ? streamConnected.value ? "回复中" : "连接中" : "随时待命");
+const avatarMood = computed(() => {
+    if (responding.value && messages.value.some((message) => message.role === "assistant" && !message.complete && message.text)) {
+        return "speaking";
+    }
+    return loading.value || sending.value || responding.value ? "thinking" : "idle";
+});
+const starters = [
+    { label: "看看班级这一周", prompt: "总结本周班级积分", icon: DataAnalysis, tone: "agent-starter__icon--0" },
+    { label: "为学生的进步加分", prompt: "给第三组按作业完成规则加分", icon: Star, tone: "agent-starter__icon--1" },
+    { label: "兑换一份小奖励", prompt: "查看可以兑换的奖品", icon: Present, tone: "agent-starter__icon--2" },
+];
+const actionStateLabels: Record<AgentAction["status"], string> = {
+    pending: "待确认", succeeded: "已完成", rejected: "已取消", expired: "已过期",
+};
+const actionResultLabels: Record<AgentAction["status"], string> = {
+    pending: "等待确认", succeeded: "操作已执行", rejected: "已取消，本次操作未执行", expired: "预览已过期，请重新生成",
+};
+const stepLabel = computed(() => sending.value ? "正在发送消息…" : currentStep.value || "正在生成回复…");
 
-function clearTimers() {
-    window.clearTimeout(phaseTimer);
-    window.clearInterval(streamTimer);
-    phaseTimer = undefined;
-    streamTimer = undefined;
+function isExpired(action: AgentAction): boolean {
+    return Date.parse(action.expires_at) <= now.value;
+}
+
+function actionLabel(action: AgentAction): string {
+    if (actionBusyId.value === action.id) return "处理中";
+    if (action.status === "pending" && isExpired(action)) return "已过期";
+    return actionStateLabels[action.status];
+}
+
+function canConfirm(action: AgentAction): boolean {
+    return props.canWrite && scopeReady.value && action.status === "pending" && !isExpired(action)
+        && !loading.value && !responding.value && !sending.value && !actionBusyId.value;
+}
+
+function formatTime(timestamp: string): string {
+    return new Date(timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
 }
 
 async function scrollToLatest() {
     await nextTick();
     if (followLatest && conversationRef.value) {
-        conversationRef.value.scrollTop = conversationRef.value.scrollHeight;
+        conversationRef.value.scrollTop = messages.value.length ? conversationRef.value.scrollHeight : 0;
     }
 }
 
 function handleScroll() {
     const container = conversationRef.value;
-    if (container) {
-        followLatest = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
-    }
+    if (container) followLatest = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
 }
 
-function finishReply() {
-    clearTimers();
-    if (activeReply?.reply) {
-        activeReply.text = activeReply.reply.text;
-        activeReply.complete = true;
-    }
-    activeReply = undefined;
-    responding.value = false;
-    void scrollToLatest();
-}
-
-function stopReply() {
-    clearTimers();
-    if (activeReply) {
-        activeReply.text = activeReply.text ? `${activeReply.text}\n\n已停止生成。` : "已停止生成，你可以继续提问。";
-        activeReply.complete = true;
-        activeReply.reply = undefined;
-    }
-    activeReply = undefined;
-    responding.value = false;
-}
-
-function sendMessage(prompt = draft.value) {
-    const text = prompt.trim().slice(0, 1000);
-    if (!text || responding.value) return;
-    messages.value.forEach((message) => {
-        if (message.reply?.action && message.actionState === "pending") message.actionState = "expired";
-    });
-    draft.value = "";
+async function sendMessage(prompt = draft.value) {
+    if (!canSend.value || !prompt.trim()) return;
+    const originalDraft = draft.value;
     followLatest = true;
-    messages.value.push({ id: ++nextMessageId, role: "user", text, complete: true, actionState: "pending" });
-    const reply = createDemoReply(text, props.className);
-    const message = reactive<ChatMessage>({
-        id: ++nextMessageId, role: "assistant", text: "", complete: false, actionState: "pending", reply,
-    });
-    messages.value.push(message);
-    activeReply = message;
-    responding.value = true;
-    currentStep.value = reply.steps[0] ?? "整理示例数据";
-    void scrollToLatest();
-    phaseTimer = window.setTimeout(() => {
-        currentStep.value = reply.steps[reply.steps.length - 1] ?? "生成回复";
-        streamTimer = window.setInterval(() => {
-            message.text = reply.text.slice(0, message.text.length + 4);
-            void scrollToLatest();
-            if (message.text.length === reply.text.length) finishReply();
-        }, 24);
-    }, 650);
+    if (await chat.send(prompt)) {
+        if (draft.value === originalDraft) draft.value = "";
+        void scrollToLatest();
+    }
 }
 
-function resolveAction(message: ChatMessage, confirmed: boolean) {
-    if (message.actionState !== "pending" || responding.value || !message.reply?.action) return;
-    message.actionState = confirmed ? "confirmed" : "cancelled";
-    messages.value.push({
-        id: ++nextMessageId,
-        role: "assistant",
-        text: confirmed ? message.reply.action.successText : "好的，已取消这次模拟操作。你可以修改需求，或者继续查询班级情况。",
-        complete: true,
-        actionState: "pending",
-    });
+async function startNewConversation() {
     followLatest = true;
-    void scrollToLatest();
+    await chat.newConversation();
+    if (!error.value) draft.value = "";
+}
+
+async function handleActionDecision(action: AgentAction, decision: "confirm" | "reject") {
+    if (loading.value || actionBusyId.value) return;
+    if (decision === "confirm" && !canConfirm(action)) return;
+    await chat.decide(action.id, decision);
 }
 
 function handleInputKeydown(event: KeyboardEvent) {
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing && event.keyCode !== 229) {
         event.preventDefault();
-        sendMessage();
+        void sendMessage();
     }
-}
-
-function resetConversation() {
-    clearTimers();
-    activeReply = undefined;
-    responding.value = false;
-    messages.value = [];
-    draft.value = "";
-    followLatest = true;
 }
 
 function handleOpened() {
@@ -323,8 +343,19 @@ function handleClosed() {
     launcherRef.value?.focus({ preventScroll: true });
 }
 
-watch(() => [props.userId, props.classId, props.semesterId], resetConversation);
-onBeforeUnmount(clearTimers);
+watch(visible, (open) => {
+    window.clearInterval(expiryTimer);
+    if (open) {
+        now.value = Date.now();
+        expiryTimer = window.setInterval(() => { now.value = Date.now(); }, 1000);
+        void chat.open();
+    } else {
+        chat.close();
+    }
+});
+watch(() => [props.userId, props.classId, props.semesterId], () => { draft.value = ""; });
+watch(messages, () => { void scrollToLatest(); }, { deep: true });
+onBeforeUnmount(() => window.clearInterval(expiryTimer));
 </script>
 
 <style scoped>
@@ -336,29 +367,28 @@ onBeforeUnmount(clearTimers);
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 56px;
-    height: 56px;
+    width: 64px;
+    height: 64px;
     padding: 0;
-    border: 1px solid rgba(255, 255, 255, 0.55);
-    border-radius: 20px;
-    color: #fff;
-    background: var(--ta-blue);
-    box-shadow: 0 6px 22px rgba(0, 122, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    border: 1px solid #dbeaff;
+    border-radius: 24px;
+    color: var(--ta-text);
+    background: var(--ta-surface-solid);
+    box-shadow: 0 6px 22px rgba(0, 122, 255, 0.15), inset 0 1px 0 #fff;
     cursor: pointer;
     transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), opacity 160ms ease;
 }
-.agent-launcher > svg {
-    width: 23px;
-    height: 23px;
-}
-.agent-launcher__dot {
+.agent-launcher__label {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #b8f0cf;
+    bottom: -7px;
+    padding: 1px 8px;
+    border: 1px solid #dbeaff;
+    border-radius: 8px;
+    background: var(--ta-surface-solid);
+    color: #315c99;
+    font-size: 10px;
+    font-weight: 650;
+    line-height: 1.5;
 }
 .agent-launcher.is-open {
     opacity: 0;
@@ -368,7 +398,18 @@ onBeforeUnmount(clearTimers);
     transform: scale(0.97);
 }
 :global(.agent-panel-layer) {
+    --el-transition-duration: 280ms;
+    background: transparent;
+    backdrop-filter: none;
+}
+:global(.agent-panel-layer::before) {
+    position: absolute;
+    inset: 0;
+    content: "";
+    background: rgba(0, 0, 0, 0.18);
+    opacity: 1;
     pointer-events: none;
+    transition: opacity var(--el-transition-duration) cubic-bezier(0.32, 0.72, 0, 1);
 }
 :global(.el-drawer.agent-panel) {
     top: 16px;
@@ -382,13 +423,21 @@ onBeforeUnmount(clearTimers);
     pointer-events: auto;
     background: var(--ta-surface-solid);
     box-shadow: 0 16px 60px rgba(29, 29, 31, 0.14), 0 2px 8px rgba(29, 29, 31, 0.04);
-    transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1), opacity 180ms ease;
+    transform: translate3d(0, 0, 0);
+    transition: transform var(--el-transition-duration) cubic-bezier(0.32, 0.72, 0, 1);
 }
 :global(.agent-panel-layer.el-drawer-fade-enter-active), :global(.agent-panel-layer.el-drawer-fade-leave-active) {
-    transition: opacity 260ms ease;
+    /* ElDrawer 在外层判断过渡结束，时长需与抽屉和遮罩同步。 */
+    transition: opacity var(--el-transition-duration) cubic-bezier(0.32, 0.72, 0, 1);
 }
-:global(.agent-panel-layer.el-drawer-fade-leave-active .agent-panel) {
-    transition-duration: 200ms;
+:global(.agent-panel-layer.el-drawer-fade-leave-active) {
+    --el-transition-duration: 200ms;
+}
+:global(.agent-panel-layer.el-drawer-fade-enter-from::before), :global(.agent-panel-layer.el-drawer-fade-leave-to::before) {
+    opacity: 0;
+}
+:global(.agent-panel-layer.el-drawer-fade-enter-from .agent-panel), :global(.agent-panel-layer.el-drawer-fade-leave-to .agent-panel) {
+    transform: translate3d(calc(100% + 32px), 0, 0);
 }
 :global(.agent-panel .el-drawer__header) {
     flex: 0 0 auto;
@@ -411,15 +460,9 @@ onBeforeUnmount(clearTimers);
 .agent-avatar {
     display: grid;
     place-items: center;
-    width: 42px;
-    height: 42px;
-    border-radius: 14px;
-    background: var(--ta-blue-soft);
-    color: var(--ta-blue);
-}
-.agent-avatar svg {
-    width: 23px;
-    height: 23px;
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
 }
 .agent-header__title {
     flex: 1;
@@ -439,7 +482,7 @@ onBeforeUnmount(clearTimers);
     font-size: 12px;
     color: var(--ta-text-tertiary);
 }
-.agent-demo-badge {
+.agent-status-badge {
     padding: 3px 6px;
     border-radius: 5px;
     background: var(--ta-green-soft);
@@ -492,6 +535,132 @@ onBeforeUnmount(clearTimers);
 .agent-context__divider {
     color: #c5c5ca;
 }
+.agent-notice {
+    margin: 12px 20px 0;
+    color: var(--ta-text-secondary);
+    font-size: 12px;
+    line-height: 1.7;
+}
+.agent-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    margin: 12px 20px 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--ta-red-soft);
+    color: var(--ta-red);
+    font-size: 12px;
+    line-height: 1.6;
+}
+.agent-error > svg {
+    flex-shrink: 0;
+    width: 15px;
+    height: 15px;
+    margin-top: 2px;
+}
+.agent-error > span {
+    min-width: 0;
+    flex: 1;
+    overflow-wrap: anywhere;
+}
+.agent-error button {
+    flex-shrink: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 11px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.agent-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 24px 0;
+    color: var(--ta-text-secondary);
+    font-size: 13px;
+}
+.agent-loading > svg {
+    width: 17px;
+    height: 17px;
+    animation: agent-spin 1s linear infinite;
+}
+.agent-message__error {
+    margin: 10px 0 0;
+    color: var(--ta-red);
+    font-size: 12px;
+}
+.agent-query-details {
+    margin-top: 14px;
+}
+.agent-query-details > summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: fit-content;
+    color: var(--ta-text-secondary);
+    font-size: 11px;
+    cursor: pointer;
+    list-style: none;
+}
+.agent-query-details > summary::-webkit-details-marker {
+    display: none;
+}
+.agent-query-details > summary > svg {
+    width: 12px;
+    height: 12px;
+}
+.agent-query-details[open] > summary > svg {
+    transform: rotate(90deg);
+}
+.agent-query-details > summary:focus-visible {
+    outline: 2px solid var(--ta-blue);
+    outline-offset: 4px;
+    border-radius: 4px;
+}
+.agent-query-details__count {
+    color: var(--ta-text-tertiary);
+}
+.agent-action-explanation {
+    margin-top: 12px;
+}
+.agent-data-card {
+    margin-top: 14px;
+}
+.agent-data-card h4 {
+    margin: 0 0 8px;
+    color: var(--ta-text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+}
+.agent-data-card__note {
+    margin: 8px 0 0;
+    color: var(--ta-text-tertiary);
+    font-size: 11px;
+    line-height: 1.7;
+}
+.agent-action__students {
+    margin: 12px 0;
+    background: var(--ta-surface-solid);
+}
+.agent-action > .agent-action__expiry {
+    margin: 10px 0 0;
+    line-height: 1.6;
+}
+.agent-busy-icon {
+    animation: agent-spin 1s linear infinite;
+}
+.agent-icon-button:disabled,
+.agent-starter:disabled,
+.agent-primary-button:disabled,
+.agent-secondary-button:disabled,
+.agent-suggestions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 .agent-conversation {
     min-height: 0;
     flex: 1;
@@ -507,18 +676,9 @@ onBeforeUnmount(clearTimers);
 .agent-welcome__mark {
     display: grid;
     place-items: center;
-    width: 56px;
-    height: 56px;
-    margin-bottom: 23px;
-    border: 1px solid #dcecff;
-    border-radius: 18px;
-    color: var(--ta-blue);
-    background: linear-gradient(145deg, #f2f8ff, #e6f2ff);
-    box-shadow: inset 0 1px 0 #fff;
-}
-.agent-welcome__mark svg {
-    width: 29px;
-    height: 29px;
+    width: 76px;
+    height: 76px;
+    margin-bottom: 16px;
 }
 .agent-eyebrow {
     color: var(--ta-text-tertiary);
@@ -637,24 +797,8 @@ onBeforeUnmount(clearTimers);
     font-size: 12px;
     font-weight: 650;
 }
-.agent-message__sender svg {
-    width: 17px;
-    height: 17px;
-    color: var(--ta-blue);
-}
-.agent-tool-status {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin-bottom: 10px;
-    color: var(--ta-text-tertiary);
-    font-size: 11px;
-}
-.agent-tool-status svg {
-    width: 13px;
-    height: 13px;
-    color: var(--ta-green);
-}
+
+
 .agent-stats {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -736,12 +880,7 @@ onBeforeUnmount(clearTimers);
     font-weight: 600;
     color: var(--ta-green);
 }
-.agent-data-row__rank {
-    width: 12px;
-    color: #aaaab0;
-    font-size: 10px;
-    text-align: right;
-}
+
 .agent-action {
     margin-top: 14px;
     padding: 15px;
@@ -844,10 +983,10 @@ onBeforeUnmount(clearTimers);
     width: 14px;
     height: 14px;
 }
-.agent-action.is-confirmed .agent-action__result {
+.agent-action.is-succeeded .agent-action__result {
     color: var(--ta-green);
 }
-.agent-action.is-cancelled, .agent-action.is-expired {
+.agent-action.is-rejected, .agent-action.is-expired {
     border-color: var(--ta-line);
     background: #fafafb;
 }
@@ -989,7 +1128,7 @@ onBeforeUnmount(clearTimers);
     font-size: 9px;
     color: var(--ta-text-tertiary);
 }
-.agent-demo-note {
+.agent-data-note {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -999,7 +1138,7 @@ onBeforeUnmount(clearTimers);
     line-height: 1.5;
     color: var(--ta-text-tertiary);
 }
-.agent-demo-note svg {
+.agent-data-note svg {
     width: 11px;
     height: 11px;
     flex-shrink: 0;
@@ -1013,19 +1152,19 @@ onBeforeUnmount(clearTimers);
     .agent-launcher:hover {
         transform: translateY(-2px);
     }
-    .agent-icon-button:hover {
+    .agent-icon-button:not(:disabled):hover {
         background: var(--ta-surface-muted);
         color: var(--ta-text);
     }
-    .agent-starter:hover {
+    .agent-starter:not(:disabled):hover {
         border-color: #b8d8ff;
         background: #f8fbff;
     }
-    .agent-suggestions button:hover {
+    .agent-suggestions button:not(:disabled):hover {
         color: var(--ta-blue);
         border-color: #b8d8ff;
     }
-    .agent-primary-button:hover, .agent-send-button:not(:disabled):hover {
+    .agent-primary-button:not(:disabled):hover, .agent-send-button:not(:disabled):hover {
         background: var(--ta-blue-hover);
     }
 }
@@ -1033,13 +1172,10 @@ onBeforeUnmount(clearTimers);
     .agent-launcher {
         right: 20px;
         bottom: calc(92px + env(safe-area-inset-bottom));
-        width: 54px;
-        height: 54px;
+        width: 60px;
+        height: 60px;
         padding: 0;
-        border-radius: 18px;
-    }
-    .agent-launcher__dot {
-        display: none;
+        border-radius: 22px;
     }
 }
 @media (max-width: 520px) {
@@ -1104,7 +1240,7 @@ onBeforeUnmount(clearTimers);
     .agent-launcher:hover, .agent-launcher:active, .agent-send-button:active {
         transform: none;
     }
-    .agent-thinking > svg {
+    .agent-thinking > svg, .agent-loading > svg, .agent-busy-icon {
         animation: none;
     }
 }

@@ -145,6 +145,7 @@ import { ApiRequestError } from "@/types/api";
 import { pointsManager } from "@/managers/points";
 import { studentManager } from "@/managers/student";
 import { useCacheStore } from "@/stores/cacheStore";
+import { AGENT_ACTION_SUCCEEDED_EVENT, type AgentActionSucceededDetail } from "@/utils/agentEvents";
 import type { RuleGroup } from "@/types/points";
 import type {
     ApiGender,
@@ -236,9 +237,20 @@ function syncCompactViewport(): void {
     }
 }
 
-onMounted(() => compactViewport.addEventListener("change", syncCompactViewport))
+function handleAgentActionSucceeded(event: CustomEvent<AgentActionSucceededDetail>): void {
+    const scope = event.detail
+    if (scope.userId !== cacheStore.profile?.id || scope.classId !== cacheStore.getActiveClassId()
+        || scope.semesterId !== cacheStore.getActiveSemesterId()) return
+    void loadStudentData()
+}
+
+onMounted(() => {
+    compactViewport.addEventListener("change", syncCompactViewport)
+    window.addEventListener(AGENT_ACTION_SUCCEEDED_EVENT, handleAgentActionSucceeded)
+})
 onBeforeUnmount(() => {
     compactViewport.removeEventListener("change", syncCompactViewport)
+    window.removeEventListener(AGENT_ACTION_SUCCEEDED_EVENT, handleAgentActionSucceeded)
     studentsViewActive = false
     studentLoadRequestId += 1
 })

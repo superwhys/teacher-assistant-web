@@ -242,6 +242,56 @@ async function requestBlob(
     return blob;
 }
 
+/** 事件流沿用统一鉴权和业务错误处理，消费端负责 SSE 协议解析。 */
+async function requestStream(url: string, signal?: AbortSignal) {
+    const cacheStore = useCacheStore();
+    const authToken = cacheStore.token;
+    const assertCurrentSession = () => {
+        signal?.throwIfAborted();
+        if (cacheStore.token !== authToken) throw new ApiRequestError("账号已切换，请刷新页面");
+    };
+    const handleBusinessResponse = (payload: unknown) => {
+        assertCurrentSession();
+        if (!payload || typeof payload !== "object"
+            || !("code" in payload) || typeof payload.code !== "number"
+            || !("message" in payload) || typeof payload.message !== "string") {
+            throw new ApiRequestError("服务器返回了无效响应，请重试");
+        }
+        return handleResponse(payload as ApiResponse<unknown>, authToken);
+    };
+
+    assertCurrentSession();
+    assertCommercialAccess(url, "GET", authToken);
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+        method: "GET",
+        headers: buildHeaders(authToken, { Accept: "text/event-stream" }),
+        signal,
+    });
+    assertCurrentSession();
+    if (response.status === 401) {
+        const failure = await safeParseJson<unknown>(response);
+        assertCurrentSession();
+        handleUnauthorized(cacheStore, typeof failure?.message === "string" ? failure.message : undefined, authToken);
+    }
+    if (response.status === 403) {
+        const failure = await safeParseJson<unknown>(response);
+        assertCurrentSession();
+        handlePermissionDenied(typeof failure?.message === "string" ? failure.message : undefined,
+            typeof failure?.code === "number" ? failure.code : PERMISSION_DENIED_CODE, authToken);
+    }
+    if (!response.ok) {
+        const failure = await safeParseJson<unknown>(response);
+        if (failure) handleBusinessResponse(failure);
+        throw new ApiRequestError(`请求失败（HTTP ${response.status}），请重试`);
+    }
+    if (response.headers.get("Content-Type")?.split(";")[0]?.trim().toLowerCase() !== "text/event-stream") {
+        handleBusinessResponse(await safeParseJson<unknown>(response));
+        throw new ApiRequestError("服务器未返回事件流，请重试");
+    }
+    if (!response.body) throw new ApiRequestError("事件流连接已中断，请重试");
+    return { body: response.body, assertCurrentSession, handleBusinessResponse };
+}
+
 /**
  * 发送 GET 请求。
  */
@@ -301,4 +351,4 @@ function del<T>(url: string): Promise<ApiResponse<T>> {
     return request<T>(url, { method: "DELETE" });
 }
 
-export { get, post, postBlob, put, del };
+export { get, post, postBlob, put, del, requestStream };

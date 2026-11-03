@@ -29,6 +29,17 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('commercial request boundary', () => {
+    it('permits Agent transport posts at expiry while retaining the business write boundary', async () => {
+        mocks.cache.profile = profile('trial_expired')
+        mocks.fetch.mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ code: 0, data: null }), { status: 200 })))
+        for (const path of ['/agent/conversations', '/agent/conversations/conversation/runs', '/agent/runs/run/cancel', '/agent/actions/action/decision']) {
+            await post(path, {})
+        }
+        expect(mocks.fetch).toHaveBeenCalledTimes(4)
+        await expect(post('/agent/runs/run/execute', {})).rejects.toMatchObject({ code: 200402 })
+        await expect(post('/points/rule/apply', {})).rejects.toMatchObject({ code: 200402 })
+        expect(mocks.fetch).toHaveBeenCalledTimes(4)
+    })
     it('rejects an old download response after switching accounts', async () => {
         let finish!: (blob: Blob) => void
         mocks.fetch.mockResolvedValue({ status: 200, ok: true, blob: () => new Promise<Blob>(resolve => { finish = resolve }) })

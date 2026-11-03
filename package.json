@@ -15,6 +15,7 @@
     "element-plus": "^2.11.2",
     "html2canvas": "^1.4.1",
     "localforage": "^1.10.0",
+    "markdown-it": "^15.0.3",
     "pinia": "^3.0.3",
     "pinia-plugin-persistedstate": "^4.7.1",
     "pinyin-pro": "^3.27.0",
@@ -26,6 +27,7 @@
   "devDependencies": {
     "@iconify-json/ep": "^1.2.3",
     "@iconify-json/si": "^1.2.13",
+    "@types/markdown-it": "^14.2.0",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/tsconfig": "^0.8.1",
     "typescript": "~5.8.3",

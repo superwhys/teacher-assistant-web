@@ -10,6 +10,24 @@ function profile(state: UserEntitlement['state'], deadline: string | null = null
 }
 
 describe('independent commercial access', () => {
+    it.each(['not_started', 'trial_expired', 'paid_expired'] as const)('allows only the six Agent transports when commercial state is %s', state => {
+        const teacher = profile(state)
+        for (const [method, path] of [
+            ['POST', '/agent/conversations'], ['GET', '/agent/conversations/conversation'],
+            ['POST', '/agent/conversations/conversation/runs'], ['GET', '/agent/runs/run/events?after_event_id=4'],
+            ['POST', '/agent/runs/run/cancel'], ['POST', '/agent/actions/action/decision'],
+        ]) {
+            expect(allowsEntitlementRequest(teacher, method!, path!, now)).toBe(true)
+        }
+        for (const [method, path] of [
+            ['POST', '/agent/future-write'], ['POST', '/agent/conversations/conversation/delete'],
+            ['GET', '/agent/actions/action'], ['GET', '/agent/runs/run/events/export'],
+            ['DELETE', '/agent/conversations/conversation'], ['PUT', '/agent/actions/action/decision'],
+            ['POST', '/agent/runs/run/events'], ['POST', '/points/rule/apply'],
+        ]) {
+            expect(allowsEntitlementRequest(teacher, method!, path!, now)).toBe(false)
+        }
+    })
     it('uses the server deadline and never invents seven days from registration or a role', () => {
         const teacher = normalizeUserProfile({ id: 'teacher', role_id: 7, created_at: '2020-01-01T00:00:00Z', entitlement: profile('trial_active', '2026-11-16T00:00:00Z').entitlement })
         expect(computeTrialFromProfile(teacher)).toEqual({ trial: true, expiresAt: Date.parse('2026-11-16T00:00:00Z') / 1000 })

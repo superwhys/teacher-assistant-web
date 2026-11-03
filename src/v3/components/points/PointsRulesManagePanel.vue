@@ -186,6 +186,15 @@
         <div v-else class="empty-state">
             <strong>还没有积分规则</strong>
             <p>可以先新增规则组，或者直接通过 Excel 批量导入积分项。</p>
+            <button
+                type="button"
+                class="primary-button primary-button--small"
+                :disabled="!canMutatePoints"
+                @click="emit('create-group')"
+            >
+                <i-ep-plus />
+                <span>新增规则组</span>
+            </button>
         </div>
     </section>
 </template>
@@ -386,7 +395,8 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
     opacity: 0.42;
 }
 
-.rule-shell {
+.rule-shell,
+.rules-panel > .empty-state {
     margin-top: 14px;
 }
 

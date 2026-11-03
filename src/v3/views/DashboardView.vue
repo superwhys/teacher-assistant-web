@@ -17,7 +17,7 @@
             </article>
         </section>
 
-        <section class="panel-grid">
+        <section :key="agentRefreshVersion" class="panel-grid">
             <DashboardRankingPanel :active-class-id="currentClassId" :current-semester-id="currentSemesterId" />
             <DashboardRecentRecordsPanel :active-class-id="currentClassId"
                 :current-semester-id="currentSemesterId" />
@@ -31,7 +31,8 @@ import DashboardRecentRecordsPanel from "@/v3/components/DashboardRecentRecordsP
 import { dashboardApi } from "@/api/dashboard";
 import { useCacheStore } from "@/stores/cacheStore";
 import type { DashboardStatisticsResp } from "@/types/dashboard";
-import { computed, reactive, watch } from "vue";
+import { AGENT_ACTION_SUCCEEDED_EVENT, type AgentActionSucceededDetail } from "@/utils/agentEvents";
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 
 /** 定义状态标签结构。 */
 interface ChipItem {
@@ -83,6 +84,22 @@ const summaryCardConfigs: SummaryCardConfig[] = [
 const cacheStore = useCacheStore()
 const currentClassId = computed<number | null>(() => cacheStore.getActiveClassId())
 const currentSemesterId = computed<number | null>(() => cacheStore.getActiveSemesterId())
+const agentRefreshVersion = ref(0)
+let summaryRequestId = 0
+
+function handleAgentActionSucceeded(event: CustomEvent<AgentActionSucceededDetail>): void {
+    const scope = event.detail
+    if (scope.userId !== cacheStore.profile?.id || scope.classId !== currentClassId.value
+        || scope.semesterId !== currentSemesterId.value) return
+    agentRefreshVersion.value += 1
+    void loadDashboardSummary()
+}
+
+onMounted(() => window.addEventListener(AGENT_ACTION_SUCCEEDED_EVENT, handleAgentActionSucceeded))
+onBeforeUnmount(() => {
+    window.removeEventListener(AGENT_ACTION_SUCCEEDED_EVENT, handleAgentActionSucceeded)
+    summaryRequestId += 1
+})
 
 /** 创建首页空白摘要数据。 */
 function createEmptyDashboardSummaryResponse(): DashboardSummaryResponseData {
@@ -113,18 +130,23 @@ function applyDashboardSummaryResponse(data?: DashboardStatisticsResp): void {
 
 /** 加载首页摘要接口数据。 */
 async function loadDashboardSummary(): Promise<void> {
+    const requestId = ++summaryRequestId
+    const scope = { userId: cacheStore.profile?.id, classId: currentClassId.value, semesterId: currentSemesterId.value }
+    const isCurrent = () => requestId === summaryRequestId && scope.userId === cacheStore.profile?.id
+        && scope.classId === currentClassId.value && scope.semesterId === currentSemesterId.value
     try {
-        const classId = currentClassId.value
-        if (!classId) {
+        if (!scope.classId) {
             applyDashboardSummaryResponse(undefined)
             return
         }
 
         const response = await dashboardApi.getStatistics({
-            class_id: classId,
+            class_id: scope.classId,
         })
+        if (!isCurrent()) return
         applyDashboardSummaryResponse(response.data)
     } catch (error) {
+        if (!isCurrent()) return
         console.error("获取首页统计数据失败", error)
     }
 }

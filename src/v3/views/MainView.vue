@@ -127,10 +127,11 @@
                 </RouterLink>
             </nav>
 
-            <AgentAssistant v-if="cacheStore.isAuthenticated && !cacheStore.isLocked"
+            <AgentAssistant v-if="sessionStore.canUseAgent && cacheStore.isAuthenticated && !cacheStore.isLocked"
                 :class-id="activeClassId" :class-name="currentClassName"
                 :semester-id="currentSemesterId" :semester-name="currentSemesterName"
-                :user-id="cacheStore.profile?.id" />
+                :user-id="cacheStore.profile?.id"
+                :can-write="sessionStore.canWrite && currentSemesterStatus === 1" />
 
             <div v-if="cacheStore.isAuthenticated && unlockDialogVisible" class="lock-overlay">
                 <div class="lock-card">

@@ -53,6 +53,59 @@ beforeEach(() => {
 })
 afterEach(() => { disposePinia(pinia); vi.useRealTimers(); vi.unstubAllGlobals() })
 
+describe('AI assistant module access', () => {
+    it('requires the agent menu and keeps the global assistant out of navigation', async () => {
+        const session = useSessionStore()
+        expect(session.canUseAgent).toBe(false)
+        await session.initialize()
+        expect(session.canUseAgent).toBe(false)
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['agent', 'students']))
+        await session.initialize(true)
+        expect(session.canUseAgent).toBe(true)
+        expect(session.sidebar.map(item => item.code)).toEqual(['students'])
+        expect(session.firstRoute).toBe('/students')
+        expect(session.canAccess('/agent')).toBe(false)
+    })
+
+    it('does not turn an assistant-only grant into a nonexistent page', async () => {
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['agent']))
+        const session = useSessionStore()
+        await session.initialize()
+        expect(session.canUseAgent).toBe(true)
+        expect(session.sidebar).toEqual([])
+        expect(session.firstRoute).toBeNull()
+    })
+
+    it('keeps assistant access during preparation while retaining write restrictions', async () => {
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile('not_started'), ['agent', 'students', 'points']))
+        const session = useSessionStore()
+        await session.initialize()
+        expect(session.canUseAgent).toBe(true)
+        expect(session.canWrite).toBe(false)
+        expect(session.sidebar.map(item => item.code)).toEqual(['students'])
+    })
+
+    it('revokes assistant access after refreshed role menus remove it', async () => {
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['agent', 'dashboard']))
+        const session = useSessionStore()
+        await session.initialize()
+        expect(session.canUseAgent).toBe(true)
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse())
+        await session.initialize(true)
+        expect(session.canUseAgent).toBe(false)
+    })
+
+    it('clears assistant access immediately when the account changes', async () => {
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['agent', 'dashboard']))
+        const session = useSessionStore()
+        await session.initialize()
+        expect(session.canUseAgent).toBe(true)
+        mocks.cache.token = 'another-session'
+        expect(session.canUseAgent).toBe(false)
+        expect(session.initialized).toBe(false)
+    })
+})
+
 describe('commercial session permissions', () => {
     it('does not let an older active snapshot undo a commercial rejection', async () => {
         const browser = new EventTarget()

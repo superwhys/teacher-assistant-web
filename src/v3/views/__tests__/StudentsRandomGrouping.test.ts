@@ -3,6 +3,7 @@ import { createRenderer, nextTick, reactive, ssrContextKey, type App } from 'vue
 import StudentsView from '../StudentsView.vue'
 import { ApiRequestError } from '@/types/api'
 import type { ApplyRandomGroupsReq, StudentDTO, StudentGroupDTO } from '@/types/student'
+import { notifyAgentActionSucceeded } from '@/utils/agentEvents'
 
 const mocks = vi.hoisted(() => ({
     list: vi.fn(),
@@ -110,9 +111,13 @@ async function mountStudents(): Promise<StudentsState> {
 beforeEach(() => {
     Object.assign(businessSession, { canWrite: true, canPrepare: true, canImportExport: true })
     vi.resetAllMocks()
-    vi.stubGlobal('window', { matchMedia: () => ({
-        matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn(),
-    }) })
+    const events = new EventTarget()
+    vi.stubGlobal('window', {
+        addEventListener: events.addEventListener.bind(events),
+        removeEventListener: events.removeEventListener.bind(events),
+        dispatchEvent: events.dispatchEvent.bind(events),
+        matchMedia: () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }),
+    })
     mocks.cache = reactive({
         classId: 7,
         getActiveClassId() { return this.classId },
@@ -135,6 +140,24 @@ afterEach(() => {
 })
 
 describe('StudentsView random grouping', () => {
+    it('refreshes only the matching agent action scope and removes its listener on unmount', async () => {
+        await mountStudents()
+        mocks.list.mockClear()
+        const scope = { userId: 'teacher', classId: 7, semesterId: 70, kind: 'points' as const }
+        notifyAgentActionSucceeded({ ...scope, userId: 'other' })
+        notifyAgentActionSucceeded({ ...scope, classId: 8 })
+        notifyAgentActionSucceeded({ ...scope, semesterId: 71 })
+        expect(mocks.list).not.toHaveBeenCalled()
+        notifyAgentActionSucceeded(scope)
+        expect(mocks.list).toHaveBeenCalledTimes(1)
+        await nextTick()
+        app?.unmount()
+        app = undefined
+        notifyAgentActionSucceeded(scope)
+        expect(mocks.list).toHaveBeenCalledTimes(1)
+        expect(mocks.bumpDataVersion).not.toHaveBeenCalled()
+    })
+
     it('releases loading when saving replaces an in-flight refresh and ignores the stale response', async () => {
         const state = await mountStudents()
         const saving = deferred<StudentGroupDTO[]>()

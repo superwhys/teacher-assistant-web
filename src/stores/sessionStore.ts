@@ -35,11 +35,13 @@ export const useSessionStore = defineStore('session', () => {
     const isPreparation = computed(() => entitlementState.value === 'not_started')
     const isReadOnly = computed(() => !canPrepare.value)
     const entitlementMessage = computed(() => describeEntitlement(entitlementState.value))
+    const canUseAgent = computed(() => allSidebar.value.some(menu => menu.code === 'agent'))
     const sidebar = computed(() => {
+        const menus = allSidebar.value.filter(menu => menu.code !== 'agent')
         if (isPreparation.value || entitlementState.value === 'unavailable') {
-            return allSidebar.value.filter(menu => menu.route_key === 'students' || menu.route_key === 'settings')
+            return menus.filter(menu => menu.route_key === 'students' || menu.route_key === 'settings')
         }
-        return allSidebar.value
+        return menus
     })
     const firstRoute = computed(() => firstAllowedPath(sidebar.value))
 
@@ -193,7 +195,7 @@ export const useSessionStore = defineStore('session', () => {
     onScopeDispose(() => clearTimeout(deadlineTimer))
 
     return {
-        sidebar, role, initialized, loading, error, firstRoute, initialize, reset, canAccess,
+        sidebar, role, initialized, loading, error, firstRoute, initialize, reset, canAccess, canUseAgent,
         entitlementState, trialExpiresAt, paidExpiresAt, canWrite, canPrepare, canImportExport,
         isPreparation, isReadOnly, entitlementMessage, startingTrial, startTrial,
     }

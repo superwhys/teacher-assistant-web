@@ -4,7 +4,7 @@
             <h3>奖品</h3>
             <div class="prize-section__actions">
                 <button type="button" class="prize-section__toggle" :aria-pressed="showProbability"
-                    @click="showProbability = !showProbability">
+                    @click="toggleProbability">
                     {{ showProbability ? "隐藏概率" : "显示概率" }}
                 </button>
                 <span class="prize-section__count">{{ prizes.length }}</span>
@@ -42,12 +42,32 @@ interface ToolsLotteryPoolPanelProps {
 
 defineProps<ToolsLotteryPoolPanelProps>()
 
-const showProbability = ref(true)
+const PROBABILITY_STORAGE_KEY = "ta_lottery_show_probability_v1"
+const showProbability = ref(readShowProbability())
 
 const emit = defineEmits<{
     (e: "editPrize", item: UiLotteryPrize): void
     (e: "togglePrize", item: UiLotteryPrize): void
 }>()
+
+/** 读取本地保存的概率显示状态。 */
+function readShowProbability(): boolean {
+    try {
+        return window.localStorage.getItem(PROBABILITY_STORAGE_KEY) === "1"
+    } catch {
+        return false
+    }
+}
+
+/** 切换概率显示状态并保存到本地。 */
+function toggleProbability(): void {
+    showProbability.value = !showProbability.value
+    try {
+        window.localStorage.setItem(PROBABILITY_STORAGE_KEY, showProbability.value ? "1" : "0")
+    } catch {
+        return
+    }
+}
 </script>
 
 <style scoped>

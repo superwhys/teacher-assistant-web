@@ -127,6 +127,11 @@
                 </RouterLink>
             </nav>
 
+            <AgentAssistant v-if="cacheStore.isAuthenticated && !cacheStore.isLocked"
+                :class-id="activeClassId" :class-name="currentClassName"
+                :semester-id="currentSemesterId" :semester-name="currentSemesterName"
+                :user-id="cacheStore.profile?.id" />
+
             <div v-if="cacheStore.isAuthenticated && unlockDialogVisible" class="lock-overlay">
                 <div class="lock-card">
                     <div class="lock-card__icon"><Lock /></div>
@@ -174,6 +179,7 @@
 <script setup lang="ts">
 import { ArrowDown, Expand, Fold, HomeFilled, Lock, Menu, Present, Setting, StarFilled, Timer, Tools, UserFilled } from "@element-plus/icons-vue";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
+import AgentAssistant from "@/v3/components/agent/AgentAssistant.vue";
 import AppNoticeBar from "@/v3/components/AppNoticeBar.vue";
 import AccountEntitlementNotice from "@/v3/components/settings/AccountEntitlementNotice.vue";
 import ClassSwitchButton from "@/v3/components/ClassSwitchButton.vue";

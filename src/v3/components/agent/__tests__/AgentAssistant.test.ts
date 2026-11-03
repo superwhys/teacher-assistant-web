@@ -1,19 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRenderer, createSSRApp, nextTick, ref, ssrContextKey, type App } from "vue";
 import { renderToString } from "vue/server-renderer";
-import type { AgentAction, AgentConversation } from "@/types/agent";
+import type { AgentAction, AgentConversation, AgentRun } from "@/types/agent";
 import type { AgentChatMessage } from "../agentPresentation";
 import AgentAssistant from "../AgentAssistant.vue";
+import AgentConversationHistory from "../AgentConversationHistory.vue";
 
 const mocks = vi.hoisted(() => ({
     open: vi.fn(), close: vi.fn(), cancel: vi.fn(), send: vi.fn(), decide: vi.fn(),
-    reconnect: vi.fn(), newConversation: vi.fn(),
+    reconnect: vi.fn(), newConversation: vi.fn(), loadHistory: vi.fn(), selectConversation: vi.fn(),
 }));
 
 const chatState = {
     conversation: ref<AgentConversation | null>(null), loading: ref(false), sending: ref(false),
     responding: ref(false), streamConnected: ref(false), error: ref(""), actionBusyId: ref(""),
     stopping: ref(false), currentStep: ref(""),
+    history: ref<{ id: string; title: string; created_at: string }[]>([]), historyLoading: ref(false),
+    historyError: ref(""), historyHasMore: ref(false),
 };
 
 vi.mock("@/v3/composables/useAgentChat", () => ({
@@ -24,7 +27,7 @@ vi.mock("element-plus", async () => {
     return {
         ElDrawer: defineComponent({
             setup(_, { slots }) {
-                return () => slots.default?.();
+                return () => [slots.header?.(), slots.default?.()];
             },
         }),
     };
@@ -34,6 +37,7 @@ vi.mock("element-plus/es/components/drawer/style/css", () => ({}));
 
 interface AssistantState {
     visible: boolean;
+    historyVisible: boolean;
     draft: string;
     messages: AgentChatMessage[];
     starters: { label: string; prompt: string }[];
@@ -41,6 +45,11 @@ interface AssistantState {
     canConfirm(action: AgentAction): boolean;
     actionLabel(action: AgentAction): string;
     handleActionDecision(action: AgentAction, decision: "confirm" | "reject"): Promise<void>;
+    canSwitchConversation: boolean;
+    openHistory(): Promise<void>;
+    closeHistory(): void;
+    selectConversation(id: string): Promise<void>;
+    startNewConversation(): Promise<void>;
 }
 
 // Exercise the real component setup, lifecycle and click handlers without a browser drawer.
@@ -95,6 +104,10 @@ beforeEach(() => {
     chatState.actionBusyId.value = "";
     chatState.stopping.value = false;
     chatState.currentStep.value = "";
+    chatState.history.value = [];
+    chatState.historyLoading.value = false;
+    chatState.historyError.value = "";
+    chatState.historyHasMore.value = false;
     vi.stubGlobal("window", {
         clearInterval: globalThis.clearInterval, setInterval: globalThis.setInterval,
     });
@@ -109,6 +122,83 @@ afterEach(() => {
 });
 
 describe("AgentAssistant server interaction", () => {
+    it("opens history inside the assistant and returns without cancelling a running reply", async () => {
+        const state = mountAssistant();
+        chatState.responding.value = true;
+        state.draft = "未发送的内容";
+        await state.openHistory();
+        expect(state.historyVisible).toBe(true);
+        expect(mocks.loadHistory).toHaveBeenCalledExactlyOnceWith();
+        state.closeHistory();
+        expect(state.historyVisible).toBe(false);
+        expect(state.draft).toBe("未发送的内容");
+        expect(mocks.cancel).not.toHaveBeenCalled();
+    });
+
+    it.each([false, true])("only leaves history and clears the draft after a successful selection (%s)", async (success) => {
+        const state = mountAssistant();
+        state.draft = "未发送的内容";
+        await state.openHistory();
+        mocks.selectConversation.mockResolvedValueOnce(success);
+        await state.selectConversation("earlier-conversation");
+        expect(mocks.selectConversation).toHaveBeenCalledExactlyOnceWith("earlier-conversation");
+        expect(state.historyVisible).toBe(!success);
+        expect(state.draft).toBe(success ? "" : "未发送的内容");
+        expect(mocks.cancel).not.toHaveBeenCalled();
+    });
+
+    it.each(["loading", "sending", "stopping", "actionBusyId"] as const)("blocks conversation switching during %s", async (busy) => {
+        const state = mountAssistant();
+        if (busy === "actionBusyId") chatState.actionBusyId.value = "action";
+        else chatState[busy].value = true;
+        expect(state.canSwitchConversation).toBe(false);
+        await state.openHistory();
+        await state.selectConversation("earlier-conversation");
+        await state.startNewConversation();
+        expect(mocks.loadHistory).not.toHaveBeenCalled();
+        expect(mocks.selectConversation).not.toHaveBeenCalled();
+        expect(mocks.newConversation).not.toHaveBeenCalled();
+    });
+
+    it("returns to the conversation after creating a new conversation", async () => {
+        const state = mountAssistant();
+        await state.openHistory();
+        state.draft = "未发送的内容";
+        await state.startNewConversation();
+        expect(state.historyVisible).toBe(false);
+        expect(state.draft).toBe("");
+        expect(mocks.newConversation).toHaveBeenCalledOnce();
+    });
+
+    it("renders history in place of the conversation and composer while retaining class context", async () => {
+        const state = mountAssistant();
+        function renderState() {
+            return renderToString(createSSRApp({ ...AgentAssistant, setup: () => state }, {
+                userId: "teacher", classId: 7, semesterId: 70,
+            }));
+        }
+        expect(await renderState()).toContain('class="agent-composer"');
+        await state.openHistory();
+        expect(state.historyVisible).toBe(true);
+        const history = await renderState();
+        expect(history).not.toContain('class="agent-composer"');
+        expect(history).not.toContain('class="agent-conversation"');
+        expect(history).toContain('class="agent-context"');
+        expect(history).toContain('aria-label="历史对话" aria-busy="false"');
+        state.closeHistory();
+        expect(await renderState()).toContain('class="agent-composer"');
+    });
+
+    it.each(["userId", "classId", "semesterId"])("closes history when %s changes", async (key) => {
+        const state = mountAssistant();
+        await state.openHistory();
+        state.draft = "旧上下文的草稿";
+        app!._instance!.props[key] = key === "userId" ? "other-teacher" : 99;
+        await nextTick();
+        expect(state.historyVisible).toBe(false);
+        expect(state.draft).toBe("");
+    });
+
     it("sends the progress starter without choosing a group or rule for the teacher", async () => {
         const state = mountAssistant();
         mocks.send.mockResolvedValueOnce(true);
@@ -194,13 +284,69 @@ describe("AgentAssistant server interaction", () => {
     });
 });
 
+describe("AgentAssistant history display", () => {
+    function renderHistory(props: Partial<InstanceType<typeof AgentConversationHistory>["$props"]> = {}) {
+        return renderToString(createSSRApp(AgentConversationHistory, {
+            items: [], loading: false, error: "", hasMore: false, disabled: false, ...props,
+        }));
+    }
+
+    it("shows an accessible history button in the assistant header", async () => {
+        const html = await renderToString(createSSRApp(AgentAssistant, {
+            userId: "teacher", classId: 7, semesterId: 70,
+        }));
+        expect(html).toContain('aria-label="历史对话"');
+        expect(html).toContain('title="历史对话"');
+        expect(html).toContain('aria-pressed="false"');
+    });
+
+    it("distinguishes empty history from initial loading and errors", async () => {
+        expect(await renderHistory()).toContain("还没有历史对话");
+        const loading = await renderHistory({ loading: true });
+        expect(loading).toContain("正在加载历史对话…");
+        expect(loading).not.toContain("还没有历史对话");
+        const failed = await renderHistory({ error: "历史对话加载失败" });
+        expect(failed).toContain("历史对话加载失败");
+        expect(failed).toContain("重新加载");
+        expect(failed).not.toContain("还没有历史对话");
+    });
+
+    it("shows titles, timestamps, the current conversation and a load-more entry", async () => {
+        const html = await renderHistory({
+            currentId: "current", hasMore: true,
+            items: [
+                { id: "current", title: "总结本周班级积分", created_at: "2026-11-03T10:00:00+08:00" },
+                { id: "old", title: "查看可以兑换的奖品", created_at: "2026-11-02T09:00:00+08:00" },
+            ],
+        });
+        expect(html).toContain("总结本周班级积分");
+        expect(html).toContain("查看可以兑换的奖品");
+        expect(html).toContain('datetime="2026-11-03T10:00:00+08:00"');
+        expect(html).toContain('aria-current="true"');
+        expect(html.match(/当前对话<\/span>/g)).toHaveLength(1);
+        expect(html).toContain("加载更多");
+        expect(html).toContain("返回当前对话");
+    });
+
+    it("retains loaded conversations and offers retry when another page fails", async () => {
+        const html = await renderHistory({
+            items: [{ id: "old", title: "之前的对话", created_at: "2026-11-02T09:00:00+08:00" }],
+            hasMore: true, error: "加载更多失败",
+        });
+        expect(html).toContain("之前的对话");
+        expect(html).toContain("加载更多失败");
+        expect(html).toContain("重新加载");
+    });
+});
+
 describe("AgentAssistant result display", () => {
-    function setReply(text: string, action?: AgentAction) {
+    function setReply(text: string, action?: AgentAction, runFields: Partial<AgentRun> = {}) {
         chatState.conversation.value = {
             id: "conversation", class_id: 7, semester_id: 70,
             messages: text ? [{ id: "assistant", run_id: "run", role: "assistant", content: text,
                 created_at: "2026-11-03T10:00:00+08:00" }] : [],
-            runs: [{ id: "run", status: "completed", last_event_id: 1, created_at: "2026-11-03T10:00:00+08:00" }],
+            runs: [{ id: "run", status: "completed", last_event_id: 1,
+                created_at: "2026-11-03T10:00:00+08:00", ...runFields }],
             results: [{ run_id: "run", data: { tool: "query_points_summary", result: {
                 awarded: 10, deducted: 0, net_change: 10, records: 2, participating_students: 2,
             } } }],
@@ -222,6 +368,31 @@ describe("AgentAssistant result display", () => {
         expect(html).toContain("<table>");
         expect(html).toContain("查询详情");
         expect(html.match(/<details\b[^>]*>/)?.[0]).not.toMatch(/\bopen(?:[\s=>])/);
+    });
+
+    it("shows the completed reply duration beneath the collapsed query details", async () => {
+        setReply("查询完成。", undefined, { duration_ms: 12340 });
+        const html = await renderAssistant();
+        expect(html).toContain("耗时 12.3 秒");
+        expect(html.match(/耗时 /g)).toHaveLength(1);
+        expect(html.indexOf("耗时 12.3 秒")).toBeGreaterThan(html.indexOf("</details>"));
+    });
+
+    it.each(["query", "action"])("shows duration for a completed %s card without reply text", async (kind) => {
+        setReply("", kind === "action" ? pendingAction() : undefined, { duration_ms: 68000 });
+        const html = await renderAssistant();
+        expect(html).toContain("耗时 1 分 8 秒");
+        expect(html.match(/耗时 /g)).toHaveLength(1);
+    });
+
+    it("keeps old replies without a recorded duration free of a duration label", async () => {
+        setReply("历史回复。");
+        expect(await renderAssistant()).not.toContain("耗时");
+    });
+
+    it.each(["running", "failed", "cancelled"] as const)("does not show duration for a %s reply", async (status) => {
+        setReply("回复内容。", undefined, { status, duration_ms: 12340 });
+        expect(await renderAssistant()).not.toContain("耗时");
     });
 
     it("keeps the confirmation card visible outside collapsed query details", async () => {

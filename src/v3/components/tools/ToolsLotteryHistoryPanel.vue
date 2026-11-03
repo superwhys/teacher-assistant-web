@@ -155,22 +155,27 @@ function formatRecordTime(timestamp: number): string {
     flex: 1;
     margin-top: 8px;
     display: grid;
+    grid-auto-rows: max-content;
     align-content: start;
     overflow: auto;
 }
 
 .history-item {
     min-height: 48px;
-    padding: 8px 2px;
+    padding: 12px 2px;
     border-top: 1px solid var(--ta-line);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 12px;
 }
 
 .history-item__content {
     min-width: 0;
+    flex: 1;
+    display: grid;
+    gap: 4px;
+    line-height: 1.5;
 }
 
 .history-student-button {
@@ -218,7 +223,14 @@ function formatRecordTime(timestamp: number): string {
 }
 
 .history-item__content .history-item__student {
+    max-width: 100%;
+    justify-self: start;
+    margin-top: 2px;
+    padding: 2px 7px;
+    border-radius: 6px;
     color: var(--ta-text-secondary);
+    background: var(--ta-surface-muted);
+    overflow-wrap: anywhere;
 }
 
 .history-item__content strong {
@@ -229,7 +241,6 @@ function formatRecordTime(timestamp: number): string {
 }
 
 .history-item__content span {
-    margin-top: 3px;
     color: var(--ta-text-tertiary);
     font-size: 11px;
 }

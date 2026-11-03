@@ -1,6 +1,6 @@
 import { get, post, requestStream } from "@/api/api";
 import { ApiRequestError, type ApiResponse } from "@/types/api";
-import type { AgentAction, AgentConversation, AgentRun, AgentStreamEvent } from "@/types/agent";
+import type { AgentAction, AgentConversation, AgentConversationList, AgentRun, AgentStreamEvent } from "@/types/agent";
 
 const runStatuses = ["queued", "running", "completed", "failed", "cancelled"];
 const eventTypes = new Set([
@@ -12,11 +12,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function validDuration(value: unknown): boolean {
+    return value === undefined || (typeof value === "number" && Number.isSafeInteger(value) && value >= 0);
+}
+
 function isRun(value: unknown): value is AgentRun {
     return isRecord(value) && typeof value.id === "string" && typeof value.status === "string"
         && runStatuses.includes(value.status) && typeof value.created_at === "string"
         && typeof value.last_event_id === "number" && Number.isSafeInteger(value.last_event_id)
-        && value.last_event_id >= 0 && (value.error === undefined || typeof value.error === "string");
+        && value.last_event_id >= 0 && (value.error === undefined || typeof value.error === "string")
+        && validDuration(value.duration_ms);
 }
 
 function isAction(value: unknown): value is AgentAction {
@@ -40,7 +45,7 @@ function validPayload(type: string, data: unknown, runId: string): boolean {
         case "data.result": return typeof data.tool === "string" && "result" in data;
         case "action.proposed": return isAction(data) && data.run_id === runId;
         case "run.started": return data.status === "running";
-        case "run.completed": return data.status === "completed";
+        case "run.completed": return data.status === "completed" && validDuration(data.duration_ms);
         case "run.cancelled": return data.status === "cancelled";
         case "run.failed": return typeof data.message === "string";
         default: return false;
@@ -147,6 +152,16 @@ async function subscribe(runId: string, afterEventId: number, options: Subscript
 }
 
 export const agentApi = {
+    async listConversations(data: { class_id: number; semester_id: number; page: number; page_size: number }): Promise<ApiResponse<AgentConversationList>> {
+        const response = await get<AgentConversationList>("/agent/conversations", data);
+        const list = response.data;
+        if (!isRecord(list) || typeof list.has_more !== "boolean" || !Array.isArray(list.items)
+            || !list.items.every((item: unknown) => isRecord(item) && typeof item.id === "string" && item.id.length > 0
+                && typeof item.title === "string" && typeof item.created_at === "string" && Number.isFinite(Date.parse(item.created_at)))) {
+            throw new ApiRequestError("历史对话数据无效，请重试");
+        }
+        return response;
+    },
     createConversation(data: { class_id: number; semester_id: number }): Promise<ApiResponse<AgentConversation>> {
         return post<AgentConversation>("/agent/conversations", data);
     },

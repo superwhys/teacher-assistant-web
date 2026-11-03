@@ -69,7 +69,8 @@ export function allowsEntitlementRequest(profile: UserProfile | null, method: st
     const path = url.split('?')[0]!.split('#')[0]!
     if (path.startsWith('/auth/') || (method === 'POST' && path === '/user/trial/start')) return true
     // Agent transport 本身不修改业务数据，工具读取及确认写入由服务端逐项校验。
-    if (method === 'GET' && /^\/agent\/(conversations\/[^/]+|runs\/[^/]+\/events)$/.test(path)) return true
+    if (method === 'GET' && (path === '/agent/conversations'
+        || /^\/agent\/(conversations\/[^/]+|runs\/[^/]+\/events)$/.test(path))) return true
     if (method === 'POST' && (path === '/agent/conversations'
         || /^\/agent\/(conversations\/[^/]+\/runs|runs\/[^/]+\/cancel|actions\/[^/]+\/decision)$/.test(path))) return true
     const state = effectiveEntitlementState(profile, now)

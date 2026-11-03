@@ -1,7 +1,7 @@
 import { computed, nextTick, onScopeDispose, ref, watch } from "vue";
 import { agentApi } from "@/api/agent";
 import { isApiRequestError } from "@/types/api";
-import type { AgentAction, AgentConversation, AgentResult, AgentRun, AgentStreamEvent } from "@/types/agent";
+import type { AgentAction, AgentConversation, AgentConversationSummary, AgentResult, AgentRun, AgentStreamEvent } from "@/types/agent";
 
 interface AgentScope {
     userId?: string;
@@ -40,6 +40,10 @@ export function useAgentChat(scope: () => AgentScope, onActionSucceeded: (action
     const actionBusyId = ref("");
     const currentStep = ref("");
     const stopping = ref(false);
+    const history = ref<AgentConversationSummary[]>([]);
+    const historyLoading = ref(false);
+    const historyError = ref("");
+    const historyHasMore = ref(false);
     const activeRun = computed(() => conversation.value?.runs.find(active));
     const responding = computed(() => !!activeRun.value);
     const scopeKey = computed(() => {
@@ -54,6 +58,7 @@ export function useAgentChat(scope: () => AgentScope, onActionSucceeded: (action
     let opened = false;
     let subscription: AbortController | null = null;
     let pendingSend: PendingSend | null = null;
+    let historyPage = 0;
     const cursors = new Map<string, number>();
     const partials = new Map<string, string>();
     const notifiedActions = new Set<string>();
@@ -78,6 +83,11 @@ export function useAgentChat(scope: () => AgentScope, onActionSucceeded: (action
         currentStep.value = "";
         error.value = "";
         pendingSend = null;
+        history.value = [];
+        historyLoading.value = false;
+        historyError.value = "";
+        historyHasMore.value = false;
+        historyPage = 0;
         cursors.clear();
         partials.clear();
         notifiedActions.clear();
@@ -232,6 +242,7 @@ export function useAgentChat(scope: () => AgentScope, onActionSucceeded: (action
                 break;
             case "run.completed":
                 if (active(run)) run.status = "completed";
+                if (event.data.duration_ms !== undefined) run.duration_ms = event.data.duration_ms;
                 currentStep.value = "";
                 break;
             case "run.cancelled":
@@ -284,6 +295,29 @@ export function useAgentChat(scope: () => AgentScope, onActionSucceeded: (action
             else if (activeRun.value?.id === run.id) error.value = failure || "连接已中断，请点击重新连接继续查看回复";
             else if (failure) error.value = failure;
         })();
+    }
+
+    async function loadHistory(resetList = true): Promise<void> {
+        if (!scopeKey.value || historyLoading.value || (!resetList && !historyHasMore.value)) return;
+        const version = revision;
+        const { classId, semesterId } = scope();
+        if (!classId || !semesterId) return;
+        const page = resetList ? 1 : historyPage + 1;
+        historyLoading.value = true;
+        historyError.value = "";
+        try {
+            const response = await agentApi.listConversations({ class_id: classId, semester_id: semesterId, page, page_size: 20 });
+            if (!current(version)) return;
+            history.value = resetList ? response.data.items : [...new Map(
+                [...history.value, ...response.data.items].map((item) => [item.id, item]),
+            ).values()];
+            historyHasMore.value = response.data.has_more;
+            historyPage = page;
+        } catch (cause) {
+            if (current(version)) historyError.value = messageOf(cause);
+        } finally {
+            if (current(version)) historyLoading.value = false;
+        }
     }
 
     async function open(): Promise<void> {
@@ -396,6 +430,36 @@ export function useAgentChat(scope: () => AgentScope, onActionSucceeded: (action
         }
     }
 
+    async function selectConversation(id: string): Promise<boolean> {
+        if (!scopeKey.value || !id || loading.value || sending.value || stopping.value || actionBusyId.value) return false;
+        if (pendingSend) {
+            error.value = "上一条消息的发送结果尚未确认，请先重试该消息";
+            return false;
+        }
+        if (id === conversation.value?.id) return true;
+        const version = revision;
+        const { classId, semesterId } = scope();
+        loading.value = true;
+        error.value = "";
+        try {
+            const response = await agentApi.getConversation(id);
+            if (!current(version)) return false;
+            if (response.data.id !== id || response.data.class_id !== classId || response.data.semester_id !== semesterId) {
+                throw new Error("会话与当前班级或学期不一致，请重新选择");
+            }
+            reset();
+            applySnapshot(response.data, true);
+            saveConversationId(response.data.id);
+            if (activeRun.value) connect(activeRun.value, revision);
+            return true;
+        } catch (cause) {
+            if (current(version)) error.value = messageOf(cause);
+            return false;
+        } finally {
+            if (current(version)) loading.value = false;
+        }
+    }
+
     async function newConversation(): Promise<void> {
         if (!scopeKey.value || loading.value || sending.value || actionBusyId.value || stopping.value) return;
         const version = revision;
@@ -482,5 +546,6 @@ export function useAgentChat(scope: () => AgentScope, onActionSucceeded: (action
     });
 
     return { conversation, loading, sending, responding, streamConnected, error, actionBusyId, currentStep, stopping,
+        history, historyLoading, historyError, historyHasMore, loadHistory, selectConversation,
         open, close, send, cancel, newConversation, decide, reconnect };
 }

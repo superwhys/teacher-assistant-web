@@ -12,6 +12,7 @@ export interface AgentRun {
     error?: string;
     last_event_id: number;
     created_at: string;
+    duration_ms?: number;
 }
 
 export interface AgentAction {
@@ -42,13 +43,24 @@ export interface AgentConversation {
     results: AgentResult[];
 }
 
+export interface AgentConversationSummary {
+    id: string;
+    title: string;
+    created_at: string;
+}
+
+export interface AgentConversationList {
+    items: AgentConversationSummary[];
+    has_more: boolean;
+}
+
 interface AgentEventPayloads {
     "message.delta": { text: string };
     "tool.status": { tool: string; status: "running" | "completed" | "failed" };
     "data.result": AgentResult["data"];
     "action.proposed": AgentAction;
     "run.started": { status: "running" };
-    "run.completed": { status: "completed" };
+    "run.completed": { status: "completed"; duration_ms?: number };
     "run.failed": { message: string };
     "run.cancelled": { status: "cancelled" };
 }

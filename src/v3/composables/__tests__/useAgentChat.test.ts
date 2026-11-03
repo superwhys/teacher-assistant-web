@@ -5,7 +5,7 @@ import type { AgentAction, AgentConversation, AgentRun, AgentStreamEvent } from 
 import { useAgentChat } from "../useAgentChat";
 
 const api = vi.hoisted(() => ({
-    createConversation: vi.fn(), getConversation: vi.fn(), createRun: vi.fn(),
+    createConversation: vi.fn(), getConversation: vi.fn(), listConversations: vi.fn(), createRun: vi.fn(),
     cancelRun: vi.fn(), decideAction: vi.fn(), subscribe: vi.fn()
 }));
 vi.mock("@/api/agent", () => ({ agentApi: api }));
@@ -71,6 +71,7 @@ beforeEach(() => {
     } });
     api.createConversation.mockImplementation(async ({ class_id }) => response({ ...copy(server), class_id }));
     api.getConversation.mockImplementation(async () => response(copy(server)));
+    api.listConversations.mockResolvedValue(response({ items: [], has_more: false }));
     api.subscribe.mockImplementation((runId, after, options) => new Promise<void>((resolve, reject) => {
         streams.push({ runId, after, ...options, end: resolve, fail: reject });
         options.signal.addEventListener("abort", resolve, { once: true });
@@ -84,6 +85,132 @@ afterEach(async () => {
 });
 
 describe("real Agent conversation orchestration", () => {
+    it("loads scoped history on demand and retries the same page without losing earlier conversations", async () => {
+        const { chat } = createChat();
+        expect(api.listConversations).not.toHaveBeenCalled();
+        const first = { id: "first", title: "总结积分", created_at: "2026-11-03T08:00:00Z" };
+        const second = { id: "second", title: "查询奖品", created_at: "2026-11-02T08:00:00Z" };
+        api.listConversations.mockResolvedValueOnce(response({ items: [first], has_more: true }));
+        await chat.loadHistory();
+        expect(api.listConversations).toHaveBeenLastCalledWith({ class_id: 7, semester_id: 9, page: 1, page_size: 20 });
+        expect(chat.history.value).toEqual([first]);
+        api.listConversations.mockRejectedValueOnce(new Error("历史加载失败"));
+        await chat.loadHistory(false);
+        expect(chat.history.value).toEqual([first]);
+        expect(chat.historyError.value).toBe("历史加载失败");
+        expect(chat.historyLoading.value).toBe(false);
+        api.listConversations.mockResolvedValueOnce(response({ items: [first, second], has_more: false }));
+        await chat.loadHistory(false);
+        expect(api.listConversations).toHaveBeenLastCalledWith({ class_id: 7, semester_id: 9, page: 2, page_size: 20 });
+        expect(chat.history.value).toEqual([first, second]);
+        expect(chat.historyHasMore.value).toBe(false);
+        expect(chat.historyError.value).toBe("");
+    });
+
+    it("clears history on scope changes and ignores late pages from the previous teacher", async () => {
+        const { chat, selected } = createChat();
+        const old = deferred<ReturnType<typeof response<{ items: { id: string; title: string; created_at: string }[]; has_more: boolean }>>>();
+        api.listConversations.mockReturnValueOnce(old.promise);
+        const pending = chat.loadHistory();
+        selected.userId = "other-teacher";
+        expect(chat.history.value).toEqual([]);
+        expect(chat.historyLoading.value).toBe(false);
+        await chat.loadHistory();
+        old.resolve(response({ items: [{ id: "secret", title: "旧老师的问题", created_at: "2026-11-03T08:00:00Z" }], has_more: true }));
+        await pending;
+        expect(chat.history.value).toEqual([]);
+        expect(chat.historyHasMore.value).toBe(false);
+    });
+
+    it("switches to a historical conversation without cancelling the previous run or accepting its late events", async () => {
+        server.runs = [run()];
+        const { chat } = createChat();
+        await chat.open();
+        const previousStream = streams[0]!;
+        const target = { ...snapshot("history"), runs: [{ ...run(), id: "history-run" }] };
+        api.getConversation.mockResolvedValueOnce(response(target));
+        expect(await chat.selectConversation("history")).toBe(true);
+        expect(chat.conversation.value?.id).toBe("history");
+        expect(previousStream.signal.aborted).toBe(true);
+        expect(api.cancelRun).not.toHaveBeenCalled();
+        expect(streams[1]?.runId).toBe("history-run");
+        previousStream.onEvent({ type: "message.delta", run_id: "run", event_id: 1, data: { text: "旧会话晚到的回复" } });
+        expect(chat.conversation.value?.messages).toEqual([]);
+        expect([...storage.values()]).toEqual(["history"]);
+        const calls = api.getConversation.mock.calls.length;
+        expect(await chat.selectConversation("history")).toBe(true);
+        expect(api.getConversation).toHaveBeenCalledTimes(calls);
+    });
+
+    it.each(["failed", "wrong-scope", "wrong-id"])("keeps the current conversation and stream after a %s history selection", async (kind) => {
+        server.runs = [run()];
+        const { chat } = createChat();
+        await chat.open();
+        if (kind === "failed") api.getConversation.mockRejectedValueOnce(new Error("读取历史失败"));
+        else api.getConversation.mockResolvedValueOnce(response(snapshot(kind === "wrong-id" ? "other" : "history", kind === "wrong-scope" ? 8 : 7)));
+        expect(await chat.selectConversation("history")).toBe(false);
+        expect(chat.conversation.value?.id).toBe("chat");
+        expect(streams[0]!.signal.aborted).toBe(false);
+        expect(chat.error.value).not.toBe("");
+        expect(chat.loading.value).toBe(false);
+        expect([...storage.values()]).toEqual(["chat"]);
+    });
+
+    it("ignores a selected history response after the class changes", async () => {
+        const { chat, selected } = createChat();
+        await chat.open();
+        const old = deferred<ReturnType<typeof response<AgentConversation>>>();
+        api.getConversation.mockReturnValueOnce(old.promise);
+        const pending = chat.selectConversation("history");
+        server = snapshot("next-class", 8);
+        selected.classId = 8;
+        await settle();
+        old.resolve(response(snapshot("history")));
+        expect(await pending).toBe(false);
+        expect(chat.conversation.value?.id).toBe("next-class");
+        expect(chat.loading.value).toBe(false);
+    });
+
+    it("keeps an uncertain send attached to its current conversation until the teacher retries it", async () => {
+        const { chat } = createChat();
+        await chat.open();
+        api.createRun.mockRejectedValueOnce(new Error("响应丢失"));
+        await chat.send("查积分");
+        expect(await chat.selectConversation("history")).toBe(false);
+        expect(api.getConversation).not.toHaveBeenCalled();
+        expect(chat.conversation.value?.messages[0]?.content).toBe("查积分");
+        expect(chat.error.value).toContain("重试");
+    });
+
+    it("keeps the completed run duration when the final snapshot cannot be refreshed", async () => {
+        server.runs = [run()];
+        const { chat } = createChat();
+        await chat.open();
+        const stream = streams[0]!;
+        stream.onEvent({ type: "message.delta", run_id: "run", event_id: 1, data: { text: "查询完成" } });
+        stream.onEvent({ type: "run.completed", run_id: "run", event_id: 2,
+            data: { status: "completed", duration_ms: 12340 } });
+        expect(chat.conversation.value?.runs[0]).toMatchObject({ status: "completed", duration_ms: 12340 });
+        api.getConversation.mockRejectedValueOnce(new Error("刷新失败"));
+        stream.end();
+        await settle();
+        expect(chat.conversation.value?.runs[0]).toMatchObject({ status: "completed", duration_ms: 12340 });
+    });
+
+    it("restores each run's saved duration when reopening a conversation", async () => {
+        server.runs = [
+            { ...run("completed"), id: "first", duration_ms: 12340 },
+            { ...run("completed"), id: "second", duration_ms: 68000 },
+        ];
+        const { chat } = createChat();
+        await chat.open();
+        chat.close();
+        await chat.open();
+        expect(chat.conversation.value?.runs.map((item) => [item.id, item.duration_ms]))
+            .toEqual([["first", 12340], ["second", 68000]]);
+        expect(api.subscribe).not.toHaveBeenCalled();
+    });
+
     it("restores accumulated stream text and resumes after the matching snapshot cursor on opening and reopening", async () => {
         server.runs = [run("running", 5)];
         server.messages = [streamMessage("前半")];

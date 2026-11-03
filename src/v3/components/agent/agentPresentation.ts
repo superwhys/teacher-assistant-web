@@ -16,6 +16,7 @@ export interface AgentChatMessage {
     cards: AgentCard[];
     actions: AgentAction[];
     error?: string;
+    durationMs?: number;
 }
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -167,6 +168,15 @@ function complete(run: AgentRun | undefined): boolean {
     return !run || (run.status !== "queued" && run.status !== "running");
 }
 
+export function formatDuration(durationMs: number): string {
+    if (durationMs < 1000) return "<1 秒";
+    if (durationMs < 60000) return `${Math.floor(durationMs / 100) / 10} 秒`;
+    const totalSeconds = Math.floor(durationMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return seconds ? `${minutes} 分 ${seconds} 秒` : `${minutes} 分`;
+}
+
 export function toChatMessages(conversation: AgentConversation | null): AgentChatMessage[] {
     if (!conversation) return [];
     const runs = new Map(conversation.runs.map((run) => [run.id, run]));
@@ -212,6 +222,9 @@ export function toChatMessages(conversation: AgentConversation | null): AgentCha
         }
         assistant.cards = cards;
         assistant.actions = actions;
+        if (run?.status === "completed" && numeric(run.duration_ms) && run.duration_ms >= 0) {
+            assistant.durationMs = run.duration_ms;
+        }
         if (run?.status === "failed") assistant.error = run.error || "本次回复未完成，请重试。";
     }
     return ordered.flatMap((entry) => entry.messages);

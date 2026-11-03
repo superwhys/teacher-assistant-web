@@ -10,10 +10,11 @@ function profile(state: UserEntitlement['state'], deadline: string | null = null
 }
 
 describe('independent commercial access', () => {
-    it.each(['not_started', 'trial_expired', 'paid_expired'] as const)('allows only the six Agent transports when commercial state is %s', state => {
+    it.each(['not_started', 'trial_expired', 'paid_expired'] as const)('allows only the supported Agent transports when commercial state is %s', state => {
         const teacher = profile(state)
         for (const [method, path] of [
             ['POST', '/agent/conversations'], ['GET', '/agent/conversations/conversation'],
+            ['GET', '/agent/conversations?class_id=7&semester_id=9&page=1'],
             ['POST', '/agent/conversations/conversation/runs'], ['GET', '/agent/runs/run/events?after_event_id=4'],
             ['POST', '/agent/runs/run/cancel'], ['POST', '/agent/actions/action/decision'],
         ]) {

@@ -17,8 +17,13 @@
                     <h2>小 Y <span class="agent-status-badge">{{ statusLabel }}</span></h2>
                     <p>你的课堂小帮手</p>
                 </div>
+                <button type="button" class="agent-icon-button" aria-label="历史对话" title="历史对话"
+                    :aria-pressed="historyVisible" :disabled="!canSwitchConversation"
+                    @click="historyVisible ? closeHistory() : openHistory()">
+                    <Clock aria-hidden="true" />
+                </button>
                 <button type="button" class="agent-icon-button" aria-label="新建对话" title="新建对话"
-                    :disabled="!scopeReady || loading || sending || responding || !!actionBusyId" @click="startNewConversation">
+                    :disabled="!canSwitchConversation" @click="startNewConversation">
                     <RefreshRight aria-hidden="true" />
                 </button>
                 <button type="button" class="agent-icon-button" aria-label="关闭小 Y" title="关闭"
@@ -44,146 +49,156 @@
             <button type="button" :disabled="loading || sending" @click="reconnect">重新同步</button>
         </div>
 
-        <div ref="conversationRef" class="agent-conversation" @scroll="handleScroll">
-            <div v-if="loading" class="agent-loading" role="status">
-                <Loading aria-hidden="true" />正在同步对话…
-            </div>
-            <div v-else-if="messages.length === 0" class="agent-welcome">
-                <div class="agent-welcome__mark"><XiaoYAvatar :size="76" /></div>
-                <span class="agent-eyebrow">让日常教学，轻松一点</span>
-                <h3>你好，老师<br />今天想先处理什么？</h3>
-                <p>我是小 Y，你的课堂小帮手。<br />查班级、记积分，或兑换一份小奖励。</p>
-                <div class="agent-starters">
-                    <button v-for="starter in starters" :key="starter.prompt" type="button"
-                        class="agent-starter" :disabled="!canSend" @click="sendMessage(starter.prompt)">
-                        <span class="agent-starter__icon" :class="starter.tone">
-                            <component :is="starter.icon" aria-hidden="true" />
-                        </span>
-                        <span><strong>{{ starter.label }}</strong><small>{{ starter.prompt }}</small></span>
-                        <ArrowRight aria-hidden="true" />
-                    </button>
-                </div>
-            </div>
+        <AgentConversationHistory v-if="historyVisible" :items="history" :current-id="conversation?.id"
+            :loading="historyLoading" :error="historyError" :has-more="historyHasMore"
+            :disabled="!canSwitchConversation" @back="closeHistory" @select="selectConversation"
+            @retry="chat.loadHistory()" @load-more="chat.loadHistory(false)" />
 
-            <div v-else class="agent-messages" role="log" aria-label="与小 Y 的对话"
-                aria-live="polite" :aria-busy="responding">
-                <div class="agent-timeline-label">当前班级 · {{ semesterName }}</div>
-                <article v-for="message in messages" :key="message.id" class="agent-message"
-                    :class="`agent-message--${message.role}`" :aria-label="message.role === 'user' ? '你' : '小 Y'">
-                    <div v-if="message.role === 'assistant'" class="agent-message__sender">
-                        <XiaoYAvatar :size="24" /><span>小 Y</span>
-                    </div>
-                    <AgentMarkdown v-if="message.role === 'assistant' && message.text && !message.actions.length"
-                        :content="message.text" />
-                    <p v-else-if="message.role === 'user' && message.text" class="agent-message__text">{{ message.text }}</p>
-                    <details v-if="message.cards.length || (message.actions.length && message.text)" class="agent-query-details"
-                        :open="message.complete && !message.text && !message.actions.length">
-                        <summary>
+        <template v-else>
+            <div ref="conversationRef" class="agent-conversation" @scroll="handleScroll">
+                <div v-if="loading" class="agent-loading" role="status">
+                    <Loading aria-hidden="true" />正在同步对话…
+                </div>
+                <div v-else-if="messages.length === 0" class="agent-welcome">
+                    <div class="agent-welcome__mark"><XiaoYAvatar :size="76" /></div>
+                    <span class="agent-eyebrow">让日常教学，轻松一点</span>
+                    <h3>你好，老师<br />今天想先处理什么？</h3>
+                    <p>我是小 Y，你的课堂小帮手。<br />查班级、记积分，或兑换一份小奖励。</p>
+                    <div class="agent-starters">
+                        <button v-for="starter in starters" :key="starter.prompt" type="button"
+                            class="agent-starter" :disabled="!canSend" @click="sendMessage(starter.prompt)">
+                            <span class="agent-starter__icon" :class="starter.tone">
+                                <component :is="starter.icon" aria-hidden="true" />
+                            </span>
+                            <span><strong>{{ starter.label }}</strong><small>{{ starter.prompt }}</small></span>
                             <ArrowRight aria-hidden="true" />
-                            <span>{{ message.actions.length ? '操作说明' : '查询详情' }}</span>
-                            <span v-if="message.cards.length" class="agent-query-details__count">{{ message.cards.length }} 项查询</span>
-                        </summary>
-                        <AgentMarkdown v-if="message.actions.length && message.text" class="agent-action-explanation"
+                        </button>
+                    </div>
+                </div>
+
+                <div v-else class="agent-messages" role="log" aria-label="与小 Y 的对话"
+                    aria-live="polite" :aria-busy="responding">
+                    <div class="agent-timeline-label">当前班级 · {{ semesterName }}</div>
+                    <article v-for="message in messages" :key="message.id" class="agent-message"
+                        :class="`agent-message--${message.role}`" :aria-label="message.role === 'user' ? '你' : '小 Y'">
+                        <div v-if="message.role === 'assistant'" class="agent-message__sender">
+                            <XiaoYAvatar :size="24" /><span>小 Y</span>
+                        </div>
+                        <AgentMarkdown v-if="message.role === 'assistant' && message.text && !message.actions.length"
                             :content="message.text" />
-                        <div v-for="(card, cardIndex) in message.cards" :key="`${message.runId}-${cardIndex}`" class="agent-data-card">
-                            <h4 v-if="card.title">{{ card.title }}</h4>
-                            <div v-if="card.stats?.length" class="agent-stats">
-                                <div v-for="stat in card.stats" :key="stat.label" class="agent-stat">
-                                    <span>{{ stat.label }}</span>
-                                    <strong>{{ stat.value }}</strong>
-                                    <small v-if="stat.detail">{{ stat.detail }}</small>
+                        <p v-else-if="message.role === 'user' && message.text" class="agent-message__text">{{ message.text }}</p>
+                        <details v-if="message.cards.length || (message.actions.length && message.text)" class="agent-query-details"
+                            :open="message.complete && !message.text && !message.actions.length">
+                            <summary>
+                                <ArrowRight aria-hidden="true" />
+                                <span>{{ message.actions.length ? '操作说明' : '查询详情' }}</span>
+                                <span v-if="message.cards.length" class="agent-query-details__count">{{ message.cards.length }} 项查询</span>
+                            </summary>
+                            <AgentMarkdown v-if="message.actions.length && message.text" class="agent-action-explanation"
+                                :content="message.text" />
+                            <div v-for="(card, cardIndex) in message.cards" :key="`${message.runId}-${cardIndex}`" class="agent-data-card">
+                                <h4 v-if="card.title">{{ card.title }}</h4>
+                                <div v-if="card.stats?.length" class="agent-stats">
+                                    <div v-for="stat in card.stats" :key="stat.label" class="agent-stat">
+                                        <span>{{ stat.label }}</span>
+                                        <strong>{{ stat.value }}</strong>
+                                        <small v-if="stat.detail">{{ stat.detail }}</small>
+                                    </div>
                                 </div>
+                                <div v-if="card.rows?.length" class="agent-data-list">
+                                    <div v-for="row in card.rows" :key="row.id" class="agent-data-row">
+                                        <span class="agent-data-row__avatar">{{ row.name.slice(-2) }}</span>
+                                        <span class="agent-data-row__name">
+                                            <strong>{{ row.name }}</strong><small>{{ row.detail }}</small>
+                                        </span>
+                                        <span class="agent-data-row__value">{{ row.value }}</span>
+                                    </div>
+                                </div>
+                                <p v-if="card.note" class="agent-data-card__note">{{ card.note }}</p>
                             </div>
-                            <div v-if="card.rows?.length" class="agent-data-list">
-                                <div v-for="row in card.rows" :key="row.id" class="agent-data-row">
-                                    <span class="agent-data-row__avatar">{{ row.name.slice(-2) }}</span>
+                        </details>
+
+                        <div v-for="action in message.actions" :key="action.id" class="agent-action"
+                            :class="`is-${action.status}`">
+                            <div class="agent-action__heading">
+                                <component :is="action.kind === 'points' ? Star : Present" aria-hidden="true" />
+                                <strong>{{ action.title }}</strong>
+                                <span>{{ actionLabel(action) }}</span>
+                            </div>
+                            <p>{{ action.description }}</p>
+                            <div v-if="action.rows?.length" class="agent-data-list agent-action__students">
+                                <div v-for="(row, rowIndex) in action.rows" :key="`${action.id}-${rowIndex}`" class="agent-data-row">
                                     <span class="agent-data-row__name">
                                         <strong>{{ row.name }}</strong><small>{{ row.detail }}</small>
                                     </span>
                                     <span class="agent-data-row__value">{{ row.value }}</span>
                                 </div>
                             </div>
-                            <p v-if="card.note" class="agent-data-card__note">{{ card.note }}</p>
-                        </div>
-                    </details>
-
-                    <div v-for="action in message.actions" :key="action.id" class="agent-action"
-                        :class="`is-${action.status}`">
-                        <div class="agent-action__heading">
-                            <component :is="action.kind === 'points' ? Star : Present" aria-hidden="true" />
-                            <strong>{{ action.title }}</strong>
-                            <span>{{ actionLabel(action) }}</span>
-                        </div>
-                        <p>{{ action.description }}</p>
-                        <div v-if="action.rows?.length" class="agent-data-list agent-action__students">
-                            <div v-for="(row, rowIndex) in action.rows" :key="`${action.id}-${rowIndex}`" class="agent-data-row">
-                                <span class="agent-data-row__name">
-                                    <strong>{{ row.name }}</strong><small>{{ row.detail }}</small>
-                                </span>
-                                <span class="agent-data-row__value">{{ row.value }}</span>
+                            <dl>
+                                <div v-for="detail in action.details" :key="detail.label">
+                                    <dt>{{ detail.label }}</dt><dd>{{ detail.value }}</dd>
+                                </div>
+                            </dl>
+                            <template v-if="action.status === 'pending'">
+                                <p class="agent-action__expiry">
+                                    {{ isExpired(action) ? '预览已过期，请重新生成' : `请在 ${formatTime(action.expires_at)} 前确认` }}
+                                </p>
+                                <p v-if="!canWrite && !isExpired(action)" class="agent-action__expiry">
+                                    当前为只读状态，暂不能确认写入。
+                                </p>
+                                <div class="agent-action__buttons">
+                                    <button type="button" class="agent-secondary-button"
+                                        :disabled="loading || !!actionBusyId" @click="handleActionDecision(action, 'reject')">暂不执行</button>
+                                    <button type="button" class="agent-primary-button"
+                                        :disabled="!canConfirm(action)" @click="handleActionDecision(action, 'confirm')">
+                                        <Loading v-if="actionBusyId === action.id" class="agent-busy-icon" aria-hidden="true" />
+                                        <Check v-else aria-hidden="true" />
+                                        {{ actionBusyId === action.id ? '处理中…' : action.kind === 'points' ? '确认执行' : '确认兑换' }}
+                                    </button>
+                                </div>
+                            </template>
+                            <div v-else class="agent-action__result">
+                                <CircleCheck v-if="action.status === 'succeeded'" aria-hidden="true" />
+                                <span>{{ action.result?.summary || actionResultLabels[action.status] }}</span>
                             </div>
                         </div>
-                        <dl>
-                            <div v-for="detail in action.details" :key="detail.label">
-                                <dt>{{ detail.label }}</dt><dd>{{ detail.value }}</dd>
-                            </div>
-                        </dl>
-                        <template v-if="action.status === 'pending'">
-                            <p class="agent-action__expiry">
-                                {{ isExpired(action) ? '预览已过期，请重新生成' : `请在 ${formatTime(action.expires_at)} 前确认` }}
-                            </p>
-                            <p v-if="!canWrite && !isExpired(action)" class="agent-action__expiry">
-                                当前为只读状态，暂不能确认写入。
-                            </p>
-                            <div class="agent-action__buttons">
-                                <button type="button" class="agent-secondary-button"
-                                    :disabled="loading || !!actionBusyId" @click="handleActionDecision(action, 'reject')">暂不执行</button>
-                                <button type="button" class="agent-primary-button"
-                                    :disabled="!canConfirm(action)" @click="handleActionDecision(action, 'confirm')">
-                                    <Loading v-if="actionBusyId === action.id" class="agent-busy-icon" aria-hidden="true" />
-                                    <Check v-else aria-hidden="true" />
-                                    {{ actionBusyId === action.id ? '处理中…' : action.kind === 'points' ? '确认执行' : '确认兑换' }}
-                                </button>
-                            </div>
-                        </template>
-                        <div v-else class="agent-action__result">
-                            <CircleCheck v-if="action.status === 'succeeded'" aria-hidden="true" />
-                            <span>{{ action.result?.summary || actionResultLabels[action.status] }}</span>
-                        </div>
-                    </div>
-                    <p v-if="message.error" class="agent-message__error" role="status">{{ message.error }}</p>
-                </article>
-            </div>
+                        <p v-if="message.error" class="agent-message__error" role="status">{{ message.error }}</p>
+                        <p v-if="message.durationMs !== undefined" class="agent-message__duration">
+                            耗时 {{ formatDuration(message.durationMs) }}
+                        </p>
+                    </article>
+                </div>
 
-            <div v-if="responding || sending" class="agent-thinking" role="status">
-                <Loading aria-hidden="true" /><span>{{ stepLabel }}</span>
-                <button type="button" :disabled="sending || stopping" @click="cancel">{{ stopping ? '停止中…' : '停止' }}</button>
-            </div>
-        </div>
-
-        <div v-if="messages.length && !responding && !loading" class="agent-suggestions" aria-label="继续提问">
-            <button v-for="starter in starters" :key="starter.prompt" type="button" :disabled="!canSend"
-                @click="sendMessage(starter.prompt)">{{ starter.label }}<ArrowRight aria-hidden="true" /></button>
-        </div>
-
-        <form class="agent-composer" @submit.prevent="sendMessage()">
-            <div class="agent-composer__input">
-                <textarea ref="inputRef" v-model="draft" rows="2" maxlength="1000" aria-label="发送给小 Y 的消息"
-                    :disabled="!scopeReady || loading" placeholder="试着问我，或者描述你想做的事…"
-                    @keydown="handleInputKeydown" />
-                <div class="agent-composer__toolbar">
-                    <span><span class="agent-mode-dot" />小 Y · 课堂助手</span>
-                    <button v-if="responding" type="button" class="agent-send-button" aria-label="停止回复" :disabled="stopping" @click="cancel">
-                        <span class="agent-stop-icon" />
-                    </button>
-                    <button v-else type="submit" class="agent-send-button" :disabled="!canSend || !draft.trim()" aria-label="发送消息">
-                        <Top aria-hidden="true" />
-                    </button>
+                <div v-if="responding || sending" class="agent-thinking" role="status">
+                    <Loading aria-hidden="true" /><span>{{ stepLabel }}</span>
+                    <button type="button" :disabled="sending || stopping" @click="cancel">{{ stopping ? '停止中…' : '停止' }}</button>
                 </div>
             </div>
-            <div class="agent-composer__hint"><span>Enter 发送 · Shift + Enter 换行</span><span>{{ draft.length }}/1000</span></div>
-            <p class="agent-data-note"><InfoFilled aria-hidden="true" />AI 建议请核对，积分操作和兑换需确认后执行</p>
-        </form>
+
+            <div v-if="messages.length && !responding && !loading" class="agent-suggestions" aria-label="继续提问">
+                <button v-for="starter in starters" :key="starter.prompt" type="button" :disabled="!canSend"
+                    @click="sendMessage(starter.prompt)">{{ starter.label }}<ArrowRight aria-hidden="true" /></button>
+            </div>
+
+            <form class="agent-composer" @submit.prevent="sendMessage()">
+                <div class="agent-composer__input">
+                    <textarea ref="inputRef" v-model="draft" rows="2" maxlength="1000" aria-label="发送给小 Y 的消息"
+                        :disabled="!scopeReady || loading" placeholder="试着问我，或者描述你想做的事…"
+                        @keydown="handleInputKeydown" />
+                    <div class="agent-composer__toolbar">
+                        <span><span class="agent-mode-dot" />小 Y · 课堂助手</span>
+                        <button v-if="responding" type="button" class="agent-send-button" aria-label="停止回复" :disabled="stopping" @click="cancel">
+                            <span class="agent-stop-icon" />
+                        </button>
+                        <button v-else type="submit" class="agent-send-button" :disabled="!canSend || !draft.trim()" aria-label="发送消息">
+                            <Top aria-hidden="true" />
+                        </button>
+                    </div>
+                </div>
+                <div class="agent-composer__hint"><span>Enter 发送 · Shift + Enter 换行</span><span>{{ draft.length }}/1000</span></div>
+                <p class="agent-data-note"><InfoFilled aria-hidden="true" />AI 建议请核对，积分操作和兑换需确认后执行</p>
+            </form>
+        </template>
     </ElDrawer>
 </template>
 
@@ -194,6 +209,7 @@ import {
     ArrowRight,
     Check,
     CircleCheck,
+    Clock,
     Close,
     DataAnalysis,
     InfoFilled,
@@ -209,8 +225,9 @@ import type { AgentAction } from "@/types/agent";
 import { notifyAgentActionSucceeded } from "@/utils/agentEvents";
 import { useAgentChat } from "@/v3/composables/useAgentChat";
 import AgentMarkdown from "./AgentMarkdown.vue";
+import AgentConversationHistory from "./AgentConversationHistory.vue";
 import XiaoYAvatar from "./XiaoYAvatar.vue";
-import { toChatMessages } from "./agentPresentation";
+import { formatDuration, toChatMessages } from "./agentPresentation";
 
 const props = withDefaults(defineProps<{
     classId?: number | null;
@@ -226,6 +243,7 @@ const props = withDefaults(defineProps<{
 });
 
 const visible = ref(false);
+const historyVisible = ref(false);
 const draft = ref("");
 const now = ref(Date.now());
 const launcherRef = ref<HTMLButtonElement>();
@@ -249,11 +267,12 @@ const chat = useAgentChat(
 );
 const {
     conversation, loading, sending, responding, streamConnected, error, actionBusyId, stopping,
-    currentStep, reconnect, cancel,
+    currentStep, reconnect, cancel, history, historyLoading, historyError, historyHasMore,
 } = chat;
 const messages = computed(() => toChatMessages(conversation.value));
 const scopeReady = computed(() => !!props.userId && !!props.classId && !!props.semesterId);
 const canSend = computed(() => scopeReady.value && !loading.value && !sending.value && !responding.value && !actionBusyId.value);
+const canSwitchConversation = computed(() => scopeReady.value && !loading.value && !sending.value && !stopping.value && !actionBusyId.value);
 const statusLabel = computed(() => loading.value ? "同步中" : responding.value ? streamConnected.value ? "回复中" : "连接中" : "随时待命");
 const avatarMood = computed(() => {
     if (responding.value && messages.value.some((message) => message.role === "assistant" && !message.complete && message.text)) {
@@ -316,9 +335,33 @@ async function sendMessage(prompt = draft.value) {
 }
 
 async function startNewConversation() {
+    if (!canSwitchConversation.value) return;
     followLatest = true;
     await chat.newConversation();
-    if (!error.value) draft.value = "";
+    if (!error.value) {
+        draft.value = "";
+        closeHistory();
+    }
+}
+
+async function openHistory() {
+    if (!canSwitchConversation.value) return;
+    historyVisible.value = true;
+    await chat.loadHistory();
+}
+
+function closeHistory() {
+    historyVisible.value = false;
+    followLatest = true;
+    void scrollToLatest();
+}
+
+async function selectConversation(id: string) {
+    if (!canSwitchConversation.value) return;
+    if (await chat.selectConversation(id)) {
+        draft.value = "";
+        closeHistory();
+    }
 }
 
 async function handleActionDecision(action: AgentAction, decision: "confirm" | "reject") {
@@ -353,7 +396,10 @@ watch(visible, (open) => {
         chat.close();
     }
 });
-watch(() => [props.userId, props.classId, props.semesterId], () => { draft.value = ""; });
+watch(() => [props.userId, props.classId, props.semesterId], () => {
+    draft.value = "";
+    historyVisible.value = false;
+});
 watch(messages, () => { void scrollToLatest(); }, { deep: true });
 onBeforeUnmount(() => window.clearInterval(expiryTimer));
 </script>
@@ -507,6 +553,18 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
     width: 18px;
     height: 18px;
 }
+.agent-icon-button[aria-pressed="true"] {
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+}
+.agent-icon-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+.agent-icon-button:focus-visible {
+    outline: 2px solid var(--ta-blue);
+    outline-offset: 2px;
+}
 .agent-context {
     display: flex;
     flex-shrink: 0;
@@ -592,6 +650,11 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
     margin: 10px 0 0;
     color: var(--ta-red);
     font-size: 12px;
+}
+.agent-message__duration {
+    margin: 10px 0 0;
+    color: var(--ta-text-tertiary);
+    font-size: 11px;
 }
 .agent-query-details {
     margin-top: 14px;
@@ -1190,6 +1253,18 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
     }
     :global(.agent-panel .el-drawer__header) {
         padding: 16px 16px 12px;
+    }
+    .agent-header {
+        gap: 6px;
+    }
+    .agent-header h2 {
+        flex-wrap: wrap;
+        gap: 4px 6px;
+    }
+    .agent-icon-button {
+        width: 30px;
+        height: 30px;
+        padding: 6px;
     }
     .agent-context {
         margin: 0 16px;

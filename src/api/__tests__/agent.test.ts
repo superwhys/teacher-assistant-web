@@ -12,8 +12,8 @@ vi.mock("@/stores/cacheStore", () => ({ useCacheStore: () => mocks.cache }));
 vi.mock("element-plus", () => ({ ElMessage: mocks.message }));
 vi.mock("@/utils/entitlementEvents", () => ({ notifyEntitlementRejected: mocks.rejected }));
 
-function jsonResponse(code = 0, message = "success", status = 200): Response {
-    return new Response(JSON.stringify({ code, message, data: {} }), { status, headers: { "Content-Type": "application/json" } });
+function jsonResponse(code = 0, message = "success", status = 200, data: unknown = {}): Response {
+    return new Response(JSON.stringify({ code, message, data }), { status, headers: { "Content-Type": "application/json" } });
 }
 
 function frame(id: number, type: string, data: unknown): string {
@@ -49,6 +49,46 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Agent transport", () => {
+    it("requests history for the selected class, semester and page", async () => {
+        mocks.fetch.mockResolvedValueOnce(jsonResponse(0, "success", 200, { items: [], has_more: false }));
+        await agentApi.listConversations({ class_id: 7, semester_id: 9, page: 2, page_size: 20 });
+        expect(mocks.fetch.mock.calls[0]?.[0]).toBe("/api/agent/conversations?class_id=7&semester_id=9&page=2&page_size=20");
+        expect(mocks.fetch.mock.calls[0]?.[1].headers.Authorization).toBe("session");
+    });
+
+    it.each([
+        { items: null, has_more: false },
+        { items: [], has_more: "false" },
+        { items: [{ id: "history", title: "查询积分", created_at: "invalid" }], has_more: false },
+    ])("rejects malformed history pages %#", async (data) => {
+        mocks.fetch.mockResolvedValueOnce(jsonResponse(0, "success", 200, data));
+        await expect(agentApi.listConversations({ class_id: 7, semester_id: 9, page: 1, page_size: 20 }))
+            .rejects.toThrow("历史对话数据无效");
+    });
+
+    it("passes completed durations from events and restored snapshots", async () => {
+        const run = { id: "run", status: "completed", last_event_id: 2,
+            created_at: "2026-11-03T08:00:00Z", duration_ms: 12340 };
+        mocks.fetch.mockResolvedValue(eventResponse(frame(2, "run.completed", { status: "completed", duration_ms: 12340 })
+            + `event: run.snapshot\ndata: ${JSON.stringify(run)}\n\n`));
+        const onEvent = vi.fn();
+        await agentApi.subscribe("run", 0, { signal: new AbortController().signal, onEvent });
+        expect(onEvent.mock.calls.map(([event]) => event.data.duration_ms)).toEqual([12340, 12340]);
+    });
+
+    it.each([-1, null, "1200", 1.5])("rejects invalid completed durations (%s)", async (duration_ms) => {
+        for (const text of [
+            frame(1, "run.completed", { status: "completed", duration_ms }),
+            `event: run.snapshot\ndata: ${JSON.stringify({ id: "run", status: "completed", last_event_id: 1,
+                created_at: "2026-11-03T08:00:00Z", duration_ms })}\n\n`,
+        ]) {
+            mocks.fetch.mockResolvedValue(eventResponse(text));
+            const onEvent = vi.fn();
+            await expect(agentApi.subscribe("run", 0, { signal: new AbortController().signal, onEvent })).rejects.toThrow(/无效/);
+            expect(onEvent).not.toHaveBeenCalled();
+        }
+    });
+
     it("uses the authenticated JSON endpoints without changing request identifiers or paths", async () => {
         await agentApi.createConversation({ class_id: 7, semester_id: 8 });
         await agentApi.getConversation("conversation");

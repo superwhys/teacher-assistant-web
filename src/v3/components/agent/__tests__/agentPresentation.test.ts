@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AgentAction, AgentConversation, AgentRun } from "@/types/agent";
-import { toChatMessages, toDataCard } from "../agentPresentation";
+import { formatDuration, toChatMessages, toDataCard } from "../agentPresentation";
 
 function conversation(fields: Partial<AgentConversation> = {}): AgentConversation {
     return {
@@ -92,6 +92,48 @@ describe("agent business result presentation", () => {
 });
 
 describe("agent conversation presentation", () => {
+    it("attaches the completed run duration only to its final assistant message", () => {
+        const messages = toChatMessages(conversation({
+            runs: [{ ...run("run", "completed"), duration_ms: 12340 }],
+            messages: [
+                { id: "user", run_id: "run", role: "user", content: "查询班级", created_at: "2026-11-03T10:00:00+08:00" },
+                { id: "first", run_id: "run", role: "assistant", content: "正在查询", created_at: "2026-11-03T10:00:01+08:00" },
+                { id: "final", run_id: "run", role: "assistant", content: "查询完成", created_at: "2026-11-03T10:00:12+08:00" },
+            ],
+        }));
+        expect(messages.map((message) => [message.id, message.durationMs])).toEqual([
+            ["user", undefined], ["first", undefined], ["final", 12340],
+        ]);
+    });
+
+    it.each(["query", "action"])("keeps the duration on a completed %s result without an assistant text", (kind) => {
+        const messages = toChatMessages(conversation({
+            runs: [{ ...run("run", "completed"), duration_ms: 0 }],
+            results: kind === "query" ? [{ run_id: "run", data: { tool: "list_prizes", result: [] } }] : [],
+            actions: kind === "action" ? [action("pending")] : [],
+        }));
+        expect(messages[0]?.id).toBe("result:run");
+        expect(messages[0]?.durationMs).toBe(0);
+    });
+
+    it.each(["queued", "running", "failed", "cancelled"] as const)("hides duration for a %s run", (status) => {
+        const messages = toChatMessages(conversation({
+            runs: [{ ...run("run", status), duration_ms: 12000 }],
+            messages: [{ id: "assistant", run_id: "run", role: "assistant", content: "回复内容",
+                created_at: "2026-11-03T10:00:00+08:00" }],
+        }));
+        expect(messages[0]?.durationMs).toBeUndefined();
+    });
+
+    it.each([undefined, -1, NaN, Infinity])("hides missing or invalid duration (%s)", (duration) => {
+        const messages = toChatMessages(conversation({
+            runs: [{ ...run("run", "completed"), duration_ms: duration }],
+            messages: [{ id: "assistant", run_id: "run", role: "assistant", content: "回复内容",
+                created_at: "2026-11-03T10:00:00+08:00" }],
+        }));
+        expect(messages[0]?.durationMs).toBeUndefined();
+    });
+
     it("does not invent an assistant reply while a user message is only queued", () => {
         const messages = toChatMessages(conversation({
             runs: [run("run", "queued")],
@@ -139,5 +181,17 @@ describe("agent conversation presentation", () => {
         expect(messages[0]?.text).toBe("");
         expect(messages[0]?.complete).toBe(true);
         expect(toChatMessages(null)).toEqual([]);
+    });
+});
+
+describe("agent duration presentation", () => {
+    it.each([
+        { duration: 300, expected: "<1 秒" },
+        { duration: 12000, expected: "12 秒" },
+        { duration: 12340, expected: "12.3 秒" },
+        { duration: 60000, expected: "1 分" },
+        { duration: 68900, expected: "1 分 8 秒" },
+    ])("formats $duration ms as $expected", ({ duration, expected }) => {
+        expect(formatDuration(duration)).toBe(expected);
     });
 });

@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
     addMembers: vi.fn(), removeMembers: vi.fn(), warning: vi.fn(),
     success: vi.fn(),
     error: vi.fn(),
+    applyRuleBatch: vi.fn(),
     bumpDataVersion: vi.fn(),
     cache: {} as {
         classId: number
@@ -32,7 +33,7 @@ vi.mock('@/managers/student', () => ({ studentManager: {
     update: mocks.update, delete: mocks.delete, deleteGroup: mocks.deleteGroup,
     addStudentsToGroup: mocks.addMembers, removeStudentsFromGroup: mocks.removeMembers,
 } }))
-vi.mock('@/managers/points', () => ({ pointsManager: {} }))
+vi.mock('@/managers/points', () => ({ pointsManager: { applyRuleBatch: mocks.applyRuleBatch } }))
 const businessSession = reactive({ canWrite: true, canPrepare: true, canImportExport: true, entitlementMessage: '试用已到期，仅可查看' })
 vi.mock('@/stores/sessionStore', () => ({ useSessionStore: () => businessSession }))
 vi.mock('@/stores/cacheStore', () => ({ useCacheStore: () => mocks.cache }))
@@ -64,6 +65,10 @@ interface StudentsState {
     randomGroupVisible: boolean
     randomGroupingSaving: boolean
     randomGroupingError: string
+    pointsApplying: boolean
+    selectorVisible: boolean
+    selectorTargets: number[]
+    handleSelectRule: (rule: { id: number, name: string, sign: 'plus' | 'minus', points: number }, count: number) => Promise<void>
     loadStudentData: () => Promise<void>
     handleAddSingle: (payload: { name: string, gender: 1 }) => Promise<void>
     handleAddBatch: (payload: { students: { name: string, gender: 1 }[] }) => Promise<void>
@@ -264,5 +269,50 @@ describe('StudentsView commercial access', () => {
         expect(mocks.addMembers).not.toHaveBeenCalled()
         expect(mocks.removeMembers).not.toHaveBeenCalled()
         expect(mocks.warning).toHaveBeenCalledWith(businessSession.entitlementMessage)
+    })
+})
+
+describe('StudentsView repeat points application', () => {
+    const rule = { id: 3, name: '课堂发言', sign: 'plus' as const, points: 2 }
+
+    it('sends the count once and reports the multiplied score after refreshing', async () => {
+        const state = await mountStudents()
+        state.selectorTargets = [1]
+        state.selectorVisible = true
+        await state.handleSelectRule(rule, 3)
+        expect(mocks.applyRuleBatch).toHaveBeenCalledExactlyOnceWith(7, 3, [1], 3)
+        expect(mocks.success).toHaveBeenCalledWith('已对「甲」加6 分（课堂发言 × 3 次）')
+        expect(state.selectorVisible).toBe(false)
+        expect(state.pointsApplying).toBe(false)
+    })
+
+    it('blocks duplicate submissions and keeps the dialog open on failure', async () => {
+        const state = await mountStudents()
+        state.selectorTargets = [1]
+        state.selectorVisible = true
+        const applying = deferred<void>()
+        mocks.applyRuleBatch.mockReturnValueOnce(applying.promise)
+        const pending = state.handleSelectRule(rule, 3)
+        await state.handleSelectRule(rule, 3)
+        expect(mocks.applyRuleBatch).toHaveBeenCalledOnce()
+        expect(state.pointsApplying).toBe(true)
+        applying.reject(new ApiRequestError('积分不足'))
+        await pending
+        expect(state.selectorVisible).toBe(true)
+        expect(state.pointsApplying).toBe(false)
+        expect(mocks.success).not.toHaveBeenCalled()
+        expect(mocks.error).not.toHaveBeenCalled()
+    })
+
+    it('closes the completed operation even when the subsequent list refresh fails', async () => {
+        const state = await mountStudents()
+        state.selectorTargets = [1]
+        state.selectorVisible = true
+        mocks.list.mockRejectedValueOnce(new Error('offline'))
+        await state.handleSelectRule(rule, 3)
+        expect(state.selectorVisible).toBe(false)
+        expect(mocks.success).toHaveBeenCalledWith('已对「甲」加6 分（课堂发言 × 3 次）')
+        expect(mocks.error).toHaveBeenCalledWith('加载学生管理数据失败')
+        expect(mocks.applyRuleBatch).toHaveBeenCalledOnce()
     })
 })

@@ -765,7 +765,7 @@ async function handleLocateStudent(studentId: number): Promise<void> {
 }
 
 /** 处理积分规则选择。 */
-async function handleSelectRule(rule: { id: number, name: string, sign: "plus" | "minus", points: number }): Promise<void> {
+async function handleSelectRule(rule: { id: number, name: string, sign: "plus" | "minus", points: number }, count: number): Promise<void> {
     if (!allowWrite()) return
     if (!activeClassId.value || isArchivedSemester.value || selectorTargets.value.length === 0
         || pointsApplying.value || ruleGroupsLoading.value || ruleGroupsError.value) {
@@ -774,16 +774,19 @@ async function handleSelectRule(rule: { id: number, name: string, sign: "plus" |
 
     pointsApplying.value = true
     try {
-        await pointsManager.applyRuleBatch(activeClassId.value, rule.id, selectorTargets.value)
-        await loadStudentData()
+        await pointsManager.applyRuleBatch(activeClassId.value, rule.id, selectorTargets.value, count)
         selectorVisible.value = false
-        ElMessage.success(`已对「${getPointsTargetLabel(selectorTargets.value)}」${rule.sign === "plus" ? "加" : "减"}${Math.abs(rule.points)} 分（${rule.name}）`)
+        ElMessage.success(`已对「${getPointsTargetLabel(selectorTargets.value)}」${rule.sign === "plus" ? "加" : "减"}${Math.abs(rule.points) * count} 分（${rule.name} × ${count} 次）`)
     } catch (error) {
         console.error("执行积分操作失败", error)
-        ElMessage.error("执行积分操作失败")
+        if (!(error instanceof ApiRequestError)) {
+            ElMessage.error(error instanceof Error ? error.message : "执行积分操作失败")
+        }
+        return
     } finally {
         pointsApplying.value = false
     }
+    await loadStudentData()
 }
 
 /** 处理学生卡片选中。 */

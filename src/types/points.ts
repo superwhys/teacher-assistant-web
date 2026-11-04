@@ -11,6 +11,7 @@ export type Wallet = {
 
 export type ApplyPointsReq = {
     class_id?: number
+    count?: number
     rule_id?: number
     student_id?: number
 }

@@ -21,6 +21,17 @@
                 <template #prefix><i-ep-search aria-hidden="true" /></template>
             </el-input>
 
+            <div class="rule-repeat-settings">
+                <label class="rule-repeat-count">
+                    <span>应用次数</span>
+                    <input v-model="countInput" type="number" min="1" max="100" step="1" inputmode="numeric"
+                        :disabled="!canWrite || applying" :aria-invalid="!validCount" aria-describedby="rule-repeat-hint">
+                </label>
+                <p id="rule-repeat-hint" :class="{ 'rule-repeat-error': !validCount }" :role="validCount ? undefined : 'alert'">
+                    {{ validCount ? `每位学生应用所选规则 ${applicationCount} 次，下方显示总分。` : '请输入 1–100 的整数。' }}
+                </p>
+            </div>
+
             <template v-if="filteredGroups.length > 0 && activeGroup">
                 <div class="rule-group-switch" role="group" aria-label="规则分组">
                     <button v-for="group in filteredGroups" :key="group.id" type="button"
@@ -31,9 +42,12 @@
                 </div>
                 <div class="rule-grid">
                     <button v-for="rule in activeGroup.rules" :key="rule.id" type="button" class="rule-card"
-                        :class="{ 'rule-card--minus': rule.sign === 'minus' }" :disabled="!canWrite || (applying)" @click="handleSelectRule(rule)">
+                        :class="{ 'rule-card--minus': rule.sign === 'minus' }" :disabled="!canWrite || applying || !validCount" @click="handleSelectRule(rule)">
                         <span class="rule-card__name">{{ rule.name }}</span>
-                        <strong>{{ rule.sign === 'plus' ? '+' : '-' }}{{ Math.abs(rule.points) }}</strong>
+                        <span class="rule-card__points">
+                            <strong>{{ validCount ? `${rule.sign === 'plus' ? '+' : '-'}${Math.abs(rule.points) * applicationCount}` : '—' }}</strong>
+                            <small v-if="validCount && applicationCount > 1">{{ Math.abs(rule.points) }} 分 × {{ applicationCount }} 次</small>
+                        </span>
                     </button>
                 </div>
                 <p class="rules-hint">{{ filteredGroups.length }} 个分组 · {{ filteredRuleCount }} 项规则，点击规则立即执行。</p>
@@ -101,7 +115,7 @@ const props = withDefaults(defineProps<StudentsPointsRuleDialogProps>(), {
 const emit = defineEmits<{
     (event: "update:modelValue", value: boolean): void
     (event: "update:tab", value: SelectorTab): void
-    (event: "select", rule: UiRule): void
+    (event: "select", rule: UiRule, count: number): void
     (event: "retry"): void
 }>()
 
@@ -116,6 +130,10 @@ const currentTab = computed<SelectorTab>({
 })
 
 const keyword = ref("")
+const countInput = ref("1")
+const applicationCount = computed(() => Number(countInput.value))
+const validCount = computed(() => Number.isInteger(applicationCount.value)
+    && applicationCount.value >= 1 && applicationCount.value <= 100)
 const activeGroupId = ref<number | null>(null)
 
 /** 将未知值转换为数字。 */
@@ -219,17 +237,18 @@ const activeGroup = computed<UiGroup | null>(() => {
 /** 处理积分规则点击选择。 */
 function handleSelectRule(rule: UiRule): void {
     if (!allowWrite()) return
-    if (props.loading || props.applying) {
+    if (props.loading || props.applying || !validCount.value) {
         return
     }
 
-    emit("select", rule)
+    emit("select", rule, applicationCount.value)
 }
 
 /** 在弹窗打开时重置搜索条件。 */
 watch(() => props.modelValue, (isVisible) => {
     if (isVisible) {
         keyword.value = ""
+        countInput.value = "1"
     }
 })
 
@@ -319,6 +338,44 @@ watch(filteredGroups, (groups) => {
     gap: 10px;
 }
 
+.rule-repeat-settings {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.rule-repeat-count {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 10px;
+    color: var(--ta-text);
+    font-size: 14px;
+}
+
+.rule-repeat-count input {
+    width: 78px;
+    min-height: 40px;
+    box-sizing: border-box;
+    padding: 0 10px;
+    border: 1px solid var(--ta-line-strong);
+    border-radius: 10px;
+    color: var(--ta-text);
+    background: var(--ta-surface-solid);
+    font: inherit;
+}
+
+.rule-repeat-settings p {
+    margin: 0;
+    color: var(--ta-text-secondary);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.rule-repeat-settings .rule-repeat-error {
+    color: var(--ta-red);
+}
+
 .rule-card {
     min-width: 0;
     min-height: 60px;
@@ -341,9 +398,25 @@ watch(filteredGroups, (groups) => {
     overflow-wrap: anywhere;
 }
 
-.rule-card strong {
+.rule-card__points {
+    display: grid;
+    min-height: 42px;
+    align-content: center;
+    gap: 4px;
     flex-shrink: 0;
+    text-align: right;
+}
+
+.rule-card__points small {
+    color: var(--ta-text-secondary);
+    font-size: 11px;
+    line-height: 16px;
+    white-space: nowrap;
+}
+
+.rule-card strong {
     color: var(--ta-blue);
+    line-height: 22px;
     font-variant-numeric: tabular-nums;
 }
 
@@ -379,6 +452,16 @@ watch(filteredGroups, (groups) => {
 }
 
 @media (max-width: 660px) {
+    .rule-repeat-settings {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .rule-repeat-count input {
+        min-height: 44px;
+    }
+
     .rule-grid {
         grid-template-columns: 1fr;
     }

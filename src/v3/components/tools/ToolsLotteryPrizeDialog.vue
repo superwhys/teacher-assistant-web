@@ -1,6 +1,6 @@
 <template>
     <AppDialogShell v-model="visible" :title="mode === 'add' ? '添加奖品' : '编辑奖品'" eyebrow="奖品设置"
-        description="配置抽奖奖品名称、权重和启用状态，权重越高时被抽中的概率越大。" width="520px">
+        description="配置抽奖奖品名称、权重和启用状态，权重越高时被抽中的概率越大。" width="520px" height="580px">
         <div class="lottery-prize-dialog">
             <section class="surface-card">
                 <div class="section-head">

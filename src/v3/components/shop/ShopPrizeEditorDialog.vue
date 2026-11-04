@@ -1,7 +1,7 @@
 <template>
     <AppDialogShell v-model="visible" :eyebrow="mode === 'add' ? '新增奖品' : '编辑奖品'"
         :title="mode === 'add' ? '配置新的课堂奖励商品' : '更新当前商品信息'" description="支持设置商品名称、所需积分、库存和展示图标，方便在大屏和移动端统一呈现。"
-        width="720px">
+        width="720px" height="680px">
         <div class="editor-layout">
             <section class="editor-form">
                 <el-form :model="form" label-position="top">

@@ -5,6 +5,7 @@
         eyebrow="班级设置"
         description="修改后会立即同步到当前班级，不影响学期数据和学生积分。"
         width="560px"
+        height="400px"
         @closed="emit('closed')"
     >
         <div class="dialog-stack">

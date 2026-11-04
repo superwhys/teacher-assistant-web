@@ -24,6 +24,7 @@ vi.mock('@/stores/cacheStore', () => ({ useCacheStore: () => cache }))
 vi.mock('@/managers/lottery', () => ({ lotteryManager: mocks }))
 vi.mock('@/managers/student', () => ({ studentManager: { list: mocks.listStudents } }))
 vi.mock('@/api/mall', () => ({ mallApi: { listPrizes: vi.fn() } }))
+vi.mock('@/utils/confirmDialog', () => ({ confirmDialog: vi.fn() }))
 vi.mock('element-plus', () => ({
     ElMessage: { warning: mocks.warning, error: mocks.error, success: mocks.success },
     ElMessageBox: { confirm: vi.fn() },

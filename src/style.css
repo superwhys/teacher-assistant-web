@@ -33,6 +33,7 @@
   --ta-radius-small: 10px;
   --ta-radius-medium: 16px;
   --ta-radius-large: 22px;
+  --ta-dialog-height: 50dvh;
 
   --el-color-primary: #007aff;
   --el-color-primary-light-3: #4da2ff;

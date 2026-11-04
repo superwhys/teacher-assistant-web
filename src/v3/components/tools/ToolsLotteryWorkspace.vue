@@ -135,7 +135,8 @@ import ToolsLotteryPoolDialog from "@/v3/components/tools/ToolsLotteryPoolDialog
 import ToolsLotteryPoolPanel from "@/v3/components/tools/ToolsLotteryPoolPanel.vue";
 import ToolsLotteryPrizeDialog from "@/v3/components/tools/ToolsLotteryPrizeDialog.vue";
 import ToolsLotteryStudentDialog from "@/v3/components/tools/ToolsLotteryStudentDialog.vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
+import { confirmDialog } from "@/utils/confirmDialog";
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from "vue";
 
 const { canWrite, canImportExport, allowWrite, allowImportExport } = useBusinessAccess()
@@ -514,7 +515,7 @@ async function savePrize(): Promise<void> {
 async function deletePrize(item: UiLotteryPrize): Promise<void> {
     if (!allowWrite()) return
     try {
-        await ElMessageBox.confirm(`确定删除奖品「${item.name}」吗？`, "删除确认", {
+        await confirmDialog(`确定删除奖品「${item.name}」吗？`, "删除确认", {
             type: "warning"
         })
     } catch {

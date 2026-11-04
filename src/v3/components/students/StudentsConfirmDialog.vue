@@ -5,6 +5,7 @@
         :eyebrow="eyebrow"
         :description="description"
         width="460px"
+        height="auto"
     >
         <div class="confirm-card">
             <strong>{{ message }}</strong>

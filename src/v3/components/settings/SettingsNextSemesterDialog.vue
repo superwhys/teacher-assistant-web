@@ -5,6 +5,7 @@
         eyebrow="学期设置"
         description="切换后当前学期会进入历史状态，积分数据仅支持查看，不能继续操作。"
         width="560px"
+        height="680px"
         @closed="emit('closed')"
     >
         <div class="dialog-stack">

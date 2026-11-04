@@ -19,7 +19,8 @@ import { useCacheStore } from "@/stores/cacheStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { isApiRequestError } from "@/types/api";
 import AppNoticeBar from "@/v3/components/AppNoticeBar.vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
+import { confirmDialog } from "@/utils/confirmDialog";
 import { computed, ref } from "vue";
 
 const cacheStore = useCacheStore()
@@ -72,7 +73,7 @@ async function confirmStartTrial(): Promise<void> {
     confirming.value = true
     try {
         try {
-            await ElMessageBox.confirm(
+            await confirmDialog(
                 "确认现在开启免费试用？开启后将连续计时 14 天，到期后仅可查看，不能修改或导出数据。每个账号只能领取一次。",
                 "开启 14 天免费试用",
                 { confirmButtonText: "现在开启", cancelButtonText: "暂不开启", type: "info" }

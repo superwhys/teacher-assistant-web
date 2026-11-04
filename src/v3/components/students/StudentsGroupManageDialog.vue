@@ -86,7 +86,7 @@
     </AppDialogShell>
 
     <AppDialogShell v-model="deleteConfirmVisible" title="删除分组" eyebrow="风险操作"
-        description="删除分组不会删除学生本身，只会移除该组关系。确认后将立即生效。" width="460px">
+        description="删除分组不会删除学生本身，只会移除该组关系。确认后将立即生效。" width="460px" height="auto">
         <div class="confirm-card">
             <strong>确定删除分组「{{ selectedGroupName }}」吗？</strong>
             <p>删除后，本组学生会回到未分组状态。</p>

@@ -5,6 +5,7 @@
         eyebrow="规则管理"
         description="规则组用于归类课堂中的常用加减分场景，例如课堂表现、作业表现、小组合作等。"
         width="560px"
+        height="340px"
     >
         <section class="dialog-surface-card">
             <div class="dialog-form dialog-form--points">

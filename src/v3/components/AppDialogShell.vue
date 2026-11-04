@@ -2,6 +2,7 @@
     <el-dialog
         v-model="visible"
         :width="width"
+        :style="height ? { '--app-dialog-height': height } : undefined"
         :title="title"
         :show-close="showClose && !busy"
         :close-on-click-modal="!busy"
@@ -20,9 +21,11 @@
             </div>
         </template>
 
-        <div class="app-dialog-shell__body">
-            <slot />
-        </div>
+        <el-scrollbar height="100%" always class="app-dialog-shell__scrollbar">
+            <div class="app-dialog-shell__body">
+                <slot />
+            </div>
+        </el-scrollbar>
 
         <template v-if="$slots.footer" #footer>
             <div class="app-dialog-shell__footer">
@@ -33,6 +36,7 @@
 </template>
 
 <script setup lang="ts">
+import { ElScrollbar } from "element-plus";
 import { computed } from "vue";
 
 defineOptions({ name: "AppDialogShell" })
@@ -42,6 +46,7 @@ interface AppDialogShellProps {
     description?: string
     busy?: boolean
     eyebrow?: string
+    height?: string
     modelValue: boolean
     showClose?: boolean
     title: string
@@ -83,7 +88,7 @@ const visible = computed({
     padding: 0 !important;
     align-self: center;
     max-width: calc(100vw - 24px);
-    height: auto !important;
+    height: var(--app-dialog-height, var(--ta-dialog-height)) !important;
     min-height: 0;
     max-height: calc(100dvh - 40px);
     overflow: hidden;
@@ -120,8 +125,9 @@ const visible = computed({
 }
 
 :global(.app-dialog-shell .el-dialog__body) {
+    flex: 1;
     min-height: 0;
-    overflow-y: auto;
+    overflow: hidden;
 }
 
 :global(.app-dialog-shell .el-dialog__header),
@@ -161,10 +167,6 @@ const visible = computed({
 }
 
 .app-dialog-shell__body {
-    min-height: 0;
-    max-height: calc(100dvh - 180px);
-    flex: 0 1 auto;
-    overflow-y: auto;
     padding: 16px 20px 20px;
 }
 

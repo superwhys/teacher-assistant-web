@@ -24,10 +24,10 @@ vi.mock('@/managers/class', () => ({ classManager: {
 vi.mock('@/api/opinion', () => ({ submitOpinion: mocks.submitOpinion }))
 vi.mock('@/stores/cacheStore', () => ({ useCacheStore: () => mocks.cache }))
 vi.mock('@/stores/sessionStore', () => ({ useSessionStore: () => mocks.session }))
+vi.mock('@/utils/confirmDialog', () => ({ confirmDialog: mocks.confirm }))
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('element-plus', () => ({
     ElMessage: { warning: mocks.warning, success: mocks.success, error: vi.fn() },
-    ElMessageBox: { confirm: mocks.confirm },
 }))
 vi.mock('@/v3/components/settings/SettingsAccountCard.vue', () => ({ default: { render: () => null } }))
 vi.mock('@/v3/components/settings/SettingsMiniProgramCard.vue', () => ({ default: { render: () => null } }))

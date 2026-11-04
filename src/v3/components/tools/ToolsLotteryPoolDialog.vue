@@ -1,6 +1,6 @@
 <template>
     <AppDialogShell v-model="visible" :title="mode === 'add' ? '新建奖池' : '编辑奖池'" eyebrow="奖池设置"
-        description="为当前抽奖器创建或修改奖池名称，方便按课堂场景切换不同奖品集合。" width="480px">
+        description="为当前抽奖器创建或修改奖池名称，方便按课堂场景切换不同奖品集合。" width="480px" height="520px">
         <div class="lottery-pool-dialog">
             <section class="surface-card">
                 <div class="section-head">

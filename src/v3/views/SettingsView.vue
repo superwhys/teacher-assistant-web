@@ -52,7 +52,8 @@ import SettingsLockCard from "@/v3/components/settings/SettingsLockCard.vue";
 import SettingsMiniProgramCard from "@/v3/components/settings/SettingsMiniProgramCard.vue";
 import SettingsNextSemesterDialog from "@/v3/components/settings/SettingsNextSemesterDialog.vue";
 import SettingsRenameClassDialog from "@/v3/components/settings/SettingsRenameClassDialog.vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
+import { confirmDialog } from "@/utils/confirmDialog";
 import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
@@ -370,7 +371,7 @@ async function onSaveLockPassword(): Promise<void> {
 /** 清除当前锁屏密码。 */
 async function onClearLockPassword(): Promise<void> {
     try {
-        await ElMessageBox.confirm("确定清除锁屏密码？此操作需要验证当前密码。", "确认操作", {
+        await confirmDialog("确定清除锁屏密码？此操作需要验证当前密码。", "确认操作", {
             type: "warning",
         })
     } catch {
@@ -418,7 +419,7 @@ async function onSubmitFeedback(): Promise<void> {
 
     feedbackSubmitting.value = true
     try {
-        await ElMessageBox.confirm("确定提交这条反馈吗？", "确认提交", {
+        await confirmDialog("确定提交这条反馈吗？", "确认提交", {
             type: "info",
             confirmButtonText: "提交",
             cancelButtonText: "取消",

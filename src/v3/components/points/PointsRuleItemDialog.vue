@@ -5,6 +5,7 @@
         eyebrow="规则管理"
         description="积分项会直接用于单项榜与课堂积分操作。"
         width="620px"
+        height="420px"
     >
         <section class="dialog-surface-card">
             <div class="dialog-form dialog-form--points">

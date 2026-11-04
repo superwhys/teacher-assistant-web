@@ -5,6 +5,7 @@
         eyebrow="学生管理"
         description="修改当前学生的基础信息，样式与学生管理主页面保持一致。"
         width="520px"
+        height="400px"
     >
         <div class="students-edit-dialog">
             <section class="surface-card">

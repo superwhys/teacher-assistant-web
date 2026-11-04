@@ -24,8 +24,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/stores/sessionStore', () => ({ useSessionStore: () => mocks.session }))
 vi.mock('@/stores/cacheStore', () => ({ useCacheStore: () => mocks.cache }))
+vi.mock('@/utils/confirmDialog', () => ({ confirmDialog: mocks.confirm }))
 vi.mock('element-plus', () => ({
-    ElMessageBox: { confirm: mocks.confirm },
     ElMessage: { warning: mocks.warning, error: mocks.error },
 }))
 

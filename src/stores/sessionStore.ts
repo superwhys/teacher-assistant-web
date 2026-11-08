@@ -10,6 +10,7 @@ import { canAccessPath, firstAllowedPath, normalizeSidebar } from '@/utils/menuA
 import { computeTrialFromProfile, normalizeUserProfile } from '@/utils/userProfile'
 import { effectiveEntitlementState, entitlementDeadline, entitlementMessage as describeEntitlement, hasCommercialAccess } from '@/utils/entitlement'
 import { ENTITLEMENT_REJECTED_EVENT } from '@/utils/entitlementEvents'
+import { isPlatformPage, isPlatformPath, PLATFORM_MENUS } from '@/utils/platformAccess'
 
 export const useSessionStore = defineStore('session', () => {
     const cacheStore = useCacheStore()
@@ -36,14 +37,16 @@ export const useSessionStore = defineStore('session', () => {
     const isReadOnly = computed(() => !canPrepare.value)
     const entitlementMessage = computed(() => describeEntitlement(entitlementState.value))
     const canUseAgent = computed(() => allSidebar.value.some(menu => menu.code === 'agent'))
+    const isSuperAdmin = computed(() => initialized.value && !!cacheStore.token && role.value?.code === 'admin')
+    const platformSidebar = computed(() => isSuperAdmin.value ? PLATFORM_MENUS : [])
     const sidebar = computed(() => {
-        const menus = allSidebar.value.filter(menu => menu.code !== 'agent')
+        const menus = allSidebar.value.filter(menu => menu.code !== 'agent' && !isPlatformPath(menu.route_key))
         if (isPreparation.value || entitlementState.value === 'unavailable') {
             return menus.filter(menu => menu.route_key === 'students' || menu.route_key === 'settings')
         }
         return menus
     })
-    const firstRoute = computed(() => firstAllowedPath(sidebar.value))
+    const firstRoute = computed(() => firstAllowedPath(sidebar.value) || firstAllowedPath([...platformSidebar.value]))
 
     function updateClock(): void {
         now.value = Date.now()
@@ -118,6 +121,13 @@ export const useSessionStore = defineStore('session', () => {
         return task
     }
 
+    async function refreshAfterMutation(): Promise<void> {
+        // 保存后的会话必须晚于本次写入，不能复用此前发出的旧快照。
+        generation += 1
+        inFlight = null
+        await initialize(true)
+    }
+
     function startTrial(): Promise<void> {
         if (trialRequest) return trialRequest
         const token = cacheStore.token
@@ -159,6 +169,7 @@ export const useSessionStore = defineStore('session', () => {
     }
 
     function canAccess(path: string): boolean {
+        if (isPlatformPath(path)) return isSuperAdmin.value && isPlatformPage(path)
         if (path === '/settings/mini-program') return true
         if (!canWrite.value && (path === '/tools/timer' || path === '/tools/rollcall')) return false
         return canAccessPath(sidebar.value, path)
@@ -195,7 +206,7 @@ export const useSessionStore = defineStore('session', () => {
     onScopeDispose(() => clearTimeout(deadlineTimer))
 
     return {
-        sidebar, role, initialized, loading, error, firstRoute, initialize, reset, canAccess, canUseAgent,
+        sidebar, platformSidebar, isSuperAdmin, role, initialized, loading, error, firstRoute, initialize, refreshAfterMutation, reset, canAccess, canUseAgent,
         entitlementState, trialExpiresAt, paidExpiresAt, canWrite, canPrepare, canImportExport,
         isPreparation, isReadOnly, entitlementMessage, startingTrial, startTrial,
     }

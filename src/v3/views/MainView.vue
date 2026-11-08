@@ -12,20 +12,29 @@
             <div class="workspace-card">
                 <span class="workspace-card__icon" aria-hidden="true"><HomeFilled /></span>
                 <div class="workspace-card__content">
-                    <strong>教学工作台</strong>
-                    <span>班级教学空间</span>
+                    <strong>{{ isPlatformPage ? '平台管理' : '教学工作台' }}</strong>
+                    <span>{{ isPlatformPage ? '平台管理空间' : '班级教学空间' }}</span>
                 </div>
-                <span class="workspace-card__label">WORKSPACE</span>
+                <span class="workspace-card__label">{{ isPlatformPage ? 'ADMIN' : 'WORKSPACE' }}</span>
             </div>
 
             <nav class="aside-nav" aria-label="主导航">
-                <p class="aside-nav__group-label">教学管理 <span>WORKSPACE</span></p>
+                <p v-if="navItems.length" class="aside-nav__group-label">教学管理 <span>WORKSPACE</span></p>
                 <RouterLink v-for="item in navItems" :key="item.id" :to="item.to" class="aside-nav__item"
                     :class="{ 'is-active': currentNavItem?.id === item.id }" :title="item.label">
                     <component :is="item.icon" class="aside-nav__icon" aria-hidden="true" />
                     <span class="aside-nav__label">{{ item.label }}</span>
                     <span class="aside-nav__indicator" aria-hidden="true" />
                 </RouterLink>
+                <template v-if="platformNavItems.length">
+                    <p class="aside-nav__group-label aside-nav__group-label--platform">平台管理 <span>ADMINISTRATION</span></p>
+                    <RouterLink v-for="item in platformNavItems" :key="item.id" :to="item.to" class="aside-nav__item"
+                        :class="{ 'is-active': currentNavItem?.id === item.id }" :title="item.label">
+                        <component :is="item.icon" class="aside-nav__icon" aria-hidden="true" />
+                        <span class="aside-nav__label">{{ item.label }}</span>
+                        <span class="aside-nav__indicator" aria-hidden="true" />
+                    </RouterLink>
+                </template>
             </nav>
 
             <div class="sidebar-spacer" />
@@ -63,6 +72,11 @@
                         <strong>教师助手</strong>
                     </div>
                     <div class="mobile-actions">
+                        <button v-if="platformNavItems.length" type="button" class="mobile-platform-trigger"
+                            :aria-expanded="platformNavigationOpen" @click="platformNavigationOpen = true">
+                            <Key aria-hidden="true" />
+                            平台管理
+                        </button>
                         <RouterLink v-if="sessionStore.canAccess('/settings')" to="/settings" class="mobile-account" aria-label="进入设置">
                             {{ userInitial }}
                         </RouterLink>
@@ -70,7 +84,12 @@
                 </div>
 
                 <header class="main-view__header">
-                    <div class="context-bar">
+                    <div v-if="isPlatformPage" class="platform-context">
+                        <span>平台管理</span>
+                        <ArrowRight aria-hidden="true" />
+                        <strong>{{ currentNavItem?.label }}</strong>
+                    </div>
+                    <div v-else class="context-bar">
                         <ClassSwitchButton :active-class-id="activeClassId" :trigger-label="currentClassName"
                             @switched="handleClassSwitched" />
                         <SemesterSwitchButton :active-class-id="activeClassId" :current-semester-id="currentSemesterId"
@@ -82,7 +101,8 @@
                         </span>
                     </div>
 
-                    <div class="header-actions">
+                    <span v-if="isPlatformPage" class="platform-role-badge"><Lock aria-hidden="true" />超级管理员</span>
+                    <div v-else class="header-actions">
                         <button type="button" class="header-actions__button is-icon" aria-label="立即锁屏"
                             title="立即锁屏" @click="lockNow">
                             <Lock aria-hidden="true" />
@@ -98,7 +118,7 @@
                     </div>
                 </header>
 
-                <div v-if="showEntitlementNotice || showMiniProgramNotice" class="main-view__notices">
+                <div v-if="!isPlatformPage && (showEntitlementNotice || showMiniProgramNotice)" class="main-view__notices">
                     <AccountEntitlementNotice v-if="showEntitlementNotice" />
                     <AppNoticeBar v-if="showMiniProgramNotice" title="尚未绑定小程序"
                         description="前往设置页完成绑定，即可在小程序中使用当前账号。" tone="warning">
@@ -111,7 +131,7 @@
                     </AppNoticeBar>
                 </div>
 
-                <div v-if="showTimerStrip" class="main-view__timer-strip">
+                <div v-if="!isPlatformPage && showTimerStrip" class="main-view__timer-strip">
                     <FloatingTimerStrip :caption="timerStrip.caption" :title="timerStrip.title"
                         :countdown="timerStrip.countdown" :progress="timerStrip.progress" :paused="timerStrip.paused"
                         @open="openTimerPage" />
@@ -123,7 +143,7 @@
                 <RouterView />
             </section>
 
-            <nav class="mobile-nav" aria-label="手机主导航">
+            <nav v-if="navItems.length" class="mobile-nav" aria-label="手机主导航">
                 <RouterLink v-for="item in navItems" :key="`mobile-${item.id}`" :to="item.to"
                     class="mobile-nav__item" :class="{ 'is-active': currentNavItem?.id === item.id }">
                     <component :is="item.icon" aria-hidden="true" />
@@ -131,7 +151,18 @@
                 </RouterLink>
             </nav>
 
-            <AgentAssistant v-if="sessionStore.canUseAgent && cacheStore.isAuthenticated && !cacheStore.isLocked"
+            <AppDialogShell v-if="platformNavItems.length" v-model="platformNavigationOpen" title="平台管理"
+                eyebrow="ADMINISTRATION" description="用户、权限、菜单与反馈管理" width="380px">
+                <nav class="platform-mobile-nav" aria-label="平台管理">
+                    <RouterLink v-for="item in platformNavItems" :key="item.id" :to="item.to" class="aside-nav__item"
+                        :class="{ 'is-active': currentNavItem?.id === item.id }" @click="platformNavigationOpen = false">
+                        <component :is="item.icon" class="aside-nav__icon" aria-hidden="true" />
+                        <span>{{ item.label }}</span>
+                    </RouterLink>
+                </nav>
+            </AppDialogShell>
+
+            <AgentAssistant v-if="!isPlatformPage && sessionStore.canUseAgent && cacheStore.isAuthenticated && !cacheStore.isLocked"
                 :class-id="activeClassId" :class-name="currentClassName"
                 :semester-id="currentSemesterId" :semester-name="currentSemesterName"
                 :user-id="cacheStore.profile?.id"
@@ -182,7 +213,10 @@
 </template>
 
 <script setup lang="ts">
-import { Expand, Fold, HomeFilled, Lock, Menu, Present, Setting, StarFilled, SwitchButton, Timer, Tools, UserFilled } from "@element-plus/icons-vue";
+import {
+    ArrowRight, ChatDotRound, Expand, Fold, Grid, HomeFilled, Key, Lock, Menu,
+    Present, Setting, StarFilled, SwitchButton, Timer, Tools, User, UserFilled
+} from "@element-plus/icons-vue";
 import BrandLogo from "@/components/common/BrandLogo.vue";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import AgentAssistant from "@/v3/components/agent/AgentAssistant.vue";
@@ -201,6 +235,7 @@ import type { ClassDTO, SemesterDTO } from "@/types/class";
 import { ElMessage } from "element-plus";
 import { computed, onMounted, ref, watch, type Component } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
+import { isPlatformPath } from "@/utils/platformAccess";
 
 /** 定义左侧导航项结构。 */
 interface NavItem {
@@ -222,6 +257,8 @@ const route = useRoute();
 const router = useRouter()
 const cacheStore = useCacheStore()
 const sessionStore = useSessionStore()
+const isPlatformPage = computed(() => isPlatformPath(route.path))
+const platformNavigationOpen = ref(false)
 const showEntitlementNotice = computed(() => route.path !== "/settings"
     && sessionStore.entitlementState !== "permanent" && sessionStore.entitlementState !== "paid_active")
 const showMiniProgramNotice = computed(() => cacheStore.profile?.wechatBound === false)
@@ -244,6 +281,10 @@ const NAV_ICON_MAP: Record<string, Component> = {
     Tools,
     Setting,
     Menu,
+    User,
+    Key,
+    Grid,
+    ChatDotRound,
 }
 
 const MOBILE_MENU_LABELS: Record<string, string> = {
@@ -262,6 +303,18 @@ const navItems = computed<NavItem[]>(() => sessionStore.sidebar.map((item) => ({
     icon: NAV_ICON_MAP[item.icon] || Menu,
     to: `/${item.route_key}`,
 })))
+
+const platformNavItems = computed<NavItem[]>(() => (sessionStore.platformSidebar || []).map((item) => ({
+    id: item.code,
+    label: item.name,
+    mobileLabel: item.name,
+    icon: NAV_ICON_MAP[item.icon] || Menu,
+    to: `/${item.route_key}`,
+})))
+
+watch([() => route.path, () => sessionStore.isSuperAdmin], () => {
+    platformNavigationOpen.value = false
+})
 
 /** 返回当前激活的班级 ID。 */
 const activeClassId = computed<number | null>({
@@ -578,7 +631,8 @@ const currentSemesterName = computed<string>(() => cacheStore.getActiveSemesterN
 
 /** 返回当前激活的导航项。 */
 const currentNavItem = computed<NavItem | null>(() => {
-    return navItems.value.find((item) => route.path.startsWith(item.to)) ?? navItems.value[0] ?? null
+    return [...navItems.value, ...platformNavItems.value]
+        .find((item) => route.path === item.to || route.path.startsWith(`${item.to}/`)) ?? null
 })
 
 /** 统一展示当前模式的倒计时；多阶段进度按整个流程计算。 */
@@ -890,6 +944,59 @@ onMounted(() => {
 .aside-nav__group-label span {
     font-size: 8px;
     letter-spacing: 1px;
+}
+
+.aside-nav__group-label--platform {
+    margin-top: 22px;
+}
+
+.platform-context,
+.platform-role-badge,
+.mobile-platform-trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+}
+
+.platform-context span,
+.platform-context svg {
+    color: var(--ta-text-tertiary);
+}
+
+.platform-context svg,
+.platform-role-badge svg,
+.mobile-platform-trigger svg {
+    width: 14px;
+    height: 14px;
+}
+
+.platform-context strong {
+    font-weight: 500;
+}
+
+.platform-role-badge {
+    padding: 6px 9px;
+    border: 1px solid var(--ta-line);
+    border-radius: 6px;
+    color: var(--ta-text-secondary);
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.mobile-platform-trigger {
+    min-height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--ta-line);
+    border-radius: 6px;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+    cursor: pointer;
+}
+
+.platform-mobile-nav {
+    display: grid;
+    gap: 7px;
 }
 
 .aside-nav__item {

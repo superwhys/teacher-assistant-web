@@ -271,3 +271,106 @@ describe('commercial session permissions', () => {
         expect(mocks.success).not.toHaveBeenCalled()
     })
 })
+
+describe('platform administration access', () => {
+    function adminResponse(routes: string[] = []) {
+        const response = sessionResponse(profile('trial_expired'), routes)
+        const role = { id: 1, code: 'admin', name: '超级管理员' }
+        response.data.role = role
+        response.data.user.role = role
+        response.data.user.role_id = 1
+        return response
+    }
+
+    it('requires a freshly initialized admin role and supports accounts with no teaching menus', async () => {
+        mocks.cache.profile = { id: '17', name: 'Teacher', email: '', roleCode: 'admin' }
+        const session = useSessionStore()
+        expect(session.isSuperAdmin).toBe(false)
+        expect(session.canAccess('/platform/users')).toBe(false)
+        mocks.fetchSessionInit.mockResolvedValue(adminResponse())
+        await session.initialize()
+        expect(session.isSuperAdmin).toBe(true)
+        expect(session.platformSidebar.map(item => item.route_key)).toEqual([
+            'platform/users', 'platform/permissions', 'platform/menus', 'platform/opinions',
+        ])
+        expect(session.firstRoute).toBe('/platform/users')
+        expect(session.canAccess('/platform/users')).toBe(true)
+        expect(session.canAccess('/platform/unknown')).toBe(false)
+        expect(session.canWrite).toBe(true)
+    })
+
+    it('does not let dynamic menus or a parent path grant platform access to an ordinary account', async () => {
+        const response = sessionResponse(profile(), ['students'])
+        response.data.config.sidebar.push(
+            { ...menu('forged'), route_key: 'platform/users' },
+            { ...menu('parent'), route_key: 'platform' },
+        )
+        mocks.fetchSessionInit.mockResolvedValue(response)
+        const session = useSessionStore()
+        await session.initialize()
+        expect(session.isSuperAdmin).toBe(false)
+        expect(session.platformSidebar).toEqual([])
+        expect(session.sidebar.map(item => item.route_key)).toEqual(['students'])
+        expect(session.canAccess('/platform/users')).toBe(false)
+        expect(session.canAccess('/platform/users?tab=all')).toBe(false)
+        expect(session.canAccess('/students')).toBe(true)
+    })
+
+    it('does not identify administrators by role id, display name or permanent entitlement', async () => {
+        const response = sessionResponse(profile(), ['dashboard'])
+        response.data.role = { id: 1, code: 'common', name: '超级管理员' }
+        mocks.fetchSessionInit.mockResolvedValue(response)
+        const session = useSessionStore()
+        await session.initialize()
+        expect(session.isSuperAdmin).toBe(false)
+        expect(session.canAccess('/platform/permissions')).toBe(false)
+    })
+
+    it('removes platform access after a refresh revokes the role while entitlement stays permanent', async () => {
+        mocks.fetchSessionInit.mockResolvedValue(adminResponse(['dashboard']))
+        const session = useSessionStore()
+        await session.initialize()
+        expect(session.isSuperAdmin).toBe(true)
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['dashboard']))
+        await session.initialize(true)
+        expect(session.isSuperAdmin).toBe(false)
+        expect(session.platformSidebar).toEqual([])
+        expect(session.canAccess('/platform/users')).toBe(false)
+        expect(session.entitlementState).toBe('permanent')
+        expect(session.firstRoute).toBe('/dashboard')
+    })
+
+    it('clears platform grants immediately when the account changes', async () => {
+        mocks.fetchSessionInit.mockResolvedValue(adminResponse())
+        const session = useSessionStore()
+        await session.initialize()
+        mocks.cache.token = 'ordinary-session'
+        expect(session.isSuperAdmin).toBe(false)
+        expect(session.platformSidebar).toEqual([])
+        expect(session.canAccess('/platform/menus')).toBe(false)
+    })
+})
+
+
+describe('session refresh after platform writes', () => {
+    it('discards an older in-flight snapshot when an administrator changes their own role', async () => {
+        const role = { id: 1, code: 'admin', name: '超级管理员' }
+        const admin = sessionResponse(profile(), ['dashboard'])
+        admin.data.role = role
+        admin.data.user.role = role
+        mocks.fetchSessionInit.mockResolvedValue(admin)
+        const session = useSessionStore()
+        await session.initialize()
+        let finishOld!: (value: typeof admin) => void
+        mocks.fetchSessionInit.mockImplementationOnce(() => new Promise(resolve => { finishOld = resolve }))
+        const old = session.initialize(true)
+        mocks.fetchSessionInit.mockResolvedValueOnce(sessionResponse(profile(), ['dashboard']))
+        await session.refreshAfterMutation()
+        expect(mocks.fetchSessionInit).toHaveBeenCalledTimes(3)
+        expect(session.isSuperAdmin).toBe(false)
+        finishOld(admin)
+        await old
+        expect(session.isSuperAdmin).toBe(false)
+        expect(session.canAccess('/platform/users')).toBe(false)
+    })
+})

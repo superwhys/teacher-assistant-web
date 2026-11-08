@@ -1,0 +1,197 @@
+.platform-page,
+.admin-dialog {
+    --primary-color: var(--ta-blue);
+    --primary-soft: var(--ta-blue-soft);
+    --text-primary: var(--ta-text);
+    --text-secondary: var(--ta-text-secondary);
+    --bg-white: var(--ta-surface-solid);
+    --bg-light-gray: var(--ta-bg);
+    --border-color: var(--ta-line);
+}
+
+.platform-page > .page-header {
+    margin-bottom: 28px;
+    padding-bottom: 0;
+}
+
+.platform-page code {
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: #f1f5f2;
+    color: #64776d;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.platform-page {
+    width: 100%;
+    min-height: 100%;
+    padding: 0;
+}
+
+.platform-page .panel {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-white);
+    box-shadow: 0 2px 4px #243a2e02;
+}
+
+.platform-page .panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 20px 24px;
+}
+
+.platform-page .panel-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.platform-page .panel-description {
+    margin: 6px 0 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.platform-page .count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 25px;
+    height: 22px;
+    padding: 0 7px;
+    border: 1px solid #dfece4;
+    border-radius: 6px;
+    background: #f0f7f2;
+    color: var(--primary-color);
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.platform-page .muted-text {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.platform-page .table-scroll-hint {
+    display: none;
+    margin: 0;
+    padding: 0 18px 12px;
+    color: var(--text-secondary);
+    font-size: 11px;
+}
+
+.platform-page .table-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 18px 24px;
+    border-top: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.platform-page .el-table {
+    --el-table-header-bg-color: #f7f9f7;
+    --el-table-header-text-color: #7e8e85;
+    --el-table-text-color: #52655c;
+    --el-table-row-hover-bg-color: #f7faf8;
+    --el-table-border-color: #edf1ee;
+    font-size: 13px;
+}
+
+.platform-page .el-table th.el-table__cell {
+    height: 46px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.platform-page .el-table td.el-table__cell {
+    padding: 14px 0;
+}
+
+.platform-page .el-table .cell {
+    padding-right: 20px;
+    padding-left: 20px;
+}
+
+.platform-page .el-table__inner-wrapper::before {
+    display: none;
+}
+
+.platform-page .el-button:not(.is-link):not(.is-text),
+.admin-dialog .el-button:not(.is-link):not(.is-text) {
+    min-height: 36px;
+    padding: 9px 15px;
+    font-weight: 500;
+}
+
+.platform-page .el-button > span,
+.admin-dialog .el-button > span {
+    gap: 6px;
+}
+
+.platform-page .el-input__wrapper,
+.platform-page .el-select__wrapper {
+    min-height: 36px;
+}
+
+.platform-page .el-pagination {
+    --el-pagination-button-bg-color: transparent;
+    --el-pagination-hover-color: var(--primary-color);
+    font-weight: 400;
+}
+
+.platform-page .el-pager li.is-active {
+    border-radius: 6px;
+    background: var(--primary-soft);
+}
+
+.admin-dialog.el-dialog {
+    max-width: calc(100vw - 32px);
+    padding: 24px;
+    border-radius: 14px;
+}
+
+.admin-dialog .el-dialog__title {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.admin-dialog .el-dialog__body {
+    padding-top: 14px;
+    padding-bottom: 20px;
+}
+
+.el-message-box {
+    max-width: calc(100vw - 32px);
+}
+
+@media (max-width: 600px) {
+    .platform-page .panel-heading,
+    .platform-page .table-footer {
+        padding: 18px;
+    }
+
+    .admin-dialog.el-dialog {
+        padding: 20px;
+    }
+
+    .platform-page .table-scroll-hint {
+        display: block;
+    }
+}
+

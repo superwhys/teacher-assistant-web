@@ -4,6 +4,7 @@ import type { StudentsLayoutMode, StudentsSortOption } from '@/types/student'
 import type { UserProfile } from '@/types/user'
 import { generateSaltBase64, hashPassword, verifyPassword } from '@/utils/crypto'
 import { computeTrialFromProfile } from '@/utils/userProfile'
+import { authStorage } from '@/utils/authStorage'
 
 const GLOBAL_CACHE_KEY = 'ta_cache_global_v1'
 const USER_CACHE_PREFIX = 'ta_cache:'
@@ -562,7 +563,7 @@ export const useCacheStore = defineStore('cache', () => {
 }, {
     persist: {
         key: GLOBAL_CACHE_KEY,
-        storage: localStorage,
+        storage: authStorage,
         pick: ['token', 'profile', 'isTrial', 'trialExpiresAt', 'isExpired'],
     }
 })

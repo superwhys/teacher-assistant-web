@@ -8,7 +8,7 @@ const router = useRouter()
 const cacheStore = useCacheStore()
 const sessionStore = useSessionStore()
 
-watch(() => sessionStore.entitlementState, async () => {
+watch(() => [sessionStore.entitlementState, sessionStore.isSuperAdmin, sessionStore.sidebar], async () => {
     const path = router.currentRoute.value.path
     if (sessionStore.initialized && !sessionStore.error && path !== '/auth' && path !== '/no-access'
         && !sessionStore.canAccess(path)) {

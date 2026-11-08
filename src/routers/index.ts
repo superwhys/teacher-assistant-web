@@ -61,6 +61,34 @@ const routes = [
         component: () => import('@/v3/views/NoAccessView.vue'),
       },
       {
+        path: 'platform',
+        redirect: '/platform/users',
+      },
+      {
+        path: 'platform/users',
+        name: 'platform-users',
+        component: () => import('@/views/admin/UserManagementView.vue'),
+        meta: { requiresSuperAdmin: true },
+      },
+      {
+        path: 'platform/permissions',
+        name: 'platform-permissions',
+        component: () => import('@/views/admin/PermissionManagementView.vue'),
+        meta: { requiresSuperAdmin: true },
+      },
+      {
+        path: 'platform/menus',
+        name: 'platform-menus',
+        component: () => import('@/views/admin/MenuManagementView.vue'),
+        meta: { requiresSuperAdmin: true },
+      },
+      {
+        path: 'platform/opinions',
+        name: 'platform-opinions',
+        component: () => import('@/views/admin/OpinionManagementView.vue'),
+        meta: { requiresSuperAdmin: true },
+      },
+      {
         path: ':pathMatch(.*)*',
         component: () => import('@/v3/views/ComingSoonView.vue'),
       },
@@ -139,6 +167,14 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to) => {
+  // 路由历史在会话引导前已创建，避免首次导航把已消费的凭证重新带回 URL。
+  if ('token' in to.query || to.query.session === 'tab') {
+    const query = { ...to.query }
+    delete query.token
+    if (query.session === 'tab') delete query.session
+    return { path: to.path, query, hash: to.hash, replace: true }
+  }
+
   const mainLoading = useMainLoadingStore()
   const token = mainLoading.beginRoute()
     ; (to as any).__mainLoadingToken = token
@@ -163,6 +199,10 @@ router.beforeEach(async (to) => {
   }
 
   const fallback = session.firstRoute || '/no-access'
+  if (to.meta.requiresSuperAdmin && !session.isSuperAdmin) {
+    mainLoading.endRoute(token)
+    return fallback
+  }
   if (to.path === '/auth' || to.path === '/') {
     mainLoading.endRoute(token)
     return fallback

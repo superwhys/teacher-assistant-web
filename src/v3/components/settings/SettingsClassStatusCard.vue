@@ -64,7 +64,8 @@ const emit = defineEmits<SettingsClassStatusCardEmits>()
 
 .settings-section__intro h3 {
     margin: 0;
-    font-size: 18px;
+    font-size: 15px;
+    font-weight: 600;
     letter-spacing: -0.015em;
 }
 
@@ -116,7 +117,7 @@ const emit = defineEmits<SettingsClassStatusCardEmits>()
     padding: 0 9px;
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
+    border-radius: 6px;
     color: var(--ta-text-secondary);
     background: var(--ta-surface-muted);
     font-size: 12px;
@@ -150,9 +151,9 @@ const emit = defineEmits<SettingsClassStatusCardEmits>()
     align-items: center;
     justify-content: center;
     border: 0;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 620;
+    border-radius: var(--ta-radius-small);
+    font-size: 13px;
+    font-weight: 500;
     white-space: nowrap;
     cursor: pointer;
 }
@@ -166,7 +167,7 @@ const emit = defineEmits<SettingsClassStatusCardEmits>()
 .primary-button {
     color: #ffffff;
     background: var(--ta-blue);
-    box-shadow: 0 5px 14px rgba(0, 122, 255, 0.18);
+    box-shadow: var(--ta-shadow-1);
 }
 
 .ghost-button:disabled,

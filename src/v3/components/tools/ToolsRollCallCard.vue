@@ -67,7 +67,7 @@ const emit = defineEmits<{
     height: 94px;
     display: grid;
     place-items: center;
-    border-radius: 30px;
+    border-radius: var(--ta-radius-large);
     color: #2c6740;
     background: linear-gradient(145deg, #effaf2, #d8efdf);
     font-size: 28px;
@@ -90,7 +90,7 @@ const emit = defineEmits<{
     min-height: 38px;
     padding: 0 13px;
     border: 0;
-    border-radius: 10px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
     background: #ffffff;
     box-shadow: inset 0 0 0 1px var(--ta-line-strong);
@@ -102,8 +102,8 @@ const emit = defineEmits<{
 
 .action-button--primary {
     color: #ffffff;
-    background: var(--ta-green);
-    box-shadow: 0 5px 14px rgba(36, 138, 61, 0.18);
+    background: var(--ta-blue);
+    box-shadow: var(--ta-shadow-1);
 }
 
 .action-button:disabled {

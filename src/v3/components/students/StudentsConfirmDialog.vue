@@ -68,15 +68,15 @@ function handleConfirm(): void {
 <style scoped>
 .confirm-card {
     padding: 20px;
-    border: 1px solid rgba(122, 141, 198, 0.16);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface-solid);
 }
 
 .confirm-card strong {
     display: block;
     margin: 0;
-    color: #16213e;
+    color: var(--ta-text);
     font-size: 19px;
     line-height: 1.7;
 }
@@ -93,16 +93,16 @@ function handleConfirm(): void {
     min-height: 44px;
     padding: 0 16px;
     border: none;
-    border-radius: 16px;
+    border-radius: var(--ta-radius-small);
     font: inherit;
     cursor: pointer;
     transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
 }
 
 .ghost-button {
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
-    color: #16213e;
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
+    color: var(--ta-text);
 }
 
 .danger-button {

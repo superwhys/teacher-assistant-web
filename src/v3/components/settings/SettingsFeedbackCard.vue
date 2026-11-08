@@ -60,7 +60,8 @@ const feedbackContentModel = computed({
 
 .settings-section__intro h3 {
     margin: 0;
-    font-size: 18px;
+    font-size: 15px;
+    font-weight: 600;
     letter-spacing: -0.015em;
 }
 
@@ -85,7 +86,7 @@ const feedbackContentModel = computed({
     padding: 0 9px;
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
+    border-radius: 6px;
     color: var(--ta-text-secondary);
     background: var(--ta-surface-muted);
     font-size: 12px;
@@ -105,8 +106,8 @@ const feedbackContentModel = computed({
 
 .settings-section :deep(.el-textarea__inner) {
     min-height: 150px !important;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.62);
+    border-radius: var(--ta-radius-small);
+    background: var(--ta-surface-solid);
     font-size: 14px;
     line-height: 1.55;
 }
@@ -127,9 +128,9 @@ const feedbackContentModel = computed({
     align-items: center;
     justify-content: center;
     border: 0;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 620;
+    border-radius: var(--ta-radius-small);
+    font-size: 13px;
+    font-weight: 500;
     white-space: nowrap;
     cursor: pointer;
 }
@@ -143,7 +144,7 @@ const feedbackContentModel = computed({
 .primary-button {
     color: #ffffff;
     background: var(--ta-blue);
-    box-shadow: 0 5px 14px rgba(0, 122, 255, 0.18);
+    box-shadow: var(--ta-shadow-1);
 }
 
 .helper-note {

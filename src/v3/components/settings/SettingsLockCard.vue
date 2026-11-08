@@ -101,7 +101,8 @@ const confirmPasswordModel = computed({
 
 .settings-section__intro h3 {
     margin: 0;
-    font-size: 18px;
+    font-size: 15px;
+    font-weight: 600;
     letter-spacing: -0.015em;
 }
 
@@ -153,7 +154,7 @@ const confirmPasswordModel = computed({
     padding: 0 9px;
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
+    border-radius: 6px;
     color: var(--ta-text-secondary);
     background: var(--ta-surface-muted);
     font-size: 12px;
@@ -162,8 +163,8 @@ const confirmPasswordModel = computed({
 }
 
 .status-chip--sky {
-    color: #0064cf;
-    background: #e6f2ff;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
 }
 
 .settings-form-grid {
@@ -192,7 +193,7 @@ const confirmPasswordModel = computed({
 .settings-section :deep(.el-input__wrapper) {
     min-height: 36px;
     padding-inline: 10px;
-    border-radius: 9px;
+    border-radius: var(--ta-radius-small);
     font-size: 14px;
 }
 
@@ -210,7 +211,7 @@ const confirmPasswordModel = computed({
     align-items: center;
     justify-content: center;
     border: 0;
-    border-radius: 9px;
+    border-radius: var(--ta-radius-small);
     font-size: 13px;
     font-weight: 620;
     white-space: nowrap;
@@ -226,7 +227,7 @@ const confirmPasswordModel = computed({
 .primary-button {
     color: #ffffff;
     background: var(--ta-blue);
-    box-shadow: 0 5px 14px rgba(0, 122, 255, 0.18);
+    box-shadow: var(--ta-shadow-1);
 }
 
 .ghost-button:disabled,

@@ -45,7 +45,6 @@ defineProps<ToolsCardPanelProps>()
     border-radius: var(--ta-radius-large);
     background: var(--ta-surface);
     box-shadow: var(--ta-shadow-1);
-    backdrop-filter: blur(18px) saturate(150%);
 }
 
 .tools-card-panel__head,
@@ -63,13 +62,15 @@ defineProps<ToolsCardPanelProps>()
 
 .tools-card-panel__eyebrow {
     color: var(--ta-blue);
-    font-size: 12px;
-    font-weight: 650;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
 }
 
 .tools-card-panel__head h3 {
     margin: 5px 0 0;
-    font-size: 20px;
+    font-size: 15px;
+    font-weight: 600;
     letter-spacing: -0.015em;
 }
 
@@ -78,7 +79,7 @@ defineProps<ToolsCardPanelProps>()
     padding: 0 9px;
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
+    border-radius: 6px;
     color: var(--ta-text-secondary);
     background: var(--ta-surface-muted);
     font-size: 12px;

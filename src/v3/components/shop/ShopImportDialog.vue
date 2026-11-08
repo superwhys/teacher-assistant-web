@@ -273,9 +273,9 @@ function confirmImport(): void {
 .import-guide,
 .import-preview {
     padding: 20px;
-    border: 1px solid rgba(122, 141, 198, 0.14);
-    border-radius: 26px;
-    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface-solid);
 }
 
 .import-dropzone :deep(.el-upload) {
@@ -285,14 +285,14 @@ function confirmImport(): void {
 .import-dropzone :deep(.el-upload-dragger) {
     width: 100%;
     padding: 36px 20px;
-    border: 1px dashed rgba(85, 104, 255, 0.26);
-    border-radius: 22px;
-    background: rgba(85, 104, 255, 0.04);
+    border: 1px dashed rgba(24, 116, 100, 0.26);
+    border-radius: var(--ta-radius-large);
+    background: rgba(24, 116, 100, 0.04);
 }
 
 .import-dropzone__icon {
     font-size: 53px;
-    color: #5568ff;
+    color: var(--ta-blue);
     margin-bottom: 12px;
 }
 
@@ -305,16 +305,14 @@ function confirmImport(): void {
 
 .import-dropzone p {
     margin-top: 8px;
-    color: #627099;
+    color: var(--ta-text-secondary);
 }
 
 .import-guide {
     display: grid;
     gap: 14px;
     align-content: start;
-    background:
-        radial-gradient(circle at top right, rgba(142, 108, 255, 0.12), transparent 28%),
-        rgba(255, 255, 255, 0.82);
+    background: var(--ta-surface-muted);
 }
 
 .import-guide ul {
@@ -340,9 +338,9 @@ function confirmImport(): void {
     align-items: center;
     min-height: 30px;
     padding: 0 10px;
-    border-radius: 999px;
-    background: rgba(85, 104, 255, 0.1);
-    color: #5568ff;
+    border-radius: 6px;
+    background: rgba(24, 116, 100, 0.1);
+    color: var(--ta-blue);
     font-size: 13px;
     font-weight: 700;
 }
@@ -350,7 +348,7 @@ function confirmImport(): void {
 .text-button {
     border: none;
     background: transparent;
-    color: #5568ff;
+    color: var(--ta-blue);
     font: inherit;
     font-weight: 700;
     cursor: pointer;
@@ -364,12 +362,12 @@ function confirmImport(): void {
 .import-guide ul {
     margin: 0;
     padding-left: 18px;
-    color: #16213e;
+    color: var(--ta-text);
     line-height: 1.8;
 }
 
 .import-guide p {
-    color: #627099;
+    color: var(--ta-text-secondary);
     line-height: 1.7;
 }
 
@@ -387,7 +385,7 @@ function confirmImport(): void {
 
 .import-preview__head h4 {
     margin-top: 10px;
-    color: #16213e;
+    color: var(--ta-text);
     font-size: 23px;
 }
 
@@ -395,10 +393,10 @@ function confirmImport(): void {
 .dialog-button {
     min-height: 44px;
     padding: 0 16px;
-    border: 1px solid rgba(122, 141, 198, 0.24);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.82);
-    color: #16213e;
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-small);
+    background: var(--ta-surface-solid);
+    color: var(--ta-text);
     font: inherit;
     font-weight: 700;
     cursor: pointer;
@@ -410,7 +408,7 @@ function confirmImport(): void {
 
 .dialog-button--primary {
     border: none;
-    background: linear-gradient(135deg, #5568ff, #8e6cff);
+    background: var(--ta-blue);
     color: #ffffff;
 }
 

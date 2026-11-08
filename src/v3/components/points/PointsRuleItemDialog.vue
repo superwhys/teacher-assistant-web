@@ -157,19 +157,17 @@ watch(() => props.modelValue, (value) => {
 
 .field-label {
     display: block;
-    color: #627099;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    color: var(--ta-text-secondary);
+    font-size: 12px;
+    font-weight: 500;
 }
 
 .dialog-surface-card {
     padding: 20px;
-    border: 1px solid rgba(122, 141, 198, 0.16);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.78);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface-solid);
+    box-shadow: none;
 }
 
 .dialog-form__row > .field-block {
@@ -195,7 +193,7 @@ watch(() => props.modelValue, (value) => {
 .primary-button {
     min-height: 44px;
     padding: 0 16px;
-    border-radius: 16px;
+    border-radius: var(--ta-radius-small);
 }
 
 .ghost-button:hover,
@@ -205,24 +203,24 @@ watch(() => props.modelValue, (value) => {
 }
 
 .ghost-button {
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
-    color: #16213e;
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
+    color: var(--ta-text);
 }
 
 .primary-button {
-    background: linear-gradient(135deg, #5568ff, #8e6cff);
+    background: var(--ta-blue);
     color: #ffffff;
-    box-shadow: 0 12px 24px rgba(85, 104, 255, 0.26);
+    box-shadow: var(--ta-shadow-1);
 }
 
 .points-sign-switch__button {
     min-height: 44px;
     padding: 0 18px;
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.88);
-    color: #16213e;
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-small);
+    background: var(--ta-surface-solid);
+    color: var(--ta-text);
     font-weight: 700;
 }
 
@@ -247,16 +245,16 @@ watch(() => props.modelValue, (value) => {
 
 .dialog-surface-card :deep(.el-input__wrapper),
 .dialog-surface-card :deep(.el-input-number .el-input__wrapper) {
-    border-radius: 16px;
+    border-radius: var(--ta-radius-small);
     box-shadow: none;
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
 }
 
 .dialog-surface-card :deep(.el-input__wrapper.is-focus),
 .dialog-surface-card :deep(.el-input-number .el-input__wrapper.is-focus) {
-    border-color: rgba(85, 104, 255, 0.36);
-    box-shadow: 0 0 0 4px rgba(85, 104, 255, 0.08);
+    border-color: rgba(24, 116, 100, 0.36);
+    box-shadow: 0 0 0 4px rgba(24, 116, 100, 0.08);
 }
 
 .dialog-surface-card :deep(.el-input-number) {

@@ -305,10 +305,10 @@ watch(filteredGroups, (groups) => {
     min-height: 36px;
     padding: 0 12px;
     border: 0;
-    border-radius: 8px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
     background: transparent;
-    font-size: 14px;
+    font-size: 13px;
     cursor: pointer;
 }
 

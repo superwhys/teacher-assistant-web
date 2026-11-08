@@ -304,7 +304,6 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
     border-radius: var(--ta-radius-large);
     background: var(--ta-surface);
     box-shadow: var(--ta-shadow-1);
-    backdrop-filter: blur(18px) saturate(150%);
 }
 
 .panel-head,
@@ -335,7 +334,8 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
 }
 
 .panel-head h3 {
-    font-size: 18px;
+    font-size: 15px;
+    font-weight: 600;
 }
 
 .toolbar-row {
@@ -356,9 +356,9 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
     justify-content: center;
     gap: 7px;
     border: 0;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 620;
+    border-radius: var(--ta-radius-small);
+    font-size: 13px;
+    font-weight: 500;
     white-space: nowrap;
     cursor: pointer;
 }
@@ -373,7 +373,7 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
 .primary-button {
     color: #ffffff;
     background: var(--ta-blue);
-    box-shadow: 0 5px 14px rgba(0, 122, 255, 0.18);
+    box-shadow: var(--ta-shadow-1);
 }
 
 .danger-button {
@@ -410,7 +410,7 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
 .rule-groups-panel {
     min-width: 0;
     padding: 12px;
-    border-radius: 16px;
+    border-radius: var(--ta-radius-large);
     background: var(--ta-surface-muted);
 }
 
@@ -437,9 +437,9 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
     padding: 0 9px;
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
-    color: #0064cf;
-    background: #e6f2ff;
+    border-radius: 6px;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
     font-size: 13px;
     font-weight: 600;
     white-space: nowrap;
@@ -474,13 +474,13 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
 }
 
 .rule-group-card:hover {
-    background: rgba(255, 255, 255, 0.72);
+    background: var(--ta-surface-solid);
 }
 
 .rule-group-card.is-active {
-    color: #0065d1;
-    background: #ffffff;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+    box-shadow: none;
 }
 
 .rule-group-card strong {
@@ -516,7 +516,8 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
 
 .rule-items-panel__title h4 {
     margin-top: 5px;
-    font-size: 18px;
+    font-size: 15px;
+    font-weight: 600;
 }
 
 .rule-items-panel__toolbar {
@@ -541,8 +542,8 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
 .filter-button-group {
     min-height: 34px;
     padding: 3px;
-    border-radius: 10px;
-    background: #e9e9ed;
+    border-radius: var(--ta-radius-small);
+    background: var(--ta-surface-muted);
 }
 
 .filter-button {
@@ -554,9 +555,9 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
 }
 
 .filter-button.is-active {
-    color: var(--ta-text);
-    background: #ffffff;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+    box-shadow: none;
 }
 
 .rule-item-row {
@@ -588,7 +589,7 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
     padding: 0 9px;
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
+    border-radius: 6px;
     font-size: 12px;
     font-weight: 650;
 }
@@ -621,7 +622,7 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
     place-items: center;
     align-content: center;
     gap: 7px;
-    border-radius: 14px;
+    border-radius: var(--ta-radius-large);
     color: var(--ta-text-tertiary);
     background: var(--ta-surface-muted);
     text-align: center;

@@ -42,9 +42,9 @@ const emit = defineEmits<{
     gap: 8px 12px;
     align-items: center;
     border: 1px solid var(--ta-line);
-    border-radius: 15px;
+    border-radius: var(--ta-radius-large);
     color: var(--ta-text);
-    background: rgba(255, 255, 255, 0.96);
+    background: var(--ta-surface-solid);
     box-shadow: var(--ta-shadow-1);
     text-align: left;
     font: inherit;

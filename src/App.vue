@@ -41,9 +41,33 @@ async function retrySession() {
 </template>
 
 <style scoped>
-.session-error-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #f8fafc; }
-.session-error-card { width: min(420px, 100%); padding: 32px; border-radius: 20px; background: #fff; box-shadow: 0 18px 50px rgba(15, 23, 42, .08); text-align: center; }
-.session-error-icon { width: 42px; height: 42px; color: #f59e0b; }
-.session-error-card h1 { margin: 16px 0 8px; font-size: 23px; color: #0f172a; }
-.session-error-card p { margin: 0 0 20px; color: #64748b; }
+.session-error-page {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: var(--ta-bg);
+}
+.session-error-card {
+    width: min(420px, 100%);
+    padding: 32px;
+    border-radius: var(--ta-radius-large);
+    background: #fff;
+    box-shadow: var(--ta-shadow-1);
+    text-align: center;
+}
+.session-error-icon {
+    width: 42px;
+    height: 42px;
+    color: var(--ta-orange);
+}
+.session-error-card h1 {
+    margin: 16px 0 8px;
+    font-size: 23px;
+    color: var(--ta-text);
+}
+.session-error-card p {
+    margin: 0 0 20px;
+    color: var(--ta-text-secondary);
+}
 </style>

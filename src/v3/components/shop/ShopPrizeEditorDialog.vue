@@ -156,9 +156,9 @@ function normalizePositiveNumber(value: number, allowZero = false): number {
 .editor-form,
 .editor-preview {
     padding: 20px;
-    border: 1px solid rgba(122, 141, 198, 0.14);
-    border-radius: 26px;
-    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface-solid);
 }
 
 .editor-form__grid,
@@ -181,14 +181,12 @@ function normalizePositiveNumber(value: number, allowZero = false): number {
     display: grid;
     gap: 16px;
     align-content: start;
-    background:
-        radial-gradient(circle at top right, rgba(142, 108, 255, 0.14), transparent 28%),
-        rgba(255, 255, 255, 0.82);
+    background: var(--ta-surface-muted);
 }
 
 .editor-preview__visual {
     height: 180px;
-    border-radius: 24px;
+    border-radius: var(--ta-radius-large);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -233,13 +231,13 @@ function normalizePositiveNumber(value: number, allowZero = false): number {
 
 .editor-preview__meta strong {
     display: block;
-    color: #16213e;
+    color: var(--ta-text);
     font-size: 23px;
 }
 
 .editor-preview__meta p {
     margin-top: 8px;
-    color: #627099;
+    color: var(--ta-text-secondary);
     line-height: 1.7;
 }
 
@@ -250,20 +248,20 @@ function normalizePositiveNumber(value: number, allowZero = false): number {
 
 .editor-preview__summary>div {
     padding: 18px;
-    border-radius: 22px;
-    background: rgba(22, 33, 62, 0.05);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface-muted);
 }
 
 .editor-preview__summary span {
     display: block;
-    color: #627099;
+    color: var(--ta-text-secondary);
     font-size: 14px;
 }
 
 .editor-preview__summary strong {
     display: block;
     margin-top: 8px;
-    color: #16213e;
+    color: var(--ta-text);
     font-size: 25px;
 }
 
@@ -274,10 +272,10 @@ function normalizePositiveNumber(value: number, allowZero = false): number {
 .dialog-button {
     min-height: 46px;
     padding: 0 18px;
-    border: 1px solid rgba(122, 141, 198, 0.24);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.82);
-    color: #16213e;
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-small);
+    background: var(--ta-surface-solid);
+    color: var(--ta-text);
     font: inherit;
     font-weight: 700;
     cursor: pointer;
@@ -285,7 +283,7 @@ function normalizePositiveNumber(value: number, allowZero = false): number {
 
 .dialog-button--primary {
     border: none;
-    background: linear-gradient(135deg, #5568ff, #8e6cff);
+    background: var(--ta-blue);
     color: #ffffff;
 }
 

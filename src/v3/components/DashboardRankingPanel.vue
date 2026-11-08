@@ -194,7 +194,6 @@ watch(() => [props.activeClassId, props.currentSemesterId], async () => {
     border-radius: var(--ta-radius-large);
     background: var(--ta-surface);
     box-shadow: var(--ta-shadow-1);
-    backdrop-filter: blur(18px) saturate(150%);
 }
 
 .panel-head {
@@ -207,7 +206,8 @@ watch(() => [props.activeClassId, props.currentSemesterId], async () => {
 
 .panel-head h3 {
     margin: 0;
-    font-size: 18px;
+    font-size: 15px;
+    font-weight: 600;
     letter-spacing: -0.015em;
 }
 
@@ -228,14 +228,14 @@ watch(() => [props.activeClassId, props.currentSemesterId], async () => {
     border: 0;
     color: var(--ta-blue);
     background: transparent;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 500;
     line-height: 1.2;
     cursor: pointer;
 }
 
 .text-button:hover {
-    color: #005ecb;
+    color: var(--ta-blue-hover);
 }
 
 .text-button svg {
@@ -254,7 +254,7 @@ watch(() => [props.activeClassId, props.currentSemesterId], async () => {
     align-items: center;
     gap: 2px;
     border-radius: 10px;
-    background: #e9e9ed;
+    background: var(--ta-surface-muted);
 }
 
 .ranking-filter__button {
@@ -262,7 +262,7 @@ watch(() => [props.activeClassId, props.currentSemesterId], async () => {
     min-height: 28px;
     padding: 0 10px;
     border: 0;
-    border-radius: 8px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
     background: transparent;
     font-size: 13px;
@@ -270,9 +270,9 @@ watch(() => [props.activeClassId, props.currentSemesterId], async () => {
 }
 
 .ranking-filter__button.is-active {
-    color: var(--ta-text);
-    background: #ffffff;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+    box-shadow: none;
     font-weight: 620;
 }
 
@@ -328,7 +328,7 @@ watch(() => [props.activeClassId, props.currentSemesterId], async () => {
     display: grid;
     place-items: center;
     gap: 7px;
-    border-radius: 16px;
+    border-radius: var(--ta-radius-large);
     color: var(--ta-text-tertiary);
     background: var(--ta-surface-muted);
     text-align: center;

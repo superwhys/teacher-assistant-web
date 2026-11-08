@@ -36,7 +36,8 @@ const showQrCode = ref(false);
 
 .settings-section__intro h3 {
     margin: 0;
-    font-size: 18px;
+    font-size: 15px;
+    font-weight: 600;
     letter-spacing: -0.015em;
 }
 
@@ -60,11 +61,11 @@ const showQrCode = ref(false);
     min-height: 38px;
     padding: 0 13px;
     border: 0;
-    border-radius: 10px;
+    border-radius: var(--ta-radius-small);
     color: #ffffff;
     background: var(--ta-blue);
-    font-size: 14px;
-    font-weight: 620;
+    font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
 }
 

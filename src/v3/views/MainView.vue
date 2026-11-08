@@ -2,50 +2,54 @@
     <div class="main-view" :class="{ 'is-aside-collapsed': asideCollapsed }">
         <aside class="main-view__aside">
             <section class="brand-card">
-                <div class="brand-card__badge" aria-hidden="true">
-                    <i-ep-chat-dot-square />
-                </div>
+                <BrandLogo class="brand-card__badge" />
                 <div class="brand-card__content">
                     <strong class="brand-card__title">教师助手</strong>
-                    <span>Teacher Assistant</span>
+                    <span>TEACHER ASSISTANT</span>
                 </div>
-                <button type="button" class="aside-collapse-button" :aria-expanded="!asideCollapsed"
-                    :aria-label="asideCollapsed ? '展开侧边栏' : '收起侧边栏'"
-                    :title="asideCollapsed ? '展开侧边栏' : '收起侧边栏'" @click="toggleAsideCollapsed">
-                    <component :is="asideCollapsed ? Expand : Fold" />
-                </button>
             </section>
 
+            <div class="workspace-card">
+                <span class="workspace-card__icon" aria-hidden="true"><HomeFilled /></span>
+                <div class="workspace-card__content">
+                    <strong>教学工作台</strong>
+                    <span>班级教学空间</span>
+                </div>
+                <span class="workspace-card__label">WORKSPACE</span>
+            </div>
+
             <nav class="aside-nav" aria-label="主导航">
+                <p class="aside-nav__group-label">教学管理 <span>WORKSPACE</span></p>
                 <RouterLink v-for="item in navItems" :key="item.id" :to="item.to" class="aside-nav__item"
                     :class="{ 'is-active': currentNavItem?.id === item.id }" :title="item.label">
                     <component :is="item.icon" class="aside-nav__icon" aria-hidden="true" />
                     <span class="aside-nav__label">{{ item.label }}</span>
+                    <span class="aside-nav__indicator" aria-hidden="true" />
                 </RouterLink>
             </nav>
 
             <div class="sidebar-spacer" />
 
-            <div ref="userMenuContainerRef" class="aside-user-dropdown">
-                <button type="button" class="aside-user" :class="{ 'is-open': userMenuVisible }"
-                    :title="asideCollapsed ? userDisplayName : undefined" @click="toggleUserMenu">
-                    <el-avatar class="aside-user__avatar" :size="36" :src="userAvatar || undefined">
+            <div class="aside-bottom">
+                <button type="button" class="aside-collapse-button" :aria-expanded="!asideCollapsed"
+                    :aria-label="asideCollapsed ? '展开侧边栏' : '收起侧边栏'"
+                    :title="asideCollapsed ? '展开侧边栏' : '收起侧边栏'" @click="toggleAsideCollapsed">
+                    <component :is="asideCollapsed ? Expand : Fold" aria-hidden="true" />
+                    <span>{{ asideCollapsed ? '展开侧栏' : '收起侧栏' }}</span>
+                </button>
+
+                <div class="aside-user">
+                    <el-avatar class="aside-user__avatar" :size="33" :src="userAvatar || undefined"
+                        :title="userDisplayName">
                         {{ userInitial }}
                     </el-avatar>
                     <div class="aside-user__content">
-                        <strong class="aside-user__name">{{ userDisplayName }}</strong>
-                        <span class="aside-user__label">当前用户</span>
+                        <strong class="aside-user__name" :title="userDisplayName">{{ userDisplayName }}</strong>
+                        <span class="aside-user__label" :title="userEmail || '当前账号'">{{ userEmail || '当前账号' }}</span>
                     </div>
-                    <ArrowDown class="aside-user__arrow" aria-hidden="true" />
-                </button>
-
-                <div v-show="userMenuVisible" class="aside-user-menu">
-                    <RouterLink v-if="sessionStore.canAccess('/settings')" to="/settings" class="aside-user-menu__item" @click="userMenuVisible = false">
-                        进入设置
-                    </RouterLink>
-                    <button type="button" class="aside-user-menu__item is-danger"
-                        @click="handleUserMenuCommand('logout')">
-                        退出登录
+                    <button type="button" class="aside-logout-button" aria-label="退出登录" title="退出登录"
+                        @click="handleLogout">
+                        <SwitchButton aria-hidden="true" />
                     </button>
                 </div>
             </div>
@@ -55,7 +59,7 @@
             <div class="main-view__sticky-top">
                 <div class="mobile-topbar">
                     <div class="mobile-brand">
-                        <span class="brand-card__badge" aria-hidden="true"><i-ep-chat-dot-square /></span>
+                        <BrandLogo class="brand-card__badge" />
                         <strong>教师助手</strong>
                     </div>
                     <div class="mobile-actions">
@@ -87,7 +91,7 @@
                             <Setting aria-hidden="true" />
                             <span>进入设置</span>
                         </RouterLink>
-                        <RouterLink v-if="sessionStore.canAccess('/points')" to="/points" class="header-actions__button is-primary">
+                        <RouterLink v-if="sessionStore.canAccess('/points')" to="/points" class="header-actions__button is-primary" aria-label="进入积分中心">
                             <StarFilled aria-hidden="true" />
                             <span>进入积分中心</span>
                         </RouterLink>
@@ -178,7 +182,8 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowDown, Expand, Fold, HomeFilled, Lock, Menu, Present, Setting, StarFilled, Timer, Tools, UserFilled } from "@element-plus/icons-vue";
+import { Expand, Fold, HomeFilled, Lock, Menu, Present, Setting, StarFilled, SwitchButton, Timer, Tools, UserFilled } from "@element-plus/icons-vue";
+import BrandLogo from "@/components/common/BrandLogo.vue";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import AgentAssistant from "@/v3/components/agent/AgentAssistant.vue";
 import AppNoticeBar from "@/v3/components/AppNoticeBar.vue";
@@ -194,7 +199,7 @@ import { getTeachersDayWelcomeStorageKey, isTeachersDay } from "@/utils/teachers
 import { useSharedTimer, useStageTimer } from "@/v3/composables/useToolsWorkspace";
 import type { ClassDTO, SemesterDTO } from "@/types/class";
 import { ElMessage } from "element-plus";
-import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from "vue";
+import { computed, onMounted, ref, watch, type Component } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 
 /** 定义左侧导航项结构。 */
@@ -228,8 +233,6 @@ const ASIDE_COLLAPSED_STORAGE_KEY = "teacher-assistant-aside-collapsed"
 const teachersDayDialogVisible = ref(false)
 const teachersDayDialogOpened = ref(false)
 const teachersDayStorageKey = ref("")
-const userMenuVisible = ref(false)
-const userMenuContainerRef = ref<HTMLElement | null>(null)
 const userProfileRefreshing = ref(false)
 const asideCollapsed = ref(readAsideCollapsed())
 
@@ -559,6 +562,7 @@ const currentClassName = computed<string>(() => cacheStore.getActiveClassName()?
 
 /** 返回当前用户展示名称。 */
 const userDisplayName = computed<string>(() => cacheStore.displayName?.trim() || "未登录用户")
+const userEmail = computed<string>(() => cacheStore.profile?.email?.trim() || "")
 
 /** 返回当前用户头像地址。 */
 const userAvatar = computed<string | null>(() => cacheStore.profile?.avatar ?? null)
@@ -602,43 +606,19 @@ const timerStrip = computed(() => {
 const showTimerStrip = computed<boolean>(() => timerStrip.value.active && cacheStore.isAuthenticated
     && sessionStore.canAccess("/tools") && !unlockDialogVisible.value)
 
-/** 处理当前用户菜单点击事件。 */
-async function handleUserMenuCommand(command: string): Promise<void> {
-    if (command !== "logout") {
-        return
-    }
-
-    userMenuVisible.value = false
+/** 退出当前账号并返回登录页。 */
+async function handleLogout(): Promise<void> {
     sessionStore.reset()
     cacheStore.logout()
     ElMessage.success("已退出登录")
     await router.replace("/auth")
 }
 
-/** 切换当前用户菜单的展开状态。 */
-function toggleUserMenu(): void {
-    userMenuVisible.value = !userMenuVisible.value
-}
-
-/** 在点击外部区域时关闭当前用户菜单。 */
-function handleDocumentPointerDown(event: PointerEvent): void {
-    const container = userMenuContainerRef.value
-    const target = event.target
-    if (!container || !(target instanceof Node) || container.contains(target)) {
-        return
-    }
-
-    userMenuVisible.value = false
-}
-
 /** 根据登录状态同步当前用户资料。 */
 function syncUserProfileByAuthState(token: string | null, expired: boolean): void {
     if (token && !expired) {
         void refreshUserProfile()
-        return
     }
-
-    userMenuVisible.value = false
 }
 
 /** 判断当前教师节欢迎弹窗是否已经展示过。 */
@@ -695,7 +675,6 @@ function persistAsideCollapsed(collapsed: boolean): void {
 /** 切换左侧导航栏的收起状态。 */
 function toggleAsideCollapsed(): void {
     asideCollapsed.value = !asideCollapsed.value
-    userMenuVisible.value = false
     persistAsideCollapsed(asideCollapsed.value)
 }
 
@@ -731,23 +710,14 @@ watch(teachersDayDialogVisible, (visible) => {
 
 watch(
     [() => cacheStore.token, () => cacheStore.isExpired],
-    ([token, expired], [previousToken]) => {
-        if (token !== previousToken) {
-            userMenuVisible.value = false
-        }
-
+    ([token, expired]) => {
         syncUserProfileByAuthState(token, expired)
     },
     { immediate: true }
 )
 
 onMounted(() => {
-    document.addEventListener("pointerdown", handleDocumentPointerDown)
     openTeachersDayWelcome()
-})
-
-onBeforeUnmount(() => {
-    document.removeEventListener("pointerdown", handleDocumentPointerDown)
 })
 </script>
 
@@ -755,17 +725,17 @@ onBeforeUnmount(() => {
 .main-view__notices {
     display: grid;
     gap: 10px;
-    padding: 0 clamp(18px, 3vw, 34px) 12px;
+    padding: 14px 36px 0;
 }
 
 .main-view {
-    --sidebar-width: 236px;
+    --sidebar-width: 244px;
     min-height: 100vh;
     display: grid;
     grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
     color: var(--ta-text);
     background: var(--ta-bg);
-    transition: grid-template-columns 260ms cubic-bezier(.2, .8, .2, 1);
+    transition: grid-template-columns 180ms ease;
 }
 
 .main-view.is-aside-collapsed {
@@ -777,81 +747,63 @@ onBeforeUnmount(() => {
     top: 0;
     z-index: 30;
     height: 100vh;
-    padding: 14px 12px;
+    padding: 0 18px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
     border-right: 1px solid var(--ta-line);
-    background: rgba(249, 249, 251, 0.84);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    background: #ffffff;
 }
 
 .brand-card {
-    min-height: 56px;
-    padding: 8px;
+    min-height: 89px;
+    padding: 0 6px;
     display: flex;
     align-items: center;
-    gap: 11px;
-    border-radius: 14px;
-}
-
-.brand-card__badge {
-    width: 38px;
-    height: 38px;
-    flex: 0 0 auto;
-    display: grid;
-    place-items: center;
-    border-radius: 11px;
-    color: #ffffff;
-    background: linear-gradient(145deg, #1687ff, #0061d9);
-    box-shadow: 0 7px 18px rgba(0, 122, 255, 0.24);
-}
-
-.brand-card__badge svg {
-    width: 19px;
-    height: 19px;
+    gap: 10px;
 }
 
 .brand-card__content {
     min-width: 0;
+    flex: 1;
 }
 
 .brand-card__title {
     display: block;
-    font-size: 17px;
+    font-size: 18px;
+    font-weight: 650;
     line-height: 1.15;
-    letter-spacing: -0.01em;
+    letter-spacing: 0.5px;
     white-space: nowrap;
 }
 
-.brand-card__content span {
+.brand-card__content > span {
     display: block;
-    margin-top: 4px;
-    color: var(--ta-text-tertiary);
-    font-size: 12px;
-    letter-spacing: 0.02em;
+    margin-top: 3px;
+    color: var(--ta-text-secondary);
+    font-size: 8px;
+    letter-spacing: 1px;
     white-space: nowrap;
 }
 
 .aside-collapse-button {
-    width: 30px;
-    height: 30px;
-    margin-left: auto;
-    padding: 0;
-    display: grid;
-    place-items: center;
+    width: 100%;
+    min-height: 36px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     flex: 0 0 auto;
     border: 0;
-    border-radius: 9px;
+    border-radius: 6px;
     color: var(--ta-text-tertiary);
     background: transparent;
+    font-size: 12px;
     cursor: pointer;
 }
 
 .aside-collapse-button:hover {
     color: var(--ta-text);
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--ta-surface-muted);
 }
 
 .aside-collapse-button svg {
@@ -861,47 +813,125 @@ onBeforeUnmount(() => {
 
 .aside-nav {
     display: grid;
-    gap: 4px;
+    gap: 7px;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.aside-nav__item:focus-visible {
+    outline-offset: -2px;
+}
+
+.workspace-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 5px 0 28px;
+    padding: 12px 10px;
+    border: 1px solid var(--ta-line);
+    border-radius: 9px;
+    background: #fbfcfb;
+}
+
+.workspace-card__icon {
+    width: 30px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border: 1px solid var(--ta-line);
+    border-radius: 6px;
+    color: var(--ta-text-secondary);
+    background: #ffffff;
+}
+
+.workspace-card__icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.workspace-card__content {
+    min-width: 0;
+}
+
+.workspace-card__content strong,
+.workspace-card__content span {
+    display: block;
+    white-space: nowrap;
+}
+
+.workspace-card__content strong {
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.workspace-card__content span {
+    margin-top: 3px;
+    color: var(--ta-text-secondary);
+    font-size: 9px;
+}
+
+.workspace-card__label {
+    margin-left: auto;
+    color: var(--ta-text-tertiary);
+    font-size: 8px;
+    letter-spacing: 0.5px;
+}
+
+.aside-nav__group-label {
+    display: flex;
+    justify-content: space-between;
+    margin: 0 10px 5px;
+    color: var(--ta-text-tertiary);
+    font-size: 10px;
+}
+
+.aside-nav__group-label span {
+    font-size: 8px;
+    letter-spacing: 1px;
 }
 
 .aside-nav__item {
     width: 100%;
-    min-height: 46px;
-    padding: 0 12px;
+    min-height: 45px;
+    padding: 0 14px;
     display: flex;
     align-items: center;
-    gap: 11px;
+    gap: 12px;
     border: 0;
-    border-radius: 12px;
+    border-radius: 7px;
     color: var(--ta-text-secondary);
     background: transparent;
     text-decoration: none;
     cursor: pointer;
     text-align: left;
+    font-size: 13px;
     transition: color 140ms ease, background-color 140ms ease, transform 100ms ease;
 }
 
 .aside-nav__item:hover {
-    color: var(--ta-text);
-    background: rgba(0, 0, 0, 0.045);
+    color: var(--ta-blue);
+    background: var(--ta-surface-muted);
 }
 
 .aside-nav__item.is-active {
-    color: #006edc;
+    color: var(--ta-blue);
     background: var(--ta-blue-soft);
-    font-weight: 650;
+    font-weight: 600;
 }
 
 .aside-nav__item:active,
-.aside-user:active,
+.aside-collapse-button:active,
+.aside-logout-button:active,
 .header-actions__button:active,
 .mobile-nav__item:active {
     transform: scale(0.975);
 }
 
 .aside-nav__icon {
-    width: 19px;
-    height: 19px;
+    width: 17px;
+    height: 17px;
     flex: 0 0 auto;
 }
 
@@ -912,77 +942,48 @@ onBeforeUnmount(() => {
     white-space: nowrap;
 }
 
+.aside-nav__indicator {
+    display: none;
+    width: 5px;
+    height: 5px;
+    margin-left: auto;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--ta-blue);
+}
+
+.aside-nav__item.is-active .aside-nav__indicator {
+    display: block;
+}
+
 .sidebar-spacer {
     flex: 1;
 }
 
-.aside-user-dropdown {
-    position: relative;
-}
-
-.aside-user-menu {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: calc(100% + 7px);
-    z-index: 80;
-    padding: 6px;
-    border: 1px solid var(--ta-line);
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow: var(--ta-shadow-2);
-    backdrop-filter: blur(22px) saturate(180%);
-    transform-origin: bottom left;
-}
-
-.aside-user-menu__item {
-    width: 100%;
-    min-height: 40px;
-    padding: 0 10px;
-    display: flex;
-    align-items: center;
-    border: 0;
-    border-radius: 9px;
-    color: var(--ta-text-secondary);
-    background: transparent;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.aside-user-menu__item:hover {
-    color: var(--ta-text);
-    background: var(--ta-surface-muted);
-}
-
-.aside-user-menu__item.is-danger {
-    color: var(--ta-red);
+.aside-bottom {
+    flex-shrink: 0;
+    padding-top: 22px;
 }
 
 .aside-user {
     width: 100%;
-    min-height: 54px;
-    padding: 7px 8px;
+    margin-top: 8px;
+    padding: 19px 0;
     display: flex;
     align-items: center;
     gap: 10px;
-    border: 1px solid transparent;
-    border-radius: 14px;
+    border-top: 1px solid var(--ta-line);
     color: var(--ta-text);
-    background: transparent;
-    cursor: pointer;
     text-align: left;
-}
-
-.aside-user:hover,
-.aside-user.is-open {
-    border-color: var(--ta-line);
-    background: rgba(255, 255, 255, 0.72);
 }
 
 .aside-user__avatar {
     flex: 0 0 auto;
-    color: #ffffff;
-    background: linear-gradient(145deg, #5e5ce6, #007aff);
+    border: 1px solid #e0e8df;
+    color: #66765e;
+    background: #f0f4ec;
+    font-size: 12px;
+    font-weight: 600;
 }
 
 .aside-user__content {
@@ -999,23 +1000,38 @@ onBeforeUnmount(() => {
 }
 
 .aside-user__name {
-    font-size: 14px;
+    font-size: 11px;
+    font-weight: 600;
 }
 
 .aside-user__label {
-    margin-top: 2px;
-    color: var(--ta-text-tertiary);
-    font-size: 12px;
+    margin-top: 3px;
+    color: var(--ta-text-secondary);
+    font-size: 10px;
 }
 
-.aside-user__arrow {
+.aside-logout-button {
+    width: 30px;
+    min-height: 32px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border: 0;
+    border-radius: 6px;
+    color: var(--ta-text-tertiary);
+    background: transparent;
+    cursor: pointer;
+}
+
+.aside-logout-button:hover {
+    color: var(--ta-red);
+    background: var(--ta-red-soft);
+}
+
+.aside-logout-button svg {
     width: 16px;
-    color: var(--ta-text-tertiary);
-    transition: transform 160ms ease;
-}
-
-.aside-user.is-open .aside-user__arrow {
-    transform: rotate(180deg);
+    height: 16px;
 }
 
 .main-view.is-aside-collapsed .brand-card {
@@ -1024,33 +1040,24 @@ onBeforeUnmount(() => {
 }
 
 .main-view.is-aside-collapsed .brand-card__content,
+.main-view.is-aside-collapsed .workspace-card,
+.main-view.is-aside-collapsed .aside-nav__group-label,
 .main-view.is-aside-collapsed .aside-nav__label,
+.main-view.is-aside-collapsed .aside-nav__indicator,
 .main-view.is-aside-collapsed .aside-user__content,
-.main-view.is-aside-collapsed .aside-user__arrow {
+.main-view.is-aside-collapsed .aside-collapse-button span {
     display: none;
 }
 
-.main-view.is-aside-collapsed .aside-collapse-button {
-    position: absolute;
-    top: 76px;
-    left: 26px;
-}
-
-.main-view.is-aside-collapsed .aside-nav {
-    margin-top: 37px;
-}
-
+.main-view.is-aside-collapsed .aside-collapse-button,
 .main-view.is-aside-collapsed .aside-nav__item,
 .main-view.is-aside-collapsed .aside-user {
     justify-content: center;
     padding-inline: 0;
 }
 
-.main-view.is-aside-collapsed .aside-user-menu {
-    left: calc(100% + 9px);
-    right: auto;
-    bottom: 0;
-    width: 190px;
+.main-view.is-aside-collapsed .aside-user {
+    flex-direction: column;
 }
 
 .main-view__main {
@@ -1064,10 +1071,11 @@ onBeforeUnmount(() => {
     position: sticky;
     top: 0;
     z-index: 24;
+    background: var(--ta-bg);
 }
 
 .main-view__timer-strip {
-    padding: 0 clamp(18px, 3vw, 34px) 12px;
+    padding: 14px 36px 0;
     display: flex;
     justify-content: center;
 }
@@ -1080,26 +1088,14 @@ onBeforeUnmount(() => {
 .main-view__header {
     position: relative;
     z-index: 24;
-    min-height: 70px;
-    padding: 10px clamp(18px, 3vw, 34px);
+    min-height: 73px;
+    padding: 12px 36px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    background: rgba(245, 245, 247, 0.76);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-}
-
-.main-view__header::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -12px;
-    height: 12px;
-    pointer-events: none;
-    background: linear-gradient(180deg, rgba(245, 245, 247, 0.56), transparent);
+    border-bottom: 1px solid var(--ta-line);
+    background: #ffffff;
 }
 
 .context-bar,
@@ -1121,30 +1117,30 @@ onBeforeUnmount(() => {
 
 .context-bar :deep(.switch-trigger),
 .header-actions__button {
-    min-height: 38px;
+    min-height: 34px;
     padding: 0 10px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 7px;
-    border: 0;
-    border-radius: 10px;
+    border: 1px solid var(--ta-line);
+    border-radius: 6px;
     color: var(--ta-text-secondary);
-    background: rgba(255, 255, 255, 0.7);
-    box-shadow: inset 0 0 0 1px var(--ta-line);
-    font-size: 14px;
-    font-weight: 600;
+    background: #ffffff;
+    font-size: 12px;
+    font-weight: 500;
     line-height: 1;
     white-space: nowrap;
     text-decoration: none;
     cursor: pointer;
-    transition: background-color 140ms ease, color 140ms ease, transform 100ms ease, box-shadow 140ms ease;
+    transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease, transform 100ms ease;
 }
 
 .context-bar :deep(.switch-trigger:hover),
 .header-actions__button:hover {
-    color: var(--ta-text);
-    background: #ffffff;
+    color: var(--ta-blue);
+    border-color: var(--ta-blue);
+    background: var(--ta-blue-soft);
     transform: none;
 }
 
@@ -1164,20 +1160,19 @@ onBeforeUnmount(() => {
 .context-status {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
+    gap: 6px;
     color: var(--ta-green);
-    font-size: 13px;
+    font-size: 11px;
     white-space: nowrap;
 }
 
 .context-status::before {
     content: "";
-    width: 7px;
-    height: 7px;
+    width: 5px;
+    height: 5px;
     flex: 0 0 auto;
     border-radius: 50%;
     background: currentColor;
-    box-shadow: 0 0 0 4px rgba(36, 138, 61, 0.1);
 }
 
 .context-status.status-chip--slate,
@@ -1197,24 +1192,27 @@ onBeforeUnmount(() => {
 
 .header-actions__button.is-primary {
     color: #ffffff;
+    border-color: var(--ta-blue);
     background: var(--ta-blue);
-    box-shadow: 0 5px 14px rgba(0, 122, 255, 0.2);
 }
 
 .header-actions__button.is-primary:hover {
     color: #ffffff;
+    border-color: var(--ta-blue-hover);
     background: var(--ta-blue-hover);
 }
 
 .header-actions__button.is-icon {
-    width: 38px;
+    width: 34px;
     padding: 0;
 }
 
 .main-view__content {
     width: 100%;
+    max-width: 1680px;
     min-width: 0;
-    padding: 24px clamp(18px, 2vw, 48px) 44px;
+    margin: 0 auto;
+    padding: 32px 36px 40px;
     flex: 1;
 }
 
@@ -1229,8 +1227,7 @@ onBeforeUnmount(() => {
     padding: 22px;
     display: grid;
     place-items: center;
-    background: rgba(0, 0, 0, 0.28);
-    backdrop-filter: blur(18px) saturate(130%);
+    background: rgba(22, 40, 32, 0.4);
 }
 
 .lock-card {
@@ -1239,9 +1236,9 @@ onBeforeUnmount(() => {
     display: grid;
     justify-items: center;
     gap: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.74);
-    border-radius: 22px;
-    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid var(--ta-line);
+    border-radius: 12px;
+    background: #ffffff;
     box-shadow: var(--ta-shadow-2);
     text-align: center;
 }
@@ -1251,7 +1248,7 @@ onBeforeUnmount(() => {
     height: 52px;
     display: grid;
     place-items: center;
-    border-radius: 16px;
+    border-radius: 9px;
     color: var(--ta-blue);
     background: var(--ta-blue-soft);
 }
@@ -1262,7 +1259,7 @@ onBeforeUnmount(() => {
 
 .lock-title {
     margin-top: 4px;
-    font-size: 25px;
+    font-size: 23px;
     font-weight: 700;
     letter-spacing: -0.025em;
 }
@@ -1279,7 +1276,7 @@ onBeforeUnmount(() => {
 
 .lock-card :deep(.el-input__wrapper) {
     min-height: 42px;
-    border-radius: 10px;
+    border-radius: 6px;
 }
 
 .lock-card__action {
@@ -1300,7 +1297,7 @@ onBeforeUnmount(() => {
     height: 64px;
     display: grid;
     place-items: center;
-    border-radius: 20px;
+    border-radius: 12px;
     color: var(--ta-blue);
     background: var(--ta-blue-soft);
     font-size: 29px;
@@ -1326,25 +1323,20 @@ onBeforeUnmount(() => {
     gap: 8px;
 }
 
-@media (min-width: 1800px) {
-    .main-view__content {
-        padding-inline: 44px;
-    }
-}
-
-@media (min-width: 2300px) {
-    .main-view__content {
-        padding-inline: 52px;
-    }
-}
-
 @media (max-width: 1180px) {
+    .main-view__header,
+    .main-view__content,
+    .main-view__notices,
+    .main-view__timer-strip {
+        padding-inline: 24px;
+    }
+
     .header-settings-link span {
         display: none;
     }
 
     .header-settings-link {
-        width: 38px;
+        width: 34px;
         padding: 0;
     }
 }
@@ -1355,7 +1347,7 @@ onBeforeUnmount(() => {
     }
 
     .main-view__timer-strip {
-        padding: 0 14px 10px;
+        padding: 10px 14px 0;
     }
 
     .main-view__notices {
@@ -1378,8 +1370,7 @@ onBeforeUnmount(() => {
         align-items: center;
         justify-content: space-between;
         border-bottom: 1px solid var(--ta-line);
-        background: rgba(249, 249, 251, 0.9);
-        backdrop-filter: blur(22px) saturate(180%);
+        background: #ffffff;
     }
 
     .mobile-brand,
@@ -1390,9 +1381,7 @@ onBeforeUnmount(() => {
     }
 
     .mobile-brand .brand-card__badge {
-        width: 31px;
-        height: 31px;
-        border-radius: 9px;
+        --brand-logo-size: 32px;
     }
 
     .mobile-brand strong {
@@ -1405,8 +1394,9 @@ onBeforeUnmount(() => {
         display: grid;
         place-items: center;
         border-radius: 50%;
-        color: #ffffff;
-        background: linear-gradient(145deg, #5e5ce6, #007aff);
+        border: 1px solid #e0e8df;
+        color: #66765e;
+        background: #f0f4ec;
         font-size: 14px;
         font-weight: 700;
         text-decoration: none;
@@ -1444,12 +1434,10 @@ onBeforeUnmount(() => {
         display: grid;
         grid-template-columns: repeat(6, minmax(0, 1fr));
         gap: 2px;
-        border: 1px solid rgba(255, 255, 255, 0.74);
-        border-radius: 19px;
-        background: rgba(250, 250, 252, 0.88);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16);
-        backdrop-filter: blur(26px) saturate(190%);
-        -webkit-backdrop-filter: blur(26px) saturate(190%);
+        border: 1px solid var(--ta-line);
+        border-radius: 10px;
+        background: #ffffff;
+        box-shadow: var(--ta-shadow-1);
     }
 
     .mobile-nav__item {
@@ -1461,7 +1449,7 @@ onBeforeUnmount(() => {
         justify-content: center;
         flex-direction: column;
         gap: 3px;
-        border-radius: 13px;
+        border-radius: 6px;
         color: var(--ta-text-tertiary);
         font-size: 11px;
         text-align: center;
@@ -1482,9 +1470,9 @@ onBeforeUnmount(() => {
     }
 
     .mobile-nav__item.is-active {
-        color: #006edc;
+        color: var(--ta-blue);
         background: var(--ta-blue-soft);
-        font-weight: 650;
+        font-weight: 600;
     }
 }
 
@@ -1506,7 +1494,7 @@ onBeforeUnmount(() => {
     }
 
     .header-actions__button.is-primary {
-        width: 38px;
+        width: 34px;
         padding: 0;
     }
 
@@ -1535,6 +1523,15 @@ onBeforeUnmount(() => {
 
     .header-actions {
         flex: 0 0 auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .main-view,
+    .aside-nav__item,
+    .header-actions__button,
+    .mobile-nav__item {
+        transition: none;
     }
 }
 </style>

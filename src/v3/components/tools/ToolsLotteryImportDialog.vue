@@ -165,10 +165,10 @@ function handleSelectionChange(rows: ShopItem[]): void {
 
 .surface-card {
     padding: 20px;
-    border: 1px solid rgba(122, 141, 198, 0.16);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.78);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface-solid);
+    box-shadow: none;
 }
 
 .surface-card--nested {
@@ -177,8 +177,8 @@ function handleSelectionChange(rows: ShopItem[]): void {
 
 .guide-list-card {
     padding: 18px 20px;
-    border-radius: 22px;
-    background: rgba(85, 104, 255, 0.06);
+    border-radius: var(--ta-radius-large);
+    background: rgba(24, 116, 100, 0.06);
 }
 
 .field-block {
@@ -188,11 +188,9 @@ function handleSelectionChange(rows: ShopItem[]): void {
 
 .field-block__label {
     display: block;
-    color: #627099;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    color: var(--ta-text-secondary);
+    font-size: 12px;
+    font-weight: 500;
 }
 
 .mode-switch,
@@ -228,13 +226,14 @@ function handleSelectionChange(rows: ShopItem[]): void {
 }
 
 .section-head h4 {
-    color: #16213e;
-    font-size: 19px;
+    color: var(--ta-text);
+    font-size: 15px;
+    font-weight: 600;
 }
 
 .section-head p {
     margin-top: 6px;
-    color: #627099;
+    color: var(--ta-text-secondary);
     line-height: 1.7;
 }
 
@@ -243,9 +242,9 @@ function handleSelectionChange(rows: ShopItem[]): void {
     align-items: center;
     min-height: 32px;
     padding: 0 12px;
-    border-radius: 999px;
-    background: rgba(85, 104, 255, 0.1);
-    color: #5568ff;
+    border-radius: 6px;
+    background: rgba(24, 116, 100, 0.1);
+    color: var(--ta-blue);
     font-size: 13px;
     font-weight: 700;
 }
@@ -253,16 +252,16 @@ function handleSelectionChange(rows: ShopItem[]): void {
 .guide-list {
     margin: 0;
     padding-left: 18px;
-    color: #627099;
+    color: var(--ta-text-secondary);
     line-height: 1.9;
 }
 
 .v3-table :deep(.el-table) {
-    border-radius: 18px;
+    border-radius: var(--ta-radius-large);
     overflow: hidden;
-    --el-table-border-color: rgba(122, 141, 198, 0.16);
-    --el-table-header-bg-color: rgba(85, 104, 255, 0.08);
-    --el-table-row-hover-bg-color: rgba(85, 104, 255, 0.06);
+    --el-table-border-color: var(--ta-line);
+    --el-table-header-bg-color: #f7f9f7;
+    --el-table-row-hover-bg-color: #f7faf8;
 }
 
 .mode-switch__button,
@@ -270,7 +269,7 @@ function handleSelectionChange(rows: ShopItem[]): void {
 .danger-button {
     min-height: 44px;
     padding: 0 16px;
-    border-radius: 16px;
+    border-radius: var(--ta-radius-small);
     border: none;
     font: inherit;
     cursor: pointer;
@@ -278,15 +277,15 @@ function handleSelectionChange(rows: ShopItem[]): void {
 }
 
 .mode-switch__button {
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
-    color: #16213e;
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
+    color: var(--ta-text);
 }
 
 .mode-switch__button.is-active {
-    border-color: rgba(85, 104, 255, 0.24);
-    background: rgba(85, 104, 255, 0.12);
-    color: #5568ff;
+    border-color: rgba(24, 116, 100, 0.24);
+    background: rgba(24, 116, 100, 0.12);
+    color: var(--ta-blue);
 }
 
 .mode-switch__button:hover,
@@ -296,9 +295,9 @@ function handleSelectionChange(rows: ShopItem[]): void {
 }
 
 .ghost-button {
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
-    color: #16213e;
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
+    color: var(--ta-text);
 }
 
 .danger-button {

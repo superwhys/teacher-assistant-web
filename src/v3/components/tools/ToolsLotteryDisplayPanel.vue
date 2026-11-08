@@ -114,13 +114,13 @@ const statusMeta = computed<string>(() => {
     align-items: center;
     justify-content: center;
     flex-direction: column;
-    border-radius: 17px;
+    border-radius: var(--ta-radius-large);
     background: var(--ta-surface-muted);
     text-align: center;
 }
 
 .display-stage.is-rolling {
-    box-shadow: inset 0 0 0 2px rgba(0, 122, 255, 0.14);
+    box-shadow: inset 0 0 0 2px rgba(24, 116, 100, 0.14);
 }
 
 .display-stage__badge {
@@ -131,9 +131,9 @@ const statusMeta = computed<string>(() => {
     padding: 0 9px;
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
-    color: #0064cf;
-    background: #e6f2ff;
+    border-radius: 6px;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
     font-size: 12px;
     font-weight: 600;
 }
@@ -143,7 +143,7 @@ const statusMeta = computed<string>(() => {
     height: 74px;
     display: grid;
     place-items: center;
-    border-radius: 24px;
+    border-radius: var(--ta-radius-large);
     color: var(--ta-blue);
     background: var(--ta-blue-soft);
     transition: opacity 180ms ease, transform 180ms ease;
@@ -207,9 +207,9 @@ const statusMeta = computed<string>(() => {
     min-height: 38px;
     padding: 0 13px;
     border: 0;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 620;
+    border-radius: var(--ta-radius-small);
+    font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
 }
 
@@ -222,7 +222,7 @@ const statusMeta = computed<string>(() => {
 .primary-button {
     color: #ffffff;
     background: var(--ta-blue);
-    box-shadow: 0 5px 14px rgba(0, 122, 255, 0.18);
+    box-shadow: var(--ta-shadow-1);
 }
 
 .ghost-button:disabled,

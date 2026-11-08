@@ -1,5 +1,6 @@
 <template>
     <div class="tools-view">
+        <PageHeader eyebrow="CLASSROOM TOOLS" title="课堂工具" description="计时、点名与抽奖，掌握课堂节奏。" />
         <section class="tools-view__grid">
             <ToolsTimerCard :display-time="timerPreview.displayTime" :is-running="timerPreview.isRunning"
                 :mode="timerMode" :show-mode-switch="true" :has-started="timerPreview.hasStarted"
@@ -25,6 +26,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from "@/components/common/PageHeader.vue";
 import { useStageTimer, useToolsWorkspace } from "@/v3/composables/useToolsWorkspace";
 import ToolsLotteryCard from "@/v3/components/tools/ToolsLotteryCard.vue";
 import ToolsRollCallCard from "@/v3/components/tools/ToolsRollCallCard.vue";
@@ -113,6 +115,11 @@ function openToolRoute(path: string): void {
 </script>
 
 <style scoped>
+.tools-view {
+    display: grid;
+    gap: 20px;
+}
+
 .tools-view__grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

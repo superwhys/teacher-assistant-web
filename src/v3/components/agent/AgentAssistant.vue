@@ -416,11 +416,11 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
     width: 64px;
     height: 64px;
     padding: 0;
-    border: 1px solid #dbeaff;
-    border-radius: 24px;
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
     color: var(--ta-text);
     background: var(--ta-surface-solid);
-    box-shadow: 0 6px 22px rgba(0, 122, 255, 0.15), inset 0 1px 0 #fff;
+    box-shadow: var(--ta-shadow-1);
     cursor: pointer;
     transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), opacity 160ms ease;
 }
@@ -428,10 +428,10 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
     position: absolute;
     bottom: -7px;
     padding: 1px 8px;
-    border: 1px solid #dbeaff;
+    border: 1px solid var(--ta-line);
     border-radius: 8px;
     background: var(--ta-surface-solid);
-    color: #315c99;
+    color: var(--ta-blue);
     font-size: 10px;
     font-weight: 650;
     line-height: 1.5;
@@ -446,7 +446,6 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
 :global(.agent-panel-layer) {
     --el-transition-duration: 280ms;
     background: transparent;
-    backdrop-filter: none;
 }
 :global(.agent-panel-layer::before) {
     position: absolute;
@@ -464,11 +463,11 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
     height: calc(100% - 32px);
     max-width: calc(100vw - 32px);
     border: 1px solid var(--ta-line);
-    border-radius: 24px;
+    border-radius: var(--ta-radius-large);
     overflow: hidden;
     pointer-events: auto;
     background: var(--ta-surface-solid);
-    box-shadow: 0 16px 60px rgba(29, 29, 31, 0.14), 0 2px 8px rgba(29, 29, 31, 0.04);
+    box-shadow: var(--ta-shadow-1);
     transform: translate3d(0, 0, 0);
     transition: transform var(--el-transition-duration) cubic-bezier(0.32, 0.72, 0, 1);
 }
@@ -544,7 +543,7 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
     height: 32px;
     padding: 7px;
     border: 0;
-    border-radius: 9px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-tertiary);
     background: transparent;
     cursor: pointer;
@@ -576,7 +575,7 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
     border-radius: 10px;
     font-size: 12px;
     color: var(--ta-text-secondary);
-    background: #fafafb;
+    background: var(--ta-surface-muted);
 }
 .agent-context > svg {
     flex-shrink: 0;
@@ -772,7 +771,7 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
     gap: 12px;
     padding: 14px 12px;
     border: 1px solid var(--ta-line);
-    border-radius: 14px;
+    border-radius: var(--ta-radius-large);
     text-align: left;
     background: #fff;
     cursor: pointer;
@@ -875,7 +874,7 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
     padding: 12px 10px;
     border: 1px solid var(--ta-line);
     border-radius: 12px;
-    background: #fafafb;
+    background: var(--ta-surface-muted);
 }
 .agent-stat > span {
     font-size: 11px;
@@ -947,9 +946,9 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
 .agent-action {
     margin-top: 14px;
     padding: 15px;
-    border: 1px solid #cfe4fd;
-    border-radius: 14px;
-    background: #f7fbff;
+    border: 1px solid var(--ta-line-strong);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-blue-soft);
 }
 .agent-action__heading {
     display: flex;
@@ -971,7 +970,7 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
     flex-shrink: 0;
     padding: 1px 6px;
     border-radius: 5px;
-    background: #e8f1fc;
+    background: var(--ta-blue-soft);
     color: var(--ta-blue);
     font-size: 10px;
 }
@@ -1015,7 +1014,7 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
     gap: 5px;
     padding: 8px 11px;
     border: 1px solid transparent;
-    border-radius: 8px;
+    border-radius: var(--ta-radius-small);
     cursor: pointer;
     font-size: 12px;
 }
@@ -1051,7 +1050,7 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
 }
 .agent-action.is-rejected, .agent-action.is-expired {
     border-color: var(--ta-line);
-    background: #fafafb;
+    background: var(--ta-surface-muted);
 }
 .agent-thinking {
     display: flex;
@@ -1089,7 +1088,7 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
     max-width: 100%;
     border: 1px solid var(--ta-line);
     padding: 6px 8px;
-    border-radius: 8px;
+    border-radius: var(--ta-radius-small);
     font-size: 10px;
     background: #fff;
     color: var(--ta-text-secondary);
@@ -1107,13 +1106,13 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
 }
 .agent-composer__input {
     border: 1px solid var(--ta-line-strong);
-    border-radius: 15px;
+    border-radius: var(--ta-radius-small);
     padding: 12px;
     background: #fff;
     transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 .agent-composer__input:focus-within {
-    border-color: #80bdff;
+    border-color: var(--ta-blue);
     box-shadow: 0 0 0 3px var(--ta-blue-soft);
 }
 .agent-composer textarea {
@@ -1160,7 +1159,7 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
     height: 30px;
     padding: 6px;
     border: 0;
-    border-radius: 9px;
+    border-radius: var(--ta-radius-small);
     background: var(--ta-blue);
     color: #fff;
     cursor: pointer;
@@ -1220,12 +1219,12 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
         color: var(--ta-text);
     }
     .agent-starter:not(:disabled):hover {
-        border-color: #b8d8ff;
-        background: #f8fbff;
+        border-color: var(--ta-line-strong);
+        background: var(--ta-surface-muted);
     }
     .agent-suggestions button:not(:disabled):hover {
         color: var(--ta-blue);
-        border-color: #b8d8ff;
+        border-color: var(--ta-line-strong);
     }
     .agent-primary-button:not(:disabled):hover, .agent-send-button:not(:disabled):hover {
         background: var(--ta-blue-hover);
@@ -1238,7 +1237,7 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
         width: 60px;
         height: 60px;
         padding: 0;
-        border-radius: 22px;
+        border-radius: var(--ta-radius-large);
     }
 }
 @media (max-width: 520px) {
@@ -1249,7 +1248,7 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
         width: calc(100vw - 16px) !important;
         max-width: none;
         height: calc(100% - 16px);
-        border-radius: 20px;
+        border-radius: var(--ta-radius-large);
     }
     :global(.agent-panel .el-drawer__header) {
         padding: 16px 16px 12px;

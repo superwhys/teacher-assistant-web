@@ -352,7 +352,6 @@ function toggleRankingMask(): void {
     border-radius: var(--ta-radius-large);
     background: var(--ta-surface);
     box-shadow: var(--ta-shadow-1);
-    backdrop-filter: blur(18px) saturate(150%);
 }
 
 .panel-head,
@@ -380,7 +379,8 @@ function toggleRankingMask(): void {
 
 .panel-head h3 {
     margin: 0;
-    font-size: 18px;
+    font-size: 15px;
+    font-weight: 600;
     letter-spacing: -0.015em;
 }
 
@@ -402,7 +402,7 @@ function toggleRankingMask(): void {
     padding: 3px;
     gap: 2px;
     border-radius: 10px;
-    background: #e9e9ed;
+    background: var(--ta-surface-muted);
 }
 
 .chip-button,
@@ -418,7 +418,7 @@ function toggleRankingMask(): void {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
     background: transparent;
     font-size: 13px;
@@ -426,21 +426,21 @@ function toggleRankingMask(): void {
 }
 
 .chip-button.is-active {
-    color: var(--ta-text);
-    background: #ffffff;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+    box-shadow: none;
     font-weight: 620;
 }
 
 .ghost-button {
     min-height: 38px;
     padding: 0 13px;
-    border-radius: 10px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
     background: #ffffff;
     box-shadow: inset 0 0 0 1px var(--ta-line-strong);
-    font-size: 14px;
-    font-weight: 620;
+    font-size: 13px;
+    font-weight: 500;
     white-space: nowrap;
 }
 
@@ -448,8 +448,8 @@ function toggleRankingMask(): void {
     padding: 4px 0;
     color: var(--ta-blue);
     background: transparent;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 500;
 }
 
 .toolbar-divider {
@@ -575,15 +575,15 @@ function toggleRankingMask(): void {
     min-height: 40px;
     padding: 0 12px 0 37px;
     border: 1px solid var(--ta-line-strong);
-    border-radius: 10px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text);
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--ta-surface-solid);
     outline: 0;
 }
 
 .search-box__input:focus {
-    border-color: rgba(0, 122, 255, 0.65);
-    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+    border-color: rgba(24, 116, 100, 0.65);
+    box-shadow: 0 0 0 3px rgba(24, 116, 100, 0.1);
 }
 
 .record-item__score {
@@ -630,7 +630,7 @@ function toggleRankingMask(): void {
     place-items: center;
     align-content: center;
     gap: 7px;
-    border-radius: 14px;
+    border-radius: var(--ta-radius-large);
     color: var(--ta-text-tertiary);
     background: var(--ta-surface-muted);
     text-align: center;

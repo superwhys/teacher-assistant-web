@@ -24,7 +24,26 @@ function logout() {
 </template>
 
 <style scoped>
-.no-access { min-height: 60vh; display: grid; place-content: center; justify-items: center; text-align: center; gap: 12px; color: #475569; }
-.no-access__icon { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 18px; background: #eef2ff; color: #4f46e5; font-size: 27px; }
-.no-access h1, .no-access p { margin: 0; }
+.no-access {
+    min-height: 60vh;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    text-align: center;
+    gap: 12px;
+    color: var(--ta-text-secondary);
+}
+.no-access__icon {
+    width: 56px;
+    height: 56px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-blue-soft);
+    color: var(--ta-blue);
+    font-size: 27px;
+}
+.no-access h1, .no-access p {
+    margin: 0;
+}
 </style>

@@ -138,7 +138,7 @@ watch([mode, amountInput, () => props.students.map(student => student.id).join("
     flex: 1;
     min-height: 40px;
     border: 0;
-    border-radius: 9px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
     background: transparent;
     font: inherit;

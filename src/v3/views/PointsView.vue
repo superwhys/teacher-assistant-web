@@ -1,5 +1,6 @@
 <template>
     <div class="points-view">
+        <PageHeader eyebrow="POINTS CENTER" title="积分中心" description="管理课堂积分规则，查看积分记录与学生排行。" />
         <section class="metrics-grid">
             <article class="metric-card metric-card--blue">
                 <span>积分规则组</span>
@@ -69,6 +70,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from "@/components/common/PageHeader.vue";
 import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { pointsManager } from "@/managers/points";
 import { studentManager } from "@/managers/student";
@@ -1152,7 +1154,7 @@ watch([historySign, historyPage], async () => {
 <style scoped>
 .points-view {
     display: grid;
-    gap: 14px;
+    gap: 20px;
 }
 
 .metrics-grid {
@@ -1163,24 +1165,13 @@ watch([historySign, historyPage], async () => {
 
 .metric-card {
     min-height: 112px;
-    padding: 17px;
+    padding: 19px 22px;
     position: relative;
     overflow: hidden;
     border: 1px solid var(--ta-line);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.84);
+    border-radius: var(--ta-radius-medium);
+    background: var(--ta-surface-solid);
     box-shadow: var(--ta-shadow-1);
-}
-
-.metric-card::after {
-    content: "";
-    position: absolute;
-    width: 74px;
-    height: 74px;
-    right: -24px;
-    bottom: -30px;
-    border-radius: 50%;
-    background: var(--metric-soft, var(--ta-blue-soft));
 }
 
 .metric-card span,
@@ -1211,27 +1202,15 @@ watch([historySign, historyPage], async () => {
     line-height: 1.4;
 }
 
-.metric-card--blue {
-    --metric-soft: #dceeff;
-}
-
-.metric-card--gold {
-    --metric-soft: #ffe6d6;
-}
-
-.metric-card--green {
-    --metric-soft: #dcf2e1;
-}
-
 .points-view__notice {
     min-height: 44px;
     padding: 10px 12px;
     display: flex;
     align-items: center;
     gap: 9px;
-    border: 1px solid #ffd8be;
+    border: 1px solid #f0dfb8;
     border-radius: 12px;
-    color: #a53400;
+    color: var(--ta-orange);
     background: var(--ta-orange-soft);
     font-size: 13px;
 }

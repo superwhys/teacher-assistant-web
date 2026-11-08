@@ -1016,8 +1016,8 @@ onBeforeUnmount(() => {
     justify-content: space-between;
     gap: 12px;
     border: 1px solid var(--ta-line);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.76);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface-solid);
     box-shadow: var(--ta-shadow-1);
 }
 
@@ -1068,14 +1068,14 @@ onBeforeUnmount(() => {
     padding: 0;
     display: grid;
     place-items: center;
-    border-radius: 10px;
+    border-radius: var(--ta-radius-small);
 }
 
 .ghost-button,
 .text-button {
     min-height: 38px;
     padding: 0 13px;
-    border-radius: 10px;
+    border-radius: var(--ta-radius-small);
 }
 
 .text-button {

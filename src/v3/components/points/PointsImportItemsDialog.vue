@@ -351,9 +351,9 @@ watch(visible, (value) => {
 .upload-panel,
 .guide-card,
 .preview-card {
-    border: 1px solid rgba(122, 141, 198, 0.18);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface-solid);
 }
 
 .upload-panel {
@@ -367,14 +367,14 @@ watch(visible, (value) => {
 .upload-panel__control :deep(.el-upload-dragger) {
     width: 100%;
     padding: 26px 16px;
-    border-radius: 20px;
-    border: 1px dashed rgba(122, 141, 198, 0.26);
-    background: linear-gradient(180deg, rgba(85, 104, 255, 0.05), rgba(255, 255, 255, 0.96));
+    border-radius: var(--ta-radius-large);
+    border: 1px dashed var(--ta-line);
+    background: var(--ta-surface-muted);
 }
 
 .upload-panel__icon {
     font-size: 55px;
-    color: #5568ff;
+    color: var(--ta-blue);
 }
 
 .upload-panel__title,
@@ -385,14 +385,14 @@ watch(visible, (value) => {
 
 .upload-panel__title {
     margin-top: 10px;
-    color: #16213e;
+    color: var(--ta-text);
     font-size: 17px;
     font-weight: 700;
 }
 
 .upload-panel__hint {
     margin-top: 8px;
-    color: #627099;
+    color: var(--ta-text-secondary);
     font-size: 14px;
 }
 
@@ -418,14 +418,14 @@ watch(visible, (value) => {
 
 .guide-card__head strong,
 .preview-card__head strong {
-    color: #16213e;
+    color: var(--ta-text);
     font-size: 17px;
 }
 
 .guide-list {
     margin: 12px 0 0;
     padding-left: 18px;
-    color: #627099;
+    color: var(--ta-text-secondary);
     line-height: 1.8;
 }
 
@@ -435,7 +435,7 @@ watch(visible, (value) => {
 
 .preview-card__head p {
     margin-top: 6px;
-    color: #627099;
+    color: var(--ta-text-secondary);
     font-size: 14px;
 }
 
@@ -452,12 +452,12 @@ watch(visible, (value) => {
 }
 
 .preview-tag {
-    background: rgba(85, 104, 255, 0.1);
-    color: #5568ff;
+    background: rgba(24, 116, 100, 0.1);
+    color: var(--ta-blue);
 }
 
 .preview-table :deep(.el-table__inner-wrapper) {
-    border-radius: 18px;
+    border-radius: var(--ta-radius-small);
     overflow: hidden;
 }
 
@@ -489,7 +489,7 @@ watch(visible, (value) => {
 .text-button {
     padding: 0;
     background: transparent;
-    color: #5568ff;
+    color: var(--ta-blue);
     font-weight: 700;
 }
 
@@ -497,19 +497,19 @@ watch(visible, (value) => {
 .primary-button {
     min-height: 44px;
     padding: 0 16px;
-    border-radius: 16px;
+    border-radius: var(--ta-radius-small);
 }
 
 .ghost-button {
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
-    color: #16213e;
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
+    color: var(--ta-text);
 }
 
 .primary-button {
-    background: linear-gradient(135deg, #5568ff, #8e6cff);
+    background: var(--ta-blue);
     color: #ffffff;
-    box-shadow: 0 12px 24px rgba(85, 104, 255, 0.26);
+    box-shadow: var(--ta-shadow-1);
 }
 
 .ghost-button:disabled,

@@ -147,9 +147,9 @@ function handleSave(): void {
 
 .surface-card {
     padding: 20px;
-    border: 1px solid rgba(122, 141, 198, 0.16);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface-solid);
 }
 
 .form-grid,
@@ -172,11 +172,9 @@ function handleSave(): void {
 
 .field-block__label {
     display: block;
-    color: #627099;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    color: var(--ta-text-secondary);
+    font-size: 12px;
+    font-weight: 500;
 }
 
 .gender-switch {
@@ -190,7 +188,7 @@ function handleSave(): void {
     min-height: 44px;
     padding: 0 16px;
     border: none;
-    border-radius: 16px;
+    border-radius: var(--ta-radius-small);
     font: inherit;
     cursor: pointer;
     transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
@@ -198,21 +196,21 @@ function handleSave(): void {
 
 .gender-switch__button,
 .ghost-button {
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
-    color: #16213e;
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
+    color: var(--ta-text);
 }
 
 .gender-switch__button.is-active {
-    border-color: rgba(85, 104, 255, 0.24);
-    background: rgba(85, 104, 255, 0.12);
-    color: #5568ff;
+    border-color: rgba(24, 116, 100, 0.24);
+    background: rgba(24, 116, 100, 0.12);
+    color: var(--ta-blue);
 }
 
 .primary-button {
-    background: linear-gradient(135deg, #5568ff, #8e6cff);
+    background: var(--ta-blue);
     color: #ffffff;
-    box-shadow: 0 12px 24px rgba(85, 104, 255, 0.22);
+    box-shadow: var(--ta-shadow-1);
 }
 
 .gender-switch__button:hover,
@@ -226,15 +224,15 @@ function handleSave(): void {
 }
 
 .students-edit-dialog :deep(.el-input__wrapper) {
-    border-radius: 16px;
+    border-radius: var(--ta-radius-small);
     box-shadow: none;
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
 }
 
 .students-edit-dialog :deep(.el-input__wrapper.is-focus) {
-    border-color: rgba(85, 104, 255, 0.36);
-    box-shadow: 0 0 0 4px rgba(85, 104, 255, 0.08);
+    border-color: rgba(24, 116, 100, 0.36);
+    box-shadow: 0 0 0 4px rgba(24, 116, 100, 0.08);
 }
 
 @media (max-width: 768px) {

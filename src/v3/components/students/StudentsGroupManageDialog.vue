@@ -332,27 +332,27 @@ function handleSaveMembers(): void {
 .empty-card,
 .confirm-card {
     padding: 20px;
-    border: 1px solid rgba(122, 141, 198, 0.16);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface-solid);
 }
 
 .empty-card {
-    background: rgba(85, 104, 255, 0.06);
+    background: rgba(24, 116, 100, 0.06);
 }
 
 .empty-card strong,
 .confirm-card strong {
     display: block;
     margin: 0;
-    color: #16213e;
+    color: var(--ta-text);
     font-size: 19px;
 }
 
 .empty-card p,
 .confirm-card p {
     margin: 10px 0 0;
-    color: #627099;
+    color: var(--ta-text-secondary);
     line-height: 1.7;
 }
 
@@ -384,13 +384,14 @@ function handleSaveMembers(): void {
 }
 
 .section-head h4 {
-    color: #16213e;
-    font-size: 19px;
+    color: var(--ta-text);
+    font-size: 15px;
+    font-weight: 600;
 }
 
 .section-head p {
     margin-top: 6px;
-    color: #627099;
+    color: var(--ta-text-secondary);
     line-height: 1.7;
 }
 
@@ -404,9 +405,9 @@ function handleSaveMembers(): void {
     align-items: center;
     min-height: 32px;
     padding: 0 12px;
-    border-radius: 999px;
-    background: rgba(85, 104, 255, 0.1);
-    color: #5568ff;
+    border-radius: 6px;
+    background: rgba(24, 116, 100, 0.1);
+    color: var(--ta-blue);
     font-size: 13px;
     font-weight: 700;
 }
@@ -421,7 +422,7 @@ function handleSaveMembers(): void {
     min-height: 44px;
     padding: 0 16px;
     border: none;
-    border-radius: 16px;
+    border-radius: var(--ta-radius-small);
     font: inherit;
     cursor: pointer;
     transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
@@ -429,15 +430,15 @@ function handleSaveMembers(): void {
 }
 
 .ghost-button {
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
-    color: #16213e;
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
+    color: var(--ta-text);
 }
 
 .primary-button {
-    background: linear-gradient(135deg, #5568ff, #8e6cff);
+    background: var(--ta-blue);
     color: #ffffff;
-    box-shadow: 0 12px 24px rgba(85, 104, 255, 0.22);
+    box-shadow: var(--ta-shadow-1);
 }
 
 .danger-button {
@@ -461,16 +462,16 @@ function handleSaveMembers(): void {
 
 .group-manage-dialog :deep(.el-input__wrapper),
 .group-manage-dialog :deep(.el-select__wrapper) {
-    border-radius: 16px;
+    border-radius: var(--ta-radius-small);
     box-shadow: none;
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
 }
 
 .group-manage-dialog :deep(.el-input__wrapper.is-focus),
 .group-manage-dialog :deep(.el-select__wrapper.is-focused) {
-    border-color: rgba(85, 104, 255, 0.36);
-    box-shadow: 0 0 0 4px rgba(85, 104, 255, 0.08);
+    border-color: rgba(24, 116, 100, 0.36);
+    box-shadow: 0 0 0 4px rgba(24, 116, 100, 0.08);
 }
 
 .action-row>.ghost-button,
@@ -481,14 +482,14 @@ function handleSaveMembers(): void {
 
 .v3-transfer :deep(.el-transfer-panel) {
     width: min(100%, 360px);
-    border: 1px solid rgba(122, 141, 198, 0.16);
-    border-radius: 22px;
-    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface-solid);
 }
 
 .v3-transfer :deep(.el-transfer-panel__header) {
-    background: rgba(85, 104, 255, 0.08);
-    color: #16213e;
+    background: rgba(24, 116, 100, 0.08);
+    color: var(--ta-text);
 }
 
 .v3-transfer :deep(.el-transfer-panel__body) {
@@ -497,9 +498,9 @@ function handleSaveMembers(): void {
 
 .v3-transfer :deep(.el-transfer-panel__filter .el-input__wrapper) {
     margin: 10px;
-    border-radius: 14px;
+    border-radius: var(--ta-radius-small);
     box-shadow: none;
-    border: 1px solid rgba(122, 141, 198, 0.2);
+    border: 1px solid var(--ta-line);
 }
 
 .v3-transfer :deep(.el-transfer__buttons) {
@@ -507,7 +508,7 @@ function handleSaveMembers(): void {
 }
 
 .v3-transfer :deep(.el-button) {
-    border-radius: 14px;
+    border-radius: var(--ta-radius-small);
 }
 
 @media (max-width: 900px) {

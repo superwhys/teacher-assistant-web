@@ -50,7 +50,6 @@ const emit = defineEmits<{
     border-radius: var(--ta-radius-large);
     background: var(--ta-surface);
     box-shadow: var(--ta-shadow-1);
-    backdrop-filter: blur(18px) saturate(150%);
 }
 
 .panel-head {
@@ -68,7 +67,8 @@ const emit = defineEmits<{
 
 .panel-head h3 {
     margin: 5px 0 0;
-    font-size: 18px;
+    font-size: 15px;
+    font-weight: 600;
     letter-spacing: -0.015em;
 }
 
@@ -100,7 +100,7 @@ const emit = defineEmits<{
     place-items: center;
     align-content: center;
     gap: 8px;
-    border-radius: 14px;
+    border-radius: var(--ta-radius-large);
     color: var(--ta-text-tertiary);
     background: var(--ta-surface-muted);
     text-align: center;

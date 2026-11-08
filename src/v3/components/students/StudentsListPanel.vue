@@ -360,7 +360,8 @@ function formatAveragePoints(points: number): string {
 
 .panel-head h3 {
     margin: 0;
-    font-size: 18px;
+    font-size: 15px;
+    font-weight: 600;
     letter-spacing: -0.015em;
 }
 
@@ -383,7 +384,7 @@ function formatAveragePoints(points: number): string {
     min-height: 36px;
     padding: 0 11px;
     border: 0;
-    border-radius: 10px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-blue);
     background: transparent;
     font-size: 13px;
@@ -392,7 +393,7 @@ function formatAveragePoints(points: number): string {
 }
 
 .selection-toggle.is-active {
-    color: #0065d1;
+    color: var(--ta-blue);
     background: var(--ta-blue-soft);
 }
 
@@ -419,14 +420,14 @@ function formatAveragePoints(points: number): string {
     min-width: 0;
     padding: 16px;
     border: 1px solid var(--ta-line);
-    border-radius: 16px;
+    border-radius: var(--ta-radius-large);
     background: #ffffff;
     cursor: pointer;
     transition: border-color 140ms ease, box-shadow 140ms ease, transform 100ms ease;
 }
 
 .student-group-card:hover {
-    border-color: rgba(0, 122, 255, 0.28);
+    border-color: rgba(24, 116, 100, 0.28);
 }
 
 .student-group-card:active {
@@ -434,8 +435,8 @@ function formatAveragePoints(points: number): string {
 }
 
 .student-group-card.is-all-selected {
-    border-color: rgba(0, 122, 255, 0.62);
-    box-shadow: inset 0 0 0 2px rgba(0, 122, 255, 0.1);
+    border-color: rgba(24, 116, 100, 0.62);
+    box-shadow: inset 0 0 0 2px rgba(24, 116, 100, 0.1);
 }
 
 .student-group-card.is-empty {
@@ -486,7 +487,7 @@ function formatAveragePoints(points: number): string {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
+    border-radius: 6px;
     color: var(--ta-blue);
     background: var(--ta-blue-soft);
     font-size: 12px;
@@ -543,7 +544,7 @@ function formatAveragePoints(points: number): string {
     display: grid;
     place-items: center;
     border: 0;
-    border-radius: 8px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-tertiary);
     background: transparent;
     font-size: 12px;
@@ -582,7 +583,7 @@ function formatAveragePoints(points: number): string {
     place-items: center;
     align-content: center;
     gap: 7px;
-    border-radius: 16px;
+    border-radius: var(--ta-radius-large);
     color: var(--ta-text-tertiary);
     background: var(--ta-surface-muted);
     text-align: center;

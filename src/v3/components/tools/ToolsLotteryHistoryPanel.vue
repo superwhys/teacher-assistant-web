@@ -119,7 +119,8 @@ function formatRecordTime(timestamp: number): string {
 
 .tools-lottery-history-panel__head h3 {
     margin: 0;
-    font-size: 17px;
+    font-size: 15px;
+    font-weight: 600;
 }
 
 .history-head__meta {
@@ -133,8 +134,8 @@ function formatRecordTime(timestamp: number): string {
     display: inline-grid;
     place-items: center;
     border-radius: 999px;
-    color: #0064cf;
-    background: #e6f2ff;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
     font-size: 12px;
     font-weight: 600;
 }
@@ -143,7 +144,7 @@ function formatRecordTime(timestamp: number): string {
     min-height: 28px;
     padding: 0 9px;
     border: 0;
-    border-radius: 8px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-red);
     background: var(--ta-red-soft);
     font-size: 12px;
@@ -183,7 +184,7 @@ function formatRecordTime(timestamp: number): string {
     min-height: 32px;
     padding: 0 8px;
     border: 0;
-    border-radius: 8px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-blue);
     background: var(--ta-blue-soft);
     font-size: 12px;
@@ -252,7 +253,7 @@ function formatRecordTime(timestamp: number): string {
     display: grid;
     place-items: center;
     align-content: center;
-    border-radius: 14px;
+    border-radius: var(--ta-radius-large);
     color: var(--ta-text-tertiary);
     background: var(--ta-surface-muted);
     text-align: center;

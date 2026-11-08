@@ -204,7 +204,7 @@ function adjustCustomPreset(delta: number): void {
     flex: 1;
     min-height: 36px;
     border: 0;
-    border-radius: 8px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
     background: transparent;
     font: inherit;
@@ -323,14 +323,14 @@ function adjustCustomPreset(delta: number): void {
     align-items: center;
     gap: 4px;
     border-radius: 12px;
-    background: #e9e9ed;
+    background: var(--ta-surface-muted);
     transition: box-shadow 140ms ease, background-color 140ms ease;
 }
 
 .tools-timer-card__custom-stepper:focus-within,
 .tools-timer-card__custom-input.is-active .tools-timer-card__custom-stepper {
     background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1), inset 0 0 0 1px rgba(0, 122, 255, 0.45);
+    box-shadow: 0 0 0 3px rgba(24, 116, 100, 0.1), inset 0 0 0 1px rgba(24, 116, 100, 0.45);
 }
 
 .custom-stepper__button {
@@ -340,9 +340,9 @@ function adjustCustomPreset(delta: number): void {
     display: grid;
     place-items: center;
     border: 0;
-    border-radius: 9px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
-    background: rgba(255, 255, 255, 0.72);
+    background: var(--ta-surface-solid);
     cursor: pointer;
     transition: color 140ms ease, background-color 140ms ease, transform 100ms ease;
 }
@@ -400,7 +400,7 @@ function adjustCustomPreset(delta: number): void {
     min-height: 38px;
     padding: 0 13px;
     border: 0;
-    border-radius: 10px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
     background: #ffffff;
     box-shadow: inset 0 0 0 1px var(--ta-line-strong);
@@ -417,14 +417,14 @@ function adjustCustomPreset(delta: number): void {
 }
 
 .preset-button.is-active {
-    color: #0065d1;
-    background: #eaf4ff;
-    box-shadow: inset 0 0 0 1px rgba(0, 122, 255, 0.18);
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+    box-shadow: inset 0 0 0 1px rgba(24, 116, 100, 0.18);
 }
 
 .action-button--primary {
     color: #ffffff;
     background: var(--ta-blue);
-    box-shadow: 0 5px 14px rgba(0, 122, 255, 0.18);
+    box-shadow: var(--ta-shadow-1);
 }
 </style>

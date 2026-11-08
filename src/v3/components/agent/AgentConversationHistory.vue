@@ -165,8 +165,8 @@ function formatCreatedAt(timestamp: string): string {
     text-align: left;
 }
 .agent-history__item[aria-current="true"] {
-    border-color: #b8d8ff;
-    background: #f8fbff;
+    border-color: var(--ta-line-strong);
+    background: var(--ta-surface-muted);
 }
 .agent-history__item-body {
     flex: 1;

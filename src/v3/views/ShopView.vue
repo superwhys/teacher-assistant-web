@@ -1,5 +1,6 @@
 <template>
     <div class="shop-view">
+        <PageHeader eyebrow="REWARDS STORE" title="积分商城" description="管理课堂奖品，查看库存与兑换记录。" />
         <ShopOverviewBanner :active-class-name="activeClassName" :active-semester-name="activeSemesterName"
             :can-mutate-shop="canMutateShop" :is-archived-semester="isArchivedSemester" :metric-items="overviewMetrics"
             :prize-count="prizes.length" @add-prize="openAddPrizeDialog" @open-import="openImportDialog"
@@ -56,6 +57,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from "@/components/common/PageHeader.vue";
 import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { ElMessage } from "element-plus"
@@ -761,7 +763,7 @@ watch(activeTab, async (tab) => {
 <style scoped>
 .shop-view {
     display: grid;
-    gap: 14px;
+    gap: 20px;
 }
 
 .shop-view__notice {
@@ -770,9 +772,9 @@ watch(activeTab, async (tab) => {
     display: flex;
     align-items: center;
     gap: 9px;
-    border: 1px solid #ffd8be;
+    border: 1px solid #f0dfb8;
     border-radius: 12px;
-    color: #a53400;
+    color: var(--ta-orange);
     background: var(--ta-orange-soft);
     font-size: 13px;
 }
@@ -791,7 +793,7 @@ watch(activeTab, async (tab) => {
     align-items: center;
     gap: 2px;
     border-radius: 10px;
-    background: #e9e9ed;
+    background: var(--ta-surface-muted);
 }
 
 .shop-view__tab-button {
@@ -807,16 +809,16 @@ watch(activeTab, async (tab) => {
 
 .shop-view__tab-button.is-active {
     color: var(--ta-text);
-    background: #ffffff;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
-    font-weight: 620;
+    background: var(--ta-blue-soft);
+    box-shadow: none;
+    font-weight: 500;
 }
 
 .shop-view__content-grid {
     min-width: 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 350px;
-    gap: 14px;
+    gap: 20px;
     align-items: stretch;
 }
 

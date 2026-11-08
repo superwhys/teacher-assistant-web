@@ -73,8 +73,7 @@ const visible = computed({
 
 <style scoped>
 :global(.app-dialog-shell__overlay) {
-    background: rgba(0, 0, 0, 0.28);
-    backdrop-filter: blur(12px) saturate(130%);
+    background: rgba(35, 53, 47, 0.35);
 }
 
 :global(.app-dialog-shell__overlay .el-overlay-dialog) {
@@ -94,12 +93,11 @@ const visible = computed({
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    border: 1px solid rgba(255, 255, 255, 0.78);
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.97);
+    border: 1px solid var(--ta-line);
+    border-radius: 14px;
+    background: var(--ta-surface-solid);
     color: var(--ta-text);
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
-    backdrop-filter: blur(24px) saturate(160%);
+    box-shadow: var(--ta-shadow-2);
 }
 
 :global(.app-dialog-shell .el-dialog__header),
@@ -114,14 +112,14 @@ const visible = computed({
     right: 14px;
     width: 32px;
     height: 32px;
-    border-radius: 9px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-tertiary);
     background: var(--ta-surface-muted);
 }
 
 :global(.app-dialog-shell .el-dialog__headerbtn:hover) {
     color: var(--ta-text);
-    background: #e9e9ed;
+    background: var(--ta-blue-soft);
 }
 
 :global(.app-dialog-shell .el-dialog__body) {
@@ -136,14 +134,14 @@ const visible = computed({
 }
 
 .app-dialog-shell__header {
-    padding: 20px 52px 0 20px;
+    padding: 24px 56px 0 24px;
 }
 
 .app-dialog-shell__eyebrow {
     color: var(--ta-blue);
-    font-size: 12px;
-    font-weight: 650;
-    letter-spacing: 0.02em;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
 }
 
 .app-dialog-shell__title,
@@ -153,25 +151,25 @@ const visible = computed({
 
 .app-dialog-shell__title {
     margin-top: 5px;
-    font-size: 21px;
-    font-weight: 700;
+    font-size: 18px;
+    font-weight: 600;
     line-height: 1.25;
     letter-spacing: -0.02em;
 }
 
 .app-dialog-shell__description {
     margin-top: 6px;
-    color: var(--ta-text-tertiary);
+    color: var(--ta-text-secondary);
     font-size: 13px;
     line-height: 1.55;
 }
 
 .app-dialog-shell__body {
-    padding: 16px 20px 20px;
+    padding: 20px 24px 24px;
 }
 
 .app-dialog-shell__footer {
-    padding: 14px 20px 20px;
+    padding: 18px 24px;
     border-top: 1px solid var(--ta-line);
 }
 
@@ -194,7 +192,7 @@ const visible = computed({
         max-width: none;
         align-self: flex-end;
         max-height: calc(100dvh - 16px);
-        border-radius: 20px;
+        border-radius: 14px;
     }
 
     :global(.app-dialog-shell .el-dialog__headerbtn) {

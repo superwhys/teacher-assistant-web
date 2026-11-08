@@ -149,8 +149,8 @@ function handleToggleEnabled(): void {
 }
 
 .tag--sky {
-    color: #0064cf;
-    background: #e6f2ff;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
 }
 
 .tag--amber {

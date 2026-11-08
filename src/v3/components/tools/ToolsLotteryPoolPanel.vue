@@ -93,7 +93,8 @@ function toggleProbability(): void {
 
 .prize-section__head h3 {
     margin: 0;
-    font-size: 17px;
+    font-size: 15px;
+    font-weight: 600;
 }
 
 .prize-section__actions {
@@ -121,8 +122,8 @@ function toggleProbability(): void {
     display: inline-grid;
     place-items: center;
     border-radius: 999px;
-    color: #0064cf;
-    background: #e6f2ff;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
     font-size: 12px;
     font-weight: 600;
 }
@@ -151,7 +152,7 @@ function toggleProbability(): void {
     place-items: center;
     align-content: center;
     gap: 7px;
-    border-radius: 14px;
+    border-radius: var(--ta-radius-large);
     color: var(--ta-text-tertiary);
     background: var(--ta-surface-muted);
     text-align: center;

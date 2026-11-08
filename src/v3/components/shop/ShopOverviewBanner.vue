@@ -140,7 +140,7 @@ const emit = defineEmits<{
     padding: 0 9px;
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
+    border-radius: 6px;
     color: var(--ta-text-secondary);
     background: var(--ta-surface-muted);
     font-size: 12px;
@@ -149,8 +149,8 @@ const emit = defineEmits<{
 }
 
 .status-chip--sky {
-    color: #0064cf;
-    background: #e6f2ff;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
 }
 
 .status-chip--green {
@@ -171,12 +171,12 @@ const emit = defineEmits<{
     justify-content: center;
     gap: 7px;
     border: 0;
-    border-radius: 10px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
     background: #ffffff;
     box-shadow: inset 0 0 0 1px var(--ta-line-strong);
-    font-size: 14px;
-    font-weight: 620;
+    font-size: 13px;
+    font-weight: 500;
     white-space: nowrap;
     cursor: pointer;
 }
@@ -189,7 +189,7 @@ const emit = defineEmits<{
 .banner-button--primary {
     color: #ffffff;
     background: var(--ta-blue);
-    box-shadow: 0 5px 14px rgba(0, 122, 255, 0.18);
+    box-shadow: var(--ta-shadow-1);
 }
 
 .shop-overview-banner__metrics {
@@ -200,24 +200,13 @@ const emit = defineEmits<{
 
 .metric-card {
     min-height: 112px;
-    padding: 17px;
+    padding: 19px 22px;
     position: relative;
     overflow: hidden;
     border: 1px solid var(--ta-line);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.84);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface-solid);
     box-shadow: var(--ta-shadow-1);
-}
-
-.metric-card::after {
-    content: "";
-    position: absolute;
-    width: 74px;
-    height: 74px;
-    right: -24px;
-    bottom: -30px;
-    border-radius: 50%;
-    background: var(--metric-soft, var(--ta-blue-soft));
 }
 
 .metric-card span,
@@ -246,18 +235,6 @@ const emit = defineEmits<{
     color: var(--ta-text-secondary);
     font-size: 13px;
     line-height: 1.4;
-}
-
-.metric-card--violet {
-    --metric-soft: #eee1f6;
-}
-
-.metric-card--amber {
-    --metric-soft: #ffe6d6;
-}
-
-.metric-card--emerald {
-    --metric-soft: #dcf2e1;
 }
 
 @media (max-width: 920px) {

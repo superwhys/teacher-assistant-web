@@ -102,8 +102,6 @@ function getGenderLabel(gender: UiGender): string {
 
 <style scoped>
 .student-card {
-    --student-card-background: #f5f9ff;
-    --student-card-border: rgba(66, 133, 214, 0.2);
     --student-avatar-background: #dcecff;
     --student-avatar-color: #2470bd;
     position: relative;
@@ -111,14 +109,14 @@ function getGenderLabel(gender: UiGender): string {
     padding: 16px;
     display: grid;
     gap: 18px;
-    border: 1px solid var(--student-card-border);
-    border-radius: 15px;
-    background: var(--student-card-background);
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface-solid);
     transition: border-color 140ms ease, box-shadow 140ms ease, transform 100ms ease;
 }
 
 .student-card:hover {
-    border-color: rgba(0, 122, 255, 0.3);
+    border-color: rgba(24, 116, 100, 0.3);
 }
 
 .student-card:has(.student-card__select:active) {
@@ -127,6 +125,7 @@ function getGenderLabel(gender: UiGender): string {
 
 .student-card.is-selected {
     border-color: var(--ta-blue);
+    background: var(--ta-blue-soft);
     box-shadow: 0 0 0 2px var(--ta-blue-soft);
 }
 
@@ -165,36 +164,26 @@ function getGenderLabel(gender: UiGender): string {
 }
 
 .student-card.tone-sky {
-    --student-card-background: #f3faff;
-    --student-card-border: rgba(52, 145, 210, 0.2);
     --student-avatar-background: #d9f0ff;
     --student-avatar-color: #1978b7;
 }
 
 .student-card.tone-azure {
-    --student-card-background: #f2f8ff;
-    --student-card-border: rgba(54, 125, 213, 0.2);
     --student-avatar-background: #dceaff;
     --student-avatar-color: #286bc1;
 }
 
 .student-card.tone-blue {
-    --student-card-background: #f5f8ff;
-    --student-card-border: rgba(73, 111, 211, 0.2);
     --student-avatar-background: #e0e8ff;
     --student-avatar-color: #4263bd;
 }
 
 .student-card.tone-cyan {
-    --student-card-background: #f2fbfc;
-    --student-card-border: rgba(43, 139, 151, 0.2);
     --student-avatar-background: #d8f1f3;
     --student-avatar-color: #287e87;
 }
 
 .student-card.tone-indigo {
-    --student-card-background: #f7f7ff;
-    --student-card-border: rgba(91, 101, 193, 0.2);
     --student-avatar-background: #e7e7ff;
     --student-avatar-color: #585daf;
 }

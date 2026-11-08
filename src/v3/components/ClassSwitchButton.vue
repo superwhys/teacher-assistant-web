@@ -231,12 +231,12 @@ watch(dialogVisible, async (visible) => {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 16px;
-    border: 1px solid rgba(122, 141, 198, 0.24);
-    background: rgba(255, 255, 255, 0.82);
-    color: #16213e;
-    font-size: 15px;
-    font-weight: 700;
+    border-radius: var(--ta-radius-small);
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
+    color: var(--ta-text);
+    font-size: 13px;
+    font-weight: 500;
     line-height: 1;
     white-space: nowrap;
     text-decoration: none;
@@ -255,10 +255,10 @@ watch(dialogVisible, async (visible) => {
 
 .surface-card {
     padding: 20px;
-    border: 1px solid rgba(122, 141, 198, 0.16);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.78);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface-solid);
+    box-shadow: none;
 }
 
 .tab-row {
@@ -266,16 +266,16 @@ watch(dialogVisible, async (visible) => {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     padding: 8px;
-    border-radius: 20px;
-    background: rgba(85, 104, 255, 0.06);
+    border-radius: var(--ta-radius-large);
+    background: rgba(24, 116, 100, 0.06);
 }
 
 .tab-button {
     min-height: 44px;
     border: none;
-    border-radius: 16px;
+    border-radius: var(--ta-radius-small);
     background: transparent;
-    color: #627099;
+    color: var(--ta-text-secondary);
     font: inherit;
     font-weight: 700;
     cursor: pointer;
@@ -283,9 +283,9 @@ watch(dialogVisible, async (visible) => {
 }
 
 .tab-button.is-active {
-    background: linear-gradient(135deg, rgba(85, 104, 255, 0.16), rgba(142, 108, 255, 0.18));
-    color: #16213e;
-    box-shadow: 0 10px 22px rgba(85, 104, 255, 0.12);
+    background: var(--ta-blue-soft);
+    color: var(--ta-blue);
+    box-shadow: none;
 }
 
 .tab-button:hover {
@@ -298,7 +298,7 @@ watch(dialogVisible, async (visible) => {
 
 .section-head__desc {
     margin: 8px 0 0;
-    color: #627099;
+    color: var(--ta-text-secondary);
     line-height: 1.7;
 }
 
@@ -309,11 +309,9 @@ watch(dialogVisible, async (visible) => {
 
 .field-block__label {
     display: block;
-    color: #627099;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    color: var(--ta-text-secondary);
+    font-size: 12px;
+    font-weight: 500;
 }
 
 .switch-dialog__select {
@@ -345,7 +343,7 @@ watch(dialogVisible, async (visible) => {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 16px;
+    border-radius: var(--ta-radius-small);
     border: none;
     font: inherit;
     cursor: pointer;
@@ -353,15 +351,15 @@ watch(dialogVisible, async (visible) => {
 }
 
 .ghost-button {
-    border: 1px solid rgba(122, 141, 198, 0.24);
-    background: rgba(255, 255, 255, 0.82);
-    color: #16213e;
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
+    color: var(--ta-text);
 }
 
 .primary-button {
-    background: linear-gradient(135deg, #5568ff, #8e6cff);
+    background: var(--ta-blue);
     color: #ffffff;
-    box-shadow: 0 12px 24px rgba(85, 104, 255, 0.26);
+    box-shadow: var(--ta-shadow-1);
 }
 
 .ghost-button:hover,
@@ -377,14 +375,14 @@ watch(dialogVisible, async (visible) => {
 }
 
 .switch-dialog :deep(.el-input__wrapper) {
-    border-radius: 16px;
+    border-radius: var(--ta-radius-small);
     box-shadow: none;
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
 }
 
 .switch-dialog :deep(.el-input__wrapper.is-focus) {
-    border-color: rgba(85, 104, 255, 0.36);
-    box-shadow: 0 0 0 4px rgba(85, 104, 255, 0.08);
+    border-color: rgba(24, 116, 100, 0.36);
+    box-shadow: 0 0 0 4px rgba(24, 116, 100, 0.08);
 }
 </style>

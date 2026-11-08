@@ -75,7 +75,7 @@ const emit = defineEmits<{
 
 .summary-pill {
     padding: 14px;
-    border-radius: 14px;
+    border-radius: var(--ta-radius-large);
     background: var(--ta-surface-muted);
 }
 
@@ -107,7 +107,7 @@ const emit = defineEmits<{
     min-height: 38px;
     padding: 0 13px;
     border: 0;
-    border-radius: 10px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
     background: #ffffff;
     box-shadow: inset 0 0 0 1px var(--ta-line-strong);
@@ -119,7 +119,7 @@ const emit = defineEmits<{
 
 .action-button--primary {
     color: #ffffff;
-    background: var(--ta-purple);
-    box-shadow: 0 5px 14px rgba(137, 68, 171, 0.18);
+    background: var(--ta-blue);
+    box-shadow: var(--ta-shadow-1);
 }
 </style>

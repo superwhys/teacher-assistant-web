@@ -330,6 +330,7 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
 .panel-head h3 {
     margin: 0;
     font-size: 15px;
+    font-weight: 600;
     white-space: nowrap;
     letter-spacing: -0.015em;
 }
@@ -362,7 +363,7 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
     padding: 0;
     display: grid;
     place-items: center;
-    border-radius: 9px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
     background: var(--ta-surface-muted);
 }
@@ -378,9 +379,9 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
     padding: 0 9px;
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
-    color: #0064cf;
-    background: #e6f2ff;
+    border-radius: 6px;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
     font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
@@ -420,7 +421,7 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
 .selected-student__avatar {
     width: 48px;
     height: 48px;
-    border-radius: 15px;
+    border-radius: var(--ta-radius-large);
     font-size: 17px;
 }
 
@@ -511,7 +512,7 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
     justify-content: center;
     gap: 6px;
     border: 0;
-    border-radius: 10px;
+    border-radius: var(--ta-radius-small);
     font-size: 13px;
     font-weight: 620;
     cursor: pointer;
@@ -540,7 +541,7 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
 }
 
 .selection-points-button--minus {
-    border: 1px solid rgba(0, 122, 255, 0.2);
+    border: 1px solid rgba(24, 116, 100, 0.2);
     color: var(--ta-blue);
     background: var(--ta-surface-solid);
 }
@@ -603,7 +604,7 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
     display: grid;
     place-items: center;
     align-content: center;
-    border-radius: 14px;
+    border-radius: var(--ta-radius-large);
     color: var(--ta-text-tertiary);
     background: var(--ta-surface-muted);
     font-size: 13px;
@@ -638,7 +639,7 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
     padding: 0 7px;
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
+    border-radius: 6px;
     color: var(--ta-text-tertiary);
     background: var(--ta-surface-muted);
     font-size: 11px;

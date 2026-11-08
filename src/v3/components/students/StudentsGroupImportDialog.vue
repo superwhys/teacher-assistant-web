@@ -376,13 +376,13 @@ function confirmImport(): void {
 .surface-card,
 .guide-card {
     padding: 20px;
-    border: 1px solid rgba(122, 141, 198, 0.16);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface-solid);
 }
 
 .guide-card {
-    background: rgba(85, 104, 255, 0.06);
+    background: rgba(24, 116, 100, 0.06);
 }
 
 .section-head,
@@ -407,13 +407,14 @@ function confirmImport(): void {
 }
 
 .section-head h4 {
-    color: #16213e;
-    font-size: 19px;
+    color: var(--ta-text);
+    font-size: 15px;
+    font-weight: 600;
 }
 
 .section-head p {
     margin-top: 6px;
-    color: #627099;
+    color: var(--ta-text-secondary);
     line-height: 1.7;
 }
 
@@ -430,15 +431,15 @@ function confirmImport(): void {
     align-items: center;
     min-height: 32px;
     padding: 0 12px;
-    border-radius: 999px;
+    border-radius: 6px;
     font-size: 13px;
     font-weight: 700;
 }
 
 .meta-tag,
 .member-status--normal {
-    background: rgba(85, 104, 255, 0.1);
-    color: #5568ff;
+    background: rgba(24, 116, 100, 0.1);
+    color: var(--ta-blue);
 }
 
 .meta-tag--warn,
@@ -455,7 +456,7 @@ function confirmImport(): void {
 .guide-list {
     margin: 0;
     padding-left: 18px;
-    color: #627099;
+    color: var(--ta-text-secondary);
     line-height: 1.9;
 }
 
@@ -472,25 +473,25 @@ function confirmImport(): void {
 .primary-button {
     min-height: 44px;
     padding: 0 16px;
-    border-radius: 16px;
+    border-radius: var(--ta-radius-small);
 }
 
 .ghost-button {
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
-    color: #16213e;
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
+    color: var(--ta-text);
 }
 
 .primary-button {
-    background: linear-gradient(135deg, #5568ff, #8e6cff);
+    background: var(--ta-blue);
     color: #ffffff;
-    box-shadow: 0 12px 24px rgba(85, 104, 255, 0.22);
+    box-shadow: var(--ta-shadow-1);
 }
 
 .text-button {
     padding: 0;
     background: transparent;
-    color: #5568ff;
+    color: var(--ta-blue);
     font-weight: 700;
 }
 
@@ -524,14 +525,14 @@ function confirmImport(): void {
 .v3-upload :deep(.el-upload-dragger) {
     width: 100%;
     padding: 28px 16px;
-    border: 1px dashed rgba(122, 141, 198, 0.28);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.72);
+    border: 1px dashed var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface-solid);
 }
 
 .v3-upload__icon {
     font-size: 53px;
-    color: #8a96b8;
+    color: var(--ta-text-tertiary);
 }
 
 .v3-upload__title,
@@ -541,22 +542,22 @@ function confirmImport(): void {
 
 .v3-upload__title {
     margin-top: 12px;
-    color: #16213e;
+    color: var(--ta-text);
     font-size: 19px;
 }
 
 .v3-upload__hint {
     margin-top: 8px;
-    color: #627099;
+    color: var(--ta-text-secondary);
     line-height: 1.7;
 }
 
 .v3-table :deep(.el-table) {
-    border-radius: 18px;
+    border-radius: var(--ta-radius-large);
     overflow: hidden;
-    --el-table-border-color: rgba(122, 141, 198, 0.16);
-    --el-table-header-bg-color: rgba(85, 104, 255, 0.08);
-    --el-table-row-hover-bg-color: rgba(85, 104, 255, 0.06);
+    --el-table-border-color: var(--ta-line);
+    --el-table-header-bg-color: #f7f9f7;
+    --el-table-row-hover-bg-color: #f7faf8;
 }
 
 @media (max-width: 768px) {

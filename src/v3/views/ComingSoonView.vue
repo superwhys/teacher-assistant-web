@@ -19,9 +19,37 @@ const menu = computed(() => findMenuForPath(sessionStore.sidebar, route.path))
 </template>
 
 <style scoped>
-.coming-soon { min-height: 60vh; display: grid; place-content: center; justify-items: center; text-align: center; gap: 10px; color: #64748b; }
-.coming-soon__icon { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 20px; background: #eef2ff; color: #4f46e5; font-size: 29px; }
-.coming-soon span { color: #6366f1; font-size: 13px; font-weight: 800; letter-spacing: .14em; }
-.coming-soon h1 { margin: 0; color: #0f172a; font-size: 27px; }
-.coming-soon p { margin: 0; }
+.coming-soon {
+    min-height: 60vh;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    text-align: center;
+    gap: 10px;
+    color: var(--ta-text-secondary);
+}
+.coming-soon__icon {
+    width: 64px;
+    height: 64px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-blue-soft);
+    color: var(--ta-blue);
+    font-size: 29px;
+}
+.coming-soon span {
+    color: var(--ta-blue);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .14em;
+}
+.coming-soon h1 {
+    margin: 0;
+    color: var(--ta-text);
+    font-size: 27px;
+}
+.coming-soon p {
+    margin: 0;
+}
 </style>

@@ -1,5 +1,6 @@
 <template>
     <div class="settings-view">
+        <PageHeader eyebrow="WORKSPACE SETTINGS" title="账号与设置" description="管理账号、班级与学期，设置课堂使用偏好。" />
         <section class="settings-content">
             <SettingsAccountCard :current-class-name="currentClassName" :current-semester-name="currentSemesterName"
                 :display-name="displayName" :has-profile="Boolean(profile)" :has-pwd="hasPwd"
@@ -40,6 +41,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from "@/components/common/PageHeader.vue";
 import { submitOpinion } from "@/api/opinion";
 import { classManager } from "@/managers/class";
 import { useCacheStore } from "@/stores/cacheStore";
@@ -478,6 +480,11 @@ watch(
 </script>
 
 <style scoped>
+.settings-view {
+    display: grid;
+    gap: 20px;
+}
+
 .settings-content,
 .settings-flow {
     display: grid;

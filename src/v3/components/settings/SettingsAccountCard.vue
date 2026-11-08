@@ -86,8 +86,8 @@ defineProps<SettingsAccountCardProps>()
 
 .settings-profile__avatar {
     color: #ffffff;
-    background: linear-gradient(145deg, #5e5ce6, #007aff);
-    box-shadow: 0 8px 22px rgba(0, 122, 255, 0.18);
+    background: var(--ta-blue);
+    box-shadow: none;
 }
 
 .settings-profile__identity {
@@ -121,7 +121,7 @@ defineProps<SettingsAccountCardProps>()
     padding: 0 9px;
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
+    border-radius: 6px;
     color: var(--ta-text-secondary);
     background: var(--ta-surface-muted);
     font-size: 12px;
@@ -140,8 +140,8 @@ defineProps<SettingsAccountCardProps>()
 }
 
 .status-chip--sky {
-    color: #0064cf;
-    background: #e6f2ff;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
 }
 
 .status-chip--rose {

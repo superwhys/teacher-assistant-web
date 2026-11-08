@@ -1,15 +1,14 @@
 <template>
     <div class="students-view">
-        <header class="students-header">
-            <div>
-                <h1>学生管理</h1>
-                <p>{{ studentCards.length }} 名学生 · {{ groupChips.length }} 个小组</p>
-            </div>
-            <button type="button" class="primary-button" :disabled="!hasActiveClass || !canPrepare" @click="openAddStudentDialog('single')">
-                <i-ep-plus aria-hidden="true" />
-                添加学生
-            </button>
-        </header>
+        <PageHeader eyebrow="STUDENT MANAGEMENT" title="学生管理"
+            :description="`${studentCards.length} 名学生 · ${groupChips.length} 个小组`">
+            <template #actions>
+                <button type="button" class="primary-button" :disabled="!hasActiveClass || !canPrepare" @click="openAddStudentDialog('single')">
+                    <i-ep-plus aria-hidden="true" />
+                    添加学生
+                </button>
+            </template>
+        </PageHeader>
 
         <section class="control-panel" aria-label="搜索与筛选学生">
             <div class="control-toolbar">
@@ -139,6 +138,7 @@
 </template>
 
 <script setup lang="ts">
+import PageHeader from "@/components/common/PageHeader.vue";
 import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import type { UiGender, UiStudent } from "@/components/class/ClassStudentList.vue";
 import { ApiRequestError } from "@/types/api";
@@ -1152,27 +1152,6 @@ watch(filteredStudents, () => {
     gap: 20px;
 }
 
-.students-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-}
-
-.students-header h1 {
-    margin: 0;
-    font-size: 28px;
-    line-height: 1.2;
-    letter-spacing: -0.025em;
-}
-
-.students-header p {
-    margin: 8px 0 0;
-    color: var(--ta-text-secondary);
-    font-size: 13px;
-}
-
-.students-header svg,
 .students-manage-button svg,
 .students-view-switch svg,
 .students-mobile-actions svg {
@@ -1184,7 +1163,7 @@ watch(filteredStudents, () => {
 .control-panel {
     min-width: 0;
     display: grid;
-    gap: 14px;
+    gap: 20px;
 }
 
 .control-toolbar {
@@ -1212,13 +1191,13 @@ watch(filteredStudents, () => {
 
 .search-box__input {
     width: 100%;
-    min-height: 44px;
+    min-height: 36px;
     padding: 0 12px 0 38px;
     border: 1px solid var(--ta-line-strong);
-    border-radius: 11px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text);
     background: var(--ta-surface-solid);
-    font-size: 15px;
+    font-size: 13px;
     -webkit-appearance: none;
 }
 
@@ -1238,17 +1217,17 @@ watch(filteredStudents, () => {
     justify-content: center;
     gap: 7px;
     border: 0;
-    border-radius: 9px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
     background: transparent;
-    font-size: 14px;
+    font-size: 13px;
     cursor: pointer;
     white-space: nowrap;
     transition: background-color 140ms ease, color 140ms ease, transform 100ms ease;
 }
 
 .students-manage-button {
-    min-height: 44px;
+    min-height: 36px;
     border: 1px solid var(--ta-line-strong);
     background: var(--ta-surface-solid);
 }
@@ -1279,7 +1258,7 @@ watch(filteredStudents, () => {
     padding: 3px;
     display: inline-flex;
     gap: 2px;
-    border-radius: 10px;
+    border-radius: var(--ta-radius-small);
     background: var(--ta-blue-soft);
 }
 
@@ -1293,7 +1272,7 @@ watch(filteredStudents, () => {
 .students-view-switch button[aria-pressed="true"] {
     color: var(--ta-blue);
     background: var(--ta-surface-solid);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
 }
 
 .students-sort {
@@ -1304,10 +1283,10 @@ watch(filteredStudents, () => {
 .students-sort :deep(.el-select__wrapper) {
     min-height: 36px;
     padding: 0 12px;
-    border-radius: 10px;
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
     background: var(--ta-surface-solid);
-    box-shadow: inset 0 0 0 1px rgba(0, 122, 255, 0.18) !important;
+    box-shadow: inset 0 0 0 1px var(--ta-line-strong) !important;
     font-size: 13px;
 }
 
@@ -1321,10 +1300,10 @@ watch(filteredStudents, () => {
 
 :global(.students-sort-menu.el-popper) {
     padding: 5px;
-    border: 1px solid rgba(0, 122, 255, 0.15);
+    border: 1px solid var(--ta-line);
     border-radius: 13px;
     background: var(--ta-surface-solid);
-    box-shadow: 0 8px 30px rgba(20, 55, 100, 0.12);
+    box-shadow: var(--ta-shadow-2);
 }
 
 :global(.students-sort-menu .el-select-dropdown__list) {
@@ -1361,9 +1340,9 @@ watch(filteredStudents, () => {
     display: flex;
     align-items: center;
     gap: 9px;
-    border: 1px solid #ffd8be;
+    border: 1px solid #f0dfb8;
     border-radius: 12px;
-    color: #a53400;
+    color: var(--ta-orange);
     background: var(--ta-orange-soft);
     font-size: 13px;
 }
@@ -1417,7 +1396,7 @@ watch(filteredStudents, () => {
 }
 
 .students-points-button {
-    border: 1px solid rgba(0, 122, 255, 0.2);
+    border: 1px solid var(--ta-line-strong);
     color: var(--ta-blue);
     background: var(--ta-surface-solid);
 }
@@ -1448,10 +1427,8 @@ watch(filteredStudents, () => {
         padding-bottom: 76px;
     }
 
-    .students-header h1 {
-        font-size: 25px;
-    }
-
+    .search-box__input,
+    .students-manage-button,
     .students-filter-button,
     .students-view-switch button,
     .students-sort :deep(.el-select__wrapper) {

@@ -171,7 +171,6 @@ function getCompactRecordTimeLabel(date: Date): string {
     border-radius: var(--ta-radius-large);
     background: var(--ta-surface);
     box-shadow: var(--ta-shadow-1);
-    backdrop-filter: blur(18px) saturate(150%);
 }
 
 .shop-records-panel--preview {
@@ -202,7 +201,8 @@ function getCompactRecordTimeLabel(date: Date): string {
 
 .panel-head h3 {
     margin: 5px 0 0;
-    font-size: 18px;
+    font-size: 15px;
+    font-weight: 600;
     letter-spacing: -0.015em;
 }
 
@@ -247,8 +247,8 @@ function getCompactRecordTimeLabel(date: Date): string {
     display: grid;
     place-items: center;
     border-radius: 11px;
-    color: #0069d6;
-    background: #e7f3ff;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
     font-size: 14px;
     font-weight: 700;
 }
@@ -298,8 +298,8 @@ function getCompactRecordTimeLabel(date: Date): string {
     align-items: center;
     gap: 5px;
     border-radius: 8px;
-    color: #0064cf;
-    background: #e6f2ff;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
     font-size: 11px;
 }
 
@@ -339,7 +339,7 @@ function getCompactRecordTimeLabel(date: Date): string {
     place-items: center;
     align-content: center;
     gap: 8px;
-    border-radius: 14px;
+    border-radius: var(--ta-radius-large);
     color: var(--ta-text-tertiary);
     background: var(--ta-surface-muted);
     text-align: center;

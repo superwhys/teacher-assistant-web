@@ -405,9 +405,9 @@ watch([exportType, exportScope, exportGroupId, sortBy, filterRuleIds, dateRange]
 
 .filters-card,
 .preview-card {
-    border: 1px solid rgba(122, 141, 198, 0.18);
-    border-radius: 24px;
-    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-large);
+    background: var(--ta-surface-solid);
     padding: 18px;
     min-width: 0;
 }
@@ -428,11 +428,9 @@ watch([exportType, exportScope, exportGroupId, sortBy, filterRuleIds, dateRange]
 }
 
 .field-label {
-    color: #627099;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    color: var(--ta-text-secondary);
+    font-size: 12px;
+    font-weight: 500;
 }
 
 .field-full {
@@ -443,17 +441,17 @@ watch([exportType, exportScope, exportGroupId, sortBy, filterRuleIds, dateRange]
 .dialog-layout :deep(.el-select__wrapper),
 .dialog-layout :deep(.el-date-editor.el-input__wrapper),
 .dialog-layout :deep(.el-date-editor .el-input__wrapper) {
-    border-radius: 16px;
+    border-radius: var(--ta-radius-small);
     box-shadow: none;
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
 }
 
 .dialog-layout :deep(.el-input__wrapper.is-focus),
 .dialog-layout :deep(.el-select__wrapper.is-focused),
 .dialog-layout :deep(.el-date-editor.el-input__wrapper.is-focus) {
-    border-color: rgba(85, 104, 255, 0.36);
-    box-shadow: 0 0 0 4px rgba(85, 104, 255, 0.08);
+    border-color: rgba(24, 116, 100, 0.36);
+    box-shadow: 0 0 0 4px rgba(24, 116, 100, 0.08);
 }
 
 .dialog-layout :deep(.el-radio-group) {
@@ -468,10 +466,10 @@ watch([exportType, exportScope, exportGroupId, sortBy, filterRuleIds, dateRange]
     justify-content: center;
     min-height: 44px;
     padding: 0 16px;
-    border-radius: 16px;
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
-    color: #16213e;
+    border-radius: var(--ta-radius-small);
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
+    color: var(--ta-text);
     line-height: 1;
     text-align: center;
     box-shadow: none;
@@ -480,19 +478,19 @@ watch([exportType, exportScope, exportGroupId, sortBy, filterRuleIds, dateRange]
 
 .dialog-layout :deep(.el-radio-button:first-child .el-radio-button__inner),
 .dialog-layout :deep(.el-radio-button:last-child .el-radio-button__inner) {
-    border-radius: 16px;
+    border-radius: var(--ta-radius-small);
 }
 
 .dialog-layout :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
-    border-color: rgba(85, 104, 255, 0.24);
-    background: rgba(85, 104, 255, 0.12);
-    color: #5568ff;
+    border-color: rgba(24, 116, 100, 0.24);
+    background: rgba(24, 116, 100, 0.12);
+    color: var(--ta-blue);
     box-shadow: none;
 }
 
 .dialog-layout :deep(.el-select__tags .el-tag),
 .dialog-layout :deep(.el-date-editor .el-range-separator) {
-    color: #627099;
+    color: var(--ta-text-secondary);
 }
 
 .preview-card__head,
@@ -509,20 +507,20 @@ watch([exportType, exportScope, exportGroupId, sortBy, filterRuleIds, dateRange]
 
 .preview-card__head strong,
 .empty-state strong {
-    color: #16213e;
+    color: var(--ta-text);
     font-size: 17px;
 }
 
 .preview-card__head p,
 .empty-state p {
     margin: 6px 0 0;
-    color: #627099;
+    color: var(--ta-text-secondary);
     font-size: 14px;
     line-height: 1.7;
 }
 
 .preview-table :deep(.el-table__inner-wrapper) {
-    border-radius: 18px;
+    border-radius: var(--ta-radius-small);
     overflow: hidden;
 }
 
@@ -549,7 +547,7 @@ watch([exportType, exportScope, exportGroupId, sortBy, filterRuleIds, dateRange]
     min-height: 44px;
     padding: 0 16px;
     border: none;
-    border-radius: 16px;
+    border-radius: var(--ta-radius-small);
     font: inherit;
     cursor: pointer;
     transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
@@ -561,21 +559,21 @@ watch([exportType, exportScope, exportGroupId, sortBy, filterRuleIds, dateRange]
 }
 
 .ghost-button {
-    border: 1px solid rgba(122, 141, 198, 0.22);
-    background: rgba(255, 255, 255, 0.88);
-    color: #16213e;
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
+    color: var(--ta-text);
 }
 
 .ghost-button--small {
     min-height: 40px;
     padding: 0 14px;
-    border-radius: 14px;
+    border-radius: var(--ta-radius-small);
 }
 
 .primary-button {
-    background: linear-gradient(135deg, #5568ff, #8e6cff);
+    background: var(--ta-blue);
     color: #ffffff;
-    box-shadow: 0 12px 24px rgba(85, 104, 255, 0.26);
+    box-shadow: var(--ta-shadow-1);
 }
 
 .ghost-button:disabled,

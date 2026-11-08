@@ -1,7 +1,7 @@
 <template>
     <div class="dashboard-view">
+        <PageHeader eyebrow="CLASS OVERVIEW" title="班级总览" description="查看当前班级的课堂数据与状态摘要。" />
         <section class="dashboard-context" aria-label="班级总览">
-            <p>当前班级的课堂核心数据与状态摘要</p>
             <div class="hero-status">
                 <span v-for="item in heroStatusChips" :key="item.id" class="status-chip" :class="item.toneClass">
                     {{ item.label }}
@@ -27,6 +27,7 @@
 
 <script setup lang="ts">
 import DashboardRankingPanel from "@/v3/components/DashboardRankingPanel.vue";
+import PageHeader from "@/components/common/PageHeader.vue";
 import DashboardRecentRecordsPanel from "@/v3/components/DashboardRecentRecordsPanel.vue";
 import { dashboardApi } from "@/api/dashboard";
 import { useCacheStore } from "@/stores/cacheStore";
@@ -181,7 +182,7 @@ watch([currentClassId, currentSemesterId], async () => {
 <style scoped>
 .dashboard-view {
     display: grid;
-    gap: 14px;
+    gap: 20px;
 }
 
 .dashboard-context {
@@ -189,13 +190,7 @@ watch([currentClassId, currentSemesterId], async () => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
-}
-
-.dashboard-context p {
-    margin: 0;
-    color: var(--ta-text-tertiary);
-    font-size: 13px;
+    gap: 20px;
 }
 
 .hero-status {
@@ -211,7 +206,7 @@ watch([currentClassId, currentSemesterId], async () => {
     padding: 0 9px;
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
+    border-radius: 6px;
     color: var(--ta-text-secondary);
     background: var(--ta-surface-muted);
     font-size: 12px;
@@ -220,12 +215,12 @@ watch([currentClassId, currentSemesterId], async () => {
 }
 
 .status-chip--sky {
-    color: #0064cf;
-    background: #e6f2ff;
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
 }
 
 .status-chip--green {
-    color: #1b7133;
+    color: var(--ta-green);
     background: var(--ta-green-soft);
 }
 
@@ -237,24 +232,13 @@ watch([currentClassId, currentSemesterId], async () => {
 
 .summary-card {
     min-height: 112px;
-    padding: 17px;
+    padding: 19px 22px;
     position: relative;
     overflow: hidden;
     border: 1px solid var(--ta-line);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.84);
+    border-radius: var(--ta-radius-medium);
+    background: var(--ta-surface-solid);
     box-shadow: var(--ta-shadow-1);
-}
-
-.summary-card::after {
-    content: "";
-    position: absolute;
-    width: 74px;
-    height: 74px;
-    right: -24px;
-    bottom: -30px;
-    border-radius: 50%;
-    background: var(--metric-soft, var(--ta-blue-soft));
 }
 
 .summary-card span,
@@ -287,26 +271,10 @@ watch([currentClassId, currentSemesterId], async () => {
     line-height: 1.4;
 }
 
-.summary-card--blue {
-    --metric-soft: #dceeff;
-}
-
-.summary-card--purple {
-    --metric-soft: #eee1f6;
-}
-
-.summary-card--gold {
-    --metric-soft: #ffe6d6;
-}
-
-.summary-card--green {
-    --metric-soft: #dcf2e1;
-}
-
 .panel-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
+    gap: 20px;
 }
 
 @media (max-width: 1080px) {

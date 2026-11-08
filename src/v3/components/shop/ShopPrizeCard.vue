@@ -115,13 +115,13 @@ function toNumber(value: unknown, fallback = 0): number {
     min-width: 0;
     padding: 13px;
     border: 1px solid var(--ta-line);
-    border-radius: 16px;
+    border-radius: var(--ta-radius-large);
     background: #ffffff;
     transition: border-color 140ms ease, box-shadow 140ms ease, transform 100ms ease;
 }
 
 .shop-card:hover {
-    border-color: rgba(0, 122, 255, 0.25);
+    border-color: rgba(24, 116, 100, 0.25);
 }
 
 .shop-card:active {
@@ -147,12 +147,11 @@ function toNumber(value: unknown, fallback = 0): number {
     padding: 0;
     display: grid;
     place-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.72);
-    border-radius: 10px;
+    border: 1px solid var(--ta-surface-solid);
+    border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    backdrop-filter: blur(12px);
+    background: var(--ta-surface-solid);
+    box-shadow: var(--ta-shadow-1);
     cursor: pointer;
     transition: color 140ms ease, background-color 140ms ease, transform 100ms ease;
 }
@@ -176,9 +175,8 @@ function toNumber(value: unknown, fallback = 0): number {
     padding: 4px;
     border: 1px solid var(--ta-line);
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.97);
+    background: var(--ta-surface-solid);
     box-shadow: var(--ta-shadow-2);
-    backdrop-filter: blur(20px) saturate(160%);
 }
 
 :global(.shop-card-actions-menu .el-dropdown-menu) {
@@ -215,8 +213,7 @@ function toNumber(value: unknown, fallback = 0): number {
     height: 90px;
     display: grid;
     place-items: center;
-    border-radius: 13px;
-    color: #ffffff;
+    border-radius: var(--ta-radius-small);
 }
 
 .shop-card__visual :deep(svg) {
@@ -225,27 +222,33 @@ function toNumber(value: unknown, fallback = 0): number {
 }
 
 .shop-card__visual--violet {
-    background: linear-gradient(145deg, #9b6be8, #7650c7);
+    color: var(--ta-purple);
+    background: var(--ta-purple-soft);
 }
 
 .shop-card__visual--emerald {
-    background: linear-gradient(145deg, #4aa568, #2f7f49);
+    color: var(--ta-green);
+    background: var(--ta-green-soft);
 }
 
 .shop-card__visual--gold {
-    background: linear-gradient(145deg, #efad32, #d57c16);
+    color: var(--ta-orange);
+    background: var(--ta-orange-soft);
 }
 
 .shop-card__visual--sunset {
-    background: linear-gradient(145deg, #ef8f6f, #d65b76);
+    color: var(--ta-red);
+    background: var(--ta-red-soft);
 }
 
 .shop-card__visual--indigo {
-    background: linear-gradient(145deg, #5e72d8, #4555aa);
+    color: #6575a4;
+    background: #edf0f7;
 }
 
 .shop-card__visual--cyan {
-    background: linear-gradient(145deg, #37a6c8, #357fbd);
+    color: #49838c;
+    background: #edf5f6;
 }
 
 .shop-card__title {
@@ -318,7 +321,7 @@ function toNumber(value: unknown, fallback = 0): number {
     min-height: 30px;
     padding: 0 10px;
     border: 0;
-    border-radius: 9px;
+    border-radius: var(--ta-radius-small);
     color: #ffffff;
     background: var(--ta-blue);
     font-size: 12px;

@@ -1321,22 +1321,6 @@ button:focus-visible {
     transform: scale(0.55);
 }
 
-.animation-stage :deep(.character:nth-child(1)) {
-    background-color: #7f9e83 !important;
-}
-
-.animation-stage :deep(.character:nth-child(2)) {
-    background-color: #396754 !important;
-}
-
-.animation-stage :deep(.character:nth-child(3)) {
-    background-color: #b9c99f !important;
-}
-
-.animation-stage :deep(.character:nth-child(4)) {
-    background-color: #97b091 !important;
-}
-
 .brand-footer {
     margin: auto 0 0;
     padding-top: 20px;

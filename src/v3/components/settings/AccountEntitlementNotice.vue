@@ -25,6 +25,7 @@ import { isApiRequestError } from "@/types/api";
 import AppNoticeBar from "@/v3/components/AppNoticeBar.vue";
 import { ElMessage } from "element-plus";
 import { confirmDialog } from "@/utils/confirmDialog";
+import { entitlementStatusTitle } from "@/utils/entitlement";
 import { computed, ref } from "vue";
 import { RouterLink } from "vue-router";
 
@@ -33,17 +34,9 @@ const sessionStore = useSessionStore()
 const confirming = ref(false)
 const synchronizing = ref(false)
 
-const statusText = computed(() => {
-    switch (sessionStore.entitlementState) {
-        case "not_started": return "试用尚未开启"
-        case "trial_active": return "14 天免费试用中"
-        case "trial_expired": return "试用已到期 · 仅可查看"
-        case "paid_active": return "付费权益有效"
-        case "paid_expired": return "付费权益已到期 · 仅可查看"
-        case "permanent": return "长期使用权益"
-        default: return "暂时无法获取使用权益"
-    }
-})
+const statusText = computed(() => entitlementStatusTitle(
+    sessionStore.entitlementState, cacheStore.profile?.roleCode || sessionStore.role?.code,
+))
 
 const descriptionText = computed(() => {
     switch (sessionStore.entitlementState) {

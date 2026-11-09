@@ -85,6 +85,20 @@ export function entitlementMessage(state: EffectiveEntitlementState): string {
     }
 }
 
+export function entitlementStatusTitle(state: EffectiveEntitlementState, roleCode?: string | null): string {
+    const edition = roleCode === 'common' ? '普通版' : roleCode === 'pro' ? 'Pro 版' : ''
+    const prefix = edition ? `${edition} · ` : ''
+    switch (state) {
+        case 'not_started': return '试用尚未开启'
+        case 'trial_active': return '14 天免费试用中'
+        case 'trial_expired': return '试用已到期 · 仅可查看'
+        case 'paid_active': return `${prefix}付费权益有效`
+        case 'paid_expired': return `${prefix}付费权益已到期 · 仅可查看`
+        case 'permanent': return '长期使用权益'
+        default: return '暂时无法获取使用权益'
+    }
+}
+
 const preparationReads = new Set([
     '/user/info', '/class/list', '/student/list', '/student/list/ungrouped', '/student/group/list',
 ])
@@ -95,6 +109,7 @@ const preparationWrites = new Set([
 export function allowsEntitlementRequest(profile: UserProfile | null, method: string, url: string, now = Date.now()): boolean {
     const path = url.split('?')[0]!.split('#')[0]!
     if (path.startsWith('/auth/') || (method === 'POST' && path === '/user/trial/start')) return true
+    if (method === 'PUT' && path === '/user/profile') return true
     if ((method === 'GET' && (path === '/subscription/plans' || path === '/subscription/orders'
         || /^\/subscription\/orders\/[^/]+$/.test(path)))
         || (method === 'POST' && (path === '/subscription/purchase-link'

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { UserEntitlement, UserProfile } from '@/types/user'
-import { allowsEntitlementRequest, effectiveEntitlementState, normalizeEntitlement } from '../entitlement'
+import { allowsEntitlementRequest, effectiveEntitlementState, entitlementStatusTitle, normalizeEntitlement } from '../entitlement'
 import { computeTrialFromProfile, normalizeUserProfile } from '../userProfile'
 
 const now = Date.parse('2026-11-02T00:00:00Z')
@@ -10,6 +10,23 @@ function profile(state: UserEntitlement['state'], deadline: string | null = null
 }
 
 describe('independent commercial access', () => {
+    it('names only the actual paid edition and preserves other entitlement states', () => {
+        expect(entitlementStatusTitle('paid_active', 'common')).toBe('普通版 · 付费权益有效')
+        expect(entitlementStatusTitle('paid_expired', 'pro')).toBe('Pro 版 · 付费权益已到期 · 仅可查看')
+        expect(entitlementStatusTitle('paid_active', 'custom')).toBe('付费权益有效')
+        expect(entitlementStatusTitle('trial_active', 'pro')).toBe('14 天免费试用中')
+        expect(entitlementStatusTitle('trial_expired', 'common')).toBe('试用已到期 · 仅可查看')
+        expect(entitlementStatusTitle('permanent', 'admin')).toBe('长期使用权益')
+        expect(entitlementStatusTitle('not_started', 'common')).toBe('试用尚未开启')
+        expect(entitlementStatusTitle('unavailable', 'pro')).toBe('暂时无法获取使用权益')
+    })
+    it.each(['not_started', 'trial_expired', 'paid_expired', 'unavailable'] as const)('allows updating the current profile name when state is %s', state => {
+        const teacher = state === 'unavailable' ? null : profile(state)
+        expect(allowsEntitlementRequest(teacher, 'PUT', '/user/profile', now)).toBe(true)
+        expect(allowsEntitlementRequest(teacher, 'POST', '/user/profile', now)).toBe(false)
+        expect(allowsEntitlementRequest(teacher, 'PUT', '/user/profile/other', now)).toBe(false)
+        expect(allowsEntitlementRequest(teacher, 'PUT', '/user/other', now)).toBe(false)
+    })
     it.each(['not_started', 'trial_expired', 'paid_expired'] as const)('permits only supported subscription requests when commercial state is %s', state => {
         const teacher = profile(state)
         expect(allowsEntitlementRequest(teacher, 'GET', '/subscription/plans', now)).toBe(true)

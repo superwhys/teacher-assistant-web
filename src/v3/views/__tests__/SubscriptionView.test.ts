@@ -38,6 +38,7 @@ function purchaseLink(overrides: Partial<SubscriptionPurchaseLink> = {}): Subscr
 }
 
 interface SubscriptionState {
+    accountStatusText: string
     catalog: SubscriptionPlans | null
     loading: boolean
     loadError: string
@@ -82,6 +83,17 @@ beforeEach(() => {
 afterEach(() => { app?.unmount(); app = undefined; vi.useRealTimers() })
 
 describe('SubscriptionView', () => {
+    it('shows the currently paid edition while keeping nonpaid account status unchanged', async () => {
+        const view = await mountSubscription()
+        Reflect.set(mocks.session, 'entitlementState', 'paid_active')
+        Reflect.set(mocks.cache.profile, 'roleCode', 'pro')
+        expect(view.accountStatusText).toBe('Pro 版 · 付费权益有效')
+        Reflect.set(mocks.cache.profile, 'roleCode', 'common')
+        Reflect.set(mocks.session, 'entitlementState', 'paid_expired')
+        expect(view.accountStatusText).toBe('普通版 · 付费权益已到期 · 仅可查看')
+        Reflect.set(mocks.session, 'entitlementState', 'trial_active')
+        expect(view.accountStatusText).toBe(mocks.session.entitlementMessage)
+    })
     it('shows the fixed plans grouped by edition and loads eligibility even when trial access has expired', async () => {
         const view = await mountSubscription()
         expect(view.editionGroups.map(group => [group.id, group.plans.length])).toEqual([['common', 2], ['pro', 2]])

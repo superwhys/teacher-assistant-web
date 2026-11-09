@@ -5,7 +5,10 @@
                 {{ userInitial }}
             </el-avatar>
             <div class="settings-profile__identity">
-                <h2>{{ displayName }}</h2>
+                <div class="settings-profile__name">
+                    <h2>{{ displayName }}</h2>
+                    <SettingsProfileNameEditor />
+                </div>
                 <p>{{ userEmail || "当前账号未绑定邮箱" }}</p>
                 <div class="status-chip-row">
                     <span class="status-chip" :class="isLoginExpired ? 'status-chip--rose' : 'status-chip--emerald'">
@@ -49,6 +52,7 @@
 
 <script setup lang="ts">
 import AccountEntitlementNotice from "@/v3/components/settings/AccountEntitlementNotice.vue";
+import SettingsProfileNameEditor from "@/v3/components/settings/SettingsProfileNameEditor.vue";
 import { RouterLink } from "vue-router";
 
 /** 定义账号信息卡片属性。 */
@@ -105,10 +109,18 @@ defineProps<SettingsAccountCardProps>()
     min-width: 0;
 }
 
+.settings-profile__name {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+}
+
 .settings-profile__identity h2 {
     margin: 0;
     font-size: 21px;
     letter-spacing: -0.02em;
+    overflow-wrap: anywhere;
 }
 
 .settings-profile__identity p {

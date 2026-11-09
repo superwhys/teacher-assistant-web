@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
     initialize: vi.fn(),
     warning: vi.fn(),
     error: vi.fn(),
-    cache: { token: 'token-a', profile: { id: 'teacher-a' } },
+    cache: { token: 'token-a', profile: { id: 'teacher-a' } as { id: string; roleCode?: string | null } },
     session: {
         entitlementState: 'not_started',
         entitlementMessage: '尚未开启试用，可新增班级、学生、分组及维护组员。',
@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
         startingTrial: false,
         trialExpiresAt: null as number | null,
         paidExpiresAt: null as number | null,
+        role: null as { code: string } | null,
         startTrial: vi.fn(),
         initialize: vi.fn(),
     },
@@ -62,6 +63,7 @@ beforeEach(() => {
         startingTrial: false,
         trialExpiresAt: null,
         paidExpiresAt: null,
+        role: null,
         startTrial: mocks.startTrial,
         initialize: mocks.initialize,
     })
@@ -77,6 +79,22 @@ afterEach(() => {
 })
 
 describe('AccountEntitlementNotice', () => {
+    it('uses the current role for paid edition labels and keeps trial and permanent meanings', () => {
+        mocks.session.entitlementState = 'paid_active'
+        mocks.session.role = { code: 'pro' }
+        const notice = mountNotice()
+        expect(notice.statusText).toBe('Pro 版 · 付费权益有效')
+        mocks.cache.profile.roleCode = 'common'
+        expect(notice.statusText).toBe('普通版 · 付费权益有效')
+        mocks.session.entitlementState = 'paid_expired'
+        expect(notice.statusText).toBe('普通版 · 付费权益已到期 · 仅可查看')
+        mocks.cache.profile.roleCode = 'custom'
+        expect(notice.statusText).toBe('付费权益已到期 · 仅可查看')
+        mocks.session.entitlementState = 'trial_active'
+        expect(notice.statusText).toBe('14 天免费试用中')
+        mocks.session.entitlementState = 'permanent'
+        expect(notice.statusText).toBe('长期使用权益')
+    })
     it('waits for explicit confirmation and prevents duplicate confirmation or activation', async () => {
         let confirm!: (value: string) => void
         mocks.confirm.mockReturnValue(new Promise((resolve) => { confirm = resolve }))

@@ -16,7 +16,7 @@
                 <p>{{ cacheStore.profile?.email || `账号 ID：${cacheStore.profile?.id || '未获取'}` }}</p>
             </div>
             <div class="subscription-account__status">
-                <span>{{ sessionStore.entitlementMessage }}</span>
+                <span>{{ accountStatusText }}</span>
                 <span v-if="paidDeadline">付费到期：{{ paidDeadline }}</span>
             </div>
         </section>
@@ -133,6 +133,7 @@ import PageHeader from '@/components/common/PageHeader.vue'
 import { useCacheStore } from '@/stores/cacheStore'
 import { useSessionStore } from '@/stores/sessionStore'
 import { isApiRequestError } from '@/types/api'
+import { entitlementStatusTitle } from '@/utils/entitlement'
 import type { SubscriptionPlan, SubscriptionPlanID, SubscriptionPlans, SubscriptionPurchaseLink } from '@/types/subscription'
 import {
     isSubscriptionPlanAvailable, isSubscriptionPurchaseLinkValid, subscriptionMiniProgramLink, subscriptionPrice,
@@ -194,6 +195,9 @@ const linkExpired = computed(() => !purchaseLink.value || Date.parse(purchaseLin
 const miniProgramURL = computed(() => subscriptionMiniProgramLink(purchaseLink.value?.url_link || ''))
 const paidDeadline = computed(() => cacheStore.profile?.entitlement?.paid_expires_at
     ? formatDeadline(cacheStore.profile.entitlement.paid_expires_at) : '')
+const accountStatusText = computed(() => sessionStore.entitlementState === 'paid_active' || sessionStore.entitlementState === 'paid_expired'
+    ? entitlementStatusTitle(sessionStore.entitlementState, cacheStore.profile?.roleCode || sessionStore.role?.code)
+    : sessionStore.entitlementMessage)
 
 function formatDeadline(value: string): string {
     const timestamp = Date.parse(value)

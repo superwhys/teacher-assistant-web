@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UserProfile } from '@/types/user'
-import { del, get, post, postBlob, requestStream } from '../api'
+import { del, get, post, postBlob, put, requestStream } from '../api'
+import { userApi } from '../user'
 
 const mocks = vi.hoisted(() => ({
     fetch: vi.fn(), logout: vi.fn(), message: vi.fn(),
@@ -29,6 +30,15 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('commercial request boundary', () => {
+    it.each(['trial_expired', 'unknown'] as const)('allows only the profile name endpoint when access is %s', async state => {
+        mocks.cache.profile = state === 'unknown' ? null : profile(state)
+        await userApi.updateName('张 三 🙂')
+        expect(mocks.fetch).toHaveBeenCalledExactlyOnceWith('/api/user/profile', expect.objectContaining({
+            method: 'PUT', body: JSON.stringify({ name: '张 三 🙂' }),
+        }))
+        await expect(put('/user/profile/other', { name: 'Other' })).rejects.toMatchObject({ code: state === 'unknown' ? 200403 : 200402 })
+        expect(mocks.fetch).toHaveBeenCalledTimes(1)
+    })
     it('permits local subscription cancellation at expiry without permitting neighboring writes', async () => {
         mocks.cache.profile = profile('trial_expired')
         await post('/subscription/orders/own-order/cancel')

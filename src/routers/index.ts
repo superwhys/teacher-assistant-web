@@ -57,6 +57,11 @@ const routes = [
         component: () => import('@/v3/views/SettingsMiniProgramView.vue'),
       },
       {
+        path: 'subscription/orders',
+        name: 'subscription-orders',
+        component: () => import('@/v3/views/SubscriptionOrdersView.vue'),
+      },
+      {
         path: 'subscription',
         name: 'subscription',
         component: () => import('@/v3/views/SubscriptionView.vue'),

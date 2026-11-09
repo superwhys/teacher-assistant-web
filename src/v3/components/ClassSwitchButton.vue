@@ -19,10 +19,11 @@
                         切换班级
                     </button>
                     <button type="button" class="tab-button" :class="{ 'is-active': activeTab === 'create' }"
-                        :disabled="!canPrepare" @click="canPrepare && (activeTab = 'create')">
+                        :disabled="!canCreateClass" @click="canCreateClass && (activeTab = 'create')">
                         创建班级
                     </button>
                 </div>
+                <p v-if="classLimitMessage" class="section-head__desc">{{ classLimitMessage }}</p>
 
                 <div v-if="activeTab === 'switch'" class="tab-panel">
                     <label class="field-block">
@@ -56,17 +57,17 @@
                     <div class="create-form">
                         <label class="field-block">
                             <span class="field-block__label">班级名称</span>
-                            <el-input v-model="createClassName" :disabled="!canPrepare || createClassLoading" placeholder="例如：一年级三班" />
+                            <el-input v-model="createClassName" :disabled="!canCreateClass || createClassLoading" placeholder="例如：一年级三班" />
                         </label>
 
                         <label class="field-block">
                             <span class="field-block__label">学期名称</span>
-                            <el-input v-model="createSemesterName" :disabled="!canPrepare || createClassLoading" placeholder="例如：2025-2026学年上学期" />
+                            <el-input v-model="createSemesterName" :disabled="!canCreateClass || createClassLoading" placeholder="例如：2025-2026学年上学期" />
                         </label>
                     </div>
 
                     <div class="create-actions">
-                        <button type="button" class="primary-button" :disabled="!canPrepare || createClassLoading" @click="handleCreateClass">
+                        <button type="button" class="primary-button" :disabled="!canCreateClass || createClassLoading" @click="handleCreateClass">
                             {{ createClassLoading ? "创建中..." : "创建" }}
                         </button>
                     </div>
@@ -86,12 +87,14 @@
 <script setup lang="ts">
 import { useBusinessAccess } from "@/composables/useBusinessAccess"
 import { classManager } from "@/managers/class"
+import { useCacheStore } from "@/stores/cacheStore"
 import type { ClassDTO } from "@/types/class"
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import { ElMessage } from "element-plus"
 import { computed, ref, watch } from "vue"
 
 const { canPrepare, allowPrepare } = useBusinessAccess()
+const cacheStore = useCacheStore()
 
 /** 定义班级切换选项结构。 */
 interface ClassOption {
@@ -118,6 +121,9 @@ const activeTab = ref<ClassDialogTab>("switch")
 const createClassName = ref("")
 const createSemesterName = ref("")
 const createClassLoading = ref(false)
+const classLimitMessage = computed(() => cacheStore.profile?.roleCode === 'common' && classes.value.length >= 1
+    ? '普通版最多创建 1 个班级，多班级管理请使用 Pro 版。' : '')
+const canCreateClass = computed(() => canPrepare.value && !classesLoading.value && !classLimitMessage.value)
 
 /** 返回可用于切换的班级列表。 */
 const classOptions = computed<ClassOption[]>(() => {
@@ -171,8 +177,15 @@ function applyClassSwitch(): void {
 /** 创建班级并自动切换到新班级。 */
 async function handleCreateClass(): Promise<void> {
     if (!allowPrepare()) return
-    if (createClassLoading.value) {
+    if (createClassLoading.value || classesLoading.value) {
         return
+    }
+    if (cacheStore.profile?.roleCode === 'common') {
+        await loadClasses()
+        if (classLimitMessage.value) {
+            ElMessage.warning(classLimitMessage.value)
+            return
+        }
     }
 
     const className = createClassName.value.trim()

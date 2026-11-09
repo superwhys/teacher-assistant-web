@@ -37,6 +37,7 @@
                 </div>
             </div>
             <AccountEntitlementNotice class="settings-profile__entitlement" />
+            <RouterLink to="/subscription/orders" class="settings-profile__orders">我的订单 <span aria-hidden="true">→</span></RouterLink>
         </template>
 
         <div v-else class="empty-state">
@@ -48,6 +49,7 @@
 
 <script setup lang="ts">
 import AccountEntitlementNotice from "@/v3/components/settings/AccountEntitlementNotice.vue";
+import { RouterLink } from "vue-router";
 
 /** 定义账号信息卡片属性。 */
 interface SettingsAccountCardProps {
@@ -69,6 +71,15 @@ defineProps<SettingsAccountCardProps>()
 </script>
 
 <style scoped>
+.settings-profile__orders {
+    grid-column: 1 / -1;
+    justify-self: start;
+    color: var(--ta-blue);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
 .settings-profile__entitlement {
     grid-column: 1 / -1;
     width: 100%;

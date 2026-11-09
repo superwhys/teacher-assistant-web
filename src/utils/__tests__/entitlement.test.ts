@@ -18,7 +18,7 @@ describe('independent commercial access', () => {
         expect(allowsEntitlementRequest(teacher, 'PUT', '/subscription/purchase-link', now)).toBe(false)
     })
     it.each(['not_started', 'trial_expired', 'paid_expired'] as const)('allows only the supported Agent transports when commercial state is %s', state => {
-        const teacher = profile(state)
+        const teacher = { ...profile(state), roleCode: 'pro' }
         for (const [method, path] of [
             ['POST', '/agent/conversations'], ['GET', '/agent/conversations/conversation'],
             ['GET', '/agent/conversations?class_id=7&semester_id=9&page=1'],
@@ -57,7 +57,7 @@ describe('independent commercial access', () => {
     })
 
     it('allows only preparation operations before activation, including member maintenance but not imports', () => {
-        const teacher = profile('not_started')
+        const teacher = { ...profile('not_started'), roleCode: 'trial' }
         for (const path of ['/class/create', '/student/create', '/student/group/create', '/student/group/add_students', '/student/group/remove_students']) {
             expect(allowsEntitlementRequest(teacher, 'POST', path, now)).toBe(true)
         }

@@ -34,7 +34,9 @@ vi.mock('@/managers/student', () => ({ studentManager: {
     addStudentsToGroup: mocks.addMembers, removeStudentsFromGroup: mocks.removeMembers,
 } }))
 vi.mock('@/managers/points', () => ({ pointsManager: { applyRuleBatch: mocks.applyRuleBatch } }))
-const businessSession = reactive({ canWrite: true, canPrepare: true, canImportExport: true, entitlementMessage: '试用已到期，仅可查看' })
+const businessSession = reactive({ canWrite: true, canPrepare: true, canImportExport: true,
+    supportsStudentGroups: true, canManageGroups: true, groupingDisabledReason: '学生分组仅限 Pro 版，普通版提供基础学生名单。',
+    entitlementMessage: '试用已到期，仅可查看' })
 vi.mock('@/stores/sessionStore', () => ({ useSessionStore: () => businessSession }))
 vi.mock('@/stores/cacheStore', () => ({ useCacheStore: () => mocks.cache }))
 vi.mock('element-plus', () => ({ ElMessage: {
@@ -63,6 +65,8 @@ interface StudentsState {
     students: StudentDTO[]
     groups: StudentGroupDTO[]
     randomGroupVisible: boolean
+    groupManageVisible: boolean
+    groupImportVisible: boolean
     randomGroupingSaving: boolean
     randomGroupingError: string
     pointsApplying: boolean
@@ -78,6 +82,8 @@ interface StudentsState {
     handleSaveStudentEdit: (payload: { id: number, name: string, gender: 1 }) => Promise<void>
     handleDeleteGroup: (payload: { groupId: number }) => Promise<void>
     openRandomGroupDialog: () => void
+    openGroupManageDialog: () => void
+    openGroupImportDialog: () => void
     handleApplyRandomGroups: (groups: ApplyRandomGroupsReq['groups']) => Promise<void>
 }
 
@@ -114,7 +120,7 @@ async function mountStudents(): Promise<StudentsState> {
 }
 
 beforeEach(() => {
-    Object.assign(businessSession, { canWrite: true, canPrepare: true, canImportExport: true })
+    Object.assign(businessSession, { canWrite: true, canPrepare: true, canImportExport: true, supportsStudentGroups: true, canManageGroups: true })
     vi.resetAllMocks()
     const events = new EventTarget()
     vi.stubGlobal('window', {
@@ -232,9 +238,54 @@ describe('StudentsView random grouping', () => {
 
 
 describe('StudentsView commercial access', () => {
+    it('denies common grouping even when its dialogs were opened before the downgrade, while preserving daily student and points writes', async () => {
+        const state = await mountStudents()
+        expect(state.randomGroupVisible).toBe(true)
+        Object.assign(businessSession, { canWrite: true, canPrepare: true, canImportExport: false,
+            supportsStudentGroups: false, canManageGroups: false })
+        await nextTick()
+        await Promise.resolve()
+        state.openGroupManageDialog()
+        state.openGroupImportDialog()
+        state.openRandomGroupDialog()
+        expect(state.groupManageVisible).toBe(false)
+        expect(state.groupImportVisible).toBe(false)
+        expect(state.randomGroupVisible).toBe(false)
+        await state.handleCreateGroup({ name: '禁用分组' })
+        await state.handleDeleteGroup({ groupId: 10 })
+        await state.handleSaveGroupMembers({ groupId: 10, memberIds: [1] })
+        await state.handleApplyRandomGroups(preview)
+        await state.handleConfirmGroupImport({ groups: [{ groupName: '导入组', memberNames: ['甲'] }] })
+        expect(mocks.createGroup).not.toHaveBeenCalled()
+        expect(mocks.deleteGroup).not.toHaveBeenCalled()
+        expect(mocks.addMembers).not.toHaveBeenCalled()
+        expect(mocks.removeMembers).not.toHaveBeenCalled()
+        expect(mocks.applyRandomGroups).not.toHaveBeenCalled()
+        await state.handleAddSingle({ name: '丙', gender: 1 })
+        await state.handleSaveStudentEdit({ id: 1, name: '甲修改', gender: 1 })
+        state.selectorTargets = [1, 2]
+        await state.handleSelectRule({ id: 3, name: '课堂发言', sign: 'plus', points: 2 }, 1)
+        expect(mocks.create).toHaveBeenCalledWith(7, '丙', 1)
+        expect(mocks.update).toHaveBeenCalled()
+        expect(mocks.applyRuleBatch).toHaveBeenCalledWith(7, 3, [1, 2], 1)
+    })
+
+    it('rechecks grouping access after member lookup before changing membership', async () => {
+        const state = await mountStudents()
+        const members = deferred<StudentDTO[]>()
+        mocks.list.mockReturnValueOnce(members.promise)
+        const saving = state.handleSaveGroupMembers({ groupId: 10, memberIds: [3] })
+        Object.assign(businessSession, { supportsStudentGroups: false, canManageGroups: false, canImportExport: false })
+        members.resolve(initialStudents)
+        await saving
+        expect(mocks.addMembers).not.toHaveBeenCalled()
+        expect(mocks.removeMembers).not.toHaveBeenCalled()
+        expect(mocks.success).not.toHaveBeenCalled()
+    })
+
     it('allows preparation additions and member maintenance, but rejects batch/import/edit/delete before trial starts', async () => {
         const state = await mountStudents()
-        Object.assign(businessSession, { canWrite: false, canPrepare: true, canImportExport: false })
+        Object.assign(businessSession, { canWrite: false, canPrepare: true, canImportExport: false, canManageGroups: true })
         await state.handleAddSingle({ name: '丙', gender: 1 })
         await state.handleCreateGroup({ name: '新分组' })
         await state.handleSaveGroupMembers({ groupId: 10, memberIds: [1] })
@@ -258,7 +309,7 @@ describe('StudentsView commercial access', () => {
     it('rechecks expired access at submission even when its dialog opened while active', async () => {
         const state = await mountStudents()
         expect(state.randomGroupVisible).toBe(true)
-        Object.assign(businessSession, { canWrite: false, canPrepare: false, canImportExport: false })
+        Object.assign(businessSession, { canWrite: false, canPrepare: false, canImportExport: false, canManageGroups: false })
         await state.handleApplyRandomGroups(preview)
         await state.handleAddSingle({ name: '丙', gender: 1 })
         await state.handleCreateGroup({ name: '新分组' })

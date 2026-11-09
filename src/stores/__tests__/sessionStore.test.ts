@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, disposePinia, setActivePinia, type Pinia } from 'pinia'
 import type { UserProfile } from '@/types/user'
 import { useSessionStore } from '../sessionStore'
+import { useBusinessAccess } from '@/composables/useBusinessAccess'
 
 type Cache = {
     token: string | null
@@ -39,8 +40,9 @@ function profile(state: 'not_started' | 'trial_active' | 'trial_expired' | 'perm
         entitlement: { state, permanent: state === 'permanent', trial_started_at: null, trial_expires_at: expiresAt, paid_expires_at: null },
     }
 }
-function sessionResponse(user = profile(), routes = ['dashboard']) {
-    return { data: { user, role: { id: 2, code: 'common', name: '普通角色' }, config: { sidebar: routes.map(menu) } } }
+function sessionResponse(user = profile(), routes = ['dashboard'], roleCode?: string) {
+    return { data: { user: roleCode ? { ...user, role: { ...user.role, code: roleCode } } : user,
+        role: { id: 2, code: roleCode || 'common', name: '普通角色' }, config: { sidebar: routes.map(menu) } } }
 }
 let pinia: Pinia
 beforeEach(() => {
@@ -54,12 +56,28 @@ beforeEach(() => {
 afterEach(() => { disposePinia(pinia); vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('AI assistant module access', () => {
+    it('denies a common account even when its role was mistakenly granted the agent menu', async () => {
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['agent', 'students']))
+        const session = useSessionStore()
+        await session.initialize()
+        expect(session.canUseAgent).toBe(false)
+        expect(session.supportsStudentGroups).toBe(false)
+        expect(session.canManageGroups).toBe(false)
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['agent', 'students'], 'pro'))
+        await session.initialize(true)
+        expect(session.canUseAgent).toBe(true)
+        expect(session.canManageGroups).toBe(true)
+        mocks.cache.updateProfile({ ...mocks.cache.profile!, roleCode: 'common' })
+        expect(session.canUseAgent).toBe(false)
+        expect(session.canManageGroups).toBe(false)
+    })
+
     it('requires the agent menu and keeps the global assistant out of navigation', async () => {
         const session = useSessionStore()
         expect(session.canUseAgent).toBe(false)
         await session.initialize()
         expect(session.canUseAgent).toBe(false)
-        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['agent', 'students']))
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['agent', 'students'], 'pro'))
         await session.initialize(true)
         expect(session.canUseAgent).toBe(true)
         expect(session.sidebar.map(item => item.code)).toEqual(['students'])
@@ -68,7 +86,7 @@ describe('AI assistant module access', () => {
     })
 
     it('does not turn an assistant-only grant into a nonexistent page', async () => {
-        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['agent']))
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['agent'], 'pro'))
         const session = useSessionStore()
         await session.initialize()
         expect(session.canUseAgent).toBe(true)
@@ -77,7 +95,7 @@ describe('AI assistant module access', () => {
     })
 
     it('keeps assistant access during preparation while retaining write restrictions', async () => {
-        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile('not_started'), ['agent', 'students', 'points']))
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile('not_started'), ['agent', 'students', 'points'], 'trial'))
         const session = useSessionStore()
         await session.initialize()
         expect(session.canUseAgent).toBe(true)
@@ -86,17 +104,17 @@ describe('AI assistant module access', () => {
     })
 
     it('revokes assistant access after refreshed role menus remove it', async () => {
-        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['agent', 'dashboard']))
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['agent', 'dashboard'], 'pro'))
         const session = useSessionStore()
         await session.initialize()
         expect(session.canUseAgent).toBe(true)
-        mocks.fetchSessionInit.mockResolvedValue(sessionResponse())
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['dashboard'], 'pro'))
         await session.initialize(true)
         expect(session.canUseAgent).toBe(false)
     })
 
     it('clears assistant access immediately when the account changes', async () => {
-        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['agent', 'dashboard']))
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['agent', 'dashboard'], 'pro'))
         const session = useSessionStore()
         await session.initialize()
         expect(session.canUseAgent).toBe(true)
@@ -107,6 +125,34 @@ describe('AI assistant module access', () => {
 })
 
 describe('commercial session permissions', () => {
+    it('keeps common single-item writes available while explaining that bulk data tools require Pro', async () => {
+        const session = useSessionStore()
+        await session.initialize()
+        const access = useBusinessAccess()
+        expect(session.canWrite).toBe(true)
+        expect(session.canPrepare).toBe(true)
+        expect(session.canImportExport).toBe(false)
+        expect(access.allowImportExport()).toBe(false)
+        expect(mocks.warning).toHaveBeenCalledWith('批量导入导出仅限 Pro 版，普通版可逐条维护数据。')
+        expect(access.allowWrite()).toBe(true)
+    })
+
+    it.each(['trial', 'pro', 'admin'])('retains active %s bulk access and still requires an entitlement for non-admin roles', async roleCode => {
+        const active = sessionResponse()
+        active.data.user.role.code = roleCode
+        active.data.role.code = roleCode
+        mocks.fetchSessionInit.mockResolvedValue(active)
+        const session = useSessionStore()
+        await session.initialize()
+        expect(session.canImportExport).toBe(true)
+        const expired = sessionResponse(profile('trial_expired'))
+        expired.data.user.role.code = roleCode
+        expired.data.role.code = roleCode
+        mocks.fetchSessionInit.mockResolvedValue(expired)
+        await session.initialize(true)
+        expect(session.canImportExport).toBe(roleCode === 'admin')
+    })
+
     it('keeps subscriptions available to expired accounts without any business menu grant', async () => {
         mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile('trial_expired'), []))
         const session = useSessionStore()

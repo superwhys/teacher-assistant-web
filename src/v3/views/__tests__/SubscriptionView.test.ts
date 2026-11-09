@@ -17,12 +17,16 @@ vi.mock('@/stores/sessionStore', () => ({ useSessionStore: () => mocks.session }
 vi.mock('element-plus', () => ({ ElMessage: { success: mocks.success, error: mocks.error } }))
 
 const month: SubscriptionPlan = {
-    id: 'common_month', edition: 'common', name: '普通版月卡', days: 30, price_fen: 990, available: true,
+    id: 'common_month', edition: 'common', name: '普通版月卡', days: 30, price_fen: 190, available: true,
 }
+const proHighlights = [
+    { title: '多班级管理', description: '支持创建和管理多个班级' },
+    { title: '批量导入导出', description: '名单、评分规则、积分记录等批量处理' },
+]
 const catalog: SubscriptionPlans = {
-    plans: [month, { ...month, id: 'common_year', name: '普通版年卡', days: 365, price_fen: 9900 },
-        { ...month, id: 'pro_month', edition: 'pro', name: 'Pro 月卡', price_fen: 1299 },
-        { ...month, id: 'pro_year', edition: 'pro', name: 'Pro 年卡', days: 365, price_fen: 12990 }],
+    plans: [month, { ...month, id: 'common_year', name: '普通版年卡', days: 365, price_fen: 1290 },
+        { ...month, id: 'pro_month', edition: 'pro', name: 'Pro 月卡', price_fen: 390 },
+        { ...month, id: 'pro_year', edition: 'pro', name: 'Pro 年卡', days: 365, price_fen: 1990 }],
     auto_renew: false, can_purchase: true, purchase_disabled_reason: '', ios_available: true,
 }
 function purchaseLink(overrides: Partial<SubscriptionPurchaseLink> = {}): SubscriptionPurchaseLink {
@@ -43,7 +47,8 @@ interface SubscriptionState {
     linkExpired: boolean
     miniProgramURL: string
     refreshing: boolean
-    editionGroups: { id: string; plans: SubscriptionPlan[] }[]
+    editionGroups: { id: string; plans: SubscriptionPlan[]; activePlan: SubscriptionPlan; features: { title: string; description: string; included?: boolean }[]; highlights: { title: string; description: string }[] }[]
+    selectEditionPlan: (edition: 'common' | 'pro', id: string) => void
     loadPlans: () => Promise<void>
     createPurchaseLink: (plan: SubscriptionPlan) => Promise<void>
     refreshEntitlement: () => Promise<void>
@@ -77,11 +82,42 @@ beforeEach(() => {
 afterEach(() => { app?.unmount(); app = undefined; vi.useRealTimers() })
 
 describe('SubscriptionView', () => {
-    it('shows the server plans grouped by edition and loads even when trial access has expired', async () => {
+    it('shows the fixed plans grouped by edition and loads eligibility even when trial access has expired', async () => {
         const view = await mountSubscription()
         expect(view.editionGroups.map(group => [group.id, group.plans.length])).toEqual([['common', 2], ['pro', 2]])
         expect(view.catalog?.auto_renew).toBe(false)
         expect(view.loading).toBe(false)
+        expect(mocks.purchaseLink).not.toHaveBeenCalled()
+    })
+
+    it('keeps fixed prices, durations and edition placement while taking only server purchase eligibility', async () => {
+        mocks.plans.mockResolvedValue({ data: { ...catalog, plans: [
+            ...catalog.plans.map(plan => ({ ...plan, edition: plan.edition === 'common' ? 'pro' : 'common',
+                name: '服务端不同名称', days: 999, price_fen: 1590, available: plan.id !== 'common_year',
+                purchase_disabled_reason: plan.id === 'common_year' ? '当前账号不可购买年卡' : '',
+            })),
+            { ...month, id: 'unknown_plan', name: '未知套餐' },
+        ] } })
+        const view = await mountSubscription()
+        expect(view.catalog?.plans.map(({ id, edition, name, days, price_fen }) => ({ id, edition, name, days, price_fen }))).toEqual([
+            { id: 'common_month', edition: 'common', name: '普通版月卡', days: 30, price_fen: 190 },
+            { id: 'common_year', edition: 'common', name: '普通版年卡', days: 365, price_fen: 1290 },
+            { id: 'pro_month', edition: 'pro', name: 'Pro 月卡', days: 30, price_fen: 390 },
+            { id: 'pro_year', edition: 'pro', name: 'Pro 年卡', days: 365, price_fen: 1990 },
+        ])
+        view.selectEditionPlan('common', 'common_year')
+        expect(view.editionGroups[0]?.activePlan.available).toBe(false)
+        expect(view.editionGroups[0]?.activePlan.purchase_disabled_reason).toBe('当前账号不可购买年卡')
+        await view.createPurchaseLink(view.editionGroups[0]!.activePlan)
+        expect(mocks.purchaseLink).not.toHaveBeenCalled()
+    })
+
+    it('keeps a missing SKU unavailable and does not turn an unknown server SKU into a purchase option', async () => {
+        mocks.plans.mockResolvedValue({ data: { ...catalog, plans: [{ ...month, id: 'unknown_plan' }] } })
+        const view = await mountSubscription()
+        expect(view.catalog?.plans).toHaveLength(4)
+        expect(view.catalog?.plans.every(plan => !plan.available)).toBe(true)
+        await view.createPurchaseLink(month)
         expect(mocks.purchaseLink).not.toHaveBeenCalled()
     })
 
@@ -92,6 +128,73 @@ describe('SubscriptionView', () => {
         view.catalog = { ...catalog, can_purchase: false, purchase_disabled_reason: '请使用本人账号购买' }
         await view.createPurchaseLink(month)
         expect(mocks.purchaseLink).not.toHaveBeenCalled()
+    })
+
+    it('selects monthly or yearly terms independently before creating the chosen edition purchase entry', async () => {
+        mocks.purchaseLink.mockImplementation((planID: string) => Promise.resolve({ data: purchaseLink({ plan_id: planID }) }))
+        const view = await mountSubscription()
+        expect(view.editionGroups.map(group => group.activePlan.id)).toEqual(['common_month', 'pro_month'])
+        view.selectEditionPlan('common', 'common_year')
+        expect(view.editionGroups.map(group => group.activePlan.id)).toEqual(['common_year', 'pro_month'])
+        expect(mocks.purchaseLink).not.toHaveBeenCalled()
+        await view.createPurchaseLink(view.editionGroups[0]!.activePlan)
+        expect(mocks.purchaseLink).toHaveBeenCalledExactlyOnceWith('common_year')
+        expect(view.purchaseLink?.plan_id).toBe('common_year')
+        view.selectEditionPlan('pro', 'pro_year')
+        expect(view.editionGroups.map(group => group.activePlan.id)).toEqual(['common_year', 'pro_year'])
+        expect(view.purchaseLink).toBeNull()
+        expect(mocks.purchaseLink).toHaveBeenCalledTimes(1)
+    })
+
+    it.each(['missing', 'empty', 'opposite'])('keeps edition copy and prices static when API descriptions are %s', async state => {
+        const plans = catalog.plans.map(plan => {
+            const response = { ...plan }
+            if (state !== 'missing') {
+                const copy = state === 'empty' ? [] : [{ title: '服务端相反描述', description: '忽略已确认的版本内容' }]
+                Reflect.set(response, 'features', copy)
+                Reflect.set(response, 'highlights', copy)
+            }
+            if (state === 'opposite' && plan.id === 'common_month') response.price_fen = 1066
+            return response
+        })
+        mocks.plans.mockResolvedValue({ data: { ...catalog, plans } })
+        const view = await mountSubscription()
+        expect(view.editionGroups[0]?.highlights).toEqual([
+            { title: '1 个班级', description: '最多创建 1 个班级' },
+            { title: '不支持批量导入导出', description: '可逐条维护数据' },
+        ])
+        expect(view.editionGroups[1]?.highlights).toEqual(proHighlights)
+        expect(view.editionGroups[0]?.features.map(feature => feature.title)).toEqual([
+            '学生维护', '学生分组', 'AI 助手', '日常课堂功能',
+        ])
+        expect(view.editionGroups[1]?.features.map(feature => feature.title)).toEqual([
+            '学生维护', '学生分组', 'AI 助手', '日常课堂功能',
+        ])
+        expect(view.editionGroups[0]?.features.filter(feature => feature.included === false).map(feature => feature.title)).toEqual(['学生分组', 'AI 助手'])
+        expect(view.editionGroups[1]?.features.every(feature => feature.included !== false)).toBe(true)
+        expect(view.editionGroups[0]?.features.find(feature => feature.title === '学生维护')?.description).toBe('逐条添加、编辑学生')
+        expect(view.editionGroups[1]?.features.find(feature => feature.title === '学生分组')?.description).toBe('手动分组、随机自动分组；分组导入在网页版使用')
+        expect(view.editionGroups[0]?.activePlan.price_fen).toBe(190)
+        view.selectEditionPlan('common', 'common_year')
+        expect(view.editionGroups[0]?.activePlan.id).toBe('common_year')
+        expect(view.editionGroups[0]?.activePlan.price_fen).toBe(1290)
+        expect(view.editionGroups[0]?.highlights[0]?.title).toBe('1 个班级')
+    })
+
+    it('prevents term changes during checkout and keeps unavailable selected terms blocked', async () => {
+        let finish!: (value: { data: SubscriptionPurchaseLink }) => void
+        mocks.purchaseLink.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
+        const view = await mountSubscription()
+        const pending = view.createPurchaseLink(month)
+        view.selectEditionPlan('common', 'common_year')
+        expect(view.editionGroups[0]?.activePlan.id).toBe('common_month')
+        finish({ data: purchaseLink() })
+        await pending
+        view.catalog = { ...catalog, plans: catalog.plans.map(plan => plan.id === 'common_year' ? { ...plan, available: false } : plan) }
+        view.selectEditionPlan('common', 'common_year')
+        expect(view.editionGroups[0]?.activePlan.id).toBe('common_year')
+        await view.createPurchaseLink(view.editionGroups[0]!.activePlan)
+        expect(mocks.purchaseLink).toHaveBeenCalledTimes(1)
     })
 
     it('prevents duplicate link requests and permits a QR-only response', async () => {

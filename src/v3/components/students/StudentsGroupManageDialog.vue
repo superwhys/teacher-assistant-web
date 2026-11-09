@@ -8,7 +8,7 @@
                         <p>支持先建组再分配成员，也可以稍后通过导入批量整理。</p>
                     </div>
                     <div class="meta-tags">
-                        <button type="button" class="ghost-button" :disabled="!canWrite || (!active)" @click="emit('open-random')">
+                        <button type="button" class="ghost-button" :disabled="!canManageGroups || !canWrite || (!active)" @click="emit('open-random')">
                             自动分组
                         </button>
                         <button type="button" class="ghost-button" :disabled="!canImportExport || (!active)" @click="emit('open-import')">
@@ -18,8 +18,8 @@
                 </div>
 
                 <div class="action-row">
-                    <el-input v-model="newGroupName" size="large" placeholder="请输入新分组名称" :disabled="!active || !canPrepare" />
-                    <button type="button" class="primary-button" :disabled="!canPrepare || (!active)" @click="handleAddGroup">
+                    <el-input v-model="newGroupName" size="large" placeholder="请输入新分组名称" :disabled="!active || !canManageGroups" />
+                    <button type="button" class="primary-button" :disabled="!canManageGroups || (!active)" @click="handleAddGroup">
                         新建分组
                     </button>
                 </div>
@@ -44,7 +44,7 @@
                             :value="group.id" />
                     </el-select>
 
-                    <button type="button" class="danger-button" :disabled="!canWrite || (!active || !selectedGroupId)"
+                    <button type="button" class="danger-button" :disabled="!canManageGroups || !canWrite || (!active || !selectedGroupId)"
                         @click="openDeleteConfirm">
                         删除该组
                     </button>
@@ -77,7 +77,7 @@
                 <button type="button" class="ghost-button" @click="visible = false">
                     关闭
                 </button>
-                <button type="button" class="primary-button" :disabled="!canPrepare || (!active || !selectedGroupId)"
+                <button type="button" class="primary-button" :disabled="!canManageGroups || (!active || !selectedGroupId)"
                     @click="handleSaveMembers">
                     保存成员
                 </button>
@@ -97,7 +97,7 @@
                 <button type="button" class="ghost-button" @click="deleteConfirmVisible = false">
                     取消
                 </button>
-                <button type="button" class="danger-button" @click="handleDeleteGroup" :disabled="!canWrite">
+                <button type="button" class="danger-button" @click="handleDeleteGroup" :disabled="!canManageGroups || !canWrite">
                     确认删除
                 </button>
             </div>
@@ -113,7 +113,7 @@ import { studentManager } from "@/managers/student";
 import type { StudentDTO } from "@/types/student";
 import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 
-const { canPrepare, canWrite, canImportExport, allowPrepare, allowWrite } = useBusinessAccess()
+const { canManageGroups, canWrite, canImportExport, allowManageGroups, allowWrite } = useBusinessAccess()
 
 /** 定义分组管理弹窗使用的分组结构。 */
 export interface UiGroup {
@@ -183,7 +183,7 @@ const transferData = computed(() => {
     return Array.from(nameMap.entries()).map(([id, name]) => ({
         key: id,
         label: name,
-        disabled: !canPrepare.value
+        disabled: !canManageGroups.value
     }))
 })
 
@@ -272,7 +272,7 @@ watch([selectedGroupId, () => props.classId], async () => {
 
 /** 校验并创建新分组。 */
 function handleAddGroup(): void {
-    if (!allowPrepare()) return
+    if (!allowManageGroups()) return
     if (!props.active) {
         return
     }
@@ -289,7 +289,7 @@ function handleAddGroup(): void {
 
 /** 打开删除分组确认弹窗。 */
 function openDeleteConfirm(): void {
-    if (!allowWrite()) return
+    if (!allowWrite() || !allowManageGroups()) return
     if (!props.active || !selectedGroupId.value) {
         return
     }
@@ -299,7 +299,7 @@ function openDeleteConfirm(): void {
 
 /** 确认删除当前选中的分组。 */
 function handleDeleteGroup(): void {
-    if (!allowWrite()) return
+    if (!allowWrite() || !allowManageGroups()) return
     if (!selectedGroupId.value) {
         return
     }
@@ -310,7 +310,7 @@ function handleDeleteGroup(): void {
 
 /** 保存当前分组的成员调整结果。 */
 function handleSaveMembers(): void {
-    if (!allowPrepare()) return
+    if (!allowManageGroups()) return
     if (!props.active || !selectedGroupId.value) {
         return
     }

@@ -2,6 +2,33 @@ import type { EntitlementState, UserEntitlement, UserProfile } from '@/types/use
 
 export type EffectiveEntitlementState = EntitlementState | 'unavailable'
 
+export const PRO_IMPORT_EXPORT_MESSAGE = '批量导入导出仅限 Pro 版，普通版可逐条维护数据。'
+export const PRO_GROUPING_MESSAGE = '学生分组仅限 Pro 版，普通版提供基础学生名单。'
+export const PRO_AGENT_MESSAGE = 'AI 助手仅限 Pro 版，普通版可直接使用日常教学功能。'
+
+const importExportPaths = new Set([
+    '/student/create.batch', '/points/rule/record/import',
+    '/points/rule/record/export/preview', '/points/rule/record/export',
+])
+
+export function isImportExportRequest(method: string, url: string): boolean {
+    return method === 'POST' && importExportPaths.has(url.split('?')[0]!.split('#')[0]!)
+}
+
+const studentGroupWrites = new Set([
+    '/student/group/create', '/student/group/random/apply',
+    '/student/group/add_students', '/student/group/remove_students',
+])
+
+export function editionRequestMessage(profile: UserProfile | null, method: string, url: string): string {
+    if (profile?.roleCode !== 'common') return ''
+    const path = url.split('?')[0]!.split('#')[0]!
+    if (path === '/agent' || path.startsWith('/agent/')) return PRO_AGENT_MESSAGE
+    if ((method === 'POST' && studentGroupWrites.has(path))
+        || (method === 'DELETE' && /^\/student\/group\/[^/]+$/.test(path))) return PRO_GROUPING_MESSAGE
+    return isImportExportRequest(method, path) ? PRO_IMPORT_EXPORT_MESSAGE : ''
+}
+
 const states: readonly EntitlementState[] = [
     'not_started', 'trial_active', 'trial_expired', 'paid_active', 'paid_expired', 'permanent',
 ]
@@ -68,8 +95,10 @@ const preparationWrites = new Set([
 export function allowsEntitlementRequest(profile: UserProfile | null, method: string, url: string, now = Date.now()): boolean {
     const path = url.split('?')[0]!.split('#')[0]!
     if (path.startsWith('/auth/') || (method === 'POST' && path === '/user/trial/start')) return true
-    if ((method === 'GET' && path === '/subscription/plans')
+    if ((method === 'GET' && (path === '/subscription/plans' || path === '/subscription/orders'
+        || /^\/subscription\/orders\/[^/]+$/.test(path)))
         || (method === 'POST' && path === '/subscription/purchase-link')) return true
+    if (editionRequestMessage(profile, method, path)) return false
     // Agent transport 本身不修改业务数据，工具读取及确认写入由服务端逐项校验。
     if (method === 'GET' && (path === '/agent/conversations'
         || /^\/agent\/(conversations\/[^/]+|runs\/[^/]+\/events)$/.test(path))) return true

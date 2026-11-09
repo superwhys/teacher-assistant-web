@@ -1,7 +1,7 @@
 <template>
     <div class="students-view">
         <PageHeader eyebrow="STUDENT MANAGEMENT" title="学生管理"
-            :description="`${studentCards.length} 名学生 · ${groupChips.length} 个小组`">
+            :description="supportsStudentGroups ? `${studentCards.length} 名学生 · ${groupChips.length} 个小组` : `${studentCards.length} 名学生 · 基础学生名单`">
             <template #actions>
                 <button type="button" class="primary-button" :disabled="!hasActiveClass || !canPrepare" @click="openAddStudentDialog('single')">
                     <i-ep-plus aria-hidden="true" />
@@ -17,7 +17,7 @@
                     <input v-model="keyword" type="search" class="search-box__input" aria-label="搜索学生"
                         placeholder="搜索姓名、拼音首字母；可用逗号隔开">
                 </label>
-                <el-dropdown trigger="click" placement="bottom-end">
+                <el-dropdown v-if="supportsStudentGroups || canImportExport" trigger="click" placement="bottom-end">
                     <button type="button" class="students-manage-button" :disabled="!hasActiveClass">
                         <i-ep-operation aria-hidden="true" />
                         管理
@@ -25,17 +25,17 @@
                     </button>
                     <template #dropdown>
                         <el-dropdown-menu>
-                            <el-dropdown-item @click="openGroupManageDialog">管理分组</el-dropdown-item>
-                            <el-dropdown-item :disabled="!canWrite || loading || isArchivedSemester || randomGroupingSaving || !studentCards.length"
+                            <el-dropdown-item v-if="supportsStudentGroups" @click="openGroupManageDialog">管理分组</el-dropdown-item>
+                            <el-dropdown-item v-if="supportsStudentGroups" :disabled="!canManageGroups || !canWrite || loading || isArchivedSemester || randomGroupingSaving || !studentCards.length"
                                 @click="openRandomGroupDialog">自动分组</el-dropdown-item>
-                            <el-dropdown-item :disabled="!canImportExport" @click="openGroupImportDialog">Excel 导入分组</el-dropdown-item>
+                            <el-dropdown-item v-if="supportsStudentGroups" :disabled="!canManageGroups || !canImportExport" @click="openGroupImportDialog">Excel 导入分组</el-dropdown-item>
                             <el-dropdown-item divided :disabled="!canImportExport" @click="openAddStudentDialog('batch')">批量添加学生</el-dropdown-item>
                             <el-dropdown-item :disabled="!canImportExport" @click="openAddStudentDialog('excel')">Excel 导入学生</el-dropdown-item>
                         </el-dropdown-menu>
                     </template>
                 </el-dropdown>
             </div>
-            <div class="group-filter" role="group" aria-label="筛选分组">
+            <div v-if="supportsStudentGroups" class="group-filter" role="group" aria-label="筛选分组">
                 <button type="button" class="students-filter-button" :aria-pressed="selectedGroupId === null"
                     @click="handleSelectGroup(null)">
                     全部学生 <span>{{ studentCards.length }}</span>
@@ -66,7 +66,7 @@
                             @click="layoutMode = 'card'"><i-ep-grid aria-hidden="true" /></button>
                         <button type="button" :aria-pressed="layoutMode === 'list'" aria-label="列表视图" title="列表视图"
                             @click="layoutMode = 'list'"><i-ep-list aria-hidden="true" /></button>
-                        <button type="button" :aria-pressed="layoutMode === 'group'" aria-label="分组视图" title="分组视图"
+                        <button v-if="supportsStudentGroups" type="button" :aria-pressed="layoutMode === 'group'" aria-label="分组视图" title="分组视图"
                             @click="layoutMode = 'group'"><i-ep-user-filled aria-hidden="true" /></button>
                     </div>
                     <el-select v-model="sortBy" class="students-sort" aria-label="排序方式"
@@ -113,16 +113,16 @@
             :disabled="!hasActiveClass || !canPrepare" @add-single="handleAddSingle" @add-batch="handleAddBatch"
             @add-excel="handleAddExcel" />
 
-        <StudentsGroupManageDialog v-model="groupManageVisible" :active="hasActiveClass" :class-id="activeClassId"
+        <StudentsGroupManageDialog v-if="supportsStudentGroups" v-model="groupManageVisible" :active="hasActiveClass" :class-id="activeClassId"
             :groups="uiGroups" @create-group="handleCreateGroup" @delete-group="handleDeleteGroup"
             @save-members="handleSaveGroupMembers" @open-import="openGroupImportDialog"
             @open-random="openRandomGroupDialog" />
 
-        <StudentsRandomGroupDialog v-model="randomGroupVisible" :active="canWrite && hasActiveClass && !isArchivedSemester && !loading"
+        <StudentsRandomGroupDialog v-if="supportsStudentGroups" v-model="randomGroupVisible" :active="canManageGroups && canWrite && hasActiveClass && !isArchivedSemester && !loading"
             :busy="randomGroupingSaving" :error="randomGroupingError" :existing-group-count="groups.length"
             :students="randomGroupStudents" @confirm="handleApplyRandomGroups" @clear-error="randomGroupingError = ''" />
 
-        <StudentsGroupImportDialog v-model="groupImportVisible" :active="canImportExport && hasActiveClass" :students="uiAllStudents"
+        <StudentsGroupImportDialog v-if="supportsStudentGroups" v-model="groupImportVisible" :active="canManageGroups && canImportExport && hasActiveClass" :students="uiAllStudents"
             :groups="uiGroups" @confirm="handleConfirmGroupImport" />
 
         <StudentsEditDialog v-model="editStudentVisible" :student="editingStudent" @save="handleSaveStudentEdit" />
@@ -196,7 +196,8 @@ interface StudentSearchIndexItem {
     tagsLower: string
 }
 
-const { canWrite, canPrepare, canImportExport, allowWrite, allowPrepare, allowImportExport } = useBusinessAccess()
+const { canWrite, canPrepare, canImportExport, supportsStudentGroups, canManageGroups,
+    allowWrite, allowPrepare, allowImportExport, allowStudentGroups, allowManageGroups } = useBusinessAccess()
 const cacheStore = useCacheStore()
 const loading = ref(false)
 const students = ref<StudentDTO[]>([])
@@ -266,8 +267,8 @@ const randomGroupStudents = computed(() => students.value.map(student => ({
 
 /** 返回当前学生页的布局缓存值。 */
 const layoutMode = computed<LayoutMode>({
-    get: () => cacheStore.getClassLayout() ?? "card",
-    set: (value) => cacheStore.setClassLayout(value)
+    get: () => !supportsStudentGroups.value && cacheStore.getClassLayout() === 'group' ? 'card' : cacheStore.getClassLayout() ?? "card",
+    set: (value) => { if (value !== 'group' || allowStudentGroups()) cacheStore.setClassLayout(value) }
 })
 
 /** 返回当前学生页的排序缓存值。 */
@@ -299,6 +300,7 @@ function toUiGender(gender?: ApiGender): UiGender {
 
 /** 返回指定学生的分组信息。 */
 function getGroupInfo(student: StudentDTO): { groupId: number | null, groupName: string } {
+    if (!supportsStudentGroups.value) return { groupId: null, groupName: '基础名单' }
     const studentId = typeof student.id === "number" ? student.id : 0
 
     for (const group of groups.value) {
@@ -461,6 +463,7 @@ const studentCards = computed<StudentCardItem[]>(() => {
 
 /** 返回当前分组筛选标签列表。 */
 const groupChips = computed<GroupChipItem[]>(() => {
+    if (!supportsStudentGroups.value) return []
     return groups.value
         .map((group) => {
             const groupId = typeof group.id === "number" ? group.id : 0
@@ -647,7 +650,7 @@ async function loadStudentData(): Promise<void> {
     try {
         const [studentList, groupList] = await Promise.all([
             studentManager.list(classId),
-            studentManager.listGroups(classId)
+            supportsStudentGroups.value ? studentManager.listGroups(classId) : Promise.resolve([])
         ])
 
         if (requestId !== studentLoadRequestId || classId !== activeClassId.value || !studentsViewActive) return
@@ -865,6 +868,7 @@ function toggleSelectAllStudents(): void {
 
 /** 处理分组筛选切换。 */
 function handleSelectGroup(groupId: number | null): void {
+    if (groupId !== null && !allowStudentGroups()) return
     selectedGroupId.value = groupId
     syncSelectedStudents()
 }
@@ -878,18 +882,19 @@ function openAddStudentDialog(mode: StudentAddMode): void {
 
 /** 打开分组管理弹窗。 */
 function openGroupManageDialog(): void {
+    if (!allowStudentGroups()) return
     groupManageVisible.value = true
 }
 
 /** 打开分组导入弹窗。 */
 function openGroupImportDialog(): void {
-    if (!allowImportExport()) return
+    if (!allowManageGroups() || !allowImportExport()) return
     groupImportVisible.value = true
 }
 
 /** 预览全班随机分组，提交时由后端一次性替换。 */
 function openRandomGroupDialog(): void {
-    if (!allowWrite()) return
+    if (!allowWrite() || !allowManageGroups()) return
     if (!activeClassId.value || isArchivedSemester.value || loading.value || randomGroupingSaving.value) return
     if (!students.value.length) {
         ElMessage.info("请先添加学生")
@@ -901,14 +906,14 @@ function openRandomGroupDialog(): void {
 }
 
 async function handleApplyRandomGroups(randomGroups: ApplyRandomGroupsReq["groups"]): Promise<void> {
-    if (!allowWrite()) return
+    if (!allowWrite() || !allowManageGroups()) return
     const classId = activeClassId.value
     const semesterId = cacheStore.getActiveSemesterId()
     const userId = cacheStore.profile?.id
     if (!classId || isArchivedSemester.value || loading.value || randomGroupingSaving.value) return
     const contextIsCurrent = () => studentsViewActive && classId === activeClassId.value
         && semesterId === cacheStore.getActiveSemesterId() && userId === cacheStore.profile?.id
-        && !isArchivedSemester.value
+        && !isArchivedSemester.value && supportsStudentGroups.value
     randomGroupingSaving.value = true
     randomGroupingError.value = ""
     try {
@@ -1015,7 +1020,7 @@ async function handleSaveStudentEdit(payload: { id: number, name: string, gender
 
 /** 处理创建学生分组。 */
 async function handleCreateGroup(payload: { name: string }): Promise<void> {
-    if (!allowPrepare()) return
+    if (!allowManageGroups()) return
     if (!activeClassId.value) {
         return
     }
@@ -1027,17 +1032,17 @@ async function handleCreateGroup(payload: { name: string }): Promise<void> {
 
 /** 处理删除学生分组。 */
 async function handleDeleteGroup(payload: { groupId: number }): Promise<void> {
-    if (!allowWrite()) return
+    if (!allowWrite() || !allowManageGroups()) return
     await studentManager.deleteGroup(payload.groupId)
     ElMessage.success("已删除分组")
     await loadStudentData()
 }
 
 /** 将分组成员变更应用到接口层。 */
-async function applyGroupMembers(groupId: number, targetMemberIds: number[]): Promise<void> {
-    if (!allowPrepare()) return
+async function applyGroupMembers(groupId: number, targetMemberIds: number[]): Promise<boolean> {
+    if (!allowManageGroups()) return false
     if (!activeClassId.value) {
-        return
+        return false
     }
 
     const currentStudents = await studentManager.list(activeClassId.value, groupId)
@@ -1062,25 +1067,27 @@ async function applyGroupMembers(groupId: number, targetMemberIds: number[]): Pr
     })
 
     if (addIds.length > 0) {
+        if (!allowManageGroups()) return false
         await studentManager.addStudentsToGroup(groupId, addIds)
     }
 
     if (removeIds.length > 0) {
+        if (!allowManageGroups()) return false
         await studentManager.removeStudentsFromGroup(groupId, removeIds)
     }
+    return true
 }
 
 /** 处理保存分组成员。 */
 async function handleSaveGroupMembers(payload: { groupId: number, memberIds: number[] }): Promise<void> {
-    if (!allowPrepare()) return
-    await applyGroupMembers(payload.groupId, payload.memberIds)
+    if (!allowManageGroups() || !await applyGroupMembers(payload.groupId, payload.memberIds)) return
     ElMessage.success("已保存分组成员")
     await loadStudentData()
 }
 
 /** 处理 Excel 分组导入确认。 */
 async function handleConfirmGroupImport(payload: { groups: Array<{ groupName: string, memberNames: string[] }> }): Promise<void> {
-    if (!allowImportExport()) return
+    if (!allowManageGroups() || !allowImportExport()) return
     if (!activeClassId.value) {
         return
     }
@@ -1091,7 +1098,7 @@ async function handleConfirmGroupImport(payload: { groups: Array<{ groupName: st
     })
 
     for (const group of payload.groups) {
-        if (!allowImportExport()) return
+        if (!allowManageGroups() || !allowImportExport()) return
         const memberIds = group.memberNames
             .map((name) => nameToId.get(name) ?? 0)
             .filter((studentId) => studentId > 0)
@@ -1102,12 +1109,13 @@ async function handleConfirmGroupImport(payload: { groups: Array<{ groupName: st
 
         const existingGroup = uiGroups.value.find((item) => item.name === group.groupName)
         if (existingGroup) {
-            await applyGroupMembers(existingGroup.id, memberIds)
+            if (!await applyGroupMembers(existingGroup.id, memberIds)) return
             continue
         }
 
         const createdGroup = await studentManager.createGroup(activeClassId.value, group.groupName)
         if (createdGroup?.id) {
+            if (!allowManageGroups() || !allowImportExport()) return
             await studentManager.addStudentsToGroup(createdGroup.id, memberIds)
         }
     }
@@ -1126,6 +1134,15 @@ watch(activeClassId, async () => {
     selectedGroupId.value = null
     await loadStudentData()
 }, { immediate: true })
+
+watch(supportsStudentGroups, async supported => {
+    groupManageVisible.value = false
+    groupImportVisible.value = false
+    randomGroupVisible.value = false
+    selectedGroupId.value = null
+    if (!supported) groups.value = []
+    await loadStudentData()
+})
 
 watch(isArchivedSemester, () => {
     randomGroupVisible.value = false

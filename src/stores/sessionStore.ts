@@ -8,7 +8,7 @@ import type { SessionRole, SidebarMenu } from '@/types/session'
 import { ApiRequestError, isApiRequestError } from '@/types/api'
 import { canAccessPath, firstAllowedPath, normalizeSidebar } from '@/utils/menuAccess'
 import { computeTrialFromProfile, normalizeUserProfile } from '@/utils/userProfile'
-import { effectiveEntitlementState, entitlementDeadline, entitlementMessage as describeEntitlement, hasCommercialAccess } from '@/utils/entitlement'
+import { effectiveEntitlementState, entitlementDeadline, entitlementMessage as describeEntitlement, hasCommercialAccess, PRO_GROUPING_MESSAGE, PRO_IMPORT_EXPORT_MESSAGE } from '@/utils/entitlement'
 import { ENTITLEMENT_REJECTED_EVENT } from '@/utils/entitlementEvents'
 import { isPlatformPage, isPlatformPath, PLATFORM_MENUS } from '@/utils/platformAccess'
 
@@ -32,11 +32,18 @@ export const useSessionStore = defineStore('session', () => {
     const paidExpiresAt = computed(() => entitlementDeadline(cacheStore.profile?.entitlement?.paid_expires_at))
     const canWrite = computed(() => hasCommercialAccess(entitlementState.value))
     const canPrepare = computed(() => canWrite.value || entitlementState.value === 'not_started')
-    const canImportExport = computed(() => canWrite.value)
+    const supportsStudentGroups = computed(() => cacheStore.profile?.roleCode !== 'common')
+    const canManageGroups = computed(() => canPrepare.value && supportsStudentGroups.value)
+    const canImportExport = computed(() => canWrite.value && cacheStore.profile?.roleCode !== 'common')
     const isPreparation = computed(() => entitlementState.value === 'not_started')
     const isReadOnly = computed(() => !canPrepare.value)
     const entitlementMessage = computed(() => describeEntitlement(entitlementState.value))
-    const canUseAgent = computed(() => allSidebar.value.some(menu => menu.code === 'agent'))
+    const importExportDisabledReason = computed(() => !canWrite.value ? entitlementMessage.value
+        : cacheStore.profile?.roleCode === 'common' ? PRO_IMPORT_EXPORT_MESSAGE : '')
+    const groupingDisabledReason = computed(() => !canPrepare.value ? entitlementMessage.value
+        : !supportsStudentGroups.value ? PRO_GROUPING_MESSAGE : '')
+    const canUseAgent = computed(() => cacheStore.profile?.roleCode !== 'common'
+        && allSidebar.value.some(menu => menu.code === 'agent'))
     const isSuperAdmin = computed(() => initialized.value && !!cacheStore.token && role.value?.code === 'admin')
     const platformSidebar = computed(() => isSuperAdmin.value ? PLATFORM_MENUS : [])
     const sidebar = computed(() => {
@@ -170,7 +177,7 @@ export const useSessionStore = defineStore('session', () => {
 
     function canAccess(path: string): boolean {
         if (isPlatformPath(path)) return isSuperAdmin.value && isPlatformPage(path)
-        if (path === '/settings/mini-program' || path === '/subscription') return true
+        if (path === '/settings/mini-program' || path === '/subscription' || path === '/subscription/orders') return true
         if (!canWrite.value && (path === '/tools/timer' || path === '/tools/rollcall')) return false
         return canAccessPath(sidebar.value, path)
     }
@@ -208,6 +215,6 @@ export const useSessionStore = defineStore('session', () => {
     return {
         sidebar, platformSidebar, isSuperAdmin, role, initialized, loading, error, firstRoute, initialize, refreshAfterMutation, reset, canAccess, canUseAgent,
         entitlementState, trialExpiresAt, paidExpiresAt, canWrite, canPrepare, canImportExport,
-        isPreparation, isReadOnly, entitlementMessage, startingTrial, startTrial,
+        isPreparation, isReadOnly, entitlementMessage, importExportDisabledReason, supportsStudentGroups, canManageGroups, groupingDisabledReason, startingTrial, startTrial,
     }
 })

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UserProfile } from '@/types/user'
-import { get, post, postBlob } from '../api'
+import { del, get, post, postBlob, requestStream } from '../api'
 
 const mocks = vi.hoisted(() => ({
     fetch: vi.fn(), logout: vi.fn(), message: vi.fn(),
@@ -10,11 +10,11 @@ vi.mock('@/routers', () => ({ default: { currentRoute: { value: { path: '/studen
 vi.mock('@/stores/cacheStore', () => ({ useCacheStore: () => mocks.cache }))
 vi.mock('element-plus', () => ({ ElMessage: mocks.message }))
 
-function profile(state: 'not_started' | 'trial_active' | 'trial_expired' | 'permanent'): UserProfile {
+function profile(state: 'not_started' | 'trial_active' | 'trial_expired' | 'paid_active' | 'permanent'): UserProfile {
     return { id: 'teacher', name: 'Teacher', email: '', roleCode: 'common', entitlement: {
         state, permanent: state === 'permanent', trial_started_at: null,
         trial_expires_at: state === 'trial_active' ? new Date(Date.now() + 86400000).toISOString() : null,
-        paid_expires_at: null,
+        paid_expires_at: state === 'paid_active' ? new Date(Date.now() + 86400000).toISOString() : null,
     } }
 }
 beforeEach(() => {
@@ -29,8 +29,45 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('commercial request boundary', () => {
+    it('denies common manual and random grouping plus all agent transports before issuing a request', async () => {
+        for (const path of ['/student/group/create', '/student/group/random/apply', '/student/group/add_students', '/student/group/remove_students']) {
+            await expect(post(path, {})).rejects.toMatchObject({ code: 100403, message: expect.stringContaining('Pro') })
+        }
+        await expect(del('/student/group/10')).rejects.toMatchObject({ code: 100403 })
+        for (const path of ['/agent/conversations', '/agent/conversations/conversation/runs', '/agent/actions/action/decision']) {
+            await expect(post(path, {})).rejects.toMatchObject({ code: 100403, message: expect.stringContaining('Pro') })
+        }
+        await expect(get('/agent/conversations')).rejects.toMatchObject({ code: 100403 })
+        await expect(requestStream('/agent/runs/run/events', new AbortController().signal)).rejects.toMatchObject({ code: 100403 })
+        expect(mocks.fetch).not.toHaveBeenCalled()
+        mocks.fetch.mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ code: 0, data: null }), { status: 200 })))
+        await get('/student/list', { class_id: 7 })
+        await get('/student/group/list', { class_id: 7 })
+        await post('/student/create', { name: '甲' })
+        await post('/points/rule/apply', { student_ids: [1, 2], rule_id: 3 })
+        expect(mocks.fetch).toHaveBeenCalledTimes(4)
+    })
+
+    it.each(['trial_active', 'paid_active', 'permanent'] as const)('blocks common bulk requests during %s while allowing single-item maintenance', async state => {
+        mocks.cache.profile = profile(state)
+        for (const path of ['/student/create.batch', '/points/rule/record/import', '/points/rule/record/export/preview']) {
+            await expect(post(path, {})).rejects.toMatchObject({ code: 100403, message: expect.stringContaining('Pro') })
+        }
+        await expect(postBlob('/points/rule/record/export', {})).rejects.toMatchObject({ code: 100403, message: expect.stringContaining('Pro') })
+        expect(mocks.fetch).not.toHaveBeenCalled()
+        await post('/student/create', { name: 'Student', class_id: 1 })
+        expect(mocks.fetch).toHaveBeenCalledOnce()
+        expect(mocks.cache.profile?.entitlement?.state).toBe(state)
+    })
+
+    it.each(['trial', 'pro', 'admin'])('preserves active %s import access', async roleCode => {
+        mocks.cache.profile = { ...profile('trial_active'), roleCode }
+        await post('/points/rule/record/import', {})
+        expect(mocks.fetch).toHaveBeenCalledOnce()
+    })
+
     it('permits Agent transport posts at expiry while retaining the business write boundary', async () => {
-        mocks.cache.profile = profile('trial_expired')
+        mocks.cache.profile = { ...profile('trial_expired'), roleCode: 'pro' }
         mocks.fetch.mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ code: 0, data: null }), { status: 200 })))
         for (const path of ['/agent/conversations', '/agent/conversations/conversation/runs', '/agent/runs/run/cancel', '/agent/actions/action/decision']) {
             await post(path, {})
@@ -41,6 +78,7 @@ describe('commercial request boundary', () => {
         expect(mocks.fetch).toHaveBeenCalledTimes(4)
     })
     it('rejects an old download response after switching accounts', async () => {
+        mocks.cache.profile = { ...profile('permanent'), roleCode: 'pro' }
         let finish!: (blob: Blob) => void
         mocks.fetch.mockResolvedValue({ status: 200, ok: true, blob: () => new Promise<Blob>(resolve => { finish = resolve }) })
         const request = postBlob('/points/rule/record/export', {})
@@ -50,7 +88,7 @@ describe('commercial request boundary', () => {
         await expect(request).rejects.toThrow('账号已切换')
     })
     it('does not submit prohibited writes or exports while keeping permitted setup actions available', async () => {
-        mocks.cache.profile = profile('not_started')
+        mocks.cache.profile = { ...profile('not_started'), roleCode: 'trial' }
         await expect(post('/student/create.batch', {})).rejects.toMatchObject({ code: 200403 })
         await expect(post('/points/rule/record/export/preview', {})).rejects.toMatchObject({ code: 200403 })
         expect(mocks.fetch).not.toHaveBeenCalled()

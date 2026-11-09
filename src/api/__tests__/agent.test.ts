@@ -37,7 +37,7 @@ function eventResponse(text: string, byteByByte = false): Response {
 beforeEach(() => {
     vi.resetAllMocks();
     mocks.cache.token = "session";
-    mocks.cache.profile = { id: "teacher", name: "Teacher", email: "", roleCode: "common", entitlement: {
+    mocks.cache.profile = { id: "teacher", name: "Teacher", email: "", roleCode: "pro", entitlement: {
         state: "permanent", permanent: true, trial_started_at: null, trial_expires_at: null, paid_expires_at: null,
     } };
     mocks.cache.logout = mocks.logout;

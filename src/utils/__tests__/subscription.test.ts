@@ -5,7 +5,7 @@ import {
 } from '../subscription'
 
 const plan: SubscriptionPlan = {
-    id: 'common_month', edition: 'common', name: '普通版月卡', days: 30, price_fen: 990, available: true,
+    id: 'common_month', edition: 'common', name: '普通版月卡', days: 30, price_fen: 190, available: true,
 }
 const now = Date.parse('2026-11-09T00:00:00Z')
 const link: SubscriptionPurchaseLink = {
@@ -15,8 +15,8 @@ const link: SubscriptionPurchaseLink = {
 
 describe('subscription presentation', () => {
     it('uses server prices and never offers an unconfigured amount as a free purchase', () => {
-        expect(subscriptionPrice(plan)).toBe('¥9.90')
-        expect(subscriptionPrice({ ...plan, price_fen: 9900 })).toBe('¥99')
+        expect(subscriptionPrice(plan)).toBe('¥1.90')
+        expect(subscriptionPrice({ ...plan, price_fen: 1290 })).toBe('¥12.90')
         for (const price of [0, -1, 1.1, Number.NaN]) {
             expect(subscriptionPrice({ ...plan, price_fen: price })).toBe('暂未开放')
             expect(isSubscriptionPlanAvailable({ ...plan, price_fen: price })).toBe(false)

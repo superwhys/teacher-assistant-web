@@ -2,7 +2,7 @@ import { ApiRequestError, type ApiResponse } from "@/types/api";
 import { ElMessage } from "element-plus";
 import { useCacheStore } from "@/stores/cacheStore";
 import router from "@/routers";
-import { allowsEntitlementRequest, effectiveEntitlementState, entitlementMessage } from "@/utils/entitlement";
+import { allowsEntitlementRequest, editionRequestMessage, effectiveEntitlementState, entitlementMessage } from "@/utils/entitlement";
 import { notifyEntitlementRejected } from "@/utils/entitlementEvents";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
@@ -109,6 +109,11 @@ function assertCommercialAccess(url: string, method: string, token: string | nul
     const cache = useCacheStore();
     if (!token || allowsEntitlementRequest(cache.profile, method, url)) return;
     const state = effectiveEntitlementState(cache.profile);
+    const editionMessage = editionRequestMessage(cache.profile, method, url);
+    if (editionMessage) {
+        showMessage(editionMessage, "warning");
+        throw new ApiRequestError(editionMessage, PERMISSION_DENIED_CODE);
+    }
     const code = state === "trial_expired" ? 200402 : (state === "paid_expired" ? 200404 : 200403);
     const message = entitlementMessage(state);
     showMessage(message, "warning");

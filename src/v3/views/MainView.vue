@@ -107,6 +107,10 @@
                             title="立即锁屏" @click="lockNow">
                             <Lock aria-hidden="true" />
                         </button>
+                        <RouterLink v-if="sessionStore.entitlementState !== 'permanent'" to="/subscription"
+                            class="header-actions__button" aria-label="查看月卡和年卡">
+                            <span>订阅</span>
+                        </RouterLink>
                         <RouterLink v-if="sessionStore.canAccess('/settings')" to="/settings" class="header-actions__button header-settings-link">
                             <Setting aria-hidden="true" />
                             <span>进入设置</span>
@@ -259,7 +263,7 @@ const cacheStore = useCacheStore()
 const sessionStore = useSessionStore()
 const isPlatformPage = computed(() => isPlatformPath(route.path))
 const platformNavigationOpen = ref(false)
-const showEntitlementNotice = computed(() => route.path !== "/settings"
+const showEntitlementNotice = computed(() => route.path !== "/settings" && route.path !== "/subscription"
     && sessionStore.entitlementState !== "permanent" && sessionStore.entitlementState !== "paid_active")
 const showMiniProgramNotice = computed(() => cacheStore.profile?.wechatBound === false)
 const { closeTimerFinishedDialog, timerDisplayTime, timerFinishedDialogVisible, timerProgressPercent, timerState } = useSharedTimer()

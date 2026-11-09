@@ -10,6 +10,13 @@ function profile(state: UserEntitlement['state'], deadline: string | null = null
 }
 
 describe('independent commercial access', () => {
+    it.each(['not_started', 'trial_expired', 'paid_expired'] as const)('permits only supported subscription requests when commercial state is %s', state => {
+        const teacher = profile(state)
+        expect(allowsEntitlementRequest(teacher, 'GET', '/subscription/plans', now)).toBe(true)
+        expect(allowsEntitlementRequest(teacher, 'POST', '/subscription/purchase-link', now)).toBe(true)
+        expect(allowsEntitlementRequest(teacher, 'POST', '/subscription/future-write', now)).toBe(false)
+        expect(allowsEntitlementRequest(teacher, 'PUT', '/subscription/purchase-link', now)).toBe(false)
+    })
     it.each(['not_started', 'trial_expired', 'paid_expired'] as const)('allows only the supported Agent transports when commercial state is %s', state => {
         const teacher = profile(state)
         for (const [method, path] of [

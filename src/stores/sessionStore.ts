@@ -170,7 +170,7 @@ export const useSessionStore = defineStore('session', () => {
 
     function canAccess(path: string): boolean {
         if (isPlatformPath(path)) return isSuperAdmin.value && isPlatformPage(path)
-        if (path === '/settings/mini-program') return true
+        if (path === '/settings/mini-program' || path === '/subscription') return true
         if (!canWrite.value && (path === '/tools/timer' || path === '/tools/rollcall')) return false
         return canAccessPath(sidebar.value, path)
     }

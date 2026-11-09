@@ -107,6 +107,15 @@ describe('AI assistant module access', () => {
 })
 
 describe('commercial session permissions', () => {
+    it('keeps subscriptions available to expired accounts without any business menu grant', async () => {
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile('trial_expired'), []))
+        const session = useSessionStore()
+        await session.initialize()
+        expect(session.firstRoute).toBeNull()
+        expect(session.canAccess('/subscription')).toBe(true)
+        expect(session.canAccess('/subscription/future-page')).toBe(false)
+        expect(session.canAccess('/students')).toBe(false)
+    })
     it('does not let an older active snapshot undo a commercial rejection', async () => {
         const browser = new EventTarget()
         vi.stubGlobal('window', browser)
@@ -158,6 +167,7 @@ describe('commercial session permissions', () => {
         const session = useSessionStore()
         await session.initialize()
         expect(session.canAccess('/settings/mini-program')).toBe(true)
+        expect(session.canAccess('/subscription')).toBe(true)
         expect(session.canAccess('/dashboard')).toBe(true)
         expect(session.canAccess('/settings')).toBe(false)
         expect(session.canAccess('/settings/mini-program/other')).toBe(false)

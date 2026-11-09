@@ -57,6 +57,11 @@ const routes = [
         component: () => import('@/v3/views/SettingsMiniProgramView.vue'),
       },
       {
+        path: 'subscription',
+        name: 'subscription',
+        component: () => import('@/v3/views/SubscriptionView.vue'),
+      },
+      {
         path: 'no-access',
         component: () => import('@/v3/views/NoAccessView.vue'),
       },

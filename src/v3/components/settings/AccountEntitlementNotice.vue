@@ -1,12 +1,16 @@
 <template>
     <AppNoticeBar class="account-entitlement" :title="statusText" :description="descriptionText"
         :detail="expiresAtText" :tone="sessionStore.canWrite ? 'muted' : 'warning'">
-        <template v-if="sessionStore.entitlementState === 'not_started' || sessionStore.entitlementState === 'unavailable'" #action>
+        <template v-if="sessionStore.entitlementState !== 'permanent'" #action>
+            <RouterLink v-if="sessionStore.entitlementState !== 'unavailable'" to="/subscription"
+                class="app-notice-bar__action account-entitlement__subscribe">
+                {{ sessionStore.entitlementState === 'paid_active' ? '查看套餐与续费' : '开通正式版' }}
+            </RouterLink>
             <button v-if="sessionStore.entitlementState === 'not_started'" type="button"
                 class="app-notice-bar__action" :disabled="confirming || sessionStore.startingTrial" @click="confirmStartTrial">
                 {{ sessionStore.startingTrial ? "开启中..." : "开启 14 天免费试用" }}
             </button>
-            <button v-else type="button" class="app-notice-bar__action"
+            <button v-else-if="sessionStore.entitlementState === 'unavailable'" type="button" class="app-notice-bar__action"
                 :disabled="synchronizing" @click="synchronizeEntitlement">
                 {{ synchronizing ? "同步中..." : "重新同步权益" }}
             </button>
@@ -22,6 +26,7 @@ import AppNoticeBar from "@/v3/components/AppNoticeBar.vue";
 import { ElMessage } from "element-plus";
 import { confirmDialog } from "@/utils/confirmDialog";
 import { computed, ref } from "vue";
+import { RouterLink } from "vue-router";
 
 const cacheStore = useCacheStore()
 const sessionStore = useSessionStore()
@@ -113,4 +118,16 @@ async function synchronizeEntitlement(): Promise<void> {
     }
 }
 </script>
+
+<style scoped>
+.account-entitlement__subscribe {
+    margin-right: 8px;
+}
+
+@media (max-width: 660px) {
+    .account-entitlement__subscribe {
+        margin: 0 0 8px;
+    }
+}
+</style>
 

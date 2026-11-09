@@ -29,6 +29,14 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('commercial request boundary', () => {
+    it('permits local subscription cancellation at expiry without permitting neighboring writes', async () => {
+        mocks.cache.profile = profile('trial_expired')
+        await post('/subscription/orders/own-order/cancel')
+        expect(mocks.fetch).toHaveBeenCalledExactlyOnceWith('/api/subscription/orders/own-order/cancel', expect.objectContaining({ method: 'POST' }))
+        await expect(del('/subscription/orders/own-order')).rejects.toMatchObject({ code: 200402 })
+        await expect(post('/subscription/orders/own-order/cancel/future')).rejects.toMatchObject({ code: 200402 })
+        expect(mocks.fetch).toHaveBeenCalledTimes(1)
+    })
     it('denies common manual and random grouping plus all agent transports before issuing a request', async () => {
         for (const path of ['/student/group/create', '/student/group/random/apply', '/student/group/add_students', '/student/group/remove_students']) {
             await expect(post(path, {})).rejects.toMatchObject({ code: 100403, message: expect.stringContaining('Pro') })

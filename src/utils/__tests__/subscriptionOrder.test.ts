@@ -14,6 +14,8 @@ describe('subscription order presentation', () => {
     })
     it('distinguishes unconfirmed payment, fulfillment, manual review and refunds', () => {
         expect(subscriptionOrderStatus(pending)).toBe('待确认付款')
+        expect(subscriptionOrderStatus({ ...pending, status: 'canceled' })).toBe('已取消（本地）')
+        expect(subscriptionOrderStatus({ ...pending, status: 'paid', refund_review_required: true })).toBe('已付款 · 需人工核对')
         expect(subscriptionOrderStatus({ ...pending, status: 'paid' })).toBe('付款已确认 · 开通待核对')
         const paid = { ...pending, status: 'paid' as const, paid_expires_at: '2026-12-09T12:00:00Z' }
         expect(subscriptionOrderStatus(paid)).toBe('已付款并开通')

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { fetchSubscriptionOrder, fetchSubscriptionOrders } from '@/api/subscription'
+import { cancelSubscriptionOrder, fetchSubscriptionOrder, fetchSubscriptionOrders } from '@/api/subscription'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { useCacheStore } from '@/stores/cacheStore'
 import { useSessionStore } from '@/stores/sessionStore'
 import type { SubscriptionOrder } from '@/types/subscription'
+import { confirmDialog } from '@/utils/confirmDialog'
 import { subscriptionOrderAmount, subscriptionOrderName, subscriptionOrderStatus, subscriptionOrderTime } from '@/utils/subscriptionOrder'
 
 const cacheStore = useCacheStore()
@@ -17,15 +18,17 @@ const total = ref(0)
 const loading = ref(false)
 const loadError = ref('')
 const checkingID = ref('')
+const cancelingID = ref('')
 const checkedID = ref('')
 const checkMessage = ref('')
 const checkError = ref('')
 const pageCount = computed(() => Math.max(1, Math.ceil(total.value / pageSize)))
+const busy = computed(() => loading.value || Boolean(checkingID.value) || Boolean(cancelingID.value))
 let generation = 0
 let disposed = false
 
 async function loadOrders(targetPage = page.value): Promise<void> {
-    if (loading.value || checkingID.value || !cacheStore.token || !cacheStore.profile?.id) return
+    if (busy.value || !cacheStore.token || !cacheStore.profile?.id) return
     const version = generation
     loading.value = true
     loadError.value = ''
@@ -46,7 +49,7 @@ async function loadOrders(targetPage = page.value): Promise<void> {
 }
 
 async function checkOrder(orderID: string): Promise<void> {
-    if (checkingID.value || loading.value || !orders.value.some(order => order.id === orderID)) return
+    if (busy.value || !orders.value.some(order => order.id === orderID)) return
     const version = generation
     checkingID.value = orderID
     checkedID.value = orderID
@@ -60,6 +63,7 @@ async function checkOrder(orderID: string): Promise<void> {
         orders.value = orders.value.map(existing => existing.id === orderID ? order : existing)
         checkMessage.value = subscriptionOrderStatus(order)
         if (order.status === 'pending') checkMessage.value = '暂未确认付款。若已扣款，请稍后再次查询，勿重复购买。'
+        if (order.status === 'canceled') checkMessage.value = '订单仍处于本地取消状态。'
         if (order.status === 'paid' || order.status === 'refunded') {
             try {
                 await sessionStore.refreshAfterMutation()
@@ -74,6 +78,42 @@ async function checkOrder(orderID: string): Promise<void> {
     }
 }
 
+async function cancelOrder(orderID: string): Promise<void> {
+    if (busy.value || !orders.value.some(order => order.id === orderID && order.status === 'pending')) return
+    const token = cacheStore.token
+    const userID = cacheStore.profile?.id
+    if (!token || !userID) return
+    const version = generation
+    const current = () => !disposed && version === generation && cacheStore.token === token && cacheStore.profile?.id === userID
+    cancelingID.value = orderID
+    checkedID.value = orderID
+    checkMessage.value = ''
+    checkError.value = ''
+    try {
+        try {
+            await confirmDialog(
+                '取消后，此订单不再占用本地待付款限制，选择其他版本仍需满足当前账号的购买条件。此操作只取消本地订单，不会关闭微信支付，也不能证明微信尚未扣款。若已扣款，请先返回查询付款结果；取消后仍发生扣款，需联系管理员人工核对。',
+                '取消本地订单',
+                { confirmButtonText: '确认取消', cancelButtonText: '保留订单', type: 'warning' },
+            )
+        } catch {
+            return
+        }
+        if (!current() || !orders.value.some(order => order.id === orderID && order.status === 'pending')) return
+        const response = await cancelSubscriptionOrder(orderID)
+        if (!current()) return
+        if (response.data.id !== orderID) throw new Error('返回的订单信息不一致，请重新加载。')
+        orders.value = orders.value.map(order => order.id === orderID ? response.data : order)
+        checkMessage.value = response.data.status === 'canceled'
+            ? '订单已在本地取消，可返回套餐页重新选择。'
+            : subscriptionOrderStatus(response.data)
+    } catch (error) {
+        if (current()) checkError.value = error instanceof Error ? error.message : '取消订单失败，请稍后重试。'
+    } finally {
+        if (current()) cancelingID.value = ''
+    }
+}
+
 watch([() => cacheStore.token, () => cacheStore.profile?.id], ([token, userID]) => {
     generation += 1
     orders.value = []
@@ -82,6 +122,7 @@ watch([() => cacheStore.token, () => cacheStore.profile?.id], ([token, userID]) 
     loading.value = false
     loadError.value = ''
     checkingID.value = ''
+    cancelingID.value = ''
     checkedID.value = ''
     checkMessage.value = ''
     checkError.value = ''
@@ -96,7 +137,7 @@ onBeforeUnmount(() => { disposed = true; generation += 1 })
         <PageHeader eyebrow="MY ORDERS" title="我的订单" description="找回当前账号的订阅订单，核对付款与开通状态。">
             <template #actions>
                 <RouterLink to="/subscription" class="orders-button">查看套餐</RouterLink>
-                <button type="button" class="orders-button" :disabled="loading || Boolean(checkingID)" @click="loadOrders()">
+                <button type="button" class="orders-button" :disabled="busy" @click="loadOrders()">
                     {{ loading ? '加载中…' : '刷新订单' }}
                 </button>
             </template>
@@ -105,7 +146,7 @@ onBeforeUnmount(() => { disposed = true; generation += 1 })
         <p class="orders-help">包含为当前账号开通的网页扫码订单和小程序订单。未完成付款也会保留记录；如已扣款，请先查询结果。</p>
         <div v-if="loadError" class="orders-feedback orders-feedback--error" role="alert">
             <p>{{ loadError }}</p>
-            <button type="button" class="orders-button" :disabled="loading || Boolean(checkingID)" @click="loadOrders()">重新加载</button>
+            <button type="button" class="orders-button" :disabled="busy" @click="loadOrders()">重新加载</button>
         </div>
         <p v-if="loading && !orders.length" class="orders-feedback" role="status">正在加载订单…</p>
         <p v-else-if="!loading && !loadError && !orders.length" class="orders-feedback">暂无订阅订单。</p>
@@ -126,9 +167,13 @@ onBeforeUnmount(() => { disposed = true; generation += 1 })
                         <dt>创建时间</dt>
                         <dd>{{ subscriptionOrderTime(order.created_at) }}</dd>
                     </div>
-                    <div v-if="order.paid_expires_at && order.status !== 'refunded'">
+                    <div v-if="order.paid_expires_at && order.status === 'paid'">
                         <dt>本单开通至</dt>
                         <dd>{{ subscriptionOrderTime(order.paid_expires_at) }}</dd>
+                    </div>
+                    <div v-if="order.canceled_at">
+                        <dt>本地取消时间</dt>
+                        <dd>{{ subscriptionOrderTime(order.canceled_at) }}</dd>
                     </div>
                     <div class="order-card__number">
                         <dt>订单号</dt>
@@ -136,8 +181,12 @@ onBeforeUnmount(() => { disposed = true; generation += 1 })
                     </div>
                 </dl>
                 <div class="order-card__actions">
-                    <button type="button" class="orders-button" :disabled="loading || Boolean(checkingID)" @click="checkOrder(order.id)">
+                    <button type="button" class="orders-button" :disabled="busy" @click="checkOrder(order.id)">
                         {{ checkingID === order.id ? '查询中…' : '查询付款结果' }}
+                    </button>
+                    <button v-if="order.status === 'pending'" type="button" class="orders-button orders-button--cancel"
+                        :disabled="busy" @click="cancelOrder(order.id)">
+                        {{ cancelingID === order.id ? '取消中…' : '取消订单' }}
                     </button>
                     <p v-if="checkedID === order.id && checkMessage" class="orders-help" role="status">
                         {{ checkMessage }}
@@ -146,13 +195,20 @@ onBeforeUnmount(() => { disposed = true; generation += 1 })
                         {{ checkError }}
                     </p>
                 </div>
+                <p v-if="order.status === 'canceled'" class="orders-help order-card__canceled-note">
+                    仅取消本地订单，微信支付未关闭。后续若发生扣款，需人工核对；请勿继续支付该订单。
+                </p>
+                <p v-if="order.status === 'paid' && order.refund_review_required && !order.paid_expires_at"
+                    class="orders-help order-card__canceled-note">
+                    付款已确认，开通需人工核对。请联系管理员，勿重复购买。
+                </p>
             </li>
         </ul>
         <nav v-if="total > pageSize" class="orders-pagination" aria-label="订单分页">
-            <button type="button" class="orders-button" :disabled="page <= 1 || loading || Boolean(checkingID)"
+            <button type="button" class="orders-button" :disabled="page <= 1 || busy"
                 @click="loadOrders(page - 1)">上一页</button>
             <span>第 {{ page }} / {{ pageCount }} 页 · 共 {{ total }} 笔</span>
-            <button type="button" class="orders-button" :disabled="page >= pageCount || loading || Boolean(checkingID)"
+            <button type="button" class="orders-button" :disabled="page >= pageCount || busy"
                 @click="loadOrders(page + 1)">下一页</button>
         </nav>
     </div>
@@ -204,6 +260,14 @@ onBeforeUnmount(() => { disposed = true; generation += 1 })
 .orders-button:disabled {
     opacity: .55;
     cursor: default;
+}
+
+.orders-button--cancel {
+    color: var(--ta-text-secondary);
+}
+
+.order-card__canceled-note {
+    margin-top: 12px;
 }
 
 .orders-button:focus-visible {
@@ -265,7 +329,7 @@ onBeforeUnmount(() => { disposed = true; generation += 1 })
     background: var(--ta-blue-soft);
 }
 
-.order-card__status--refunded {
+.order-card__status--refunded, .order-card__status--canceled {
     color: var(--ta-text-secondary);
     background: var(--ta-surface-muted);
 }

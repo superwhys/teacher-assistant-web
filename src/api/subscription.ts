@@ -16,3 +16,7 @@ export function fetchSubscriptionOrders(page = 1, pageSize = 20) {
 export function fetchSubscriptionOrder(orderID: string) {
     return get<SubscriptionOrder>(`/subscription/orders/${encodeURIComponent(orderID)}`)
 }
+
+export function cancelSubscriptionOrder(orderID: string) {
+    return post<SubscriptionOrder>(`/subscription/orders/${encodeURIComponent(orderID)}/cancel`)
+}

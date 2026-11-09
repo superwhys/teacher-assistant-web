@@ -4,10 +4,11 @@ import SubscriptionOrdersView from '../SubscriptionOrdersView.vue'
 import type { SubscriptionOrder, SubscriptionOrders } from '@/types/subscription'
 
 const mocks = vi.hoisted(() => ({
-    list: vi.fn(), get: vi.fn(), refresh: vi.fn(),
+    list: vi.fn(), get: vi.fn(), refresh: vi.fn(), cancel: vi.fn(), confirm: vi.fn(),
     cache: { token: 'token-a', profile: { id: 'teacher-a', email: 'a@example.com' }, displayName: 'A' },
 }))
-vi.mock('@/api/subscription', () => ({ fetchSubscriptionOrders: mocks.list, fetchSubscriptionOrder: mocks.get }))
+vi.mock('@/api/subscription', () => ({ fetchSubscriptionOrders: mocks.list, fetchSubscriptionOrder: mocks.get, cancelSubscriptionOrder: mocks.cancel }))
+vi.mock('@/utils/confirmDialog', () => ({ confirmDialog: mocks.confirm }))
 vi.mock('@/stores/cacheStore', () => ({ useCacheStore: () => mocks.cache }))
 vi.mock('@/stores/sessionStore', () => ({ useSessionStore: () => ({ refreshAfterMutation: mocks.refresh }) }))
 
@@ -17,9 +18,10 @@ const result = (orders = [pending], page = 1, total = orders.length): { data: Su
     data: { orders, total, page, page_size: 20 },
 })
 interface OrdersState {
-    orders: SubscriptionOrder[]; loading: boolean; loadError: string; checkingID: string;
+    orders: SubscriptionOrder[]; loading: boolean; loadError: string; checkingID: string; cancelingID: string;
     page: number; pageCount: number; checkMessage: string; checkError: string;
     loadOrders: (page?: number) => Promise<void>; checkOrder: (id: string) => Promise<void>;
+    cancelOrder: (id: string) => Promise<void>;
 }
 const renderer = createRenderer<object, object>({
     patchProp: () => {}, insert: () => {}, remove: () => {},
@@ -41,10 +43,95 @@ beforeEach(() => {
     mocks.list.mockResolvedValue(result())
     mocks.get.mockResolvedValue({ data: pending })
     mocks.refresh.mockResolvedValue(undefined)
+    mocks.confirm.mockResolvedValue('confirm')
+    mocks.cancel.mockResolvedValue({ data: { ...pending, status: 'canceled', canceled_at: '2026-11-09T13:00:00Z' } })
 })
 afterEach(() => { app?.unmount(); app = undefined })
 
 describe('subscription order retrieval', () => {
+    it('cancels only a pending local order after confirmation and retains the auditable row', async () => {
+        const view = await mountOrders()
+        await view.cancelOrder(pending.id)
+        expect(mocks.confirm).toHaveBeenCalledWith(expect.stringContaining('不会关闭微信支付'), '取消本地订单', expect.any(Object))
+        expect(mocks.cancel).toHaveBeenCalledExactlyOnceWith(pending.id)
+        expect(view.orders).toHaveLength(1)
+        expect(view.orders[0]?.status).toBe('canceled')
+        expect(view.checkMessage).toContain('本地取消')
+        expect(mocks.refresh).not.toHaveBeenCalled()
+        expect(mocks.list).toHaveBeenCalledTimes(1)
+        await view.cancelOrder(pending.id)
+        expect(mocks.cancel).toHaveBeenCalledTimes(1)
+    })
+    it('does not cancel paid orders, unknown orders or a dismissed confirmation', async () => {
+        mocks.list.mockResolvedValueOnce(result([{ ...pending, status: 'paid' }]))
+        const view = await mountOrders()
+        await view.cancelOrder(pending.id)
+        await view.cancelOrder('missing')
+        expect(mocks.confirm).not.toHaveBeenCalled()
+        await view.loadOrders()
+        mocks.confirm.mockRejectedValueOnce('cancel')
+        await view.cancelOrder(pending.id)
+        expect(mocks.cancel).not.toHaveBeenCalled()
+        expect(view.cancelingID).toBe('')
+        expect(view.checkError).toBe('')
+    })
+    it('locks query, reload and duplicate cancellation while confirming or submitting', async () => {
+        const view = await mountOrders()
+        let finish!: (value: { data: SubscriptionOrder }) => void
+        mocks.cancel.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
+        const cancel = view.cancelOrder(pending.id)
+        await settle()
+        await view.cancelOrder(pending.id)
+        await view.checkOrder(pending.id)
+        await view.loadOrders(2)
+        expect(mocks.cancel).toHaveBeenCalledTimes(1)
+        expect(mocks.get).not.toHaveBeenCalled()
+        expect(mocks.list).toHaveBeenCalledTimes(1)
+        finish({ data: { ...pending, status: 'canceled' } })
+        await cancel
+        expect(view.cancelingID).toBe('')
+    })
+    it('preserves the pending row on cancellation failure so the latest payment can still be queried', async () => {
+        const view = await mountOrders()
+        mocks.cancel.mockRejectedValueOnce(new Error('订单已付款，不可取消'))
+        await view.cancelOrder(pending.id)
+        expect(view.orders[0]?.status).toBe('pending')
+        expect(view.checkError).toContain('已付款')
+        await view.checkOrder(pending.id)
+        expect(mocks.get).toHaveBeenCalledWith(pending.id)
+    })
+    it('discards confirmation and cancellation results after changing accounts', async () => {
+        const view = await mountOrders()
+        let confirm!: (value: string) => void
+        mocks.confirm.mockReturnValueOnce(new Promise(resolve => { confirm = resolve }))
+        const staleConfirmation = view.cancelOrder(pending.id)
+        mocks.cache.token = 'token-b'
+        await settle()
+        confirm('confirm')
+        await staleConfirmation
+        expect(mocks.cancel).not.toHaveBeenCalled()
+
+        let finish!: (value: { data: SubscriptionOrder }) => void
+        mocks.cancel.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
+        const staleRequest = view.cancelOrder(pending.id)
+        await settle()
+        mocks.cache.token = 'token-c'
+        await settle()
+        finish({ data: { ...pending, status: 'canceled' } })
+        await staleRequest
+        expect(view.orders[0]?.status).toBe('pending')
+        expect(view.cancelingID).toBe('')
+        expect(view.checkMessage).toBe('')
+    })
+    it('keeps canceled orders queryable and shows late payment as requiring manual review', async () => {
+        mocks.list.mockResolvedValueOnce(result([{ ...pending, status: 'canceled' }]))
+        mocks.get.mockResolvedValueOnce({ data: { ...pending, status: 'paid', refund_review_required: true } })
+        const view = await mountOrders()
+        await view.checkOrder(pending.id)
+        expect(mocks.get).toHaveBeenCalledExactlyOnceWith(pending.id)
+        expect(view.orders[0]?.status).toBe('paid')
+        expect(view.checkMessage).toBe('已付款 · 需人工核对')
+    })
     it('retrieves account orders from the server without relying on local purchase storage', async () => {
         const view = await mountOrders()
         expect(mocks.list).toHaveBeenCalledExactlyOnceWith(1, 20)

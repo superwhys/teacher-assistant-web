@@ -29,9 +29,10 @@ export interface SubscriptionPurchaseLink {
 export interface SubscriptionOrder {
     id: string
     plan_id: SubscriptionPlanID
-    status: 'pending' | 'paid' | 'refunded'
+    status: 'pending' | 'paid' | 'refunded' | 'canceled'
     amount_fen: number
     created_at: string
+    canceled_at?: string | null
     paid_expires_at?: string | null
     refund_review_required: boolean
 }

@@ -97,7 +97,8 @@ export function allowsEntitlementRequest(profile: UserProfile | null, method: st
     if (path.startsWith('/auth/') || (method === 'POST' && path === '/user/trial/start')) return true
     if ((method === 'GET' && (path === '/subscription/plans' || path === '/subscription/orders'
         || /^\/subscription\/orders\/[^/]+$/.test(path)))
-        || (method === 'POST' && path === '/subscription/purchase-link')) return true
+        || (method === 'POST' && (path === '/subscription/purchase-link'
+            || /^\/subscription\/orders\/[^/]+\/cancel$/.test(path)))) return true
     if (editionRequestMessage(profile, method, path)) return false
     // Agent transport 本身不修改业务数据，工具读取及确认写入由服务端逐项校验。
     if (method === 'GET' && (path === '/agent/conversations'

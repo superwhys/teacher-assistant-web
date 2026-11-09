@@ -159,6 +159,8 @@ describe('commercial session permissions', () => {
         await session.initialize()
         expect(session.firstRoute).toBeNull()
         expect(session.canAccess('/subscription')).toBe(true)
+        expect(session.canAccess('/subscription/orders')).toBe(true)
+        expect(session.canAccess('/subscription/orders/future-page')).toBe(false)
         expect(session.canAccess('/subscription/future-page')).toBe(false)
         expect(session.canAccess('/students')).toBe(false)
     })

@@ -13,6 +13,10 @@ describe('independent commercial access', () => {
     it.each(['not_started', 'trial_expired', 'paid_expired'] as const)('permits only supported subscription requests when commercial state is %s', state => {
         const teacher = profile(state)
         expect(allowsEntitlementRequest(teacher, 'GET', '/subscription/plans', now)).toBe(true)
+        expect(allowsEntitlementRequest(teacher, 'GET', '/subscription/orders?page=2&page_size=20', now)).toBe(true)
+        expect(allowsEntitlementRequest(teacher, 'GET', '/subscription/orders/own-order', now)).toBe(true)
+        expect(allowsEntitlementRequest(teacher, 'POST', '/subscription/orders/own-order', now)).toBe(false)
+        expect(allowsEntitlementRequest(teacher, 'GET', '/subscription/orders/own-order/confirm', now)).toBe(false)
         expect(allowsEntitlementRequest(teacher, 'POST', '/subscription/purchase-link', now)).toBe(true)
         expect(allowsEntitlementRequest(teacher, 'POST', '/subscription/future-write', now)).toBe(false)
         expect(allowsEntitlementRequest(teacher, 'PUT', '/subscription/purchase-link', now)).toBe(false)

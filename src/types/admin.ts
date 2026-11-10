@@ -78,6 +78,13 @@ export interface User {
     created_at?: string
 }
 
+export interface UpdateUserEntitlementRequest {
+    permanent: boolean
+    paid_expires_at: string | null
+    trial_expires_at?: string
+    reason?: string
+}
+
 
 export interface Opinion {
     id: number

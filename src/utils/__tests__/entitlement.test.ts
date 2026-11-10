@@ -14,7 +14,7 @@ describe('independent commercial access', () => {
         expect(entitlementStatusTitle('paid_active', 'common')).toBe('普通版 · 付费权益有效')
         expect(entitlementStatusTitle('paid_expired', 'pro')).toBe('Pro 版 · 付费权益已到期 · 仅可查看')
         expect(entitlementStatusTitle('paid_active', 'custom')).toBe('付费权益有效')
-        expect(entitlementStatusTitle('trial_active', 'pro')).toBe('14 天免费试用中')
+        expect(entitlementStatusTitle('trial_active', 'pro')).toBe('免费试用中')
         expect(entitlementStatusTitle('trial_expired', 'common')).toBe('试用已到期 · 仅可查看')
         expect(entitlementStatusTitle('permanent', 'admin')).toBe('长期使用权益')
         expect(entitlementStatusTitle('not_started', 'common')).toBe('试用尚未开启')

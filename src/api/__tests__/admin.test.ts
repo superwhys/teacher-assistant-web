@@ -10,7 +10,9 @@ vi.mock('@/api/api', () => ({ get: mocks.get, post: mocks.post, put: mocks.put, 
 vi.mock('@/stores/sessionStore', () => ({ useSessionStore: () => mocks.session }))
 vi.mock('@/stores/cacheStore', () => ({ useCacheStore: () => mocks.cache }))
 vi.mock('element-plus', () => ({ ElMessage: { warning: mocks.warning, error: mocks.error } }))
-import { assignRoleToUser, createMenu, getUserList, getRoleList, replaceRolePermissions, updateMenu } from '../admin'
+import {
+    assignRoleToUser, createMenu, getUserList, getRoleList, replaceRolePermissions, updateMenu, updateUserEntitlement,
+} from '../admin'
 
 const response = { code: 0, message: 'ok', data: null }
 beforeEach(() => {
@@ -27,6 +29,7 @@ describe('platform API authorization', () => {
         await expect(getUserList({ offset: 0, limit: 10 })).rejects.toMatchObject({ code: 100403 })
         await expect(getRoleList()).rejects.toMatchObject({ code: 100403 })
         await expect(replaceRolePermissions(2, [3])).rejects.toMatchObject({ code: 100403 })
+        await expect(updateUserEntitlement('other', { permanent: true, paid_expires_at: null })).rejects.toMatchObject({ code: 100403 })
         expect(mocks.get).not.toHaveBeenCalled()
         expect(mocks.put).not.toHaveBeenCalled()
     })
@@ -44,6 +47,24 @@ describe('platform API authorization', () => {
         mocks.session.isSuperAdmin = true
         await assignRoleToUser({ user_id: 'self', role_id: 2 })
         expect(mocks.post).toHaveBeenCalledWith('/admin/user/assign/role', { user_id: 'self', role_id: 2 })
+        expect(mocks.session.refreshAfterMutation).toHaveBeenCalledOnce()
+    })
+
+    it.each([
+        { permanent: false, paid_expires_at: '2027-05-15T10:30:45.000Z', reason: '调整有效期' },
+        { permanent: true, paid_expires_at: null, reason: '长期授权' },
+        { permanent: false, paid_expires_at: null, trial_expires_at: '2026-12-15T10:30:45.000Z', reason: '延长试用' },
+    ])('updates a user expiry with the exact $permanent payload', async (data) => {
+        mocks.session.isSuperAdmin = true
+        await expect(updateUserEntitlement('teacher/with space', data)).resolves.toEqual(response)
+        expect(mocks.put).toHaveBeenCalledExactlyOnceWith('/admin/user/teacher%2Fwith%20space/entitlement', data)
+        expect(mocks.session.refreshAfterMutation).not.toHaveBeenCalled()
+    })
+
+    it('refreshes the session when the current administrator changes their own expiry', async () => {
+        mocks.session.isSuperAdmin = true
+        await updateUserEntitlement('self', { permanent: true, paid_expires_at: null })
+        expect(mocks.put).toHaveBeenCalledWith('/admin/user/self/entitlement', { permanent: true, paid_expires_at: null })
         expect(mocks.session.refreshAfterMutation).toHaveBeenCalledOnce()
     })
 

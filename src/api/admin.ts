@@ -12,6 +12,7 @@ import type {
     RbacMenu,
     Role,
     UpdatePermissionRequest,
+    UpdateUserEntitlementRequest,
 } from '@/types/admin'
 
 function requireSuperAdmin(): void {
@@ -89,6 +90,13 @@ export async function assignRoleToUser(data: AssignUserRoleRequest): Promise<Api
     requireSuperAdmin()
     const response = await adminRequest(post<null>(`${ADMIN_API}/user/assign/role`, data))
     if (data.user_id === useCacheStore().profile?.id) await refreshSessionAfterSave()
+    return response
+}
+
+export async function updateUserEntitlement(userId: string, data: UpdateUserEntitlementRequest): Promise<ApiResponse<null>> {
+    requireSuperAdmin()
+    const response = await adminRequest(put<null>(`${ADMIN_API}/user/${encodeURIComponent(userId)}/entitlement`, data))
+    if (userId === useCacheStore().profile?.id) await refreshSessionAfterSave()
     return response
 }
 

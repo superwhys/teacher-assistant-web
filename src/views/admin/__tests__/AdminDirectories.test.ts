@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
     getUserList: vi.fn(),
     getRoleList: vi.fn(),
     assignRoleToUser: vi.fn(),
+    updateUserEntitlement: vi.fn(),
     adminLoginAsUser: vi.fn(),
     getOpinionList: vi.fn(),
     confirm: vi.fn(),
@@ -24,6 +25,7 @@ vi.mock('@/api/admin', () => ({
     getUserList: mocks.getUserList,
     getRoleList: mocks.getRoleList,
     assignRoleToUser: mocks.assignRoleToUser,
+    updateUserEntitlement: mocks.updateUserEntitlement,
     adminLoginAsUser: mocks.adminLoginAsUser,
     getOpinionList: mocks.getOpinionList,
 }))
@@ -51,6 +53,13 @@ interface UserDirectoryState {
     handleAssignRole: () => Promise<void>
     getRoleStatus: (user: User) => string
     getRoleExpiry: (user: User) => string
+    expiryDialogVisible: boolean
+    expiryMode: 'dated' | 'permanent'
+    expiryAt: string
+    expiryReason: string
+    savingExpiry: boolean
+    handleOpenExpiryDialog: (user: User) => void
+    handleUpdateExpiry: () => Promise<void>
 }
 
 interface OpinionDirectoryState {
@@ -117,6 +126,7 @@ beforeEach(() => {
     mocks.getRoleList.mockResolvedValue({ data: [{ id: 2, name: '教师', code: 'teacher' }] })
     mocks.getOpinionList.mockResolvedValue({ data: { items: [{ id: 1, content: '希望支持更多课堂活动' }], total: 12 } })
     mocks.assignRoleToUser.mockResolvedValue({ data: null })
+    mocks.updateUserEntitlement.mockResolvedValue({ data: null })
     mocks.confirm.mockResolvedValue('confirm')
     mocks.adminLoginAsUser.mockResolvedValue({ data: { token: 'teacher+token/with=symbols' } })
     mocks.open.mockReturnValue({ opener: {} })
@@ -137,7 +147,7 @@ describe('platform user directory', () => {
         { roleCode: 'common', entitlementState: 'paid_active', expected: '付费权益有效' },
         { roleCode: 'pro', entitlementState: 'paid_active', expected: '付费权益有效' },
         { roleCode: 'common', entitlementState: 'paid_expired', expected: '付费权益已到期 · 仅可查看' },
-        { roleCode: 'trial', entitlementState: 'trial_active', expected: '14 天免费试用中' },
+        { roleCode: 'trial', entitlementState: 'trial_active', expected: '免费试用中' },
         { roleCode: 'trial', entitlementState: 'trial_expired', expected: '试用已到期 · 仅可查看' },
         { roleCode: 'pro', entitlementState: 'permanent', expected: '长期使用权益' },
         { roleCode: 'trial', entitlementState: 'not_started', expected: '试用尚未开启' },
@@ -292,6 +302,141 @@ describe('platform user directory', () => {
         await state.loadUsers()
         expect(state.loadError).toBe(false)
         expect(state.users).toEqual([teacher])
+    })
+})
+
+describe('user role expiry editing', () => {
+    const localExpiry = '2027-05-15T18:30:45'
+    const paidTeacher: User = {
+        ...teacher,
+        entitlement: { ...teacher.entitlement, state: 'paid_active', paid_expires_at: new Date(localExpiry).toISOString() },
+    }
+
+    it('prefills the current expiry and resets the draft when another user opens', () => {
+        const state = mountDirectory<UserDirectoryState>(UserManagementView)
+        state.handleOpenExpiryDialog(paidTeacher)
+        expect(state.expiryAt).toBe(localExpiry)
+        expect(state.expiryMode).toBe('dated')
+        state.expiryReason = '未保存的内容'
+        state.handleOpenExpiryDialog({ ...teacher, entitlement: { ...teacher.entitlement, state: 'permanent', permanent: true } })
+        expect(state.expiryMode).toBe('permanent')
+        expect(state.expiryAt).toBe('')
+        expect(state.expiryReason).toBe('')
+    })
+
+    it('saves the date in UTC with a trimmed reason and refreshes the directory', async () => {
+        const state = mountDirectory<UserDirectoryState>(UserManagementView)
+        await flushRequests()
+        state.handleOpenExpiryDialog(paidTeacher)
+        state.expiryReason = '  人工延期  '
+        await state.handleUpdateExpiry()
+        expect(mocks.updateUserEntitlement).toHaveBeenCalledWith(teacher.id, {
+            permanent: false, paid_expires_at: new Date(localExpiry).toISOString(), reason: '人工延期',
+        })
+        expect(state.expiryDialogVisible).toBe(false)
+        expect(mocks.getUserList).toHaveBeenCalledTimes(2)
+    })
+
+    it.each(['trial_active', 'trial_expired'] as const)('updates the trial deadline without granting paid access for %s', async (trialState) => {
+        const state = mountDirectory<UserDirectoryState>(UserManagementView)
+        state.handleOpenExpiryDialog({
+            ...teacher, entitlement: { ...teacher.entitlement, state: trialState, trial_expires_at: new Date(localExpiry).toISOString() },
+        })
+        state.expiryReason = '延长试用'
+        await state.handleUpdateExpiry()
+        expect(mocks.updateUserEntitlement).toHaveBeenCalledWith(teacher.id, {
+            permanent: false, paid_expires_at: null, trial_expires_at: new Date(localExpiry).toISOString(), reason: '延长试用',
+        })
+    })
+
+    it('clears the date when granting permanent access', async () => {
+        const state = mountDirectory<UserDirectoryState>(UserManagementView)
+        state.handleOpenExpiryDialog(paidTeacher)
+        state.expiryMode = 'permanent'
+        state.expiryReason = '长期授权'
+        await state.handleUpdateExpiry()
+        expect(mocks.updateUserEntitlement).toHaveBeenCalledWith(teacher.id, {
+            permanent: true, paid_expires_at: null, reason: '长期授权',
+        })
+    })
+
+    it.each(['', 'invalid', '0999-01-01T00:00:00', '10000-01-01T00:00:00'])('rejects an absent, invalid or unsupported date: %s', async (expiry) => {
+        const state = mountDirectory<UserDirectoryState>(UserManagementView)
+        state.handleOpenExpiryDialog(paidTeacher)
+        state.expiryAt = expiry
+        state.expiryReason = '调整有效期'
+        await state.handleUpdateExpiry()
+        expect(mocks.updateUserEntitlement).not.toHaveBeenCalled()
+        expect(mocks.warning).toHaveBeenCalled()
+        expect(state.expiryDialogVisible).toBe(true)
+    })
+
+    it.each(['', '   ', '长'.repeat(501)])('requires a non-empty reason of at most 500 characters', async (reason) => {
+        const state = mountDirectory<UserDirectoryState>(UserManagementView)
+        state.handleOpenExpiryDialog(paidTeacher)
+        state.expiryReason = reason
+        await state.handleUpdateExpiry()
+        expect(mocks.updateUserEntitlement).not.toHaveBeenCalled()
+        expect(mocks.warning).toHaveBeenCalled()
+    })
+
+    it('allows a past date to end access immediately', async () => {
+        const state = mountDirectory<UserDirectoryState>(UserManagementView)
+        state.handleOpenExpiryDialog(paidTeacher)
+        state.expiryAt = '2000-01-01T00:00:00'
+        state.expiryReason = '提前结束有效期'
+        await state.handleUpdateExpiry()
+        expect(mocks.updateUserEntitlement).toHaveBeenCalledWith(teacher.id, expect.objectContaining({
+            paid_expires_at: new Date('2000-01-01T00:00:00').toISOString(),
+        }))
+    })
+
+    it('prevents duplicate saves and preserves the draft after a failed save', async () => {
+        let failSave!: (error: Error) => void
+        mocks.updateUserEntitlement.mockReturnValueOnce(new Promise((_resolve, reject) => { failSave = reject }))
+        const state = mountDirectory<UserDirectoryState>(UserManagementView)
+        state.handleOpenExpiryDialog(paidTeacher)
+        state.expiryReason = '人工延期'
+        const pending = state.handleUpdateExpiry()
+        await state.handleUpdateExpiry()
+        expect(mocks.updateUserEntitlement).toHaveBeenCalledTimes(1)
+        expect(state.savingExpiry).toBe(true)
+        failSave(new ApiRequestError('保存失败'))
+        await pending
+        expect(state.expiryDialogVisible).toBe(true)
+        expect(state.expiryAt).toBe(localExpiry)
+        expect(state.expiryReason).toBe('人工延期')
+        expect(state.savingExpiry).toBe(false)
+        expect(mocks.error).not.toHaveBeenCalled()
+        await state.handleUpdateExpiry()
+        expect(mocks.updateUserEntitlement).toHaveBeenCalledTimes(2)
+    })
+
+    it('keeps a successful save distinct from a failed list refresh', async () => {
+        const state = mountDirectory<UserDirectoryState>(UserManagementView)
+        await flushRequests()
+        mocks.getUserList.mockRejectedValueOnce(new ApiRequestError('列表加载失败'))
+        state.handleOpenExpiryDialog(paidTeacher)
+        state.expiryReason = '人工延期'
+        await state.handleUpdateExpiry()
+        expect(state.expiryDialogVisible).toBe(false)
+        expect(state.loadError).toBe(true)
+        expect(mocks.success).toHaveBeenCalledWith('角色有效期已更新')
+        expect(mocks.error).not.toHaveBeenCalled()
+    })
+
+    it('does not edit superadmin access or start a trial on behalf of a user', async () => {
+        const state = mountDirectory<UserDirectoryState>(UserManagementView)
+        state.handleOpenExpiryDialog({
+            ...paidTeacher, role: { id: 1, code: 'admin', name: '超管', timeout: 0, system: true, permissions: [] },
+        })
+        expect(state.expiryDialogVisible).toBe(false)
+        state.handleOpenExpiryDialog(teacher)
+        state.expiryAt = localExpiry
+        state.expiryReason = '设置试用到期'
+        await state.handleUpdateExpiry()
+        expect(mocks.updateUserEntitlement).not.toHaveBeenCalled()
+        expect(state.expiryDialogVisible).toBe(true)
     })
 })
 

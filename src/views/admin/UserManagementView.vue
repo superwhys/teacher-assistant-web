@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
-import { getUserList, adminLoginAsUser, getRoleList, assignRoleToUser } from '@/api/admin'
+import { getUserList, adminLoginAsUser, getRoleList, assignRoleToUser, updateUserEntitlement } from '@/api/admin'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { isApiRequestError } from '@/types/api'
 import { buildTeacherAppLoginUrl } from '@/utils/adminLogin'
 import { entitlementStatusTitle } from '@/utils/entitlement'
-import type { User, Role } from '@/types/admin'
+import type { User, Role, UpdateUserEntitlementRequest } from '@/types/admin'
 
 const loading = ref(false)
 const loadError = ref(false)
@@ -25,6 +25,16 @@ const roleDialogVisible = ref(false)
 const selectedRoleId = ref<number | null>(null)
 const currentEditingUser = ref<User | null>(null)
 const assigningRole = ref(false)
+const expiryDialogVisible = ref(false)
+const expiryEditingUser = ref<User | null>(null)
+const expiryMode = ref<'dated' | 'permanent'>('dated')
+const expiryAt = ref('')
+const expiryReason = ref('')
+const savingExpiry = ref(false)
+const expiryIsTrial = computed(() => expiryEditingUser.value?.entitlement.state === 'trial_active'
+    || expiryEditingUser.value?.entitlement.state === 'trial_expired')
+const datedExpiryUnavailable = computed(() => expiryEditingUser.value?.entitlement.state === 'not_started')
+const expiryIsPast = computed(() => expiryMode.value === 'dated' && !!expiryAt.value && new Date(expiryAt.value).getTime() <= Date.now())
 const filteredUsers = computed(() => {
     const query = keyword.value.trim().toLowerCase()
     return users.value.filter((user) => !query || `${user.name} ${user.email}`.toLowerCase().includes(query))
@@ -180,6 +190,62 @@ const handleAssignRole = async () => {
     }
 }
 
+const handleOpenExpiryDialog = (user: User) => {
+    if (user.role?.code === 'admin') {
+        ElMessage.warning('超级管理员长期有效，无需修改有效期')
+        return
+    }
+    expiryEditingUser.value = user
+    expiryMode.value = user.entitlement.state === 'permanent' ? 'permanent' : 'dated'
+    const deadline = expiryIsTrial.value ? user.entitlement.trial_expires_at : user.entitlement.paid_expires_at
+    expiryAt.value = deadline ? formatDateTime(deadline).replace(' ', 'T') : ''
+    expiryReason.value = ''
+    expiryDialogVisible.value = true
+}
+
+const handleUpdateExpiry = async () => {
+    if (savingExpiry.value) return
+    const user = expiryEditingUser.value
+    if (!user || user.role?.code === 'admin') return
+    const reason = expiryReason.value.trim()
+    if (!reason || reason.length > 500) {
+        ElMessage.warning('请填写调整原因，最多 500 字')
+        return
+    }
+    const data: UpdateUserEntitlementRequest = {
+        permanent: expiryMode.value === 'permanent', paid_expires_at: null, reason,
+    }
+    if (!data.permanent) {
+        if (datedExpiryUnavailable.value) {
+            ElMessage.warning('该用户尚未开启试用，请先由用户开启后再调整到期时间')
+            return
+        }
+        const deadline = new Date(expiryAt.value)
+        if (!expiryAt.value || Number.isNaN(deadline.getTime()) || deadline.getUTCFullYear() < 1000 || deadline.getUTCFullYear() > 9999) {
+            ElMessage.warning('请选择有效的到期时间')
+            return
+        }
+        if (expiryIsTrial.value) {
+            data.trial_expires_at = deadline.toISOString()
+        } else {
+            data.paid_expires_at = deadline.toISOString()
+        }
+    }
+    savingExpiry.value = true
+    try {
+        await updateUserEntitlement(user.id, data)
+        ElMessage.success('角色有效期已更新')
+        expiryDialogVisible.value = false
+        await loadUsers()
+    } catch (error: unknown) {
+        if (!isApiRequestError(error)) {
+            ElMessage.error(error instanceof Error && error.message ? error.message : '修改角色有效期失败')
+        }
+    } finally {
+        savingExpiry.value = false
+    }
+}
+
 watch([currentPage, sortOrder], loadUsers)
 
 onMounted(() => {
@@ -306,10 +372,14 @@ onMounted(() => {
                 >
                     <template #default="{ row }"><span class="user-date">{{ formatDateTime(row.created_at) }}</span></template>
                 </el-table-column>
-                <el-table-column label="操作" width="205" align="right">
+                <el-table-column label="操作" width="300" align="right">
                     <template #default="{ row }">
                         <div class="user-actions">
                             <el-button type="primary" link @click="handleOpenAssignRoleDialog(row)">分配角色</el-button>
+                            <template v-if="row.role?.code !== 'admin'">
+                                <span class="action-divider" />
+                                <el-button link @click="handleOpenExpiryDialog(row)">修改有效期</el-button>
+                            </template>
                             <span class="action-divider" />
                             <el-button link @click="handleQuickLogin(row)">一键登录 <i-ep-top-right aria-hidden="true" /></el-button>
                         </div>
@@ -365,6 +435,67 @@ onMounted(() => {
             <template #footer>
                 <el-button :disabled="assigningRole" @click="roleDialogVisible = false">取消</el-button>
                 <el-button type="primary" :loading="assigningRole" :disabled="!rolesLoaded" @click="handleAssignRole">确认分配</el-button>
+            </template>
+        </el-dialog>
+
+        <el-dialog
+            v-model="expiryDialogVisible"
+            title="修改角色有效期"
+            width="480px"
+            class="admin-dialog"
+            destroy-on-close
+            :close-on-click-modal="!savingExpiry"
+            :close-on-press-escape="!savingExpiry"
+            :show-close="!savingExpiry"
+        >
+            <div class="assign-role-account">
+                <span class="user-avatar">{{ (expiryEditingUser?.name || expiryEditingUser?.email || '?').slice(0, 1).toUpperCase() }}</span>
+                <div><strong>{{ expiryEditingUser?.name || '未设置姓名' }}</strong><span>{{ expiryEditingUser?.email }}</span></div>
+            </div>
+            <p class="muted-text">当前角色：{{ expiryEditingUser?.role?.name || expiryEditingUser?.role?.code || '未分配' }}</p>
+            <el-form label-position="top" @submit.prevent="handleUpdateExpiry">
+                <el-form-item label="有效期类型">
+                    <el-radio-group v-model="expiryMode" :disabled="savingExpiry" aria-label="有效期类型">
+                        <el-radio-button value="dated" :disabled="datedExpiryUnavailable">指定到期时间</el-radio-button>
+                        <el-radio-button value="permanent">长期有效</el-radio-button>
+                    </el-radio-group>
+                </el-form-item>
+                <el-form-item v-if="expiryMode === 'dated'" :label="expiryIsTrial ? '试用到期时间' : '到期时间'" for="user-expiry-date">
+                    <input
+                        id="user-expiry-date"
+                        v-model="expiryAt"
+                        class="expiry-date-input"
+                        type="datetime-local"
+                        step="1"
+                        min="1000-01-01T00:00:00"
+                        max="9999-12-31T23:59:59"
+                        :disabled="savingExpiry || datedExpiryUnavailable"
+                    >
+                </el-form-item>
+                <el-form-item label="调整原因" required>
+                    <el-input
+                        v-model="expiryReason"
+                        type="textarea"
+                        :rows="3"
+                        maxlength="500"
+                        show-word-limit
+                        placeholder="例如：延长试用、人工补偿或提前结束有效期"
+                        aria-label="调整原因"
+                        :disabled="savingExpiry"
+                    />
+                </el-form-item>
+            </el-form>
+            <p v-if="datedExpiryUnavailable" class="muted-text">该用户尚未开启试用，开启后可调整截止时间；也可设置长期有效。</p>
+            <p v-else-if="expiryIsPast" class="roles-error">已选择过去的时间，保存后角色将立即到期，仅可查看已有数据。</p>
+            <p v-else class="muted-text">{{ expiryIsTrial && expiryMode === 'dated' ? '仅调整试用截止时间，保留原试用领取记录。' : '保存后更新使用期限，保留当前角色和账号状态。' }}</p>
+            <template #footer>
+                <el-button :disabled="savingExpiry" @click="expiryDialogVisible = false">取消</el-button>
+                <el-button
+                    type="primary"
+                    :loading="savingExpiry"
+                    :disabled="expiryMode === 'dated' && datedExpiryUnavailable"
+                    @click="handleUpdateExpiry"
+                >保存有效期</el-button>
             </template>
         </el-dialog>
     </div>
@@ -609,6 +740,23 @@ onMounted(() => {
 .roles-error {
     color: #ae6e4a;
     font-size: 12px;
+}
+
+.expiry-date-input {
+    width: 100%;
+    min-width: 0;
+    min-height: 36px;
+    box-sizing: border-box;
+    padding: 8px 11px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font: inherit;
+}
+
+.expiry-date-input:focus-visible {
+    border-color: var(--primary-color);
+    outline: 2px solid var(--primary-soft);
 }
 
 @media (max-width: 1050px) {

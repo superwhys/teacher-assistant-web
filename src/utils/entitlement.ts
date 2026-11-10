@@ -78,7 +78,7 @@ export function entitlementMessage(state: EffectiveEntitlementState): string {
         case 'not_started': return '试用未开启，仅可新增班级、学生、分组和维护组员。准备好后可主动开启 14 天试用。'
         case 'trial_expired': return '试用已到期，仅可查看，不能修改、导入或导出数据。'
         case 'paid_expired': return '使用权益已到期，仅可查看，不能修改、导入或导出数据。'
-        case 'trial_active': return '14 天试用进行中'
+        case 'trial_active': return '试用进行中'
         case 'paid_active': return '付费使用中'
         case 'permanent': return '长期使用权益有效'
         default: return '权益状态尚未同步，请刷新账号状态后重试。'
@@ -90,7 +90,7 @@ export function entitlementStatusTitle(state: EffectiveEntitlementState, roleCod
     const prefix = edition ? `${edition} · ` : ''
     switch (state) {
         case 'not_started': return '试用尚未开启'
-        case 'trial_active': return '14 天免费试用中'
+        case 'trial_active': return '免费试用中'
         case 'trial_expired': return '试用已到期 · 仅可查看'
         case 'paid_active': return `${prefix}付费权益有效`
         case 'paid_expired': return `${prefix}付费权益已到期 · 仅可查看`

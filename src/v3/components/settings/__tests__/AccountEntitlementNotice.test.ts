@@ -91,7 +91,7 @@ describe('AccountEntitlementNotice', () => {
         mocks.cache.profile.roleCode = 'custom'
         expect(notice.statusText).toBe('付费权益已到期 · 仅可查看')
         mocks.session.entitlementState = 'trial_active'
-        expect(notice.statusText).toBe('14 天免费试用中')
+        expect(notice.statusText).toBe('免费试用中')
         mocks.session.entitlementState = 'permanent'
         expect(notice.statusText).toBe('长期使用权益')
     })
@@ -163,7 +163,7 @@ describe('AccountEntitlementNotice', () => {
         mocks.confirm.mockImplementation(async () => { mocks.session.entitlementState = 'trial_active' })
         await notice.confirmStartTrial()
         expect(mocks.startTrial).not.toHaveBeenCalled()
-        expect(notice.statusText).toBe('14 天免费试用中')
+        expect(notice.statusText).toBe('免费试用中')
     })
 
     it.each([

@@ -5,6 +5,7 @@ import { userApi } from '@/api/user'
 import { useCacheStore } from '@/stores/cacheStore'
 import AppDialogShell from '@/v3/components/AppDialogShell.vue'
 
+const props = defineProps<{ promptDefaultName?: boolean }>()
 const cacheStore = useCacheStore()
 const visible = ref(false)
 const name = ref('')
@@ -15,6 +16,7 @@ let generation = 0
 let disposed = false
 let dialogToken: string | null = null
 let dialogUserID = ''
+let defaultNamePrompted = false
 
 function nameError(value: string): string {
     if (/[\u0000-\u001f\u007f-\u009f]/u.test(value)) return '姓名不能包含换行、制表符或其他控制字符。'
@@ -75,17 +77,32 @@ async function save(): Promise<void> {
 }
 
 watch([() => cacheStore.token, () => cacheStore.profile?.id], () => {
+    defaultNamePrompted = false
     saving.value = false
     close()
 }, { flush: 'sync' })
+
+watch([
+    () => props.promptDefaultName,
+    () => cacheStore.token,
+    () => cacheStore.profile?.id,
+    () => cacheStore.profile?.name,
+    () => cacheStore.isLocked,
+], () => {
+    if (!props.promptDefaultName || defaultNamePrompted || cacheStore.isLocked
+        || cacheStore.profile?.name !== '微信用户') return
+    open()
+    defaultNamePrompted = visible.value
+}, { immediate: true })
 
 onBeforeUnmount(() => { disposed = true; generation += 1 })
 </script>
 
 <template>
-    <button type="button" class="profile-name-edit" :disabled="saving" @click="open">修改姓名</button>
+    <button v-if="!promptDefaultName" type="button" class="profile-name-edit" :disabled="saving" @click="open">修改姓名</button>
     <AppDialogShell :model-value="visible" :busy="saving" title="修改姓名" eyebrow="账号设置"
-        description="设置你希望展示的姓名。" width="480px" height="330px" @update:model-value="value => { if (!value) close() }">
+        :description="promptDefaultName ? '你当前的姓名为「微信用户」，请修改为便于识别的姓名。' : '设置你希望展示的姓名。'"
+        width="480px" height="330px" @update:model-value="value => { if (!value) close() }">
         <div class="profile-name-form">
             <label for="profile-name-input" class="profile-name-form__label">姓名</label>
             <el-input id="profile-name-input" v-model="name" :disabled="saving" :maxlength="128"

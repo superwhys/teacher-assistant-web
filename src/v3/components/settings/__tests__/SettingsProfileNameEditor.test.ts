@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createRenderer, reactive, ssrContextKey, type App } from 'vue'
+import { createRenderer, nextTick, reactive, ssrContextKey, type App } from 'vue'
 import type { UserProfile } from '@/types/user'
 import SettingsProfileNameEditor from '../SettingsProfileNameEditor.vue'
 
-type Cache = { token: string | null; profile: UserProfile | null; updateProfile: (profile: UserProfile) => void }
+type Cache = { token: string | null; profile: UserProfile | null; isLocked: boolean; updateProfile: (profile: UserProfile) => void }
 const mocks = vi.hoisted(() => ({ update: vi.fn(), updateProfile: vi.fn(), success: vi.fn(), cache: null as unknown as Cache }))
 vi.mock('@/api/user', () => ({ userApi: { updateName: mocks.update } }))
 vi.mock('@/stores/cacheStore', () => ({ useCacheStore: () => mocks.cache }))
@@ -20,8 +20,8 @@ const renderer = createRenderer<object, object>({
     setText: () => {}, setElementText: () => {}, parentNode: () => null, nextSibling: () => null,
 })
 let app: App | undefined
-function mountEditor(): EditorState {
-    app = renderer.createApp({ ...SettingsProfileNameEditor, render: () => null })
+function mountEditor(promptDefaultName = false): EditorState {
+    app = renderer.createApp({ ...SettingsProfileNameEditor, render: () => null }, { promptDefaultName })
     app.provide(ssrContextKey, { modules: new Set() })
     return (app.mount({}).$ as unknown as { setupState: EditorState }).setupState
 }
@@ -30,13 +30,98 @@ beforeEach(() => {
     mocks.cache = reactive({ token: 'token-a', profile: {
         id: 'teacher-a', name: '原姓名', email: 'a@example.com', roleCode: 'common', wechatBound: true,
         entitlement: { state: 'paid_expired', permanent: false, trial_started_at: null, trial_expires_at: null, paid_expires_at: '2026-11-01T00:00:00Z' },
-    }, updateProfile: mocks.updateProfile })
+    }, isLocked: false, updateProfile: mocks.updateProfile })
     mocks.updateProfile.mockImplementation(profile => { mocks.cache.profile = profile })
     mocks.update.mockImplementation((name: string) => Promise.resolve({ data: { id: 'teacher-a', name } }))
 })
 afterEach(() => { app?.unmount(); app = undefined })
 
 describe('current account name editor', () => {
+    it('keeps the manual editor closed for the default name', () => {
+        mocks.cache.profile!.name = '微信用户'
+        const editor = mountEditor()
+        expect(editor.visible).toBe(false)
+        expect(mocks.update).not.toHaveBeenCalled()
+    })
+    it('automatically opens the editor for the default name when prompting is enabled', () => {
+        mocks.cache.profile!.name = '微信用户'
+        const editor = mountEditor(true)
+        expect(editor.visible).toBe(true)
+        expect(editor.name).toBe('微信用户')
+        expect(mocks.update).not.toHaveBeenCalled()
+    })
+    it.each(['张老师', '微信用户老师', ' 微信用户 '])('does not prompt for the different name %j', name => {
+        mocks.cache.profile!.name = name
+        const editor = mountEditor(true)
+        expect(editor.visible).toBe(false)
+    })
+    it('does not reopen after cancellation when the same account profile refreshes', async () => {
+        mocks.cache.profile!.name = '微信用户'
+        const editor = mountEditor(true)
+        expect(editor.visible).toBe(true)
+        editor.close()
+        mocks.cache.profile = { ...mocks.cache.profile!, wechatBound: false }
+        await nextTick()
+        expect(editor.visible).toBe(false)
+        mocks.cache.isLocked = true
+        await nextTick()
+        mocks.cache.isLocked = false
+        await nextTick()
+        expect(editor.visible).toBe(false)
+        expect(mocks.update).not.toHaveBeenCalled()
+    })
+    it('keeps the prompt closed after saving and refreshing the updated profile', async () => {
+        mocks.cache.profile!.name = '微信用户'
+        const editor = mountEditor(true)
+        expect(editor.visible).toBe(true)
+        editor.name = '张老师'
+        await editor.save()
+        mocks.cache.profile = { ...mocks.cache.profile! }
+        await nextTick()
+        expect(mocks.cache.profile!.name).toBe('张老师')
+        expect(editor.visible).toBe(false)
+    })
+    it('delays the default-name prompt until the account is unlocked', async () => {
+        mocks.cache.profile!.name = '微信用户'
+        mocks.cache.isLocked = true
+        const editor = mountEditor(true)
+        expect(editor.visible).toBe(false)
+        mocks.cache.isLocked = false
+        await nextTick()
+        expect(editor.visible).toBe(true)
+    })
+    it('prompts again after a token change for the same default-name account', async () => {
+        mocks.cache.profile!.name = '微信用户'
+        const editor = mountEditor(true)
+        editor.close()
+        mocks.cache.token = 'token-b'
+        await nextTick()
+        expect(editor.visible).toBe(true)
+    })
+    it('prompts again for a different default-name account', async () => {
+        mocks.cache.profile!.name = '微信用户'
+        const editor = mountEditor(true)
+        editor.close()
+        mocks.cache.profile = { id: 'teacher-b', name: '微信用户', email: 'b@example.com' }
+        await nextTick()
+        expect(editor.visible).toBe(true)
+    })
+    it('waits for credentials and profile before opening the default-name prompt', async () => {
+        mocks.cache.token = null
+        mocks.cache.profile = null
+        const editor = mountEditor(true)
+        expect(editor.visible).toBe(false)
+        mocks.cache.profile = { id: 'teacher-a', name: '微信用户', email: 'a@example.com' }
+        await nextTick()
+        expect(editor.visible).toBe(false)
+        mocks.cache.profile = null
+        mocks.cache.token = 'token-a'
+        await nextTick()
+        expect(editor.visible).toBe(false)
+        mocks.cache.profile = { id: 'teacher-a', name: '微信用户', email: 'a@example.com' }
+        await nextTick()
+        expect(editor.visible).toBe(true)
+    })
     it('opens the current name, cancels without a request, and starts the next edit from live profile data', () => {
         const editor = mountEditor()
         editor.open()

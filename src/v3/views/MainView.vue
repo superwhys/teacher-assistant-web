@@ -191,6 +191,11 @@
                 :teacher-name="cacheStore.profile?.name || ''"
             />
 
+            <SettingsProfileNameEditor
+                v-if="sessionStore.initialized && cacheStore.isAuthenticated && !teachersDayDialogVisible"
+                prompt-default-name
+            />
+
             <AppDialogShell v-model="timerFinishedDialogVisible" title="计时结束" eyebrow="课堂提醒"
                 description="本轮课堂计时已经结束，请及时查看当前教学节奏。" width="560px">
                 <div class="timer-finished-dialog">
@@ -226,6 +231,7 @@ import AppDialogShell from "@/v3/components/AppDialogShell.vue";
 import AgentAssistant from "@/v3/components/agent/AgentAssistant.vue";
 import AppNoticeBar from "@/v3/components/AppNoticeBar.vue";
 import AccountEntitlementNotice from "@/v3/components/settings/AccountEntitlementNotice.vue";
+import SettingsProfileNameEditor from "@/v3/components/settings/SettingsProfileNameEditor.vue";
 import ClassSwitchButton from "@/v3/components/ClassSwitchButton.vue";
 import SemesterSwitchButton from "@/v3/components/SemesterSwitchButton.vue";
 import TeachersDayWelcomeDialog from "@/v3/components/TeachersDayWelcomeDialog.vue";

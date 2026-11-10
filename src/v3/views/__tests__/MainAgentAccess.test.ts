@@ -4,7 +4,7 @@ import { renderToString } from 'vue/server-renderer'
 import MainView from '../MainView.vue'
 
 const mocks = vi.hoisted(() => ({
-    setupAssistant: vi.fn(), list: vi.fn(), initialize: vi.fn(),
+    setupAssistant: vi.fn(), setupNamePrompt: vi.fn(), list: vi.fn(), initialize: vi.fn(),
     cache: {
         isAuthenticated: true, isLocked: false, token: 'session-token', isExpired: false,
         profile: { id: 'teacher', avatar: null, wechatBound: true }, displayName: '教师',
@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
         clearActiveSemesterId: vi.fn(), clearActiveSemesterName: vi.fn(), clearActiveSemesterStatus: vi.fn(),
     },
     session: {
-        canUseAgent: false, canWrite: true, entitlementState: 'permanent', sidebar: [],
+        canUseAgent: false, canWrite: true, initialized: false, entitlementState: 'permanent', sidebar: [],
         canAccess: () => false,
     },
 }))
@@ -24,6 +24,7 @@ vi.mock('@/stores/cacheStore', () => ({ useCacheStore: () => mocks.cache }))
 vi.mock('@/stores/sessionStore', () => ({ useSessionStore: () => ({
     get canUseAgent() { return mocks.session.canUseAgent },
     get canWrite() { return mocks.session.canWrite },
+    get initialized() { return mocks.session.initialized },
     get entitlementState() { return mocks.session.entitlementState },
     sidebar: [], canAccess: mocks.session.canAccess, initialize: mocks.initialize,
 }) }))
@@ -58,6 +59,16 @@ vi.mock('@/v3/components/agent/AgentAssistant.vue', async () => {
         },
     }) }
 })
+vi.mock('@/v3/components/settings/SettingsProfileNameEditor.vue', async () => {
+    const { defineComponent } = await import('vue')
+    return { default: defineComponent({
+        props: { promptDefaultName: Boolean },
+        setup(props) {
+            mocks.setupNamePrompt(props.promptDefaultName)
+            return () => null
+        },
+    }) }
+})
 vi.mock('@/v3/composables/useToolsWorkspace', async () => {
     const { ref } = await import('vue')
     return {
@@ -80,6 +91,7 @@ beforeEach(() => {
     mocks.cache.isLocked = false
     mocks.session.canUseAgent = false
     mocks.session.canWrite = true
+    mocks.session.initialized = false
     mocks.list.mockResolvedValue([])
     mocks.initialize.mockResolvedValue(undefined)
     vi.stubGlobal('window', { localStorage: { getItem: () => null } })
@@ -118,5 +130,19 @@ describe('MainView AI assistant access', () => {
         mocks.cache.isAuthenticated = false
         await renderMain()
         expect(mocks.setupAssistant).not.toHaveBeenCalled()
+    })
+})
+
+describe('MainView default-name prompt', () => {
+    it('only mounts the prompt after the authenticated session is initialized', async () => {
+        await renderMain()
+        expect(mocks.setupNamePrompt).not.toHaveBeenCalled()
+        mocks.session.initialized = true
+        await renderMain()
+        expect(mocks.setupNamePrompt).toHaveBeenCalledExactlyOnceWith(true)
+        mocks.setupNamePrompt.mockClear()
+        mocks.cache.isAuthenticated = false
+        await renderMain()
+        expect(mocks.setupNamePrompt).not.toHaveBeenCalled()
     })
 })

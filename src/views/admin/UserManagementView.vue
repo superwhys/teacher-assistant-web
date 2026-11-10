@@ -5,6 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { isApiRequestError } from '@/types/api'
 import { buildTeacherAppLoginUrl } from '@/utils/adminLogin'
+import { entitlementStatusTitle } from '@/utils/entitlement'
 import type { User, Role } from '@/types/admin'
 
 const loading = ref(false)
@@ -78,7 +79,7 @@ const handleSortChange = ({ order }: { order: 'ascending' | 'descending' | null 
     currentPage.value = 1
 }
 
-const formatDateTime = (value?: string): string => {
+const formatDateTime = (value?: string | null): string => {
     if (!value) {
         return '-'
     }
@@ -88,6 +89,25 @@ const formatDateTime = (value?: string): string => {
     }
     const pad = (num: number) => String(num).padStart(2, '0')
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
+const getSubscriptionTitle = (user: User): string => {
+    if (user.role?.code === 'admin') return '无需订阅'
+    return entitlementStatusTitle(user.entitlement.state, user.role?.code)
+}
+
+const getSubscriptionExpiry = (user: User): string => {
+    if (user.role?.code === 'admin' || user.entitlement.state === 'permanent') return '永久有效'
+    switch (user.entitlement.state) {
+        case 'trial_active':
+        case 'trial_expired':
+            return formatDateTime(user.entitlement.trial_expires_at)
+        case 'paid_active':
+        case 'paid_expired':
+            return formatDateTime(user.entitlement.paid_expires_at)
+        default:
+            return '-'
+    }
 }
 
 const handleQuickLogin = async (user: User) => {
@@ -209,7 +229,7 @@ onMounted(() => {
             <div class="panel-heading">
                 <div>
                     <h2 class="panel-title">用户目录 <span class="count-badge">{{ total }}</span></h2>
-                    <p class="panel-description">查看账号信息，为用户分配合适的角色。</p>
+                    <p class="panel-description">查看订阅套餐、到期时间和账号状态，为用户分配合适的角色。</p>
                 </div>
                 <el-input
                     v-model="keyword"
@@ -228,7 +248,7 @@ onMounted(() => {
                     <el-button @click="loadUsers">重新加载</el-button>
                 </el-empty>
             </div>
-            <p v-if="!loadError" class="table-scroll-hint">左右滑动表格，查看角色和管理操作 →</p>
+            <p v-if="!loadError" class="table-scroll-hint">左右滑动表格，查看完整用户信息和管理操作 →</p>
             <el-table
                 v-if="!loadError"
                 v-loading="loading"
@@ -247,6 +267,26 @@ onMounted(() => {
                                 <span :title="row.email">{{ row.email }}</span>
                             </div>
                         </div>
+                    </template>
+                </el-table-column>
+                <el-table-column label="订阅套餐" min-width="240">
+                    <template #default="{ row }">
+                        <span class="user-subscription">{{ getSubscriptionTitle(row) }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="套餐 / 试用到期时间" min-width="195">
+                    <template #default="{ row }">
+                        <span class="user-date">{{ getSubscriptionExpiry(row) }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="账号状态" min-width="110">
+                    <template #default="{ row }">
+                        <span
+                            class="user-role"
+                            :class="{ 'is-disabled': row.status === 2, 'is-unassigned': row.status !== 1 && row.status !== 2 }"
+                        >
+                            <span class="role-dot" />{{ row.status === 2 ? '已禁用' : row.status === 1 ? '正常' : '未知状态' }}
+                        </span>
                     </template>
                 </el-table-column>
                 <el-table-column prop="id" label="用户 ID" min-width="320" show-overflow-tooltip>
@@ -455,6 +495,7 @@ onMounted(() => {
 }
 
 .user-id,
+.user-subscription,
 .user-date {
     color: #687a70;
     font-size: 12px;
@@ -490,6 +531,12 @@ onMounted(() => {
     border-color: #e8ece8;
     background: #f5f6f5;
     color: #98a29b;
+}
+
+.is-disabled {
+    border-color: #f3d6d6;
+    background: #fdf0f0;
+    color: #b35b5b;
 }
 
 .user-actions {

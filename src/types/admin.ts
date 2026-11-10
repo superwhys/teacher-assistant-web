@@ -1,3 +1,5 @@
+import type { UserEntitlement } from '@/types/user'
+
 export interface PermissionAPIBinding {
     method: string
     path: string
@@ -71,6 +73,7 @@ export interface User {
     status: number
     role_id: number
     role?: Role | null
+    entitlement: UserEntitlement
     json_ext?: Record<string, any>
     created_at?: string
 }

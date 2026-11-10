@@ -4,6 +4,7 @@ import UserManagementView from '../UserManagementView.vue'
 import OpinionManagementView from '../OpinionManagementView.vue'
 import { ApiRequestError } from '@/types/api'
 import type { User } from '@/types/admin'
+import type { UserEntitlement } from '@/types/user'
 
 const mocks = vi.hoisted(() => ({
     getUserList: vi.fn(),
@@ -48,6 +49,8 @@ interface UserDirectoryState {
     handleQuickLogin: (user: User) => Promise<void>
     handleOpenAssignRoleDialog: (user: User) => void
     handleAssignRole: () => Promise<void>
+    getSubscriptionTitle: (user: User) => string
+    getSubscriptionExpiry: (user: User) => string
 }
 
 interface OpinionDirectoryState {
@@ -93,6 +96,13 @@ const teacher: User = {
     status: 1,
     role_id: 2,
     created_at: '2026-11-08T10:00:00Z',
+    entitlement: {
+        state: 'not_started',
+        trial_started_at: null,
+        trial_expires_at: null,
+        paid_expires_at: null,
+        permanent: false,
+    },
 }
 
 beforeEach(() => {
@@ -119,6 +129,74 @@ afterEach(() => {
 })
 
 describe('platform user directory', () => {
+    it.each<{
+        roleCode: string | null
+        entitlementState: UserEntitlement['state']
+        expected: string
+    }>([
+        { roleCode: 'common', entitlementState: 'paid_active', expected: '普通版 · 付费权益有效' },
+        { roleCode: 'pro', entitlementState: 'paid_active', expected: 'Pro 版 · 付费权益有效' },
+        { roleCode: 'common', entitlementState: 'paid_expired', expected: '普通版 · 付费权益已到期 · 仅可查看' },
+        { roleCode: 'trial', entitlementState: 'trial_active', expected: '14 天免费试用中' },
+        { roleCode: 'trial', entitlementState: 'trial_expired', expected: '试用已到期 · 仅可查看' },
+        { roleCode: 'pro', entitlementState: 'permanent', expected: '长期使用权益' },
+        { roleCode: 'trial', entitlementState: 'not_started', expected: '试用尚未开启' },
+        { roleCode: 'admin', entitlementState: 'not_started', expected: '无需订阅' },
+        { roleCode: null, entitlementState: 'paid_active', expected: '付费权益有效' },
+    ])('displays $roleCode subscription title for $entitlementState', ({ roleCode, entitlementState, expected }) => {
+        const state = mountDirectory<UserDirectoryState>(UserManagementView)
+        const user: User = {
+            ...teacher,
+            role: roleCode ? {
+                id: 2, code: roleCode, name: roleCode, timeout: 0, system: true, permissions: [],
+            } : null,
+            entitlement: { ...teacher.entitlement, state: entitlementState, permanent: entitlementState === 'permanent' },
+        }
+        expect(state.getSubscriptionTitle(user)).toBe(expected)
+    })
+
+    it.each<{
+        entitlementState: UserEntitlement['state']
+        expected: string
+    }>([
+        { entitlementState: 'trial_active', expected: '2026-11-20 09:08:07' },
+        { entitlementState: 'trial_expired', expected: '2026-11-20 09:08:07' },
+        { entitlementState: 'paid_active', expected: '2027-05-15 18:30:45' },
+        { entitlementState: 'paid_expired', expected: '2027-05-15 18:30:45' },
+        { entitlementState: 'permanent', expected: '永久有效' },
+        { entitlementState: 'not_started', expected: '-' },
+    ])('selects the matching subscription expiry for $entitlementState', ({ entitlementState, expected }) => {
+        const state = mountDirectory<UserDirectoryState>(UserManagementView)
+        const user: User = {
+            ...teacher,
+            entitlement: {
+                ...teacher.entitlement,
+                state: entitlementState,
+                permanent: entitlementState === 'permanent',
+                trial_expires_at: new Date(2026, 10, 20, 9, 8, 7).toISOString(),
+                paid_expires_at: new Date(2027, 4, 15, 18, 30, 45).toISOString(),
+            },
+        }
+        expect(state.getSubscriptionExpiry(user)).toBe(expected)
+    })
+
+    it.each<UserEntitlement['state']>(['trial_active', 'trial_expired', 'paid_active', 'paid_expired'])(
+        'shows a placeholder when %s has no expiry', (entitlementState) => {
+            const state = mountDirectory<UserDirectoryState>(UserManagementView)
+            expect(state.getSubscriptionExpiry({
+                ...teacher, entitlement: { ...teacher.entitlement, state: entitlementState },
+            })).toBe('-')
+        },
+    )
+
+    it('shows permanent validity for a superadmin without a subscription', () => {
+        const state = mountDirectory<UserDirectoryState>(UserManagementView)
+        expect(state.getSubscriptionExpiry({
+            ...teacher,
+            role: { id: 1, code: 'admin', name: '超级管理员', timeout: 0, system: true, permissions: [] },
+        })).toBe('永久有效')
+    })
+
     it('loads users and roles, searches the current page, and keeps pagination and sorting requests', async () => {
         const state = mountDirectory<UserDirectoryState>(UserManagementView)
         await flushRequests()

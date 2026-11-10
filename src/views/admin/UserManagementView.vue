@@ -91,12 +91,12 @@ const formatDateTime = (value?: string | null): string => {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
-const getSubscriptionTitle = (user: User): string => {
-    if (user.role?.code === 'admin') return '无需订阅'
-    return entitlementStatusTitle(user.entitlement.state, user.role?.code)
+const getRoleStatus = (user: User): string => {
+    if (user.role?.code === 'admin') return '长期使用权益'
+    return entitlementStatusTitle(user.entitlement.state)
 }
 
-const getSubscriptionExpiry = (user: User): string => {
+const getRoleExpiry = (user: User): string => {
     if (user.role?.code === 'admin' || user.entitlement.state === 'permanent') return '永久有效'
     switch (user.entitlement.state) {
         case 'trial_active':
@@ -229,7 +229,7 @@ onMounted(() => {
             <div class="panel-heading">
                 <div>
                     <h2 class="panel-title">用户目录 <span class="count-badge">{{ total }}</span></h2>
-                    <p class="panel-description">查看订阅套餐、到期时间和账号状态，为用户分配合适的角色。</p>
+                    <p class="panel-description">查看用户角色、到期时间和账号状态，为用户分配合适的角色。</p>
                 </div>
                 <el-input
                     v-model="keyword"
@@ -269,14 +269,19 @@ onMounted(() => {
                         </div>
                     </template>
                 </el-table-column>
-                <el-table-column label="订阅套餐" min-width="240">
+                <el-table-column label="角色" min-width="240">
                     <template #default="{ row }">
-                        <span class="user-subscription">{{ getSubscriptionTitle(row) }}</span>
+                        <div class="user-role-details">
+                            <span class="user-role" :class="{ 'is-unassigned': !row.role }">
+                                <span class="role-dot" />{{ row.role?.name || row.role?.code || '未分配' }}
+                            </span>
+                            <span class="user-role-status">{{ getRoleStatus(row) }}</span>
+                        </div>
                     </template>
                 </el-table-column>
-                <el-table-column label="套餐 / 试用到期时间" min-width="195">
+                <el-table-column label="到期时间" min-width="195">
                     <template #default="{ row }">
-                        <span class="user-date">{{ getSubscriptionExpiry(row) }}</span>
+                        <span class="user-date">{{ getRoleExpiry(row) }}</span>
                     </template>
                 </el-table-column>
                 <el-table-column label="账号状态" min-width="110">
@@ -291,13 +296,6 @@ onMounted(() => {
                 </el-table-column>
                 <el-table-column prop="id" label="用户 ID" min-width="320" show-overflow-tooltip>
                     <template #default="{ row }"><span class="user-id">{{ row.id }}</span></template>
-                </el-table-column>
-                <el-table-column label="角色" min-width="145">
-                    <template #default="{ row }">
-                        <span class="user-role" :class="{ 'is-unassigned': !row.role }">
-                            <span class="role-dot" />{{ row.role?.name || row.role?.code || '未分配' }}
-                        </span>
-                    </template>
                 </el-table-column>
                 <el-table-column
                     prop="created_at"
@@ -495,7 +493,7 @@ onMounted(() => {
 }
 
 .user-id,
-.user-subscription,
+.user-role-status,
 .user-date {
     color: #687a70;
     font-size: 12px;
@@ -504,6 +502,13 @@ onMounted(() => {
 
 .user-id {
     font-family: 'SFMono-Regular', Consolas, monospace;
+}
+
+.user-role-details {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
 }
 
 .user-role {

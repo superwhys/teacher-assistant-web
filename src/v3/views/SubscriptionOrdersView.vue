@@ -92,7 +92,7 @@ async function cancelOrder(orderID: string): Promise<void> {
     try {
         try {
             await confirmDialog(
-                '取消后，此订单不再占用本地待付款限制，选择其他版本仍需满足当前账号的购买条件。此操作只取消本地订单，不会关闭微信支付，也不能证明微信尚未扣款。若已扣款，请先返回查询付款结果；取消后仍发生扣款，需联系管理员人工核对。',
+                '取消后，此订单不再占用本地待付款限制，选择其他角色仍需满足当前账号的开通条件。此操作只取消本地订单，不会关闭微信支付，也不能证明微信尚未扣款。若已扣款，请先返回查询付款结果；取消后仍发生扣款，需联系管理员人工核对。',
                 '取消本地订单',
                 { confirmButtonText: '确认取消', cancelButtonText: '保留订单', type: 'warning' },
             )
@@ -105,7 +105,7 @@ async function cancelOrder(orderID: string): Promise<void> {
         if (response.data.id !== orderID) throw new Error('返回的订单信息不一致，请重新加载。')
         orders.value = orders.value.map(order => order.id === orderID ? response.data : order)
         checkMessage.value = response.data.status === 'canceled'
-            ? '订单已在本地取消，可返回套餐页重新选择。'
+            ? '订单已在本地取消，可返回开通页重新选择。'
             : subscriptionOrderStatus(response.data)
     } catch (error) {
         if (current()) checkError.value = error instanceof Error ? error.message : '取消订单失败，请稍后重试。'
@@ -134,9 +134,9 @@ onBeforeUnmount(() => { disposed = true; generation += 1 })
 
 <template>
     <div class="subscription-orders">
-        <PageHeader eyebrow="MY ORDERS" title="我的订单" description="找回当前账号的订阅订单，核对付款与开通状态。">
+        <PageHeader eyebrow="MY ORDERS" title="我的订单" description="找回当前账号的开通与续费订单，核对付款与开通状态。">
             <template #actions>
-                <RouterLink to="/subscription" class="orders-button">查看套餐</RouterLink>
+                <RouterLink to="/subscription" class="orders-button">开通 / 续费</RouterLink>
                 <button type="button" class="orders-button" :disabled="busy" @click="loadOrders()">
                     {{ loading ? '加载中…' : '刷新订单' }}
                 </button>
@@ -149,7 +149,7 @@ onBeforeUnmount(() => { disposed = true; generation += 1 })
             <button type="button" class="orders-button" :disabled="busy" @click="loadOrders()">重新加载</button>
         </div>
         <p v-if="loading && !orders.length" class="orders-feedback" role="status">正在加载订单…</p>
-        <p v-else-if="!loading && !loadError && !orders.length" class="orders-feedback">暂无订阅订单。</p>
+        <p v-else-if="!loading && !loadError && !orders.length" class="orders-feedback">暂无开通与续费订单。</p>
         <ul v-if="orders.length" class="orders-list" :aria-busy="loading">
             <li v-for="order in orders" :key="order.id" class="order-card">
                 <div class="order-card__heading">

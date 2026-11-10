@@ -9,7 +9,7 @@ describe('subscription order presentation', () => {
     it('shows immutable historical amounts rather than current SKU prices', () => {
         expect(subscriptionOrderName(pending.plan_id)).toBe('普通版月卡')
         expect(subscriptionOrderAmount(pending.amount_fen)).toBe('¥9.90')
-        expect(subscriptionOrderName('future-plan')).toBe('订阅套餐')
+        expect(subscriptionOrderName('future-plan')).toBe('角色开通')
         expect(subscriptionOrderAmount(1.5)).toBe('金额待核对')
     })
     it('distinguishes unconfirmed payment, fulfillment, manual review and refunds', () => {

@@ -4,7 +4,7 @@
         <template v-if="sessionStore.entitlementState !== 'permanent'" #action>
             <RouterLink v-if="sessionStore.entitlementState !== 'unavailable'" to="/subscription"
                 class="app-notice-bar__action account-entitlement__subscribe">
-                {{ sessionStore.entitlementState === 'paid_active' ? '查看套餐与续费' : '开通正式版' }}
+                {{ sessionStore.entitlementState === 'paid_active' ? '续费当前角色' : '开通角色' }}
             </RouterLink>
             <button v-if="sessionStore.entitlementState === 'not_started'" type="button"
                 class="app-notice-bar__action" :disabled="confirming || sessionStore.startingTrial" @click="confirmStartTrial">

@@ -4,7 +4,7 @@ export function subscriptionOrderName(planID: string): string {
     const names: Record<string, string> = {
         common_month: '普通版月卡', common_year: '普通版年卡', pro_month: 'Pro 月卡', pro_year: 'Pro 年卡',
     }
-    return names[planID] || '订阅套餐'
+    return names[planID] || '角色开通'
 }
 
 export function subscriptionOrderStatus(order: SubscriptionOrder): string {

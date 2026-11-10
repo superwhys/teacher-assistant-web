@@ -1,6 +1,6 @@
 <template>
     <div class="subscription-view">
-        <PageHeader eyebrow="SUBSCRIPTION" title="为课堂，添一份从容" description="了解每个版本包含的功能，再选择适合自己的使用期限。">
+        <PageHeader eyebrow="ROLE ACCESS" title="为课堂，添一份从容" description="了解每个角色包含的功能，再选择适合自己的使用期限。">
             <template #actions>
                 <RouterLink to="/subscription/orders" class="subscription-button subscription-button--secondary">我的订单</RouterLink>
                 <button type="button" class="subscription-button subscription-button--secondary"
@@ -10,7 +10,7 @@
             </template>
         </PageHeader>
 
-        <section class="subscription-account" aria-label="当前订阅账号">
+        <section class="subscription-account" aria-label="当前开通账号">
             <div>
                 <strong>{{ cacheStore.displayName || cacheStore.profile?.name || '当前账号' }}</strong>
                 <p>{{ cacheStore.profile?.email || `账号 ID：${cacheStore.profile?.id || '未获取'}` }}</p>
@@ -26,14 +26,14 @@
             每次购买仅支付一次，到期后手动续费，不会自动扣款。
         </p>
 
-        <p v-if="loading" class="subscription-feedback" role="status">正在加载套餐…</p>
+        <p v-if="loading" class="subscription-feedback" role="status">正在加载角色…</p>
         <div v-else-if="loadError" class="subscription-feedback subscription-feedback--error" role="alert">
             <p>{{ loadError }}</p>
             <button type="button" class="subscription-button subscription-button--secondary" @click="loadPlans">重新加载</button>
         </div>
         <template v-else-if="catalog">
             <p v-if="!catalog.can_purchase" class="subscription-feedback" role="status">
-                {{ catalog.purchase_disabled_reason || '当前账号暂不可购买套餐。' }}
+                {{ catalog.purchase_disabled_reason || '当前账号暂不可开通角色。' }}
             </p>
             <div class="subscription-editions">
                 <section v-for="edition in editionGroups" :key="edition.id" class="subscription-edition"
@@ -42,7 +42,7 @@
                         <h2>{{ edition.name }}</h2>
                         <span class="subscription-edition__label">{{ edition.label }}</span>
                     </div>
-                    <ul class="subscription-highlights" aria-label="版本特点">
+                    <ul class="subscription-highlights" aria-label="角色特点">
                         <li v-for="highlight in edition.highlights" :key="highlight.title">
                             <strong>{{ highlight.title }}</strong>
                             <p v-if="highlight.description">{{ highlight.description }}</p>
@@ -50,7 +50,7 @@
                     </ul>
 
                     <div class="subscription-edition__contents">
-                        <p class="subscription-edition__caption">套餐能力</p>
+                        <p class="subscription-edition__caption">角色功能</p>
                         <ul class="subscription-features">
                             <li v-for="feature in edition.features" :key="feature.title"
                                 :class="{ 'subscription-features__item--excluded': feature.included === false }">
@@ -83,30 +83,30 @@
                         <button type="button" class="subscription-button subscription-edition__subscribe"
                             :disabled="!catalog.can_purchase || !isSubscriptionPlanAvailable(edition.activePlan) || Boolean(creatingPlanID)"
                             @click="createPurchaseLink(edition.activePlan)">
-                            {{ creatingPlanID === edition.activePlan.id ? '正在准备…' : `订阅${edition.name}` }}
+                            {{ creatingPlanID === edition.activePlan.id ? '正在准备…' : `开通${edition.name}` }}
                             <span v-if="!creatingPlanID" aria-hidden="true">↗</span>
                         </button>
                         <p v-if="edition.activePlan.purchase_disabled_reason || !isSubscriptionPlanAvailable(edition.activePlan)"
                             class="subscription-plan__unavailable">
-                            {{ edition.activePlan.purchase_disabled_reason || '该套餐暂未开放购买' }}
+                            {{ edition.activePlan.purchase_disabled_reason || '该角色暂未开放' }}
                         </p>
                         <p class="subscription-edition__note">前往微信小程序完成购买</p>
                     </div>
                 </section>
             </div>
-            <p v-if="editionGroups.length" class="subscription-help">月卡与年卡包含相同的版本功能。有效期内可续费当前版本，到期后可更换版本。</p>
+            <p v-if="editionGroups.length" class="subscription-help">月卡与年卡包含相同的角色功能。有效期内可续费当前角色，到期后可更换角色。</p>
             <p v-if="!catalog.ios_available" class="subscription-help">iPhone 端购买暂未开放，可使用支持的微信终端购买。</p>
         </template>
 
         <p v-if="purchaseError" class="subscription-feedback subscription-feedback--error" role="alert">{{ purchaseError }}</p>
         <section v-if="purchaseLink" ref="purchaseSection" class="subscription-purchase" aria-label="在小程序完成购买">
             <div class="subscription-purchase__code">
-                <img v-if="!linkExpired" :src="purchaseLink.qr_code" alt="微信扫一扫，为当前网页账号购买套餐" />
+                <img v-if="!linkExpired" :src="purchaseLink.qr_code" alt="微信扫一扫，为当前网页账号开通角色" />
                 <p v-else class="subscription-feedback" role="status">购买入口已过期，请重新生成。</p>
             </div>
             <div class="subscription-purchase__instructions">
                 <h2>{{ selectedPlan?.name || '在小程序完成购买' }}</h2>
-                <p>使用微信扫一扫，在小程序页面核对开通账号和套餐后付款。</p>
+                <p>使用微信扫一扫，在小程序页面核对开通账号和角色后付款。</p>
                 <p class="subscription-purchase__account">开通账号：{{ purchaseLink.account_name }}</p>
                 <p>权益将开通至当前网页账号，扫码购买无需登录或切换小程序账号。</p>
                 <p v-if="!linkExpired">入口有效至 {{ formatDeadline(purchaseLink.expires_at) }}。</p>
@@ -232,11 +232,11 @@ async function loadPlans(): Promise<void> {
         catalog.value = { ...response.data, plans: editionDetails.flatMap(edition => edition.plans.map(plan => {
             const eligibility = response.data.plans.find(candidate => candidate.id === plan.id)
             return { ...plan, edition: edition.id, available: eligibility?.available === true,
-                purchase_disabled_reason: eligibility?.purchase_disabled_reason || (eligibility ? '' : '该套餐暂未开放购买') }
+                purchase_disabled_reason: eligibility?.purchase_disabled_reason || (eligibility ? '' : '该角色暂未开放') }
         })) }
     } catch (error) {
         if (disposed || version !== generation) return
-        loadError.value = error instanceof Error ? error.message : '套餐加载失败，请重试。'
+        loadError.value = error instanceof Error ? error.message : '角色加载失败，请重试。'
     } finally {
         if (!disposed && version === generation) loading.value = false
     }

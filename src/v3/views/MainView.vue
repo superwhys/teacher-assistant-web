@@ -108,8 +108,8 @@
                             <Lock aria-hidden="true" />
                         </button>
                         <RouterLink v-if="sessionStore.entitlementState !== 'permanent'" to="/subscription"
-                            class="header-actions__button" aria-label="查看月卡和年卡">
-                            <span>订阅</span>
+                            class="header-actions__button" aria-label="查看角色开通与续费">
+                            <span>开通 / 续费</span>
                         </RouterLink>
                         <RouterLink v-if="sessionStore.canAccess('/settings')" to="/settings" class="header-actions__button header-settings-link">
                             <Setting aria-hidden="true" />

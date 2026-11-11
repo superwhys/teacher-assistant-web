@@ -2,10 +2,7 @@
     <article
         :id="`student-card-${student.id}`"
         class="student-card"
-        :class="[
-            student.toneClass,
-            { 'is-group': displayMode === 'group', 'is-list': displayMode === 'list', 'is-selected': selected }
-        ]"
+        :class="{ 'is-group': displayMode === 'group', 'is-list': displayMode === 'list', 'is-selected': selected }"
     >
         <button type="button" class="student-card__select" :aria-pressed="selected"
             :aria-label="`选择${student.name}，可用积分${student.availablePoints}，总积分${student.totalPoints}`"
@@ -58,8 +55,6 @@ export type StudentsListCardItem = UiStudent & {
     initials: string
     /** 表示学生当前卡片附带的业务标签集合。 */
     tags: string[]
-    /** 表示学生卡片头像和顶部色条使用的配色类名。 */
-    toneClass: string
     /** 表示学生累计获得的总积分。 */
     totalPoints: number
 }
@@ -102,21 +97,18 @@ function getGenderLabel(gender: UiGender): string {
 
 <style scoped>
 .student-card {
-    --student-avatar-background: #dcecff;
-    --student-avatar-color: #2470bd;
+    --student-avatar-background: #edf3ee;
+    --student-avatar-color: #60816b;
     position: relative;
     min-width: 0;
-    padding: 16px;
+    min-height: 112px;
+    padding: 14px;
     display: grid;
-    gap: 18px;
+    gap: 12px;
     border: 1px solid var(--ta-line);
     border-radius: var(--ta-radius-large);
     background: var(--ta-surface-solid);
-    transition: border-color 140ms ease, box-shadow 140ms ease, transform 100ms ease;
-}
-
-.student-card:hover {
-    border-color: rgba(24, 116, 100, 0.3);
+    transition: border-color 140ms ease, background-color 140ms ease, transform 100ms ease-out;
 }
 
 .student-card:has(.student-card__select:active) {
@@ -124,9 +116,15 @@ function getGenderLabel(gender: UiGender): string {
 }
 
 .student-card.is-selected {
+    --student-avatar-background: #deede0;
+    --student-avatar-color: #4f7858;
     border-color: var(--ta-blue);
-    background: var(--ta-blue-soft);
-    box-shadow: 0 0 0 2px var(--ta-blue-soft);
+    background: #f4f8f4;
+}
+
+.student-card:has(.student-card__select:focus-visible) {
+    outline: 2px solid var(--ta-blue);
+    outline-offset: 3px;
 }
 
 .student-card__select {
@@ -151,41 +149,16 @@ function getGenderLabel(gender: UiGender): string {
 }
 
 .student-avatar {
-    width: 42px;
-    height: 42px;
+    width: 36px;
+    height: 36px;
     flex: 0 0 auto;
     display: grid;
     place-items: center;
     border-radius: 50%;
     color: var(--student-avatar-color);
     background: var(--student-avatar-background);
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 600;
-}
-
-.student-card.tone-sky {
-    --student-avatar-background: #d9f0ff;
-    --student-avatar-color: #1978b7;
-}
-
-.student-card.tone-azure {
-    --student-avatar-background: #dceaff;
-    --student-avatar-color: #286bc1;
-}
-
-.student-card.tone-blue {
-    --student-avatar-background: #e0e8ff;
-    --student-avatar-color: #4263bd;
-}
-
-.student-card.tone-cyan {
-    --student-avatar-background: #d8f1f3;
-    --student-avatar-color: #287e87;
-}
-
-.student-card.tone-indigo {
-    --student-avatar-background: #e7e7ff;
-    --student-avatar-color: #585daf;
 }
 
 .student-profile {
@@ -195,7 +168,8 @@ function getGenderLabel(gender: UiGender): string {
 .student-profile__name {
     display: block;
     color: var(--ta-text);
-    font-size: 17px;
+    font-size: 16px;
+    font-weight: 600;
     line-height: 1.4;
     overflow-wrap: anywhere;
 }
@@ -227,10 +201,6 @@ function getGenderLabel(gender: UiGender): string {
     cursor: pointer;
 }
 
-.student-card__menu:hover {
-    background: var(--ta-surface-muted);
-}
-
 .student-card__menu svg {
     width: 17px;
     height: 17px;
@@ -249,8 +219,8 @@ function getGenderLabel(gender: UiGender): string {
 }
 
 .student-profile__available strong {
-    color: var(--ta-text);
-    font-size: 23px;
+    color: #365642;
+    font-size: 25px;
     font-weight: 650;
 }
 
@@ -266,6 +236,7 @@ function getGenderLabel(gender: UiGender): string {
 }
 
 .student-card.is-list {
+    min-height: 72px;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     padding-right: 48px;
@@ -276,6 +247,7 @@ function getGenderLabel(gender: UiGender): string {
 }
 
 .student-card.is-group {
+    min-height: 0;
     gap: 10px;
     padding: 12px;
 }
@@ -333,6 +305,23 @@ function getGenderLabel(gender: UiGender): string {
 
     .student-card.is-list {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .student-card:not(.is-selected):hover {
+        border-color: rgba(24, 116, 100, 0.4);
+    }
+
+    .student-card__menu:hover {
+        background: var(--ta-surface-muted);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .student-card {
+        transition: none;
+        transform: none !important;
     }
 }
 </style>

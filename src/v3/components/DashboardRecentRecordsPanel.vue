@@ -4,7 +4,9 @@
             <div>
                 <h3>最近积分记录</h3>
             </div>
-            <button class="text-button" type="button" @click="goToHistoryPage">查看积分历史</button>
+            <button class="text-button" type="button" @click="goToHistoryPage">
+                查看积分历史<i-ep-arrow-right aria-hidden="true" />
+            </button>
         </div>
 
         <div v-if="recordPreview.length === 0" class="empty-state">
@@ -14,11 +16,15 @@
 
         <div v-else class="preview-list">
             <article v-for="item in recordPreview" :key="item.id" class="preview-item">
-                <div>
+                <span class="preview-mark" :class="item.valueToneClass" aria-hidden="true">
+                    <i-ep-minus v-if="item.valueToneClass === 'is-negative'" />
+                    <i-ep-plus v-else />
+                </span>
+                <div class="preview-content">
                     <strong>{{ item.title }}</strong>
                     <p>{{ item.meta }}</p>
                 </div>
-                <span :class="item.valueToneClass">
+                <span class="preview-value" :class="item.valueToneClass">
                     {{ item.value }}
                 </span>
             </article>
@@ -167,24 +173,24 @@ watch(() => [props.activeClassId, props.currentSemesterId], () => {
 <style scoped>
 .panel-card {
     min-width: 0;
-    padding: 20px;
+    padding: 22px;
     border: 1px solid var(--ta-line);
-    border-radius: var(--ta-radius-large);
+    border-radius: 14px;
     background: var(--ta-surface);
     box-shadow: var(--ta-shadow-1);
 }
 
 .panel-head {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 14px;
-    margin-bottom: 14px;
+    margin-bottom: 18px;
 }
 
 .panel-head h3 {
     margin: 0;
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 600;
     letter-spacing: -0.015em;
 }
@@ -206,14 +212,11 @@ watch(() => [props.activeClassId, props.currentSemesterId], () => {
     border: 0;
     color: var(--ta-blue);
     background: transparent;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     line-height: 1.2;
     cursor: pointer;
-}
-
-.text-button:hover {
-    color: var(--ta-blue-hover);
+    transition: color 140ms ease;
 }
 
 .text-button svg {
@@ -259,10 +262,10 @@ watch(() => [props.activeClassId, props.currentSemesterId], () => {
 }
 
 .preview-item {
-    min-height: 54px;
-    padding: 10px 2px;
+    min-height: 69px;
+    padding: 12px 0;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
     align-items: center;
     gap: 12px;
     border-top: 1px solid var(--ta-line);
@@ -272,30 +275,58 @@ watch(() => [props.activeClassId, props.currentSemesterId], () => {
     border-top: 0;
 }
 
-.preview-item strong {
-    display: block;
-    font-size: 15px;
+.preview-mark {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    color: var(--ta-green);
+    background: var(--ta-green-soft);
 }
 
-.preview-item p {
+.preview-mark.is-negative {
+    color: var(--ta-red);
+    background: var(--ta-red-soft);
+}
+
+.preview-mark svg {
+    width: 16px;
+    height: 16px;
+}
+
+.preview-content {
+    min-width: 0;
+}
+
+.preview-content strong {
+    display: block;
+    overflow-wrap: anywhere;
+    font-size: 14px;
+    font-weight: 550;
+}
+
+.preview-content p {
     margin: 3px 0 0;
-    color: var(--ta-text-tertiary);
-    font-size: 13px;
+    overflow-wrap: anywhere;
+    color: var(--ta-text-secondary);
+    font-size: 12px;
     line-height: 1.4;
 }
 
-.preview-item > span {
+.preview-value {
     color: var(--ta-text-secondary);
-    font-size: 15px;
-    font-weight: 650;
+    font-size: 17px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
 
-.preview-item > span.is-positive {
+.preview-value.is-positive {
     color: var(--ta-green);
 }
 
-.preview-item > span.is-negative {
+.preview-value.is-negative {
     color: var(--ta-red);
 }
 
@@ -322,6 +353,12 @@ watch(() => [props.activeClassId, props.currentSemesterId], () => {
 .empty-state p {
     margin: 0;
     font-size: 13px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .text-button:hover {
+        color: var(--ta-blue-hover);
+    }
 }
 
 @media (max-width: 660px) {

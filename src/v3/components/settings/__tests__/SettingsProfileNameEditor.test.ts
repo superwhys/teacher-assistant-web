@@ -142,6 +142,26 @@ describe('current account name editor', () => {
         expect(editor.error).not.toBe('')
         expect(editor.visible).toBe(true)
     })
+    it.each([
+        { promptDefaultName: false, originalName: '原姓名', inputName: '原姓名' },
+        { promptDefaultName: false, originalName: '原姓名', inputName: '  原姓名  ' },
+        { promptDefaultName: true, originalName: '微信用户', inputName: '微信用户' },
+        { promptDefaultName: true, originalName: '微信用户', inputName: '  微信用户  ' },
+    ])('rejects the unchanged name $inputName with promptDefaultName=$promptDefaultName and allows a corrected name', async ({ promptDefaultName, originalName, inputName }) => {
+        mocks.cache.profile!.name = originalName
+        const editor = mountEditor(promptDefaultName)
+        if (!promptDefaultName) editor.open()
+        editor.name = inputName
+        await editor.save()
+        expect(mocks.update).not.toHaveBeenCalled()
+        expect(editor.visible).toBe(true)
+        expect(editor.error).toBe('新姓名不能与原姓名相同，请修改后再保存。')
+        editor.name = '张老师'
+        await editor.save()
+        expect(mocks.update).toHaveBeenCalledExactlyOnceWith('张老师')
+        expect(mocks.cache.profile?.name).toBe('张老师')
+        expect(editor.visible).toBe(false)
+    })
     it('permits an expired account to save trimmed names with internal spaces and emoji', async () => {
         const editor = mountEditor()
         editor.open()

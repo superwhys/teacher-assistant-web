@@ -9,17 +9,8 @@
                 </div>
             </section>
 
-            <div class="workspace-card">
-                <span class="workspace-card__icon" aria-hidden="true"><HomeFilled /></span>
-                <div class="workspace-card__content">
-                    <strong>{{ isPlatformPage ? '平台管理' : '教学工作台' }}</strong>
-                    <span>{{ isPlatformPage ? '平台管理空间' : '班级教学空间' }}</span>
-                </div>
-                <span class="workspace-card__label">{{ isPlatformPage ? 'ADMIN' : 'WORKSPACE' }}</span>
-            </div>
-
             <nav class="aside-nav" aria-label="主导航">
-                <p v-if="navItems.length" class="aside-nav__group-label">教学管理 <span>WORKSPACE</span></p>
+                <p v-if="navItems.length" class="aside-nav__group-label">教学工作台</p>
                 <RouterLink v-for="item in navItems" :key="item.id" :to="item.to" class="aside-nav__item"
                     :class="{ 'is-active': currentNavItem?.id === item.id }" :title="item.label">
                     <component :is="item.icon" class="aside-nav__icon" aria-hidden="true" />
@@ -27,7 +18,7 @@
                     <span class="aside-nav__indicator" aria-hidden="true" />
                 </RouterLink>
                 <template v-if="platformNavItems.length">
-                    <p class="aside-nav__group-label aside-nav__group-label--platform">平台管理 <span>ADMINISTRATION</span></p>
+                    <p class="aside-nav__group-label aside-nav__group-label--platform">平台管理</p>
                     <RouterLink v-for="item in platformNavItems" :key="item.id" :to="item.to" class="aside-nav__item"
                         :class="{ 'is-active': currentNavItem?.id === item.id }" :title="item.label">
                         <component :is="item.icon" class="aside-nav__icon" aria-hidden="true" />
@@ -115,7 +106,7 @@
                             <Setting aria-hidden="true" />
                             <span>进入设置</span>
                         </RouterLink>
-                        <RouterLink v-if="sessionStore.canAccess('/points')" to="/points" class="header-actions__button is-primary" aria-label="进入积分中心">
+                        <RouterLink v-if="sessionStore.canAccess('/points')" to="/points" class="header-actions__button header-points-link" aria-label="进入积分中心">
                             <StarFilled aria-hidden="true" />
                             <span>进入积分中心</span>
                         </RouterLink>
@@ -789,17 +780,16 @@ onMounted(() => {
 .main-view__notices {
     display: grid;
     gap: 10px;
-    padding: 14px 36px 0;
+    padding: 14px 32px 0;
 }
 
 .main-view {
-    --sidebar-width: 244px;
+    --sidebar-width: 216px;
     min-height: 100vh;
     display: grid;
     grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
     color: var(--ta-text);
     background: var(--ta-bg);
-    transition: grid-template-columns 180ms ease;
 }
 
 .main-view.is-aside-collapsed {
@@ -811,19 +801,23 @@ onMounted(() => {
     top: 0;
     z-index: 30;
     height: 100vh;
-    padding: 0 18px;
+    padding: 0 16px;
     display: flex;
     flex-direction: column;
     border-right: 1px solid var(--ta-line);
-    background: #ffffff;
+    background: #eef2ef;
 }
 
 .brand-card {
-    min-height: 89px;
-    padding: 0 6px;
+    min-height: 96px;
+    padding: 0 8px;
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.brand-card__badge {
+    --brand-logo-size: 34px;
 }
 
 .brand-card__content {
@@ -836,7 +830,7 @@ onMounted(() => {
     font-size: 18px;
     font-weight: 650;
     line-height: 1.15;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.1px;
     white-space: nowrap;
 }
 
@@ -844,8 +838,8 @@ onMounted(() => {
     display: block;
     margin-top: 3px;
     color: var(--ta-text-secondary);
-    font-size: 8px;
-    letter-spacing: 1px;
+    font-size: 9px;
+    letter-spacing: 0.2px;
     white-space: nowrap;
 }
 
@@ -877,7 +871,7 @@ onMounted(() => {
 
 .aside-nav {
     display: grid;
-    gap: 7px;
+    gap: 6px;
     min-height: 0;
     overflow-y: auto;
     scrollbar-width: thin;
@@ -887,73 +881,11 @@ onMounted(() => {
     outline-offset: -2px;
 }
 
-.workspace-card {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 5px 0 28px;
-    padding: 12px 10px;
-    border: 1px solid var(--ta-line);
-    border-radius: 9px;
-    background: #fbfcfb;
-}
-
-.workspace-card__icon {
-    width: 30px;
-    height: 32px;
-    display: grid;
-    place-items: center;
-    flex: 0 0 auto;
-    border: 1px solid var(--ta-line);
-    border-radius: 6px;
-    color: var(--ta-text-secondary);
-    background: #ffffff;
-}
-
-.workspace-card__icon svg {
-    width: 16px;
-    height: 16px;
-}
-
-.workspace-card__content {
-    min-width: 0;
-}
-
-.workspace-card__content strong,
-.workspace-card__content span {
-    display: block;
-    white-space: nowrap;
-}
-
-.workspace-card__content strong {
-    font-size: 11px;
-    font-weight: 600;
-}
-
-.workspace-card__content span {
-    margin-top: 3px;
-    color: var(--ta-text-secondary);
-    font-size: 9px;
-}
-
-.workspace-card__label {
-    margin-left: auto;
-    color: var(--ta-text-tertiary);
-    font-size: 8px;
-    letter-spacing: 0.5px;
-}
-
 .aside-nav__group-label {
-    display: flex;
-    justify-content: space-between;
-    margin: 0 10px 5px;
+    margin: 10px 14px 8px;
     color: var(--ta-text-tertiary);
-    font-size: 10px;
-}
-
-.aside-nav__group-label span {
-    font-size: 8px;
-    letter-spacing: 1px;
+    font-size: 11px;
+    font-weight: 500;
 }
 
 .aside-nav__group-label--platform {
@@ -1010,20 +942,21 @@ onMounted(() => {
 }
 
 .aside-nav__item {
+    position: relative;
     width: 100%;
-    min-height: 45px;
+    min-height: 46px;
     padding: 0 14px;
     display: flex;
     align-items: center;
     gap: 12px;
     border: 0;
-    border-radius: 7px;
+    border-radius: 10px;
     color: var(--ta-text-secondary);
     background: transparent;
     text-decoration: none;
     cursor: pointer;
     text-align: left;
-    font-size: 13px;
+    font-size: 14px;
     transition: color 140ms ease, background-color 140ms ease, transform 100ms ease;
 }
 
@@ -1034,7 +967,8 @@ onMounted(() => {
 
 .aside-nav__item.is-active {
     color: var(--ta-blue);
-    background: var(--ta-blue-soft);
+    background: var(--ta-surface-solid);
+    box-shadow: var(--ta-shadow-1);
     font-weight: 600;
 }
 
@@ -1047,8 +981,8 @@ onMounted(() => {
 }
 
 .aside-nav__icon {
-    width: 17px;
-    height: 17px;
+    width: 19px;
+    height: 19px;
     flex: 0 0 auto;
 }
 
@@ -1060,12 +994,13 @@ onMounted(() => {
 }
 
 .aside-nav__indicator {
+    position: absolute;
+    left: 0;
     display: none;
-    width: 5px;
-    height: 5px;
-    margin-left: auto;
+    width: 3px;
+    height: 18px;
     flex: 0 0 auto;
-    border-radius: 50%;
+    border-radius: 3px;
     background: var(--ta-blue);
 }
 
@@ -1117,7 +1052,7 @@ onMounted(() => {
 }
 
 .aside-user__name {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
 }
 
@@ -1157,7 +1092,6 @@ onMounted(() => {
 }
 
 .main-view.is-aside-collapsed .brand-card__content,
-.main-view.is-aside-collapsed .workspace-card,
 .main-view.is-aside-collapsed .aside-nav__group-label,
 .main-view.is-aside-collapsed .aside-nav__label,
 .main-view.is-aside-collapsed .aside-nav__indicator,
@@ -1188,11 +1122,12 @@ onMounted(() => {
     position: sticky;
     top: 0;
     z-index: 24;
-    background: var(--ta-bg);
+    background: rgba(245, 247, 245, 0.94);
+    backdrop-filter: blur(16px);
 }
 
 .main-view__timer-strip {
-    padding: 14px 36px 0;
+    padding: 14px 32px 0;
     display: flex;
     justify-content: center;
 }
@@ -1205,14 +1140,14 @@ onMounted(() => {
 .main-view__header {
     position: relative;
     z-index: 24;
-    min-height: 73px;
-    padding: 12px 36px;
+    min-height: 72px;
+    padding: 12px 32px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
     border-bottom: 1px solid var(--ta-line);
-    background: #ffffff;
+    background: rgba(255, 255, 255, 0.88);
 }
 
 .context-bar,
@@ -1241,7 +1176,7 @@ onMounted(() => {
     justify-content: center;
     gap: 7px;
     border: 1px solid var(--ta-line);
-    border-radius: 6px;
+    border-radius: 8px;
     color: var(--ta-text-secondary);
     background: #ffffff;
     font-size: 12px;
@@ -1251,6 +1186,13 @@ onMounted(() => {
     text-decoration: none;
     cursor: pointer;
     transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease, transform 100ms ease;
+}
+
+.context-bar :deep(.switch-trigger) {
+    padding-inline: 4px;
+    border-color: transparent;
+    background: transparent;
+    font-size: 13px;
 }
 
 .context-bar :deep(.switch-trigger:hover),
@@ -1319,6 +1261,12 @@ onMounted(() => {
     background: var(--ta-blue-hover);
 }
 
+.header-points-link {
+    color: var(--ta-blue);
+    border-color: #d8e6dd;
+    background: var(--ta-blue-soft);
+}
+
 .header-actions__button.is-icon {
     width: 34px;
     padding: 0;
@@ -1329,7 +1277,7 @@ onMounted(() => {
     max-width: 1680px;
     min-width: 0;
     margin: 0 auto;
-    padding: 32px 36px 40px;
+    padding: 28px 32px 40px;
     flex: 1;
 }
 
@@ -1606,11 +1554,11 @@ onMounted(() => {
         text-overflow: ellipsis;
     }
 
-    .header-actions__button.is-primary span {
+    .header-points-link span {
         display: none;
     }
 
-    .header-actions__button.is-primary {
+    .header-points-link {
         width: 34px;
         padding: 0;
     }
@@ -1640,6 +1588,17 @@ onMounted(() => {
 
     .header-actions {
         flex: 0 0 auto;
+    }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    .main-view__sticky-top {
+        background: var(--ta-bg);
+        backdrop-filter: none;
+    }
+
+    .main-view__header {
+        background: var(--ta-surface-solid);
     }
 }
 

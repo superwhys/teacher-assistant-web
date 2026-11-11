@@ -20,169 +20,167 @@
         </section>
 
         <section class="content-grid content-grid--single">
-            <Transition name="content-panel" mode="out-in">
-                <article v-if="activeContentTab === 'ranking'" key="ranking" class="panel-surface ranking-panel">
-                    <div class="panel-head panel-head--stack">
-                        <div>
-                            <h3>积分排行榜</h3>
-                            <p>支持总榜、单项榜以及时间范围切换。</p>
-                        </div>
-                        <div class="toolbar-row toolbar-row--wrap">
-                            <button type="button" class="ghost-button ghost-button--small" @click="toggleRankingMask">
-                                <i-ep-view aria-hidden="true" />
-                                <span>{{ isRankingMasked ? "显示" : "隐藏" }}</span>
-                            </button>
-
-                            <span class="toolbar-divider" aria-hidden="true"></span>
-
-                            <div class="segmented-control">
-                                <button type="button" class="chip-button"
-                                    :class="{ 'is-active': activeRankingTab === 'total' }"
-                                    @click="handleSelectRankingTab('total')">
-                                    总榜
-                                </button>
-                                <button type="button" class="chip-button"
-                                    :class="{ 'is-active': activeRankingTab === 'item' }"
-                                    @click="handleSelectRankingTab('item')">
-                                    单项榜
-                                </button>
-                            </div>
-
-                            <span class="toolbar-divider" aria-hidden="true"></span>
-
-                            <div class="segmented-control">
-                                <button v-for="item in rankingRangeOptions" :key="item.value" type="button"
-                                    class="chip-button" :class="{ 'is-active': currentRankingTimeRange === item.value }"
-                                    @click="currentRankingTimeRange = item.value">
-                                    {{ item.label }}
-                                </button>
-                            </div>
-                        </div>
+            <article v-if="activeContentTab === 'ranking'" key="ranking" class="panel-surface ranking-panel">
+                <div class="panel-head panel-head--stack">
+                    <div>
+                        <h3>积分排行榜</h3>
+                        <p>支持总榜、单项榜以及时间范围切换。</p>
                     </div>
-
-                    <div v-if="activeRankingTab === 'item'" class="ranking-select-row">
-                        <label class="field-block">
-                            <span class="field-label">积分项</span>
-                            <el-select v-model="currentSelectedRankingRuleId" placeholder="请选择积分项" class="field-full">
-                                <el-option v-for="rule in ruleOptions" :key="rule.id"
-                                    :label="`${rule.groupName ? `${rule.groupName} / ` : ''}${rule.name}`"
-                                    :value="rule.id" />
-                            </el-select>
-                        </label>
-                    </div>
-
-                    <div v-if="rankingItems.length > 0" class="ranking-list" v-loading="rankingLoading">
-                        <article v-for="item in rankingItems" :key="item.id" class="ranking-item"
-                            :class="item.rankClass">
-                            <div class="ranking-item__rank" :class="item.rankClass">{{ item.rankLabel }}</div>
-                            <div class="ranking-item__content">
-                                <div class="ranking-item__name">
-                                    <i-ep-trophy v-if="item.rankClass === 'is-top-1'" class="ranking-item__icon"
-                                        :class="item.rankClass" />
-                                    <i-ep-medal v-else-if="item.rankClass === 'is-top-2'" class="ranking-item__icon"
-                                        :class="item.rankClass" />
-                                    <i-ep-star-filled v-else-if="item.rankClass === 'is-top-3'"
-                                        class="ranking-item__icon" :class="item.rankClass" />
-                                    <strong>{{ getRankingNameLabel(item.name) }}</strong>
-                                </div>
-                            </div>
-                            <div class="ranking-item__score">
-                                <span>{{ getRankingScoreLabel(item.scoreLabel) }}</span>
-                            </div>
-                        </article>
-                    </div>
-
-                    <div v-else class="empty-state">
-                        <strong>暂无排行榜数据</strong>
-                        <p>{{ activeRankingTab === "item" ? "请先选择一个积分项，或等待该积分项产生记录。" : "当前范围内还没有可展示的积分排行。" }}</p>
-                    </div>
-                </article>
-
-                <article v-else key="records" class="panel-surface records-panel">
-                    <div class="panel-head panel-head--stack">
-                        <div>
-                            <h3>积分规则记录</h3>
-                            <p>保留课堂最新操作记录，并支持在当前页快速撤回最近一次规则积分。</p>
-                        </div>
-                        <div class="toolbar-row toolbar-row--wrap">
-                            <button type="button" class="ghost-button ghost-button--small" :disabled="recordsLoading"
-                                @click="emit('refresh-records')">
-                                刷新记录
-                            </button>
-                            <button type="button" class="ghost-button ghost-button--small" :disabled="!canMutatePoints"
-                                @click="emit('undo-latest-record')">
-                                撤回最近一次
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="records-filter-grid">
-                        <label class="field-block">
-                            <span class="field-label">学生搜索</span>
-                            <div class="search-box">
-                                <i-ep-search class="search-box__icon" />
-                                <input v-model="currentHistoryKeyword" type="search" class="search-box__input"
-                                    placeholder="搜索学生姓名">
-                            </div>
-                        </label>
-
-                        <div class="field-block">
-                            <span class="field-label">记录类型</span>
-                            <div class="segmented-control">
-                                <button v-for="item in historySignOptions" :key="item.value" type="button"
-                                    class="chip-button" :class="{ 'is-active': historySign === item.value }"
-                                    @click="emit('select-history-sign', item.value)">
-                                    {{ item.label }}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div v-if="historyRecords.length > 0" class="record-list" v-loading="recordsLoading">
-                        <article v-for="record in historyRecords" :key="record.id" class="record-item">
-                            <div class="record-item__score"
-                                :class="inferRecordDelta(record) < 0 ? 'is-minus' : 'is-plus'">
-                                {{ inferRecordDelta(record) > 0 ? "+" : "" }}{{ inferRecordDelta(record) }}
-                            </div>
-
-                            <div class="record-item__content">
-                                <div class="record-item__summary">
-                                    <strong>{{ record.rule_desc?.trim() || "未命名积分规则" }}</strong>
-                                    <span class="record-item__student">{{ record.student_name?.trim() || `学生
-                                        ${record.student_id || "-"}` }}</span>
-                                </div>
-                                <div class="record-item__meta">
-                                    <span>{{ getRecordSourceLabel(record) }}</span>
-                                    <span>{{ getRecordTimeLabel(record) }}</span>
-                                </div>
-                            </div>
-
-                            <button type="button" class="text-button" :disabled="!canUndoRecord(record)"
-                                @click="emit('undo-record', record)">
-                                撤回
-                            </button>
-                        </article>
-                    </div>
-
-                    <div v-else class="empty-state">
-                        <strong>暂无积分记录</strong>
-                        <p>当课堂开始进行加减分、导入积分或商城兑换后，会在这里看到完整记录。</p>
-                    </div>
-
-                    <div v-if="historyPageCount > 1" class="pagination-row">
-                        <button type="button" class="ghost-button ghost-button--small"
-                            :disabled="historyPage <= 1 || recordsLoading" @click="emit('go-prev-history-page')">
-                            上一页
+                    <div class="toolbar-row toolbar-row--wrap">
+                        <button type="button" class="ghost-button ghost-button--small" @click="toggleRankingMask">
+                            <i-ep-view aria-hidden="true" />
+                            <span>{{ isRankingMasked ? "显示" : "隐藏" }}</span>
                         </button>
-                        <span class="pagination-row__label">{{ `第 ${historyPage} / ${historyPageCount} 页` }}</span>
-                        <button type="button" class="ghost-button ghost-button--small"
-                            :disabled="historyPage >= historyPageCount || recordsLoading"
-                            @click="emit('go-next-history-page')">
-                            下一页
+
+                        <span class="toolbar-divider" aria-hidden="true"></span>
+
+                        <div class="segmented-control">
+                            <button type="button" class="chip-button"
+                                :class="{ 'is-active': activeRankingTab === 'total' }"
+                                @click="handleSelectRankingTab('total')">
+                                总榜
+                            </button>
+                            <button type="button" class="chip-button"
+                                :class="{ 'is-active': activeRankingTab === 'item' }"
+                                @click="handleSelectRankingTab('item')">
+                                单项榜
+                            </button>
+                        </div>
+
+                        <span class="toolbar-divider" aria-hidden="true"></span>
+
+                        <div class="segmented-control">
+                            <button v-for="item in rankingRangeOptions" :key="item.value" type="button"
+                                class="chip-button" :class="{ 'is-active': currentRankingTimeRange === item.value }"
+                                @click="currentRankingTimeRange = item.value">
+                                {{ item.label }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="activeRankingTab === 'item'" class="ranking-select-row">
+                    <label class="field-block">
+                        <span class="field-label">积分项</span>
+                        <el-select v-model="currentSelectedRankingRuleId" placeholder="请选择积分项" class="field-full">
+                            <el-option v-for="rule in ruleOptions" :key="rule.id"
+                                :label="`${rule.groupName ? `${rule.groupName} / ` : ''}${rule.name}`"
+                                :value="rule.id" />
+                        </el-select>
+                    </label>
+                </div>
+
+                <div v-if="rankingItems.length > 0" class="ranking-list" v-loading="rankingLoading">
+                    <article v-for="item in rankingItems" :key="item.id" class="ranking-item"
+                        :class="item.rankClass">
+                        <div class="ranking-item__rank" :class="item.rankClass">{{ item.rankLabel }}</div>
+                        <div class="ranking-item__content">
+                            <div class="ranking-item__name">
+                                <i-ep-trophy v-if="item.rankClass === 'is-top-1'" class="ranking-item__icon"
+                                    :class="item.rankClass" />
+                                <i-ep-medal v-else-if="item.rankClass === 'is-top-2'" class="ranking-item__icon"
+                                    :class="item.rankClass" />
+                                <i-ep-star-filled v-else-if="item.rankClass === 'is-top-3'"
+                                    class="ranking-item__icon" :class="item.rankClass" />
+                                <strong>{{ getRankingNameLabel(item.name) }}</strong>
+                            </div>
+                        </div>
+                        <div class="ranking-item__score">
+                            <span>{{ getRankingScoreLabel(item.scoreLabel) }}</span>
+                        </div>
+                    </article>
+                </div>
+
+                <div v-else class="empty-state">
+                    <strong>暂无排行榜数据</strong>
+                    <p>{{ activeRankingTab === "item" ? "请先选择一个积分项，或等待该积分项产生记录。" : "当前范围内还没有可展示的积分排行。" }}</p>
+                </div>
+            </article>
+
+            <article v-else key="records" class="panel-surface records-panel">
+                <div class="panel-head panel-head--stack">
+                    <div>
+                        <h3>积分规则记录</h3>
+                        <p>保留课堂最新操作记录，并支持在当前页快速撤回最近一次规则积分。</p>
+                    </div>
+                    <div class="toolbar-row toolbar-row--wrap">
+                        <button type="button" class="ghost-button ghost-button--small" :disabled="recordsLoading"
+                            @click="emit('refresh-records')">
+                            刷新记录
+                        </button>
+                        <button type="button" class="ghost-button ghost-button--small" :disabled="!canMutatePoints"
+                            @click="emit('undo-latest-record')">
+                            撤回最近一次
                         </button>
                     </div>
-                </article>
-            </Transition>
+                </div>
+
+                <div class="records-filter-grid">
+                    <label class="field-block">
+                        <span class="field-label">学生搜索</span>
+                        <div class="search-box">
+                            <i-ep-search class="search-box__icon" />
+                            <input v-model="currentHistoryKeyword" type="search" class="search-box__input"
+                                placeholder="搜索学生姓名">
+                        </div>
+                    </label>
+
+                    <div class="field-block">
+                        <span class="field-label">记录类型</span>
+                        <div class="segmented-control">
+                            <button v-for="item in historySignOptions" :key="item.value" type="button"
+                                class="chip-button" :class="{ 'is-active': historySign === item.value }"
+                                @click="emit('select-history-sign', item.value)">
+                                {{ item.label }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="historyRecords.length > 0" class="record-list" v-loading="recordsLoading">
+                    <article v-for="record in historyRecords" :key="record.id" class="record-item">
+                        <div class="record-item__score"
+                            :class="inferRecordDelta(record) < 0 ? 'is-minus' : 'is-plus'">
+                            {{ inferRecordDelta(record) > 0 ? "+" : "" }}{{ inferRecordDelta(record) }}
+                        </div>
+
+                        <div class="record-item__content">
+                            <div class="record-item__summary">
+                                <strong>{{ record.rule_desc?.trim() || "未命名积分规则" }}</strong>
+                                <span class="record-item__student">{{ record.student_name?.trim() || `学生
+                                    ${record.student_id || "-"}` }}</span>
+                            </div>
+                            <div class="record-item__meta">
+                                <span>{{ getRecordSourceLabel(record) }}</span>
+                                <span>{{ getRecordTimeLabel(record) }}</span>
+                            </div>
+                        </div>
+
+                        <button type="button" class="text-button" :disabled="!canUndoRecord(record)"
+                            @click="emit('undo-record', record)">
+                            撤回
+                        </button>
+                    </article>
+                </div>
+
+                <div v-else class="empty-state">
+                    <strong>暂无积分记录</strong>
+                    <p>当课堂开始进行加减分、导入积分或商城兑换后，会在这里看到完整记录。</p>
+                </div>
+
+                <div v-if="historyPageCount > 1" class="pagination-row">
+                    <button type="button" class="ghost-button ghost-button--small"
+                        :disabled="historyPage <= 1 || recordsLoading" @click="emit('go-prev-history-page')">
+                        上一页
+                    </button>
+                    <span class="pagination-row__label">{{ `第 ${historyPage} / ${historyPageCount} 页` }}</span>
+                    <button type="button" class="ghost-button ghost-button--small"
+                        :disabled="historyPage >= historyPageCount || recordsLoading"
+                        @click="emit('go-next-history-page')">
+                        下一页
+                    </button>
+                </div>
+            </article>
         </section>
     </section>
 </template>
@@ -654,17 +652,6 @@ function toggleRankingMask(): void {
 .pagination-row__label {
     color: var(--ta-text-tertiary);
     font-size: 13px;
-}
-
-.content-panel-enter-active,
-.content-panel-leave-active {
-    transition: opacity 180ms ease, transform 210ms cubic-bezier(.2, .8, .2, 1);
-}
-
-.content-panel-enter-from,
-.content-panel-leave-to {
-    opacity: 0;
-    transform: translateY(5px);
 }
 
 @media (max-width: 660px) {

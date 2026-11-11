@@ -1,7 +1,7 @@
 <template>
     <article class="students-list-panel">
         <div class="panel-head">
-            <div>
+            <div class="panel-title">
                 <h3>学生名册</h3>
                 <p class="panel-description">
                     {{ rosterDescription }}
@@ -171,7 +171,7 @@ const rosterDescription = computed(() => {
     }
     return props.layoutMode === "group"
         ? "点击分组卡片可全选该组学生，再次点击可取消该组选择；组内学生仍支持单独选择。"
-        : "选择学生后即可加减分；更多菜单中可编辑或删除学生。"
+        : "选择学生即可加减分"
 })
 
 const emit = defineEmits<StudentsListPanelEmits>()
@@ -347,28 +347,36 @@ function formatAveragePoints(points: number): string {
 
 .roster-controls {
     justify-content: space-between;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
 }
 
 .panel-head {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 14px;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
+}
+
+.panel-title {
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .panel-head h3 {
     margin: 0;
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 600;
     letter-spacing: -0.015em;
 }
 
 .panel-description {
-    margin: 5px 0 0;
+    margin: 0;
     color: var(--ta-text-tertiary);
-    font-size: 14px;
+    font-size: 12px;
     line-height: 1.5;
 }
 
@@ -390,6 +398,16 @@ function formatAveragePoints(points: number): string {
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
+    transition: background-color 140ms ease, transform 100ms ease-out;
+}
+
+.selection-toggle:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+}
+
+.selection-toggle:not(:disabled):active {
+    transform: scale(0.97);
 }
 
 .selection-toggle.is-active {
@@ -406,7 +424,7 @@ function formatAveragePoints(points: number): string {
 .student-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
-    gap: 10px;
+    gap: 12px;
 }
 
 .group-card-grid {
@@ -426,10 +444,6 @@ function formatAveragePoints(points: number): string {
     transition: border-color 140ms ease, box-shadow 140ms ease, transform 100ms ease;
 }
 
-.student-group-card:hover {
-    border-color: rgba(24, 116, 100, 0.28);
-}
-
 .student-group-card:active {
     transform: scale(0.995);
 }
@@ -441,10 +455,6 @@ function formatAveragePoints(points: number): string {
 
 .student-group-card.is-empty {
     cursor: default;
-}
-
-.student-group-card.is-empty:hover {
-    border-color: var(--ta-line);
 }
 
 .student-group-card.is-empty:active {
@@ -631,6 +641,20 @@ function formatAveragePoints(points: number): string {
 
     .index-container {
         display: none;
+    }
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .student-group-card:not(.is-empty):hover {
+        border-color: rgba(24, 116, 100, 0.28);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .selection-toggle,
+    .student-group-card {
+        transition: none;
+        transform: none !important;
     }
 }
 </style>

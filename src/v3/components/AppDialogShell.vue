@@ -175,11 +175,11 @@ const visible = computed({
 
 @media (max-width: 660px) {
     :global(.app-dialog-shell__overlay.dialog-fade-enter-active .el-overlay-dialog) {
-        animation: app-sheet-enter 200ms ease-out;
+        animation: app-sheet-enter 200ms cubic-bezier(0.23, 1, 0.32, 1);
     }
 
     :global(.app-dialog-shell__overlay.dialog-fade-leave-active .el-overlay-dialog) {
-        animation: app-sheet-exit 160ms ease-in;
+        animation: app-sheet-exit 140ms cubic-bezier(0.23, 1, 0.32, 1);
     }
 
     :global(.app-dialog-shell__overlay .el-overlay-dialog) {

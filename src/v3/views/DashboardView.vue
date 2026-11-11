@@ -1,17 +1,13 @@
 <template>
     <div class="dashboard-view">
-        <PageHeader eyebrow="CLASS OVERVIEW" title="班级总览" description="查看当前班级的课堂数据与状态摘要。" />
-        <section class="dashboard-context" aria-label="班级总览">
-            <div class="hero-status">
-                <span v-for="item in heroStatusChips" :key="item.id" class="status-chip" :class="item.toneClass">
-                    {{ item.label }}
-                </span>
-            </div>
-        </section>
+        <PageHeader title="班级总览" description="查看当前班级的课堂数据与状态摘要。" />
 
         <section class="summary-grid">
-            <article v-for="item in summaryItems" :key="item.id" class="summary-card" :class="item.toneClass">
-                <span>{{ item.label }}</span>
+            <article v-for="item in summaryItems" :key="item.id" class="summary-card">
+                <div class="summary-card__label">
+                    <span>{{ item.label }}</span>
+                    <span class="summary-card__icon" aria-hidden="true"><component :is="item.icon" /></span>
+                </div>
                 <strong>{{ item.value }}</strong>
                 <small>{{ item.helper }}</small>
             </article>
@@ -33,14 +29,8 @@ import { dashboardApi } from "@/api/dashboard";
 import { useCacheStore } from "@/stores/cacheStore";
 import type { DashboardStatisticsResp } from "@/types/dashboard";
 import { AGENT_ACTION_SUCCEEDED_EVENT, type AgentActionSucceededDetail } from "@/utils/agentEvents";
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
-
-/** 定义状态标签结构。 */
-interface ChipItem {
-    id: string
-    label: string
-    toneClass?: string
-}
+import { Clock, Grid, Present, User } from "@element-plus/icons-vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch, type Component } from "vue";
 
 /** 定义摘要卡片结构。 */
 interface SummaryItem {
@@ -48,7 +38,7 @@ interface SummaryItem {
     label: string
     value: string
     helper: string
-    toneClass: string
+    icon: Component
 }
 
 /** 定义积分摘要项的键名。 */
@@ -59,7 +49,7 @@ interface SummaryCardConfig {
     id: SummaryMetricKey
     label: string
     helper: string
-    toneClass: string
+    icon: Component
 }
 
 /** 定义摘要接口数据结构。 */
@@ -69,17 +59,15 @@ interface SummaryMetricData {
 
 /** 定义首页接口数据结构。 */
 interface DashboardSummaryResponseData {
-    current_term_name: string
-    operation_status_text: string
     summary: Record<SummaryMetricKey, SummaryMetricData>
 }
 
 /** 提供摘要卡片的展示配置。 */
 const summaryCardConfigs: SummaryCardConfig[] = [
-    { id: "students", label: "学生人数", helper: "已完成名册导入", toneClass: "summary-card--blue" },
-    { id: "groups", label: "分组数量", helper: "支持课堂筛选", toneClass: "summary-card--purple" },
-    { id: "records", label: "积分记录", helper: "支持撤回最近一次", toneClass: "summary-card--gold" },
-    { id: "shop", label: "商城奖品", helper: "可用于课堂激励", toneClass: "summary-card--green" }
+    { id: "students", label: "学生人数", helper: "已完成名册导入", icon: User },
+    { id: "groups", label: "分组数量", helper: "支持课堂筛选", icon: Grid },
+    { id: "records", label: "积分记录", helper: "支持撤回最近一次", icon: Clock },
+    { id: "shop", label: "商城奖品", helper: "可用于课堂激励", icon: Present }
 ]
 
 const cacheStore = useCacheStore()
@@ -105,8 +93,6 @@ onBeforeUnmount(() => {
 /** 创建首页空白摘要数据。 */
 function createEmptyDashboardSummaryResponse(): DashboardSummaryResponseData {
     return {
-        current_term_name: "未知学期",
-        operation_status_text: "未知",
         summary: {
             students: { value: 0 },
             groups: { value: 0 },
@@ -121,8 +107,6 @@ const dashboardSummaryResponse = reactive<DashboardSummaryResponseData>(createEm
 
 /** 将接口返回的首页摘要数据写入页面状态。 */
 function applyDashboardSummaryResponse(data?: DashboardStatisticsResp): void {
-    dashboardSummaryResponse.current_term_name = data?.current_term_name ?? "未知学期"
-    dashboardSummaryResponse.operation_status_text = data?.operation_status_text ?? "未知"
     dashboardSummaryResponse.summary.students.value = data?.summary?.students?.value ?? 0
     dashboardSummaryResponse.summary.groups.value = data?.summary?.groups?.value ?? 0
     dashboardSummaryResponse.summary.records.value = data?.summary?.records?.value ?? 0
@@ -152,12 +136,6 @@ async function loadDashboardSummary(): Promise<void> {
     }
 }
 
-/** 顶部状态标签。 */
-const heroStatusChips = computed<ChipItem[]>(() => [
-    { id: "current-term", label: `当前学期：${dashboardSummaryResponse.current_term_name}`, toneClass: "status-chip--sky" },
-    { id: "current-state", label: `当前状态：${dashboardSummaryResponse.operation_status_text}`, toneClass: "status-chip--green" }
-])
-
 /** 摘要卡片。 */
 const summaryItems = computed<SummaryItem[]>(() => {
     return summaryCardConfigs.map((config) => {
@@ -168,7 +146,7 @@ const summaryItems = computed<SummaryItem[]>(() => {
             label: config.label,
             value: String(summaryData.value),
             helper: config.helper,
-            toneClass: config.toneClass
+            icon: config.icon
         }
     })
 })
@@ -182,99 +160,74 @@ watch([currentClassId, currentSemesterId], async () => {
 <style scoped>
 .dashboard-view {
     display: grid;
-    gap: 20px;
-}
-
-.dashboard-context {
-    min-height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-}
-
-.hero-status {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 7px;
-    flex-wrap: wrap;
-}
-
-.status-chip {
-    min-height: 26px;
-    padding: 0 9px;
-    display: inline-flex;
-    align-items: center;
-    border-radius: 6px;
-    color: var(--ta-text-secondary);
-    background: var(--ta-surface-muted);
-    font-size: 12px;
-    font-weight: 600;
-    white-space: nowrap;
-}
-
-.status-chip--sky {
-    color: var(--ta-blue);
-    background: var(--ta-blue-soft);
-}
-
-.status-chip--green {
-    color: var(--ta-green);
-    background: var(--ta-green-soft);
+    gap: 24px;
 }
 
 .summary-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
+    gap: 16px;
 }
 
 .summary-card {
-    min-height: 112px;
+    min-height: 130px;
     padding: 19px 22px;
     position: relative;
     overflow: hidden;
     border: 1px solid var(--ta-line);
-    border-radius: var(--ta-radius-medium);
+    border-radius: 14px;
     background: var(--ta-surface-solid);
     box-shadow: var(--ta-shadow-1);
 }
 
-.summary-card span,
-.summary-card small {
-    display: block;
-    position: relative;
-    z-index: 1;
+.summary-card__label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--ta-text-secondary);
+    font-size: 13px;
 }
 
-.summary-card span {
-    color: var(--ta-text-tertiary);
-    font-size: 13px;
+.summary-card__icon {
+    width: 27px;
+    height: 27px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border-radius: 7px;
+    color: var(--ta-green);
+    background: var(--ta-surface-muted);
+}
+
+.summary-card__icon svg {
+    width: 16px;
+    height: 16px;
 }
 
 .summary-card strong {
     display: block;
-    position: relative;
-    z-index: 1;
-    margin-top: 8px;
-    font-size: 28px;
-    line-height: 1;
+    margin-top: 4px;
+    font-size: 34px;
+    font-weight: 650;
+    line-height: 1.15;
     letter-spacing: -0.025em;
     font-variant-numeric: tabular-nums;
 }
 
 .summary-card small {
-    margin-top: 9px;
+    display: block;
+    margin-top: 6px;
     color: var(--ta-text-secondary);
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.4;
 }
 
 .panel-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px;
+    align-items: start;
+    gap: 22px;
 }
 
 @media (max-width: 1080px) {
@@ -284,13 +237,13 @@ watch([currentClassId, currentSemesterId], async () => {
 }
 
 @media (max-width: 760px) {
-    .dashboard-context {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
     .summary-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .summary-card {
+        padding: 16px;
     }
 }
 </style>

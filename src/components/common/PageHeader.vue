@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineProps<{
-    eyebrow: string
+    eyebrow?: string
     title: string
     description: string
 }>()
@@ -9,7 +9,6 @@ defineProps<{
 <template>
     <header class="page-header">
         <div class="page-header__copy">
-            <span class="page-header__eyebrow">{{ eyebrow }}</span>
             <h1>{{ title }}</h1>
             <p>{{ description }}</p>
         </div>
@@ -22,39 +21,29 @@ defineProps<{
 <style scoped>
 .page-header {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: space-between;
     gap: 20px;
-    padding-bottom: 8px;
 }
 
 .page-header__copy {
     min-width: 0;
 }
 
-.page-header__eyebrow {
-    display: block;
-    margin-bottom: 9px;
-    color: var(--ta-blue);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.8px;
-}
-
 h1 {
     margin: 0;
     color: var(--ta-text);
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 650;
     letter-spacing: -0.8px;
-    line-height: 1.4;
+    line-height: 1.25;
 }
 
 p {
-    margin: 9px 0 0;
+    margin: 8px 0 0;
     color: var(--ta-text-secondary);
     font-size: 13px;
-    line-height: 1.8;
+    line-height: 1.6;
 }
 
 .page-header__actions {

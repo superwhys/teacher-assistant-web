@@ -1,8 +1,9 @@
 <template>
     <article class="panel-surface side-card side-card--selected">
         <div class="panel-head">
-            <div>
+            <div class="panel-head__title">
                 <h3>{{ title }}</h3>
+                <span class="status-chip status-chip--sky" :title="statusLabel">{{ statusLabel }}</span>
             </div>
             <div class="panel-head__actions">
                 <button
@@ -17,7 +18,6 @@
                     @click="emit('locate-student', selectedStudent.id)">
                     <i-ep-location />
                 </button>
-                <span class="status-chip status-chip--sky" :title="statusLabel">{{ statusLabel }}</span>
             </div>
         </div>
 
@@ -43,7 +43,7 @@
                 <section class="points-actions-card">
                     <div class="points-actions-card__head">
                         <span>积分操作</span>
-                        <strong>{{ isArchivedSemester ? "归档学期不支持积分操作" : "支持当前学生单独加分或扣分" }}</strong>
+                        <strong>{{ isArchivedSemester ? "归档学期不支持积分操作" : "选择加分或扣分，再选择积分项" }}</strong>
                     </div>
 
                     <div class="points-actions-grid">
@@ -88,29 +88,22 @@
             </template>
 
             <template v-else-if="selectedStudents.length > 1">
-                <div class="detail-list">
-                    <div class="detail-item">
-                        <span>当前已选择</span>
-                        <strong>{{ selectedStudents.length }} 名学生</strong>
-                    </div>
-                </div>
-
                 <section class="points-actions-card">
                     <div class="points-actions-card__head">
-                        <span>积分操作</span>
-                        <strong>{{ isArchivedSemester ? "归档学期不支持积分操作" : `支持当前选中的 ${selectedStudents.length} 名学生批量加分或扣分` }}</strong>
+                        <strong>为选中的 {{ selectedStudents.length }} 名学生操作</strong>
+                        <span>{{ isArchivedSemester ? "归档学期不支持积分操作" : "选择加分或扣分，再选择积分项" }}</span>
                     </div>
 
                     <div class="points-actions-grid">
                         <button type="button" class="selection-points-button selection-points-button--plus" :disabled="!canWrite || (isPointsActionDisabled)"
                             @click="emit('open-points', { tab: 'plus' })">
                             <i-ep-plus />
-                            <span>{{ pointsApplying ? "处理中..." : `批量加分（${selectedStudents.length}）` }}</span>
+                            <span>{{ pointsApplying ? "处理中..." : "批量加分" }}</span>
                         </button>
                         <button type="button" class="selection-points-button selection-points-button--minus" :disabled="!canWrite || (isPointsActionDisabled)"
                             @click="emit('open-points', { tab: 'minus' })">
                             <i-ep-minus />
-                            <span>{{ pointsApplying ? "处理中..." : `批量扣分（${selectedStudents.length}）` }}</span>
+                            <span>{{ pointsApplying ? "处理中..." : "批量扣分" }}</span>
                         </button>
                     </div>
                 </section>
@@ -127,8 +120,7 @@
                             </div>
                         </div>
                         <div class="selected-name-item__actions">
-                            <span class="selected-name-item__badge">{{ student.groupName }}</span>
-                            <button type="button" class="selected-name-item__remove" title="移除当前学生"
+                            <button type="button" class="selected-name-item__remove" title="移除当前学生" :aria-label="`移除${student.name}`"
                                 @click="emit('remove-selected-student', student.id)">
                                 <i-ep-close />
                             </button>
@@ -139,7 +131,7 @@
 
             <div v-else class="side-empty">
                 <strong>暂无选中学生</strong>
-                <p>点击左侧学生卡片后，这里会显示单个学生详情，或展示当前多选的学生名单。</p>
+                <p>选择学生以查看详情或批量加减分。</p>
             </div>
         </div>
     </article>
@@ -307,6 +299,7 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
 }
 
 .panel-head,
+.panel-head__title,
 .panel-head__actions,
 .selected-student,
 .detail-item,
@@ -324,12 +317,18 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
     justify-content: space-between;
     gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 14px;
+    margin-bottom: 18px;
+}
+
+.panel-head__title {
+    min-width: 0;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .panel-head h3 {
     margin: 0;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
     white-space: nowrap;
     letter-spacing: -0.015em;
@@ -352,8 +351,7 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
 
 .clear-action-button {
     padding: 4px 0;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 12px;
 }
 
 .icon-action-button,
@@ -365,7 +363,7 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
     place-items: center;
     border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
-    background: var(--ta-surface-muted);
+    background: transparent;
 }
 
 .icon-action-button svg,
@@ -375,14 +373,14 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
 }
 
 .status-chip {
-    min-height: 26px;
-    padding: 0 9px;
+    min-height: 21px;
+    padding: 0 7px;
     display: inline-flex;
     align-items: center;
     border-radius: 6px;
     color: var(--ta-blue);
     background: var(--ta-blue-soft);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     white-space: nowrap;
     max-width: 120px;
@@ -413,22 +411,22 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
     flex: 0 0 auto;
     display: grid;
     place-items: center;
-    color: var(--ta-blue);
-    background: var(--ta-blue-soft);
+    color: #557b61;
+    background: #edf3ee;
     font-weight: 700;
 }
 
 .selected-student__avatar {
     width: 48px;
     height: 48px;
-    border-radius: var(--ta-radius-large);
+    border-radius: 50%;
     font-size: 17px;
 }
 
 .selected-name-item__avatar {
     width: 36px;
     height: 36px;
-    border-radius: 11px;
+    border-radius: 50%;
     font-size: 14px;
 }
 
@@ -448,7 +446,7 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
 .recent-record-item p,
 .side-empty p {
     margin: 3px 0 0;
-    color: var(--ta-text-tertiary);
+    color: var(--ta-text-secondary);
     font-size: 12px;
     line-height: 1.45;
 }
@@ -478,7 +476,10 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
 }
 
 .points-actions-card {
-    padding: 0;
+    padding: 14px;
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-medium);
+    background: var(--ta-surface-muted);
 }
 
 .points-actions-card__head span,
@@ -487,13 +488,14 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
 }
 
 .points-actions-card__head span {
-    color: var(--ta-text-tertiary);
+    color: var(--ta-text-secondary);
     font-size: 12px;
+    line-height: 1.5;
 }
 
 .points-actions-card__head strong {
-    margin-top: 4px;
-    color: var(--ta-text-secondary);
+    margin-block: 3px;
+    color: var(--ta-text);
     font-size: 13px;
     line-height: 1.45;
 }
@@ -504,7 +506,7 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
 }
 
 .selection-points-button {
-    min-height: 38px;
+    min-height: 42px;
     padding: 0 12px;
     flex: 1 1 0;
     display: inline-flex;
@@ -516,7 +518,7 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
     font-size: 13px;
     font-weight: 620;
     cursor: pointer;
-    transition: background-color 140ms ease, transform 100ms ease;
+    transition: background-color 140ms ease, transform 100ms ease-out;
 }
 
 .selection-points-button:not(:disabled):active {
@@ -541,8 +543,8 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
 }
 
 .selection-points-button--minus {
-    border: 1px solid rgba(24, 116, 100, 0.2);
-    color: var(--ta-blue);
+    border: 1px solid rgba(199, 91, 85, 0.2);
+    color: var(--ta-red);
     background: var(--ta-surface-solid);
 }
 
@@ -617,8 +619,8 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
 }
 
 .selected-name-item {
-    min-height: 56px;
-    padding: 8px 0;
+    min-height: 68px;
+    padding: 12px 0;
     justify-content: space-between;
     gap: 10px;
     border-top: 1px solid var(--ta-line);
@@ -632,17 +634,6 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
 .selected-name-item__actions {
     flex: 0 0 auto;
     gap: 5px;
-}
-
-.selected-name-item__badge {
-    min-height: 23px;
-    padding: 0 7px;
-    display: inline-flex;
-    align-items: center;
-    border-radius: 6px;
-    color: var(--ta-text-tertiary);
-    background: var(--ta-surface-muted);
-    font-size: 11px;
 }
 
 @media (max-width: 660px) {
@@ -668,6 +659,28 @@ watch(() => [props.classId, props.selectedStudent?.id, props.pointsApplying] as 
 
     .selected-name-item__remove {
         min-width: 44px;
+    }
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .selection-points-button--plus:not(:disabled):hover {
+        background: var(--ta-blue-hover);
+    }
+
+    .selection-points-button--minus:not(:disabled):hover {
+        background: var(--ta-red-soft);
+    }
+
+    .icon-action-button:hover,
+    .selected-name-item__remove:hover {
+        background: var(--ta-blue-soft);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .selection-points-button {
+        transition: none;
+        transform: none !important;
     }
 }
 </style>

@@ -54,6 +54,10 @@ async function save(): Promise<void> {
     const current = () => !disposed && version === generation && visible.value
         && token === cacheStore.token && userID === cacheStore.profile?.id
     if (!token || !userID || !current()) return
+    if (name.value.trim() === cacheStore.profile?.name.trim()) {
+        error.value = '新姓名不能与原姓名相同，请修改后再保存。'
+        return
+    }
 
     saving.value = true
     try {

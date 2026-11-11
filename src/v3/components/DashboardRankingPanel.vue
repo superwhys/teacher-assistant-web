@@ -5,22 +5,27 @@
                 <h3>排行榜</h3>
             </div>
             <div class="panel-actions">
-                <button class="text-button" type="button" @click="toggleRankingPreviewMask">
+                <button class="text-button" type="button" :aria-pressed="isRankingPreviewMasked"
+                    @click="toggleRankingPreviewMask">
                     <i-ep-view aria-hidden="true" />
                     <span>{{ isRankingPreviewMasked ? "显示" : "隐藏" }}</span>
                 </button>
-                <button class="text-button" type="button" @click="goToPointsPage">查看完整排行榜</button>
+                <button class="text-button" type="button" @click="goToPointsPage">
+                    查看完整排行榜<i-ep-arrow-right aria-hidden="true" />
+                </button>
             </div>
         </div>
 
         <div class="ranking-filter">
-            <div class="ranking-filter__group" role="tablist" aria-label="排行榜周期">
+            <div class="ranking-filter__group" role="group" aria-label="排行榜周期">
                 <button v-for="item in rankingTimeRangeOptions" :key="item.value" type="button"
                     class="ranking-filter__button" :class="{ 'is-active': rankingTimeRange === item.value }"
+                    :aria-pressed="rankingTimeRange === item.value"
                     @click="rankingTimeRange = item.value">
                     {{ item.label }}
                 </button>
             </div>
+            <span class="ranking-filter__label">总积分</span>
         </div>
 
         <div v-if="rankingPreview.length === 0" class="ranking-empty-state">
@@ -30,10 +35,11 @@
 
         <div v-else class="preview-list">
             <article v-for="item in rankingPreview" :key="item.rank" class="preview-item">
-                <div>
-                    <strong>{{ item.title }}</strong>
-                </div>
-                <span>{{ item.value }}</span>
+                <span class="preview-rank" :class="{ 'is-top': item.rank <= 3, 'is-first': item.rank === 1 }">
+                    {{ String(item.rank).padStart(2, "0") }}
+                </span>
+                <strong class="preview-name" :title="item.title">{{ item.title }}</strong>
+                <span class="preview-score">{{ item.value }}</span>
             </article>
         </div>
     </article>
@@ -115,7 +121,7 @@ const rankingPreview = computed<PreviewItem[]>(() => {
 
 /** 格式化排行榜积分展示文本。 */
 function formatRankingValue(totalPoints: number): string {
-    return `积分 ${totalPoints}`
+    return String(totalPoints)
 }
 
 /** 返回排行榜脱敏后的展示文本。 */
@@ -189,24 +195,24 @@ watch(() => [props.activeClassId, props.currentSemesterId], async () => {
 <style scoped>
 .panel-card {
     min-width: 0;
-    padding: 20px;
+    padding: 22px;
     border: 1px solid var(--ta-line);
-    border-radius: var(--ta-radius-large);
+    border-radius: 14px;
     background: var(--ta-surface);
     box-shadow: var(--ta-shadow-1);
 }
 
 .panel-head {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 14px;
-    margin-bottom: 14px;
+    margin-bottom: 18px;
 }
 
 .panel-head h3 {
     margin: 0;
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 600;
     letter-spacing: -0.015em;
 }
@@ -228,14 +234,11 @@ watch(() => [props.activeClassId, props.currentSemesterId], async () => {
     border: 0;
     color: var(--ta-blue);
     background: transparent;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     line-height: 1.2;
     cursor: pointer;
-}
-
-.text-button:hover {
-    color: var(--ta-blue-hover);
+    transition: color 140ms ease;
 }
 
 .text-button svg {
@@ -244,7 +247,16 @@ watch(() => [props.activeClassId, props.currentSemesterId], async () => {
 }
 
 .ranking-filter {
-    margin-bottom: 10px;
+    margin-bottom: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.ranking-filter__label {
+    color: var(--ta-text-tertiary);
+    font-size: 12px;
 }
 
 .ranking-filter__group {
@@ -253,26 +265,27 @@ watch(() => [props.activeClassId, props.currentSemesterId], async () => {
     display: inline-flex;
     align-items: center;
     gap: 2px;
-    border-radius: 10px;
+    border: 1px solid var(--ta-line);
+    border-radius: 9px;
     background: var(--ta-surface-muted);
 }
 
 .ranking-filter__button {
-    min-width: 58px;
+    min-width: 49px;
     min-height: 28px;
     padding: 0 10px;
     border: 0;
     border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
     background: transparent;
-    font-size: 13px;
+    font-size: 12px;
     cursor: pointer;
 }
 
 .ranking-filter__button.is-active {
     color: var(--ta-blue);
-    background: var(--ta-blue-soft);
-    box-shadow: none;
+    background: var(--ta-surface-solid);
+    box-shadow: 0 1px 3px #243a2e0d;
     font-weight: 620;
 }
 
@@ -281,10 +294,10 @@ watch(() => [props.activeClassId, props.currentSemesterId], async () => {
 }
 
 .preview-item {
-    min-height: 54px;
-    padding: 10px 2px;
+    min-height: 47px;
+    padding: 9px 0;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 22px minmax(0, 1fr) auto;
     align-items: center;
     gap: 12px;
     border-top: 1px solid var(--ta-line);
@@ -294,31 +307,41 @@ watch(() => [props.activeClassId, props.currentSemesterId], async () => {
     border-top: 0;
 }
 
-.preview-item strong {
-    display: block;
-    font-size: 15px;
-}
-
-.preview-item p {
-    margin: 3px 0 0;
+.preview-rank {
+    min-height: 24px;
+    display: grid;
+    place-items: center;
+    border-radius: 6px;
     color: var(--ta-text-tertiary);
-    font-size: 13px;
-    line-height: 1.4;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
 }
 
-.preview-item > span {
-    color: var(--ta-text-secondary);
-    font-size: 15px;
-    font-weight: 650;
-    white-space: nowrap;
-}
-
-.preview-item > span.is-positive {
+.preview-rank.is-top {
     color: var(--ta-green);
+    background: var(--ta-green-soft);
 }
 
-.preview-item > span.is-negative {
-    color: var(--ta-red);
+.preview-rank.is-first {
+    color: var(--ta-orange);
+    background: var(--ta-orange-soft);
+}
+
+.preview-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+    font-weight: 550;
+}
+
+.preview-score {
+    color: var(--ta-text);
+    font-size: 15px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
 
 .ranking-empty-state,
@@ -344,6 +367,12 @@ watch(() => [props.activeClassId, props.currentSemesterId], async () => {
 .empty-state p {
     margin: 0;
     font-size: 13px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .text-button:hover {
+        color: var(--ta-blue-hover);
+    }
 }
 
 @media (max-width: 660px) {

@@ -15,8 +15,9 @@
                 <label class="search-box">
                     <i-ep-search class="search-box__icon" aria-hidden="true" />
                     <input v-model="keyword" type="search" class="search-box__input" aria-label="搜索学生"
-                        placeholder="搜索姓名、拼音首字母；可用逗号隔开">
+                        aria-describedby="student-search-hint" placeholder="搜索姓名、拼音首字母">
                 </label>
+                <span id="student-search-hint" class="search-hint">多个姓名可用逗号隔开</span>
                 <el-dropdown v-if="supportsStudentGroups || canImportExport" trigger="click" placement="bottom-end">
                     <button type="button" class="students-manage-button" :disabled="!hasActiveClass">
                         <i-ep-operation aria-hidden="true" />
@@ -352,17 +353,6 @@ function getStudentPinyinInitials(name?: string): string {
     }
 }
 
-/** 为学生稳定分配一组相近的蓝色系卡片配色。 */
-function getStudentToneClass(studentId: number, studentName: string): string {
-    const palette = ["tone-sky", "tone-azure", "tone-blue", "tone-cyan", "tone-indigo"] as const
-    const toneSeed = Array.from(studentName).reduce(
-        (seed, character) => seed + (character.codePointAt(0) ?? 0),
-        studentId * 3
-    )
-
-    return palette[Math.abs(toneSeed) % palette.length] ?? "tone-blue"
-}
-
 /** 返回学生的标签集合。 */
 function getStudentTags(student: StudentDTO, groupName: string): string[] {
     const tags = new Set<string>()
@@ -449,7 +439,6 @@ function createStudentCardItem(student: StudentDTO): StudentCardItem | null {
         groupName: groupInfo.groupName,
         initials: getStudentInitials(studentName),
         tags: getStudentTags(student, groupInfo.groupName),
-        toneClass: getStudentToneClass(studentId, studentName),
         totalPoints: typeof student.total_points === "number" ? student.total_points : 0
     }
 }
@@ -1166,7 +1155,7 @@ watch(filteredStudents, () => {
 <style scoped>
 .students-view {
     display: grid;
-    gap: 20px;
+    gap: 18px;
 }
 
 .students-manage-button svg,
@@ -1180,7 +1169,7 @@ watch(filteredStudents, () => {
 .control-panel {
     min-width: 0;
     display: grid;
-    gap: 20px;
+    gap: 12px;
 }
 
 .control-toolbar {
@@ -1192,7 +1181,13 @@ watch(filteredStudents, () => {
 .search-box {
     position: relative;
     min-width: 0;
-    flex: 1;
+    flex: 0 1 420px;
+}
+
+.search-hint {
+    margin-right: auto;
+    color: var(--ta-text-tertiary);
+    font-size: 12px;
 }
 
 .search-box__icon {
@@ -1208,7 +1203,7 @@ watch(filteredStudents, () => {
 
 .search-box__input {
     width: 100%;
-    min-height: 36px;
+    min-height: 40px;
     padding: 0 12px 0 38px;
     border: 1px solid var(--ta-line-strong);
     border-radius: var(--ta-radius-small);
@@ -1244,7 +1239,7 @@ watch(filteredStudents, () => {
 }
 
 .students-manage-button {
-    min-height: 36px;
+    min-height: 40px;
     border: 1px solid var(--ta-line-strong);
     background: var(--ta-surface-solid);
 }
@@ -1276,7 +1271,8 @@ watch(filteredStudents, () => {
     display: inline-flex;
     gap: 2px;
     border-radius: var(--ta-radius-small);
-    background: var(--ta-blue-soft);
+    border: 1px solid var(--ta-line);
+    background: var(--ta-surface-solid);
 }
 
 .students-view-switch button {
@@ -1288,7 +1284,7 @@ watch(filteredStudents, () => {
 
 .students-view-switch button[aria-pressed="true"] {
     color: var(--ta-blue);
-    background: var(--ta-surface-solid);
+    background: var(--ta-blue-soft);
     box-shadow: none;
 }
 
@@ -1302,8 +1298,8 @@ watch(filteredStudents, () => {
     padding: 0 12px;
     border-radius: var(--ta-radius-small);
     color: var(--ta-text-secondary);
-    background: var(--ta-surface-solid);
-    box-shadow: inset 0 0 0 1px var(--ta-line-strong) !important;
+    background: transparent;
+    box-shadow: none !important;
     font-size: 13px;
 }
 
@@ -1374,7 +1370,7 @@ watch(filteredStudents, () => {
     min-width: 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 280px;
-    gap: 20px;
+    gap: 24px;
     align-items: start;
 }
 
@@ -1414,7 +1410,7 @@ watch(filteredStudents, () => {
 
 .students-points-button {
     border: 1px solid var(--ta-line-strong);
-    color: var(--ta-blue);
+    color: var(--ta-red);
     background: var(--ta-surface-solid);
 }
 
@@ -1444,6 +1440,14 @@ watch(filteredStudents, () => {
         padding-bottom: 76px;
     }
 
+    .search-box {
+        flex: 1;
+    }
+
+    .search-hint {
+        display: none;
+    }
+
     .search-box__input,
     .students-manage-button,
     .students-filter-button,
@@ -1462,6 +1466,16 @@ watch(filteredStudents, () => {
 
     .search-box__input {
         font-size: 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .students-manage-button,
+    .students-filter-button,
+    .students-view-switch button,
+    .students-mobile-actions button {
+        transition: none;
+        transform: none !important;
     }
 }
 </style>

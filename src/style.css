@@ -4,13 +4,13 @@ html:root {
   line-height: 1.5;
   font-weight: 400;
   color: #23352f;
-  background: #f5f7f6;
+  background: #f5f7f5;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --ta-bg: #f5f7f6;
+  --ta-bg: #f5f7f5;
   --ta-surface: #ffffff;
   --ta-surface-solid: #ffffff;
   --ta-surface-muted: #f5f8f6;
@@ -30,11 +30,11 @@ html:root {
   --ta-red-soft: #fcf0ee;
   --ta-purple: #7b73a2;
   --ta-purple-soft: #f0edf7;
-  --ta-shadow-1: 0 2px 4px #243a2e02;
+  --ta-shadow-1: 0 2px 5px #23392a04;
   --ta-shadow-2: 0 12px 36px rgba(35, 53, 47, 0.1);
   --ta-radius-small: 7px;
   --ta-radius-medium: 10px;
-  --ta-radius-large: 12px;
+  --ta-radius-large: 14px;
   --ta-dialog-height: 50dvh;
 
   --el-color-primary: #187464;

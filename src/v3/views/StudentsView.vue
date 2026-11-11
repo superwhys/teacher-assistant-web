@@ -130,7 +130,7 @@
 
         <StudentsEditDialog v-model="editStudentVisible" :student="editingStudent" @save="handleSaveStudentEdit" />
 
-        <StudentGrowthReportDialog v-if="reportStudent && activeSemesterId && activeClassId"
+        <StudentGrowthReportDialog v-if="canViewGrowthReports && reportStudent && activeSemesterId && activeClassId"
             :key="`${cacheStore.profile?.id}:${activeClassId}:${activeSemesterId}:${reportStudent.id}`"
             :model-value="true" :student-id="reportStudent.id" :student-name="reportStudent.name" :class-id="activeClassId"
             :semester-id="activeSemesterId" @update:model-value="!$event && (reportStudent = null)" />
@@ -205,8 +205,8 @@ interface StudentSearchIndexItem {
     tagsLower: string
 }
 
-const { canWrite, canPrepare, canImportExport, supportsStudentGroups, canManageGroups,
-    allowWrite, allowPrepare, allowImportExport, allowStudentGroups, allowManageGroups } = useBusinessAccess()
+const { canWrite, canPrepare, canImportExport, supportsStudentGroups, canManageGroups, canViewGrowthReports,
+    allowWrite, allowPrepare, allowImportExport, allowGrowthReports, allowStudentGroups, allowManageGroups } = useBusinessAccess()
 const cacheStore = useCacheStore()
 const loading = ref(false)
 const students = ref<StudentDTO[]>([])
@@ -967,7 +967,7 @@ async function handleApplyRandomGroups(randomGroups: ApplyRandomGroupsReq["group
 
 /** 打开当前学生的独立成长报告。 */
 function openGrowthReport(student: StudentCardItem): void {
-    if (!activeClassId.value || !activeSemesterId.value || loading.value) return
+    if (!allowGrowthReports() || !activeClassId.value || !activeSemesterId.value || loading.value) return
     reportStudent.value = student
 }
 
@@ -1169,6 +1169,10 @@ watch([activeClassId, () => cacheStore.getActiveSemesterId(), () => cacheStore.p
     selectedGroupId.value = null
     await loadStudentData()
 }, { immediate: true })
+
+watch(canViewGrowthReports, allowed => {
+    if (!allowed) reportStudent.value = null
+})
 
 watch(supportsStudentGroups, async supported => {
     groupManageVisible.value = false

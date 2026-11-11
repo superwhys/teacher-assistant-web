@@ -37,8 +37,8 @@
             <span v-else class="student-profile__total">积分 {{ student.totalPoints }}</span>
             <i-ep-circle-check-filled v-if="selected" class="student-card__selected-badge" aria-hidden="true" />
         </div>
-        <button type="button" class="student-card__report" :aria-label="`查看${student.name}的成长报告`"
-            @click.stop="emit('view-report', student)">
+        <button v-if="canViewGrowthReports" type="button" class="student-card__report" :aria-label="`查看${student.name}的成长报告`"
+            @click.stop="canViewGrowthReports && emit('view-report', student)">
             <i-ep-data-analysis aria-hidden="true" />查看报告
         </button>
     </article>
@@ -64,7 +64,7 @@ export type StudentsListCardItem = UiStudent & {
     totalPoints: number
 }
 
-const { canWrite } = useBusinessAccess()
+const { canWrite, canViewGrowthReports } = useBusinessAccess()
 
 /** 定义学生卡片属性结构。 */
 interface StudentsListCardProps {

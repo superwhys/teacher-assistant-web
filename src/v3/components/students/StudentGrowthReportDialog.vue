@@ -20,9 +20,8 @@ const props = defineProps<{
 const emit = defineEmits<{ (event: 'update:modelValue', value: boolean): void }>()
 const visible = computed({ get: () => props.modelValue, set: value => emit('update:modelValue', value) })
 const cache = useCacheStore()
-const { canWrite, canImportExport, allowWrite, allowImportExport } = useBusinessAccess()
-const canInterpret = computed(() => canWrite.value && cache.profile?.roleCode !== 'common')
-const isCommon = computed(() => cache.profile?.roleCode === 'common')
+const { canWrite, canImportExport, canViewGrowthReports, allowWrite, allowImportExport } = useBusinessAccess()
+const canInterpret = computed(() => canViewGrowthReports.value && canWrite.value)
 const {
     report, history, loading, saving, historyLoading, error, historyError,
     actionError, dataChanged: reportDataChanged, loadReport, loadHistory, save, retry,
@@ -33,7 +32,7 @@ const {
     submissionUncertain, completedTask, canRetryQuery, retryQuery, generate: startInterpretationTask,
 } = useGrowthInterpretationTask(() => report.value, {
     userId: cache.profile?.id ?? '',
-    canRead: () => props.modelValue && !isCommon.value,
+    canRead: () => props.modelValue && canViewGrowthReports.value,
     canGenerate: () => canInterpret.value && !reportDataChanged.value && !saving.value,
 })
 const dataChanged = computed(() => reportDataChanged.value || taskReportStale.value)
@@ -62,7 +61,7 @@ const originalExportOnly = computed(() => dataChanged.value && !!report.value?.i
 const generatedSuggestion = computed(() => completedTask.value?.snapshot_hash === report.value?.snapshot_hash
     && completedTask.value?.interpretation !== interpretation.value ? completedTask.value : null)
 const interpretationButtonLabel = computed(() => {
-    if (isCommon.value) return 'Pro 版可生成 AI 解读'
+    if (!canViewGrowthReports.value) return 'Pro 版可生成 AI 解读'
     if (dataChanged.value) return '刷新报告后生成解读'
     if (taskSubmitting.value) return '正在提交任务…'
     if (submissionUncertain.value) return '重试提交解读任务'

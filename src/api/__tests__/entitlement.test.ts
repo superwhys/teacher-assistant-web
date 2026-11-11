@@ -30,6 +30,18 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('commercial request boundary', () => {
+    it.each(['common', 'trial', 'pro'])('blocks every report API before fetch without an active Pro subscription for %s', async roleCode => {
+        mocks.cache.profile = { ...profile(roleCode === 'pro' ? 'trial_expired' : 'permanent'), roleCode }
+        for (const path of ['/student/1/growth-report', '/student/1/growth-reports', '/student/1/growth-reports/42',
+            '/student/1/growth-report/interpretation?snapshot_hash=hash', '/student/1/growth-report/interpretation/task']) {
+            await expect(get(path)).rejects.toMatchObject({ code: 100403, message: expect.stringContaining('Pro') })
+        }
+        for (const path of ['/student/1/growth-reports', '/student/1/growth-report/interpretation']) {
+            await expect(post(path, {})).rejects.toMatchObject({ code: 100403, message: expect.stringContaining('Pro') })
+        }
+        expect(mocks.fetch).not.toHaveBeenCalled()
+    })
+
     it.each(['trial_expired', 'unknown'] as const)('allows only the profile name endpoint when access is %s', async state => {
         mocks.cache.profile = state === 'unknown' ? null : profile(state)
         await userApi.updateName('张 三 🙂')

@@ -33,11 +33,11 @@ vi.mock('@/stores/cacheStore', async () => {
 })
 
 const menu = (route: string) => ({ id: 1, code: route, name: route, route_key: route, icon: 'HomeFilled', sort: 1 })
-function profile(state: 'not_started' | 'trial_active' | 'trial_expired' | 'permanent' = 'permanent', expiresAt: string | null = null) {
+function profile(state: 'not_started' | 'trial_active' | 'trial_expired' | 'paid_active' | 'paid_expired' | 'permanent' = 'permanent', expiresAt: string | null = null) {
     return {
         id: '17', name: 'Teacher', email: 'teacher@example.com', role_id: 2,
         role: { id: 2, code: 'common', name: '普通角色' }, wechat_bound: false,
-        entitlement: { state, permanent: state === 'permanent', trial_started_at: null, trial_expires_at: expiresAt, paid_expires_at: null },
+        entitlement: { state, permanent: state === 'permanent', trial_started_at: null, trial_expires_at: expiresAt, paid_expires_at: null as string | null },
     }
 }
 function sessionResponse(user = profile(), routes = ['dashboard'], roleCode?: string) {
@@ -125,6 +125,39 @@ describe('AI assistant module access', () => {
 })
 
 describe('commercial session permissions', () => {
+    it('keeps report access tied to an active Pro subscription and updates it at expiry or role changes', async () => {
+        vi.useFakeTimers()
+        vi.setSystemTime(new Date('2026-11-11T12:00:00Z'))
+        const active = { ...profile('permanent'), entitlement: {
+            state: 'paid_active' as const, permanent: false, trial_started_at: null, trial_expires_at: null,
+            paid_expires_at: '2026-11-11T12:00:01Z',
+        } }
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(active, ['students'], 'pro'))
+        const session = useSessionStore()
+        await session.initialize()
+        const access = useBusinessAccess()
+        expect(session.canViewGrowthReports).toBe(true)
+        expect(access.allowGrowthReports()).toBe(true)
+        mocks.cache.updateProfile({ ...mocks.cache.profile!, roleCode: 'common' })
+        expect(session.canViewGrowthReports).toBe(false)
+        expect(access.allowGrowthReports()).toBe(false)
+        mocks.cache.updateProfile({ ...mocks.cache.profile!, roleCode: 'pro' })
+        expect(session.canViewGrowthReports).toBe(true)
+        await vi.advanceTimersByTimeAsync(1001)
+        expect(session.canViewGrowthReports).toBe(false)
+        expect(access.canViewGrowthReports.value).toBe(false)
+        expect(access.allowGrowthReports()).toBe(false)
+    })
+
+    it.each(['common', 'trial', 'custom', 'pro'])('does not grant reports for a %s trial or unknown entitlement', async roleCode => {
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile('trial_active', new Date(Date.now() + 86400000).toISOString()), ['students'], roleCode))
+        const session = useSessionStore()
+        await session.initialize()
+        expect(session.canViewGrowthReports).toBe(false)
+        mocks.cache.updateProfile({ ...mocks.cache.profile!, entitlement: null })
+        expect(session.canViewGrowthReports).toBe(false)
+    })
+
     it('keeps common single-item writes available while explaining that bulk data tools require Pro', async () => {
         const session = useSessionStore()
         await session.initialize()

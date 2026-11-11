@@ -9,20 +9,38 @@ function profile(state: UserEntitlement['state'], deadline: string | null = null
         entitlement: { state, permanent: state === 'permanent', trial_started_at: null, trial_expires_at: deadline, paid_expires_at: deadline } }
 }
 
+const growthRequests = [
+    ['GET', '/student/1/growth-report?semester_id=7'],
+    ['GET', '/student/1/growth-reports'], ['GET', '/student/1/growth-reports/42'],
+    ['POST', '/student/1/growth-reports'],
+    ['GET', '/student/1/growth-report/interpretation?semester_id=7&snapshot_hash=hash'],
+    ['GET', '/student/1/growth-report/interpretation/task-id'],
+    ['POST', '/student/1/growth-report/interpretation'],
+]
+
 describe('independent commercial access', () => {
-    it('keeps standalone report reads available at expiry and gates AI by edition and active entitlement', () => {
-        for (const path of [
-            '/student/1/growth-report?semester_id=7', '/student/1/growth-reports', '/student/1/growth-reports/42',
-            '/student/1/growth-report/interpretation?semester_id=7&snapshot_hash=hash',
-            '/student/1/growth-report/interpretation/task-id',
-        ]) {
-            expect(allowsEntitlementRequest(profile('paid_expired'), 'GET', path, now)).toBe(true)
+    it.each(['common', 'trial', 'custom', 'pro'])('rejects growth report reads and writes for inactive or non-Pro %s accounts', roleCode => {
+        const states = roleCode === 'pro' ? ['not_started', 'trial_active', 'trial_expired', 'paid_expired'] as const
+            : ['not_started', 'trial_active', 'trial_expired', 'paid_active', 'paid_expired', 'permanent'] as const
+        for (const state of states) {
+            for (const [method, path] of growthRequests) {
+                expect(allowsEntitlementRequest({ ...profile(state, '2026-12-01T00:00:00Z'), roleCode }, method!, path!, now)).toBe(false)
+            }
         }
-        const interpretationPath = '/student/1/growth-report/interpretation'
-        expect(allowsEntitlementRequest(profile('permanent'), 'POST', interpretationPath, now)).toBe(false)
-        expect(allowsEntitlementRequest({ ...profile('permanent'), roleCode: 'pro' }, 'POST', interpretationPath, now)).toBe(true)
-        expect(allowsEntitlementRequest({ ...profile('paid_expired'), roleCode: 'pro' }, 'POST', interpretationPath, now)).toBe(false)
-        expect(allowsEntitlementRequest(profile('paid_expired'), 'POST', '/student/1/growth-reports', now)).toBe(false)
+    })
+    it.each(['pro', 'admin'])('allows every growth report endpoint for an active %s account', roleCode => {
+        for (const state of ['paid_active', 'permanent'] as const) {
+            for (const [method, path] of growthRequests) {
+                expect(allowsEntitlementRequest({ ...profile(state, '2026-12-01T00:00:00Z'), roleCode }, method!, path!, now)).toBe(true)
+            }
+        }
+    })
+    it('rejects a Pro report request at its exact subscription deadline and when account state is missing', () => {
+        const teacher = { ...profile('paid_active', '2026-11-02T00:00:00Z'), roleCode: 'pro' }
+        expect(allowsEntitlementRequest(teacher, 'GET', '/student/1/growth-report', now - 1)).toBe(true)
+        expect(allowsEntitlementRequest(teacher, 'GET', '/student/1/growth-report', now)).toBe(false)
+        expect(allowsEntitlementRequest({ ...teacher, entitlement: null }, 'GET', '/student/1/growth-report', now)).toBe(false)
+        expect(allowsEntitlementRequest(null, 'GET', '/student/1/growth-reports', now)).toBe(false)
     })
     it('names only the actual paid edition and preserves other entitlement states', () => {
         expect(entitlementStatusTitle('paid_active', 'common')).toBe('普通版 · 付费权益有效')

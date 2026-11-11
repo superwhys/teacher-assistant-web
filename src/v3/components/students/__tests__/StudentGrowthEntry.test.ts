@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createRenderer, defineComponent, h, ref, ssrContextKey, type App, type VNode } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createRenderer, defineComponent, h, nextTick, ref, ssrContextKey, type App, type VNode } from 'vue'
 import * as Vue from 'vue'
 import { compileScript, compileTemplate, parse } from 'vue/compiler-sfc'
 import StudentsListCard, { type StudentsListCardItem } from '../StudentsListCard.vue'
@@ -7,7 +7,8 @@ import StudentsListPanel from '../StudentsListPanel.vue'
 import cardSource from '../StudentsListCard.vue?raw'
 import panelSource from '../StudentsListPanel.vue?raw'
 
-vi.mock('@/composables/useBusinessAccess', () => ({ useBusinessAccess: () => ({ canWrite: ref(true), canPrepare: ref(true) }) }))
+const canViewGrowthReports = ref(true)
+vi.mock('@/composables/useBusinessAccess', () => ({ useBusinessAccess: () => ({ canWrite: ref(true), canPrepare: ref(true), canViewGrowthReports }) }))
 vi.mock('element-plus', async () => {
     const { defineComponent } = await import('vue')
     const slot = defineComponent({ setup: (_, { slots }) => () => slots.default?.() })
@@ -38,6 +39,7 @@ const student: StudentsListCardItem = {
     tags: [], availablePoints: 8, totalPoints: 10,
 }
 let app: App | undefined
+beforeEach(() => { canViewGrowthReports.value = true })
 afterEach(() => { app?.unmount(); app = undefined })
 
 function findVNode(vnode: VNode, predicate: (node: VNode) => boolean): VNode | undefined {
@@ -67,6 +69,24 @@ function mount(vnode: VNode): VNode {
 }
 
 describe('student growth report entry', () => {
+    it.each(['card', 'list', 'group'] as const)('hides the %s report button without an active Pro subscription and reacts to access changes', async mode => {
+        canViewGrowthReports.value = false
+        const view = vi.fn()
+        const root = mount(h(StudentsListCard, { student, displayMode: mode, selected: false, onViewReport: view }))
+        const reportButton = () => findVNode(root, node => node.props?.class === 'student-card__report')
+        expect(Boolean(reportButton())).toBe(false)
+        canViewGrowthReports.value = true
+        await nextTick()
+        const button = reportButton()
+        expect(Boolean(button)).toBe(true)
+        canViewGrowthReports.value = false
+        await nextTick()
+        expect(Boolean(reportButton())).toBe(false)
+        // A click already queued before revocation must also be refused.
+        button!.props!.onClick({ stopPropagation: vi.fn() })
+        expect(view).not.toHaveBeenCalled()
+    })
+
     it.each(['card', 'list', 'group'] as const)('opens the %s card report without selecting the student or bubbling to its group', mode => {
         const view = vi.fn()
         const select = vi.fn()

@@ -4,6 +4,7 @@ export type EffectiveEntitlementState = EntitlementState | 'unavailable'
 
 export const PRO_IMPORT_EXPORT_MESSAGE = '批量导入导出仅限 Pro 版，普通版可逐条维护数据。'
 export const PRO_GROUPING_MESSAGE = '学生分组仅限 Pro 版，普通版提供基础学生名单。'
+export const PRO_GROWTH_REPORT_MESSAGE = '成长报告仅限有效的 Pro 订阅账号使用。'
 export const PRO_AGENT_MESSAGE = 'AI 助手仅限 Pro 版，普通版可直接使用日常教学功能。'
 
 const importExportPaths = new Set([
@@ -20,11 +21,12 @@ const studentGroupWrites = new Set([
     '/student/group/add_students', '/student/group/remove_students',
 ])
 
-export function editionRequestMessage(profile: UserProfile | null, method: string, url: string): string {
-    if (profile?.roleCode !== 'common') return ''
+export function editionRequestMessage(profile: UserProfile | null, method: string, url: string, now = Date.now()): string {
     const path = url.split('?')[0]!.split('#')[0]!
+    if (/^\/student\/[^/]+\/(?:growth-reports(?:\/[^/]+)?|growth-report(?:\/interpretation(?:\/[^/]+)?)?)$/.test(path)
+        && !hasGrowthReportAccess(profile, now)) return PRO_GROWTH_REPORT_MESSAGE
+    if (profile?.roleCode !== 'common') return ''
     if (path === '/agent' || path.startsWith('/agent/')) return PRO_AGENT_MESSAGE
-    if (method === 'POST' && /^\/student\/[^/]+\/growth-report\/interpretation$/.test(path)) return '成长报告 AI 解读仅限 Pro 版。'
     if ((method === 'POST' && studentGroupWrites.has(path))
         || (method === 'DELETE' && /^\/student\/group\/[^/]+$/.test(path))) return PRO_GROUPING_MESSAGE
     return isImportExportRequest(method, path) ? PRO_IMPORT_EXPORT_MESSAGE : ''
@@ -68,6 +70,13 @@ export function effectiveEntitlementState(profile: UserProfile | null, now = Dat
         if (now >= deadline) return entitlement.state === 'trial_active' ? 'trial_expired' : 'paid_expired'
     }
     return entitlement.state
+}
+
+export function hasGrowthReportAccess(profile: UserProfile | null, now = Date.now()): boolean {
+    if (profile?.roleCode === 'admin') return true
+    if (profile?.roleCode !== 'pro') return false
+    const state = effectiveEntitlementState(profile, now)
+    return state === 'paid_active' || state === 'permanent'
 }
 
 export function hasCommercialAccess(state: EffectiveEntitlementState): boolean {
@@ -115,9 +124,7 @@ export function allowsEntitlementRequest(profile: UserProfile | null, method: st
         || /^\/subscription\/orders\/[^/]+$/.test(path)))
         || (method === 'POST' && (path === '/subscription/purchase-link'
             || /^\/subscription\/orders\/[^/]+\/cancel$/.test(path)))) return true
-    if (editionRequestMessage(profile, method, path)) return false
-    if (method === 'GET' && /^\/student\/[^/]+\/(growth-report|growth-reports(?:\/[^/]+)?)$/.test(path)) return true
-    if (method === 'GET' && /^\/student\/[^/]+\/growth-report\/interpretation(?:\/[^/]+)?$/.test(path)) return true
+    if (editionRequestMessage(profile, method, path, now)) return false
     // Agent transport 本身不修改业务数据，工具读取及确认写入由服务端逐项校验。
     if (method === 'GET' && (path === '/agent/conversations'
         || /^\/agent\/(conversations\/[^/]+|runs\/[^/]+\/events)$/.test(path))) return true

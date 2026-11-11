@@ -36,7 +36,7 @@ vi.mock('@/managers/student', () => ({ studentManager: {
 } }))
 vi.mock('@/managers/points', () => ({ pointsManager: { applyRuleBatch: mocks.applyRuleBatch } }))
 const businessSession = reactive({ canWrite: true, canPrepare: true, canImportExport: true,
-    supportsStudentGroups: true, canManageGroups: true, groupingDisabledReason: '学生分组仅限 Pro 版，普通版提供基础学生名单。',
+    supportsStudentGroups: true, canManageGroups: true, canViewGrowthReports: true, groupingDisabledReason: '学生分组仅限 Pro 版，普通版提供基础学生名单。',
     entitlementMessage: '试用已到期，仅可查看' })
 vi.mock('@/stores/sessionStore', () => ({ useSessionStore: () => businessSession }))
 vi.mock('@/stores/cacheStore', () => ({ useCacheStore: () => mocks.cache }))
@@ -125,7 +125,7 @@ async function mountStudents(): Promise<StudentsState> {
 }
 
 beforeEach(() => {
-    Object.assign(businessSession, { canWrite: true, canPrepare: true, canImportExport: true, supportsStudentGroups: true, canManageGroups: true })
+    Object.assign(businessSession, { canWrite: true, canPrepare: true, canImportExport: true, supportsStudentGroups: true, canManageGroups: true, canViewGrowthReports: true })
     vi.resetAllMocks()
     const events = new EventTarget()
     vi.stubGlobal('window', {
@@ -157,6 +157,19 @@ afterEach(() => {
 })
 
 describe('StudentsView random grouping', () => {
+    it('refuses report events without Pro access and clears an open report when access is revoked', async () => {
+        const state = await mountStudents()
+        businessSession.canViewGrowthReports = false
+        state.openGrowthReport({ id: 1, name: '甲' })
+        expect(state.reportStudent).toBeNull()
+        businessSession.canViewGrowthReports = true
+        state.openGrowthReport({ id: 1, name: '甲' })
+        expect(state.reportStudent).toEqual({ id: 1, name: '甲' })
+        businessSession.canViewGrowthReports = false
+        await nextTick()
+        expect(state.reportStudent).toBeNull()
+    })
+
     it('opens reports without changing student selection and clears the target on semester changes', async () => {
         const state = await mountStudents()
         state.openGrowthReport({ id: 1, name: '甲' })

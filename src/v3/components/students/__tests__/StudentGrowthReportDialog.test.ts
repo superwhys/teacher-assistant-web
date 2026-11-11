@@ -14,7 +14,7 @@ vi.mock('@/api/studentGrowth', () => ({ studentGrowthApi: api }))
 vi.mock('@/api/class', () => ({ classApi: { listSemesters: api.listSemesters } }))
 vi.mock('@/stores/cacheStore', () => ({ useCacheStore: () => ({ profile: { id: 'teacher', roleCode: 'pro' } }) }))
 vi.mock('@/composables/useBusinessAccess', () => ({ useBusinessAccess: () => ({
-    canWrite: ref(true), canImportExport: ref(true), allowWrite: () => true, allowImportExport: () => true,
+    canWrite: ref(true), canImportExport: ref(true), canViewGrowthReports: ref(true), allowWrite: () => true, allowImportExport: () => true,
 }) }))
 vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn() } }))
 vi.mock('@/v3/components/AppDialogShell.vue', () => ({ default: { render: () => null } }))

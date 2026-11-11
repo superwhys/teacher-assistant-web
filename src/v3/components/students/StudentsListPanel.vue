@@ -68,6 +68,7 @@
 
                 <div v-if="group.students.length > 0" class="student-group-card__members">
                     <StudentsListCard v-for="student in group.students" :key="student.id" display-mode="group"
+                        :points-change="getPointsChange(student.id)"
                         :selected="isStudentSelected(student.id)" :student="student"
                         @edit="emit('edit-student', $event)" @remove="emit('remove-student', $event)"
                         @select="emit('select-student', $event)" />
@@ -93,6 +94,7 @@
                         <div class="letter-header">{{ group.letter }}</div>
                         <div class="student-group-stack" :class="{ 'is-single': group.students.length === 1 }">
                             <StudentsListCard v-for="student in group.students" :key="student.id"
+                                :points-change="getPointsChange(student.id)"
                                 :display-mode="layoutMode" :selected="isStudentSelected(student.id)" :student="student"
                                 @edit="emit('edit-student', $event)" @remove="emit('remove-student', $event)"
                                 @select="emit('select-student', $event)" />
@@ -102,6 +104,7 @@
 
                 <div v-else class="student-group-stack">
                     <StudentsListCard v-for="student in students" :key="student.id" :display-mode="layoutMode"
+                        :points-change="getPointsChange(student.id)"
                         :selected="isStudentSelected(student.id)" :student="student"
                         @edit="emit('edit-student', $event)" @remove="emit('remove-student', $event)"
                         @select="emit('select-student', $event)" />
@@ -111,6 +114,7 @@
 
         <div v-else class="student-grid">
             <StudentsListCard v-for="student in students" :key="student.id" :display-mode="layoutMode"
+                :points-change="getPointsChange(student.id)"
                 :selected="isStudentSelected(student.id)" :student="student" @edit="emit('edit-student', $event)"
                 @remove="emit('remove-student', $event)" @select="emit('select-student', $event)" />
         </div>
@@ -138,6 +142,7 @@ export interface StudentsListPanelGroupItem {
 
 /** 定义学生列表面板属性结构。 */
 interface StudentsListPanelProps {
+    pointsFeedback?: { studentIds: number[], sign: "plus" | "minus" } | null
     groups?: StudentsListPanelGroupItem[]
     hasActiveClass: boolean
     isAllSelected: boolean
@@ -162,6 +167,11 @@ interface StudentsListPanelEmits {
 const props = withDefaults(defineProps<StudentsListPanelProps>(), {
     groups: () => []
 })
+
+function getPointsChange(studentId: number): "plus" | "minus" | undefined {
+    return props.pointsFeedback?.studentIds.includes(studentId) ? props.pointsFeedback.sign : undefined
+}
+
 const { canWrite, canPrepare } = useBusinessAccess()
 const rosterDescription = computed(() => {
     if (!canWrite.value) {

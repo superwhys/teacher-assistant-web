@@ -70,7 +70,15 @@
                     </label>
                 </div>
 
-                <div v-if="rankingItems.length > 0" class="ranking-list" v-loading="rankingLoading">
+                <div v-if="rankingError" class="load-status" role="alert">
+                    <span>{{ rankingError }}{{ rankingItems.length ? "，当前保留上次成功加载的数据。" : "。" }}</span>
+                    <button type="button" class="ghost-button ghost-button--small" :disabled="rankingLoading" @click="emit('refresh-ranking')">重新加载</button>
+                </div>
+                <div v-if="rankingLoading && !rankingItems.length" class="empty-state" role="status">
+                    <el-skeleton :rows="4" />
+                    <span>正在加载排行榜…</span>
+                </div>
+                <div v-else-if="rankingItems.length > 0" class="ranking-list" v-loading="rankingLoading" :aria-busy="rankingLoading">
                     <article v-for="item in rankingItems" :key="item.id" class="ranking-item"
                         :class="item.rankClass">
                         <div class="ranking-item__rank" :class="item.rankClass">{{ item.rankLabel }}</div>
@@ -91,7 +99,7 @@
                     </article>
                 </div>
 
-                <div v-else class="empty-state">
+                <div v-else-if="!rankingError" class="empty-state">
                     <strong>暂无排行榜数据</strong>
                     <p>{{ activeRankingTab === "item" ? "请先选择一个积分项，或等待该积分项产生记录。" : "当前范围内还没有可展示的积分排行。" }}</p>
                 </div>
@@ -137,7 +145,15 @@
                     </div>
                 </div>
 
-                <div v-if="historyRecords.length > 0" class="record-list" v-loading="recordsLoading">
+                <div v-if="recordsError" class="load-status" role="alert">
+                    <span>{{ recordsError }}{{ historyRecords.length ? "，当前保留上次成功加载的数据。" : "。" }}</span>
+                    <button type="button" class="ghost-button ghost-button--small" :disabled="recordsLoading" @click="emit('refresh-records')">重新加载</button>
+                </div>
+                <div v-if="recordsLoading && !historyRecords.length" class="empty-state" role="status">
+                    <el-skeleton :rows="4" />
+                    <span>正在加载积分记录…</span>
+                </div>
+                <div v-else-if="historyRecords.length > 0" class="record-list" v-loading="recordsLoading" :aria-busy="recordsLoading">
                     <article v-for="record in historyRecords" :key="record.id" class="record-item">
                         <div class="record-item__score"
                             :class="inferRecordDelta(record) < 0 ? 'is-minus' : 'is-plus'">
@@ -163,7 +179,7 @@
                     </article>
                 </div>
 
-                <div v-else class="empty-state">
+                <div v-else-if="!recordsError" class="empty-state">
                     <strong>暂无积分记录</strong>
                     <p>当课堂开始进行加减分、导入积分或商城兑换后，会在这里看到完整记录。</p>
                 </div>
@@ -241,6 +257,8 @@ interface PointsContentPanelProps {
     inferRecordDelta: (record: PointsApplyRecord) => number
     rankingItems: RankingDisplayItem[]
     rankingLoading: boolean
+    rankingError?: string
+    recordsError?: string
     rankingRangeOptions: RankingRangeOption[]
     rankingTimeRange: RankingTimeRange
     recordsLoading: boolean
@@ -253,6 +271,7 @@ const cacheStore = useCacheStore()
 const isRankingMasked = ref<boolean>(cacheStore.getDashboardRankingPreviewMasked())
 
 const emit = defineEmits<{
+    (e: "refresh-ranking"): void
     (e: "go-next-history-page"): void
     (e: "go-prev-history-page"): void
     (e: "refresh-records"): void
@@ -318,6 +337,16 @@ function toggleRankingMask(): void {
 .content-grid {
     display: grid;
     gap: 14px;
+}
+
+.load-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 12px 0;
+    color: var(--ta-text-secondary);
+    font-size: 13px;
 }
 
 .content-switch-panel {

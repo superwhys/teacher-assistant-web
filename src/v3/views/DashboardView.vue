@@ -2,21 +2,28 @@
     <div class="dashboard-view">
         <PageHeader title="班级总览" description="查看当前班级的课堂数据与状态摘要。" />
 
-        <section class="summary-grid">
+        <section class="summary-grid" :aria-busy="summaryLoading">
             <article v-for="item in summaryItems" :key="item.id" class="summary-card">
                 <div class="summary-card__label">
                     <span>{{ item.label }}</span>
                     <span class="summary-card__icon" aria-hidden="true"><component :is="item.icon" /></span>
                 </div>
                 <strong>{{ item.value }}</strong>
-                <small>{{ item.helper }}</small>
+                <small>{{ summaryLoading && !hasLoadedSummary ? "正在加载…" : item.helper }}</small>
             </article>
         </section>
 
-        <section :key="agentRefreshVersion" class="panel-grid">
-            <DashboardRankingPanel :active-class-id="currentClassId" :current-semester-id="currentSemesterId" />
+        <div v-if="summaryError" class="summary-status" role="alert">
+            <span>{{ summaryError }}{{ hasLoadedSummary ? "，当前保留上次成功加载的数据。" : "，请重试。" }}</span>
+            <button type="button" :disabled="summaryLoading" @click="loadDashboardSummary">重新加载</button>
+        </div>
+        <p v-else-if="summaryLoading && hasLoadedSummary" class="summary-status" role="status">正在刷新统计…</p>
+
+        <section class="panel-grid">
+            <DashboardRankingPanel :active-class-id="currentClassId" :current-semester-id="currentSemesterId"
+                :refresh-version="agentRefreshVersion" />
             <DashboardRecentRecordsPanel :active-class-id="currentClassId"
-                :current-semester-id="currentSemesterId" />
+                :current-semester-id="currentSemesterId" :refresh-version="agentRefreshVersion" />
         </section>
     </div>
 </template>
@@ -74,7 +81,11 @@ const cacheStore = useCacheStore()
 const currentClassId = computed<number | null>(() => cacheStore.getActiveClassId())
 const currentSemesterId = computed<number | null>(() => cacheStore.getActiveSemesterId())
 const agentRefreshVersion = ref(0)
+const summaryLoading = ref(false)
+const summaryError = ref("")
+const hasLoadedSummary = ref(false)
 let summaryRequestId = 0
+let summaryScope = ""
 
 function handleAgentActionSucceeded(event: CustomEvent<AgentActionSucceededDetail>): void {
     const scope = event.detail
@@ -119,6 +130,14 @@ async function loadDashboardSummary(): Promise<void> {
     const scope = { userId: cacheStore.profile?.id, classId: currentClassId.value, semesterId: currentSemesterId.value }
     const isCurrent = () => requestId === summaryRequestId && scope.userId === cacheStore.profile?.id
         && scope.classId === currentClassId.value && scope.semesterId === currentSemesterId.value
+    const scopeKey = JSON.stringify(scope)
+    if (summaryScope !== scopeKey) {
+        summaryScope = scopeKey
+        hasLoadedSummary.value = false
+        applyDashboardSummaryResponse(undefined)
+    }
+    summaryLoading.value = Boolean(scope.classId)
+    summaryError.value = ""
     try {
         if (!scope.classId) {
             applyDashboardSummaryResponse(undefined)
@@ -130,9 +149,13 @@ async function loadDashboardSummary(): Promise<void> {
         })
         if (!isCurrent()) return
         applyDashboardSummaryResponse(response.data)
+        hasLoadedSummary.value = true
     } catch (error) {
         if (!isCurrent()) return
         console.error("获取首页统计数据失败", error)
+        summaryError.value = "统计数据加载失败"
+    } finally {
+        if (requestId === summaryRequestId) summaryLoading.value = false
     }
 }
 
@@ -144,7 +167,7 @@ const summaryItems = computed<SummaryItem[]>(() => {
         return {
             id: config.id,
             label: config.label,
-            value: String(summaryData.value),
+            value: hasLoadedSummary.value ? String(summaryData.value) : "--",
             helper: config.helper,
             icon: config.icon
         }
@@ -152,7 +175,7 @@ const summaryItems = computed<SummaryItem[]>(() => {
 })
 
 /** 监听班级与学期变化后重新加载首页数据。 */
-watch([currentClassId, currentSemesterId], async () => {
+watch([() => cacheStore.profile?.id, currentClassId, currentSemesterId], async () => {
     await loadDashboardSummary()
 }, { immediate: true })
 </script>
@@ -167,6 +190,26 @@ watch([currentClassId, currentSemesterId], async () => {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
+}
+
+.summary-status {
+    margin: -10px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--ta-text-secondary);
+    font-size: 13px;
+}
+
+.summary-status button {
+    flex-shrink: 0;
+    padding: 6px 10px;
+    border: 1px solid var(--ta-line);
+    border-radius: var(--ta-radius-small);
+    color: var(--ta-blue);
+    background: var(--ta-surface-solid);
+    cursor: pointer;
 }
 
 .summary-card {

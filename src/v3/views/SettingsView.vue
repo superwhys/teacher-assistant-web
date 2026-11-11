@@ -21,7 +21,7 @@
                     @open-next-semester="openNextSemesterDialog" @open-rename-class="openRenameClassDialog" />
 
                 <SettingsLockCard v-model:confirm-password="confirmPwd" v-model:new-password="newPwd"
-                    v-model:old-password="oldPwd" :has-pwd="hasPwd" :saving-pwd="savingPwd"
+                    v-model:old-password="oldPwd" :has-pwd="hasPwd" :saving-pwd="savingPwd" :errors="lockPasswordErrors"
                     @clear-password="onClearLockPassword" @lock-now="onLockNow" @save-password="onSaveLockPassword" />
 
                 <SettingsFeedbackCard v-model:feedback-content="feedbackContent"
@@ -76,6 +76,7 @@ const newPwd = ref("")
 const confirmPwd = ref("")
 const oldPwd = ref("")
 const savingPwd = ref(false)
+const oldPasswordError = ref("")
 const feedbackContent = ref("")
 const feedbackSubmitting = ref(false)
 
@@ -91,6 +92,14 @@ const activeClassName = computed(() => cacheStore.getActiveClassName())
 const activeSemesterName = computed(() => cacheStore.getActiveSemesterName())
 const activeSemesterStatus = computed(() => cacheStore.getActiveSemesterStatus())
 const hasPwd = computed(() => cacheStore.hasLockPassword())
+const lockPasswordErrors = computed(() => ({
+    oldPassword: oldPasswordError.value || (hasPwd.value && !oldPwd.value.trim() ? "请输入原密码" : ""),
+    newPassword: newPwd.value.trim().length < 4 ? "密码长度至少为 4 位" : "",
+    confirmPassword: !confirmPwd.value.trim() ? "请再次输入锁屏密码"
+        : newPwd.value.trim() !== confirmPwd.value.trim() ? "两次输入的密码不一致" : "",
+}))
+
+watch(oldPwd, () => { oldPasswordError.value = "" })
 
 function onMiniProgramBound(): void {
     if (!cacheStore.profile) return
@@ -323,38 +332,14 @@ async function confirmNextSemester(): Promise<void> {
 
 /** 保存当前输入的锁屏密码。 */
 async function onSaveLockPassword(): Promise<void> {
-    if (savingPwd.value) {
-        return
-    }
-
+    if (savingPwd.value || Object.values(lockPasswordErrors.value).some(Boolean)) return
     const password = newPwd.value.trim()
-    const confirmPassword = confirmPwd.value.trim()
-    if (!password || password.length < 4) {
-        ElMessage.error("密码长度至少为 4 位")
-        return
-    }
-
-    if (password !== confirmPassword) {
-        ElMessage.error("两次输入的密码不一致")
-        return
-    }
-
-    if (hasPwd.value) {
-        const sourcePassword = oldPwd.value.trim()
-        if (!sourcePassword) {
-            ElMessage.error("请输入原密码")
-            return
-        }
-
-        const oldPasswordPassed = await cacheStore.verifyLockPassword(sourcePassword)
-        if (!oldPasswordPassed) {
-            ElMessage.error("原密码不正确")
-            return
-        }
-    }
-
     savingPwd.value = true
     try {
+        if (hasPwd.value && !await cacheStore.verifyLockPassword(oldPwd.value.trim())) {
+            oldPasswordError.value = "原密码不正确"
+            return
+        }
         const saved = await cacheStore.setLockPassword(password)
         if (!saved) {
             ElMessage.error("保存失败")
@@ -372,31 +357,28 @@ async function onSaveLockPassword(): Promise<void> {
 
 /** 清除当前锁屏密码。 */
 async function onClearLockPassword(): Promise<void> {
-    try {
-        await confirmDialog("确定清除锁屏密码？此操作需要验证当前密码。", "确认操作", {
-            type: "warning",
-        })
-    } catch {
-        return
-    }
-
+    if (savingPwd.value) return
     const sourcePassword = oldPwd.value.trim()
-    if (!sourcePassword) {
-        ElMessage.error("请输入当前密码")
-        return
+    if (!sourcePassword) return
+    savingPwd.value = true
+    try {
+        if (!await cacheStore.verifyLockPassword(sourcePassword)) {
+            oldPasswordError.value = "原密码不正确"
+            return
+        }
+        try {
+            await confirmDialog("确定清除锁屏密码？", "确认操作", { type: "warning" })
+        } catch {
+            return
+        }
+        cacheStore.clearLockPassword()
+        oldPwd.value = ""
+        newPwd.value = ""
+        confirmPwd.value = ""
+        ElMessage.success("已清除锁屏密码")
+    } finally {
+        savingPwd.value = false
     }
-
-    const oldPasswordPassed = await cacheStore.verifyLockPassword(sourcePassword)
-    if (!oldPasswordPassed) {
-        ElMessage.error("当前密码不正确")
-        return
-    }
-
-    cacheStore.clearLockPassword()
-    oldPwd.value = ""
-    newPwd.value = ""
-    confirmPwd.value = ""
-    ElMessage.success("已清除锁屏密码")
 }
 
 /** 立即进入锁屏状态。 */

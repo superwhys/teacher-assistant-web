@@ -4,14 +4,14 @@
         <section class="metrics-grid">
             <article class="metric-card metric-card--blue">
                 <span>积分规则组</span>
-                <strong>{{ ruleGroups.length }}</strong>
+                <strong>{{ hasLoadedRuleGroups ? ruleGroups.length : "--" }}</strong>
                 <small>{{ canMutatePoints ? "支持直接新增、编辑、删除" : "当前仅可查看积分规则" }}</small>
             </article>
 
             <article class="metric-card metric-card--gold">
                 <span>积分项总数</span>
-                <strong>{{ totalRuleCount }}</strong>
-                <small>{{ `${plusRuleCount} 个加分项 / ${minusRuleCount} 个扣分项` }}</small>
+                <strong>{{ hasLoadedRuleGroups ? totalRuleCount : "--" }}</strong>
+                <small>{{ hasLoadedRuleGroups ? `${plusRuleCount} 个加分项 / ${minusRuleCount} 个扣分项` : "等待加载积分规则" }}</small>
             </article>
 
             <article class="metric-card metric-card--green">
@@ -28,6 +28,7 @@
 
         <PointsRulesManagePanel :can-mutate-points="canMutatePoints" :has-active-class="hasActiveClass"
             :rule-groups="ruleGroups" :rule-groups-loading="ruleGroupsLoading" :selected-rule-group="selectedRuleGroup"
+            :rule-groups-error="ruleGroupsError" @retry="loadRuleGroups"
             :selected-rule-group-id="selectedRuleGroupId" :selected-rule-group-rules="selectedRuleGroupRules"
             @create-group="openCreateGroupDialog" @create-rule="openCreateRuleDialog" @delete-group="requestDeleteGroup"
             @delete-rule="requestDeleteRule" @edit-group="openEditGroupDialog" @edit-rule="openEditRuleDialog"
@@ -39,9 +40,10 @@
             :get-record-source-label="getRecordSourceLabel" :get-record-time-label="getRecordTimeLabel"
             :history-keyword="historyKeyword" :history-page="historyPage" :history-page-count="historyPageCount"
             :history-records="historyRecords" :history-sign="historySign" :history-sign-options="historySignOptions"
-            :infer-record-delta="inferRecordDelta" :ranking-items="rankingItems" :ranking-loading="rankingLoading"
+            :infer-record-delta="inferRecordDelta" :ranking-items="rankingItems" :ranking-loading="rankingLoading || (pageLoading && activeContentTab === 'ranking')"
+            :ranking-error="rankingError" :records-error="recordsError" @refresh-ranking="loadRankingData"
             :ranking-range-options="rankingRangeOptions" :ranking-time-range="rankingTimeRange"
-            :records-loading="recordsLoading" :rule-options="flatRules"
+            :records-loading="recordsLoading || (pageLoading && activeContentTab === 'records')" :rule-options="flatRules"
             :selected-ranking-rule-id="selectedRankingRuleId" @go-next-history-page="goToNextHistoryPage"
             @go-prev-history-page="goToPrevHistoryPage" @refresh-records="loadHistoryRecords"
             @select-content-tab="handleSelectContentTab" @select-history-sign="handleSelectHistorySign"
@@ -166,6 +168,10 @@ const pageLoading = ref(false)
 const ruleGroupsLoading = ref(false)
 const rankingLoading = ref(false)
 const recordsLoading = ref(false)
+const ruleGroupsError = ref("")
+const rankingError = ref("")
+const recordsError = ref("")
+const hasLoadedRuleGroups = ref(false)
 const ruleMutationLoading = ref(false)
 const recordMutationLoading = ref(false)
 const hasLoadedTotalRanking = ref(false)
@@ -176,6 +182,10 @@ const ruleRankingDirty = ref(true)
 const historyRecordsDirty = ref(true)
 let rankingRequestId = 0
 let historyRequestId = 0
+let ruleGroupsRequestId = 0
+let pageRequestId = 0
+let rankingScope = ""
+let historyScope = ""
 
 const importItemsDialogVisible = ref(false)
 const importRecordsDialogVisible = ref(false)
@@ -475,18 +485,24 @@ async function loadStudentGroups(): Promise<void> {
 
 /** 加载积分规则组数据。 */
 async function loadRuleGroups(): Promise<void> {
+    const requestId = ++ruleGroupsRequestId
+    const scope = { userId: cacheStore.profile?.id, classId: activeClassId.value, semesterId: cacheStore.getActiveSemesterId() }
+    const isCurrent = () => requestId === ruleGroupsRequestId && scope.userId === cacheStore.profile?.id
+        && scope.classId === activeClassId.value && scope.semesterId === cacheStore.getActiveSemesterId()
     ruleGroupsLoading.value = true
+    ruleGroupsError.value = ""
     try {
-        ruleGroups.value = await pointsManager.listRuleGroups()
+        const groups = await pointsManager.listRuleGroups()
+        if (!isCurrent()) return
+        ruleGroups.value = groups
+        hasLoadedRuleGroups.value = true
         syncRuleSelections()
     } catch (error) {
+        if (!isCurrent()) return
         console.error("加载积分规则失败", error)
-        ruleGroups.value = []
-        selectedRuleGroupId.value = 0
-        selectedRankingRuleId.value = 0
-        ElMessage.error("加载积分规则失败")
+        ruleGroupsError.value = "积分规则加载失败"
     } finally {
-        ruleGroupsLoading.value = false
+        if (requestId === ruleGroupsRequestId) ruleGroupsLoading.value = false
     }
 }
 
@@ -501,6 +517,18 @@ async function loadRankingData(): Promise<void> {
         && scope.classId === activeClassId.value && scope.semesterId === cacheStore.getActiveSemesterId()
         && scope.tab === activeRankingTab.value && (scope.tab !== "item" || scope.ruleId === selectedRankingRuleId.value)
         && scope.range === rankingTimeRange.value
+    const scopeKey = JSON.stringify(scope)
+    if (rankingScope !== scopeKey) {
+        rankingScope = scopeKey
+        if (scope.tab === "item") {
+            ruleRankingItems.value = []
+            hasLoadedRuleRanking.value = false
+        } else {
+            totalRankingItems.value = []
+            hasLoadedTotalRanking.value = false
+        }
+    }
+    rankingError.value = ""
     if (!scope.classId) {
         totalRankingItems.value = []
         ruleRankingItems.value = []
@@ -541,12 +569,7 @@ async function loadRankingData(): Promise<void> {
     } catch (error) {
         if (!isCurrent()) return
         console.error("加载排行榜失败", error)
-        if (activeRankingTab.value === "item") {
-            ruleRankingItems.value = []
-        } else {
-            totalRankingItems.value = []
-        }
-        ElMessage.error("加载排行榜失败")
+        rankingError.value = "排行榜加载失败"
     } finally {
         if (requestId === rankingRequestId) rankingLoading.value = false
     }
@@ -562,6 +585,14 @@ async function loadHistoryRecords(): Promise<void> {
     const isCurrent = () => requestId === historyRequestId && scope.userId === cacheStore.profile?.id
         && scope.classId === activeClassId.value && scope.semesterId === cacheStore.getActiveSemesterId()
         && scope.keyword === historyKeyword.value.trim() && scope.sign === historySign.value && scope.page === historyPage.value
+    const scopeKey = JSON.stringify(scope)
+    if (historyScope !== scopeKey) {
+        historyScope = scopeKey
+        historyRecords.value = []
+        historyTotal.value = 0
+        hasLoadedHistoryRecords.value = false
+    }
+    recordsError.value = ""
     if (!scope.classId) {
         historyRecords.value = []
         historyTotal.value = 0
@@ -588,9 +619,7 @@ async function loadHistoryRecords(): Promise<void> {
     } catch (error) {
         if (!isCurrent()) return
         console.error("加载积分记录失败", error)
-        historyRecords.value = []
-        historyTotal.value = 0
-        ElMessage.error("加载积分记录失败")
+        recordsError.value = "积分记录加载失败"
     } finally {
         if (requestId === historyRequestId) recordsLoading.value = false
     }
@@ -644,6 +673,7 @@ async function ensureActiveContentData(): Promise<void> {
 
 /** 刷新积分页的全部基础数据。 */
 async function refreshPointsPage(): Promise<void> {
+    const requestId = ++pageRequestId
     if (!activeClassId.value) {
         studentGroups.value = []
         ruleGroups.value = []
@@ -652,15 +682,17 @@ async function refreshPointsPage(): Promise<void> {
         totalRankingItems.value = []
         ruleRankingItems.value = []
         resetDeferredLoadState()
+        pageLoading.value = false
         return
     }
 
     pageLoading.value = true
     try {
         await loadRuleGroups()
+        if (requestId !== pageRequestId) return
         await ensureActiveContentData()
     } finally {
-        pageLoading.value = false
+        if (requestId === pageRequestId) pageLoading.value = false
     }
 }
 
@@ -1006,6 +1038,8 @@ onBeforeUnmount(() => {
     window.removeEventListener(AGENT_ACTION_SUCCEEDED_EVENT, handleAgentActionSucceeded)
     rankingRequestId += 1
     historyRequestId += 1
+    ruleGroupsRequestId += 1
+    pageRequestId += 1
 })
 
 /** 处理积分记录类型切换。 */
@@ -1083,8 +1117,19 @@ async function undoLatestRecord(): Promise<void> {
     }
 }
 
-watch(activeClassId, async () => {
+watch([() => cacheStore.profile?.id, activeClassId, () => cacheStore.getActiveSemesterId()], async () => {
     studentGroups.value = []
+    ruleGroups.value = []
+    totalRankingItems.value = []
+    ruleRankingItems.value = []
+    historyRecords.value = []
+    historyTotal.value = 0
+    hasLoadedRuleGroups.value = false
+    ruleGroupsError.value = ""
+    rankingError.value = ""
+    recordsError.value = ""
+    rankingScope = ""
+    historyScope = ""
     resetDeferredLoadState()
     historyKeyword.value = ""
     historySign.value = "all"

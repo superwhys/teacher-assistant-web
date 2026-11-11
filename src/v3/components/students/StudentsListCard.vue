@@ -2,7 +2,8 @@
     <article
         :id="`student-card-${student.id}`"
         class="student-card"
-        :class="{ 'is-group': displayMode === 'group', 'is-list': displayMode === 'list', 'is-selected': selected }"
+        :class="{ 'is-group': displayMode === 'group', 'is-list': displayMode === 'list', 'is-selected': selected,
+            'has-points-plus': pointsChange === 'plus', 'has-points-minus': pointsChange === 'minus' }"
     >
         <button type="button" class="student-card__select" :aria-pressed="selected"
             :aria-label="`选择${student.name}，可用积分${student.availablePoints}，总积分${student.totalPoints}`"
@@ -63,6 +64,7 @@ const { canWrite } = useBusinessAccess()
 
 /** 定义学生卡片属性结构。 */
 interface StudentsListCardProps {
+    pointsChange?: "plus" | "minus"
     displayMode?: "card" | "list" | "group"
     selected: boolean
     student: StudentsListCardItem
@@ -222,6 +224,22 @@ function getGenderLabel(gender: UiGender): string {
     color: #365642;
     font-size: 25px;
     font-weight: 650;
+    border-radius: 4px;
+    transition: color 140ms ease, background-color 140ms ease;
+}
+
+.student-card.has-points-plus .student-profile__available strong,
+.student-card.has-points-plus.is-group .student-profile__total {
+    color: var(--ta-blue);
+    background: var(--ta-blue-soft);
+    box-shadow: 0 0 0 4px var(--ta-blue-soft);
+}
+
+.student-card.has-points-minus .student-profile__available strong,
+.student-card.has-points-minus.is-group .student-profile__total {
+    color: var(--ta-red);
+    background: var(--ta-red-soft);
+    box-shadow: 0 0 0 4px var(--ta-red-soft);
 }
 
 .student-profile__total {

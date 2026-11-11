@@ -5,7 +5,7 @@ import DashboardView from "../DashboardView.vue";
 import { notifyAgentActionSucceeded } from "@/utils/agentEvents";
 
 const mocks = vi.hoisted(() => ({
-    ranking: vi.fn(), records: vi.fn(), statistics: vi.fn(), error: vi.fn(),
+    ranking: vi.fn(), records: vi.fn(), rules: vi.fn(), statistics: vi.fn(), error: vi.fn(),
     cache: {
         profile: { id: "teacher" }, classId: 7, semesterId: 70,
         getActiveClassId() { return this.classId; },
@@ -23,7 +23,7 @@ vi.mock("@/stores/cacheStore", () => ({ useCacheStore: () => mocks.cache }));
 vi.mock("@/stores/sessionStore", () => ({ useSessionStore: () => ({ canWrite: true, canImportExport: true }) }));
 vi.mock("@/managers/student", () => ({ studentManager: { listGroups: vi.fn().mockResolvedValue([]) } }));
 vi.mock("@/managers/points", () => ({ pointsManager: {
-    listRuleGroups: vi.fn().mockResolvedValue([]), getClassRanking: mocks.ranking, listApplyRecords: mocks.records,
+    listRuleGroups: mocks.rules, getClassRanking: mocks.ranking, listApplyRecords: mocks.records,
 } }));
 vi.mock("@/api/dashboard", () => ({ dashboardApi: { getStatistics: mocks.statistics } }));
 vi.mock("vue-router", () => ({ useRoute: () => ({ query: {} }) }));
@@ -53,6 +53,11 @@ interface PointsState {
     totalRankingItems: { score: number }[];
     historyRecords: { id: number }[];
     activeContentTab: "ranking" | "records";
+    rankingError: string;
+    recordsError: string;
+    ruleGroupsError: string;
+    hasLoadedRuleGroups: boolean;
+    loadRuleGroups(): Promise<void>;
     loadRankingData(): Promise<void>;
     loadHistoryRecords(): Promise<void>;
 }
@@ -61,6 +66,9 @@ interface DashboardState {
     agentRefreshVersion: number;
     dashboardSummaryResponse: { summary: { records: { value: number } } };
     loadDashboardSummary(): Promise<void>;
+    summaryLoading: boolean;
+    summaryError: string;
+    summaryItems: { value: string }[];
 }
 
 let app: App | undefined;
@@ -102,6 +110,7 @@ beforeEach(() => {
     });
     mocks.ranking.mockResolvedValue({ items: [] });
     mocks.records.mockResolvedValue({ items: [], total: 0 });
+    mocks.rules.mockResolvedValue([]);
     mocks.statistics.mockResolvedValue(summary(2));
     vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -114,6 +123,51 @@ afterEach(() => {
 });
 
 describe("agent write refresh request ordering", () => {
+    it.each(["ranking", "records"] as const)("keeps successful %s data and exposes a retryable refresh error", async tab => {
+        const state = mount<PointsState>(PointsView);
+        await vi.waitFor(() => expect(state.pageLoading).toBe(false));
+        state.activeContentTab = tab;
+        await flush();
+        const request = tab === "ranking" ? mocks.ranking : mocks.records;
+        const load = tab === "ranking" ? state.loadRankingData : state.loadHistoryRecords;
+        request.mockResolvedValueOnce({ items: [{ id: 12, score: 12 }], total: 1 });
+        await load();
+        request.mockRejectedValueOnce(new Error("offline"));
+        await load();
+        expect(tab === "ranking" ? state.totalRankingItems[0]?.score : state.historyRecords[0]?.id).toBe(12);
+        expect(tab === "ranking" ? state.rankingError : state.recordsError).toContain("失败");
+        request.mockResolvedValueOnce({ items: [], total: 0 });
+        await load();
+        expect(tab === "ranking" ? state.rankingError : state.recordsError).toBe("");
+        expect(tab === "ranking" ? state.totalRankingItems : state.historyRecords).toEqual([]);
+    });
+
+    it("distinguishes a rules failure from a successfully loaded empty list", async () => {
+        mocks.rules.mockRejectedValueOnce(new Error("offline"));
+        const state = mount<PointsState>(PointsView);
+        await vi.waitFor(() => expect(state.pageLoading).toBe(false));
+        expect(state.ruleGroupsError).toContain("失败");
+        expect(state.hasLoadedRuleGroups).toBe(false);
+        await state.loadRuleGroups();
+        expect(state.ruleGroupsError).toBe("");
+        expect(state.hasLoadedRuleGroups).toBe(true);
+    });
+
+    it("shows unknown summary values until a request succeeds and keeps data on refresh failure", async () => {
+        const pending = deferred<ReturnType<typeof summary>>();
+        mocks.statistics.mockReturnValueOnce(pending.promise);
+        const state = mount<DashboardState>(DashboardView);
+        expect(state.summaryLoading).toBe(true);
+        expect(state.summaryItems.map(item => item.value)).toEqual(["--", "--", "--", "--"]);
+        pending.resolve(summary(18));
+        await flush();
+        mocks.statistics.mockRejectedValueOnce(new Error("offline"));
+        await state.loadDashboardSummary();
+        expect(state.summaryError).toContain("失败");
+        expect(state.dashboardSummaryResponse.summary.records.value).toBe(18);
+        expect(state.summaryLoading).toBe(false);
+    });
+
     it.each(["ranking", "records"] as const)("ignores an older %s failure without stopping the new loading state", async (tab) => {
         const state = mount<PointsState>(PointsView);
         await vi.waitFor(() => expect(state.pageLoading).toBe(false));

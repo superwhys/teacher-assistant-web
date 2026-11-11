@@ -7,7 +7,7 @@ import PointsRulesManagePanel from '../PointsRulesManagePanel.vue'
 vi.mock('@/composables/useBusinessAccess', () => ({
     useBusinessAccess: () => ({ canImportExport: computed(() => true) }),
 }))
-vi.mock('element-plus/es', () => ({ ElLoadingDirective: {} }))
+vi.mock('element-plus/es', () => ({ ElLoadingDirective: {}, ElSkeleton: { render: () => null } }))
 vi.mock('element-plus/es/components/base/style/css', () => ({}))
 vi.mock('element-plus/es/components/loading/style/css', () => ({}))
 
@@ -28,6 +28,25 @@ async function renderCreateButton(ruleGroups: RuleGroup[], canMutatePoints = tru
 }
 
 describe('points rule group creation entry', () => {
+    it('shows a retryable error instead of an empty rules explanation', async () => {
+        const html = await renderToString(createSSRApp(PointsRulesManagePanel, {
+            canMutatePoints: true, hasActiveClass: true, ruleGroups: [], ruleGroupsLoading: false,
+            ruleGroupsError: '积分规则加载失败', selectedRuleGroup: null, selectedRuleGroupId: 0, selectedRuleGroupRules: [],
+        }))
+        expect(html).toContain('积分规则加载失败')
+        expect(html).toContain('重新加载')
+        expect(html).not.toContain('还没有积分规则')
+    })
+
+    it('shows first-load progress instead of an empty rules explanation', async () => {
+        const html = await renderToString(createSSRApp(PointsRulesManagePanel, {
+            canMutatePoints: true, hasActiveClass: true, ruleGroups: [], ruleGroupsLoading: true,
+            selectedRuleGroup: null, selectedRuleGroupId: 0, selectedRuleGroupRules: [],
+        }))
+        expect(html).toContain('正在加载积分规则')
+        expect(html).not.toContain('还没有积分规则')
+    })
+
     it.each<RuleGroup[][]>([
         [[]],
         [[{ id: 1, name: '课堂表现', rules: [] }]],

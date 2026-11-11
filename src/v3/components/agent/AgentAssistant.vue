@@ -175,6 +175,13 @@
                 </div>
             </div>
 
+            <div v-if="messages.length && !followLatest" class="agent-scroll-return">
+                <button type="button" class="agent-latest-button" aria-label="回到最新回复" @click="jumpToLatest">
+                    <span v-if="hasUnreadReply" class="agent-latest-button__unread">有新回复</span>
+                    回到最新回复<ArrowDown aria-hidden="true" />
+                </button>
+            </div>
+
             <div v-if="messages.length && !responding && !loading" class="agent-suggestions" aria-label="继续提问">
                 <button v-for="starter in starters" :key="starter.prompt" type="button" :disabled="!canSend"
                     @click="sendMessage(starter.prompt)">{{ starter.label }}<ArrowRight aria-hidden="true" /></button>
@@ -206,6 +213,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { ElDrawer } from "element-plus";
 import {
+    ArrowDown,
     ArrowRight,
     Check,
     CircleCheck,
@@ -227,7 +235,7 @@ import { useAgentChat } from "@/v3/composables/useAgentChat";
 import AgentMarkdown from "./AgentMarkdown.vue";
 import AgentConversationHistory from "./AgentConversationHistory.vue";
 import XiaoYAvatar from "./XiaoYAvatar.vue";
-import { formatDuration, toChatMessages } from "./agentPresentation";
+import { formatDuration, toChatMessages, type AgentChatMessage } from "./agentPresentation";
 
 const props = withDefaults(defineProps<{
     classId?: number | null;
@@ -249,7 +257,8 @@ const now = ref(Date.now());
 const launcherRef = ref<HTMLButtonElement>();
 const inputRef = ref<HTMLTextAreaElement>();
 const conversationRef = ref<HTMLElement>();
-let followLatest = true;
+const followLatest = ref(true);
+const hasUnreadReply = ref(false);
 let expiryTimer: number | undefined;
 
 const chat = useAgentChat(
@@ -314,20 +323,41 @@ function formatTime(timestamp: string): string {
 
 async function scrollToLatest() {
     await nextTick();
-    if (followLatest && conversationRef.value) {
+    if (followLatest.value && conversationRef.value) {
         conversationRef.value.scrollTop = messages.value.length ? conversationRef.value.scrollHeight : 0;
     }
 }
 
 function handleScroll() {
     const container = conversationRef.value;
-    if (container) followLatest = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+    if (!container) return;
+    followLatest.value = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+    if (followLatest.value) hasUnreadReply.value = false;
+}
+
+async function jumpToLatest() {
+    followLatest.value = true;
+    hasUnreadReply.value = false;
+    await scrollToLatest();
+}
+
+function resizeComposer() {
+    const input = inputRef.value;
+    if (!input) return;
+    input.style.height = "auto";
+    input.style.height = `${Math.max(51, Math.min(input.scrollHeight, 160))}px`;
+}
+
+function assistantContent(items: AgentChatMessage[]): string {
+    return JSON.stringify(items.filter(message => message.role === "assistant")
+        .map(message => [message.id, message.text, message.cards, message.actions, message.error]));
 }
 
 async function sendMessage(prompt = draft.value) {
     if (!canSend.value || !prompt.trim()) return;
     const originalDraft = draft.value;
-    followLatest = true;
+    followLatest.value = true;
+    hasUnreadReply.value = false;
     if (await chat.send(prompt)) {
         if (draft.value === originalDraft) draft.value = "";
         void scrollToLatest();
@@ -336,7 +366,8 @@ async function sendMessage(prompt = draft.value) {
 
 async function startNewConversation() {
     if (!canSwitchConversation.value) return;
-    followLatest = true;
+    followLatest.value = true;
+    hasUnreadReply.value = false;
     await chat.newConversation();
     if (!error.value) {
         draft.value = "";
@@ -352,7 +383,8 @@ async function openHistory() {
 
 function closeHistory() {
     historyVisible.value = false;
-    followLatest = true;
+    followLatest.value = true;
+    hasUnreadReply.value = false;
     void scrollToLatest();
 }
 
@@ -378,6 +410,7 @@ function handleInputKeydown(event: KeyboardEvent) {
 }
 
 function handleOpened() {
+    resizeComposer();
     if (window.matchMedia("(pointer: fine)").matches) inputRef.value?.focus();
     void scrollToLatest();
 }
@@ -399,8 +432,22 @@ watch(visible, (open) => {
 watch(() => [props.userId, props.classId, props.semesterId], () => {
     draft.value = "";
     historyVisible.value = false;
+    followLatest.value = true;
+    hasUnreadReply.value = false;
 });
-watch(messages, () => { void scrollToLatest(); }, { deep: true });
+let previousAssistantContent = assistantContent(messages.value);
+watch(messages, (current) => {
+    const content = assistantContent(current);
+    if (!followLatest.value && content !== previousAssistantContent) {
+        hasUnreadReply.value = true;
+    }
+    previousAssistantContent = content;
+    void scrollToLatest();
+}, { deep: true });
+watch([draft, historyVisible, () => props.userId, () => props.classId, () => props.semesterId], () => {
+    resizeComposer();
+    void scrollToLatest();
+}, { flush: "post" });
 onBeforeUnmount(() => window.clearInterval(expiryTimer));
 </script>
 
@@ -1081,6 +1128,34 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
     gap: 7px;
     padding: 0 20px 12px;
 }
+.agent-scroll-return {
+    display: flex;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0 20px 12px;
+}
+.agent-latest-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 30px;
+    padding: 4px 10px;
+    border: 1px solid var(--ta-line-strong);
+    border-radius: var(--ta-radius-small);
+    background: var(--ta-surface-solid);
+    color: var(--ta-blue);
+    font-size: 11px;
+    cursor: pointer;
+}
+.agent-latest-button svg {
+    width: 13px;
+    height: 13px;
+}
+.agent-latest-button__unread {
+    padding-right: 6px;
+    border-right: 1px solid var(--ta-line);
+    font-weight: 600;
+}
 .agent-suggestions button {
     display: flex;
     align-items: center;
@@ -1119,7 +1194,9 @@ onBeforeUnmount(() => window.clearInterval(expiryTimer));
     display: block;
     width: 100%;
     height: 51px;
-    max-height: 100px;
+    min-height: 51px;
+    max-height: 160px;
+    overflow-y: auto;
     padding: 0;
     resize: none;
     border: 0;

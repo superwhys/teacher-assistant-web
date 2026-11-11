@@ -22,27 +22,26 @@
             </button>
         </section>
 
-        <Transition name="content-panel" mode="out-in">
-            <div v-if="activeTab === 'overview'" key="overview" class="shop-view__content-grid">
-                <ShopPrizeShelf :items="prizes" :can-exchange="canMutateShop" @delete="requestDeletePrize"
-                    @edit="openEditPrizeDialog" @exchange="openExchangeDialog" />
+        <div v-if="activeTab === 'overview'" key="overview" class="shop-view__content-grid">
+            <ShopPrizeShelf :items="prizes" :can-exchange="canMutateShop" @delete="requestDeletePrize"
+                @edit="openEditPrizeDialog" @exchange="openExchangeDialog" />
 
-                <ShopRecordsPanel :records="recentRecords" :loading="recordsLoading" :total="recordsTotal"
-                    :page-size="recordsPageSize" :current-page="recordsCurrentPage"
-                    :student-id-name-map="studentIdNameMap" :prize-id-map="prizeIdMap" preview
-                    @open-full="handleViewRecords" @undo="requestUndoExchange" />
-            </div>
-
-            <ShopRecordsPanel v-else key="records" :records="records" :loading="recordsLoading" :total="recordsTotal"
+            <ShopRecordsPanel :records="recentRecords" :loading="recordsLoading" :total="recordsTotal"
                 :page-size="recordsPageSize" :current-page="recordsCurrentPage" :student-id-name-map="studentIdNameMap"
-                :prize-id-map="prizeIdMap" @page-change="handleRecordsPageChange" @undo="requestUndoExchange" />
-        </Transition>
+                :prize-id-map="prizeIdMap" preview @open-full="handleViewRecords" @undo="requestUndoExchange" />
+        </div>
+
+        <ShopRecordsPanel v-else key="records" :records="records" :loading="recordsLoading" :total="recordsTotal"
+            :page-size="recordsPageSize" :current-page="recordsCurrentPage" :student-id-name-map="studentIdNameMap"
+            :prize-id-map="prizeIdMap" @page-change="handleRecordsPageChange" @undo="requestUndoExchange" />
 
         <ShopPrizeEditorDialog v-model="itemDialogVisible" :form="itemForm" :mode="itemDialogMode" @save="savePrize" />
 
         <ShopExchangeDialog v-model="exchangeDialogVisible" :available-points-by-student-id="availablePointsByStudentId"
             :form="exchangeForm" :max-count="Math.max(1, selectedPrizeInfo.stock)" :prize="selectedPrizeInfo"
-            :required-points="requiredPoints" :students="studentsForExchange" @confirm="confirmExchange" />
+            :required-points="requiredPoints" :students="studentsForExchange" :busy="exchangeSubmitting"
+            :can-exchange="canMutateShop" :error="exchangeError" @confirm="confirmExchange"
+            @update:student-id="exchangeForm.studentId = $event" @update:count="exchangeForm.count = $event" />
 
         <ShopImportDialog v-model="importDialogVisible" @confirm="confirmImport" />
 
@@ -142,6 +141,8 @@ const itemDialogVisible = ref(false)
 const itemDialogMode = ref<"add" | "edit">("add")
 const importDialogVisible = ref(false)
 const exchangeDialogVisible = ref(false)
+const exchangeSubmitting = ref(false)
+const exchangeError = ref("")
 const deleteDialogVisible = ref(false)
 const pendingDeletePrize = ref<Prize | null>(null)
 const undoDialogVisible = ref(false)
@@ -164,6 +165,8 @@ const exchangeForm = reactive<ShopExchangeFormState>({
 
 let studentsLoadedForClassId: number | null = null
 let lastStudentsRequestId = 0
+let lastRecordsRequestId = 0
+let shopViewActive = true
 
 /** 返回当前激活的班级 ID。 */
 const activeClassId = computed<number | null>(() => cacheStore.getActiveClassId())
@@ -185,6 +188,15 @@ const isArchivedSemester = computed<boolean>(() => hasActiveClass.value && activ
 
 /** 返回商城当前是否允许兑换。 */
 const canMutateShop = computed<boolean>(() => canWrite.value && hasActiveClass.value && !isArchivedSemester.value)
+
+function captureShopScope() {
+    return { userId: cacheStore.profile?.id, classId: activeClassId.value, semesterId: cacheStore.getActiveSemesterId() }
+}
+
+function isCurrentShopScope(scope: ReturnType<typeof captureShopScope>): boolean {
+    return shopViewActive && scope.userId === cacheStore.profile?.id && scope.classId === activeClassId.value
+        && scope.semesterId === cacheStore.getActiveSemesterId()
+}
 
 /** 返回商品 ID 映射表。 */
 const prizeIdMap = computed<Record<number, Prize>>(() => {
@@ -471,6 +483,7 @@ async function confirmDeletePrize(): Promise<void> {
 
 /** 打开兑换弹窗。 */
 async function openExchangeDialog(prize: Prize): Promise<void> {
+    if (exchangeSubmitting.value) return
     if (!allowWrite()) return
     if (!activeClassId.value) {
         ElMessage.warning("请先选择班级")
@@ -487,7 +500,13 @@ async function openExchangeDialog(prize: Prize): Promise<void> {
         return
     }
 
-    await ensureStudentsLoaded()
+    const scope = captureShopScope()
+    const studentsReady = await ensureStudentsLoaded()
+    if (!isCurrentShopScope(scope)) return
+    if (!studentsReady) {
+        ElMessage.warning("学生积分加载失败，请重试")
+        return
+    }
     if (students.value.length === 0) {
         ElMessage.warning("当前班级暂无学生")
         return
@@ -496,13 +515,16 @@ async function openExchangeDialog(prize: Prize): Promise<void> {
     exchangeForm.prizeId = toNumber(prize.id, 0)
     exchangeForm.studentId = null
     exchangeForm.count = 1
+    exchangeError.value = ""
     exchangeDialogVisible.value = true
 }
 
 /** 确认提交兑换请求。 */
 async function confirmExchange(): Promise<void> {
+    if (exchangeSubmitting.value) return
     if (!allowWrite()) return
-    if (!activeClassId.value) {
+    const classId = activeClassId.value
+    if (!classId) {
         ElMessage.warning("请先选择班级")
         return
     }
@@ -512,48 +534,66 @@ async function confirmExchange(): Promise<void> {
         return
     }
 
-    if (!exchangeForm.studentId) {
-        ElMessage.warning("请选择兑换学生")
+    if (!exchangeForm.studentId || !students.value.some(student => student.id === exchangeForm.studentId)) {
+        exchangeError.value = "请选择兑换学生"
         return
     }
 
-    if (exchangeForm.count <= 0) {
-        ElMessage.warning("兑换数量必须大于 0")
+    if (!Number.isInteger(exchangeForm.count) || exchangeForm.count <= 0) {
+        exchangeError.value = "兑换数量必须为大于 0 的整数"
         return
     }
 
     if (!selectedPrize.value) {
-        ElMessage.error("商品不存在")
+        exchangeError.value = "商品不存在"
         return
     }
 
     const prizeStock = toNumber(selectedPrize.value.stock, 0)
     if (prizeStock < exchangeForm.count) {
-        ElMessage.warning("商品库存不足")
+        exchangeError.value = "商品库存不足"
         return
     }
 
     const availablePoints = availablePointsByStudentId.value[exchangeForm.studentId] ?? 0
     if (availablePoints < requiredPoints.value) {
-        ElMessage.warning(`学生可用积分不足，当前 ${availablePoints}，需要 ${requiredPoints.value}`)
+        exchangeError.value = `学生可用积分不足，当前 ${availablePoints}，需要 ${requiredPoints.value}`
         return
     }
 
+    const scope = captureShopScope()
+    const prizeId = toNumber(selectedPrize.value.id, 0)
+    if (!prizeId || toNumber(selectedPrize.value.points, 0) <= 0) {
+        exchangeError.value = "商品兑换信息异常，请刷新后重试"
+        return
+    }
+    const studentId = exchangeForm.studentId
+    const count = exchangeForm.count
+    const studentName = studentIdNameMap.value[studentId] || "该学生"
+    const prizeName = selectedPrize.value.name?.trim() || "商品"
+    exchangeSubmitting.value = true
+    exchangeError.value = ""
     try {
         await shopManager.exchangePrize(
-            activeClassId.value,
-            toNumber(selectedPrize.value.id, 0),
-            exchangeForm.studentId,
-            exchangeForm.count
+            classId,
+            prizeId,
+            studentId,
+            count
         )
-
-        const studentName = studentIdNameMap.value[exchangeForm.studentId] || "该学生"
-        ElMessage.success(`${studentName} 已成功兑换 ${exchangeForm.count} 个 ${selectedPrize.value.name?.trim() || "商品"}`)
+        if (!isCurrentShopScope(scope)) return
+        ElMessage.success(`${studentName} 已成功兑换 ${count} 个 ${prizeName}`)
         exchangeDialogVisible.value = false
-        await refreshPrizes()
-        await loadRecordsPage(1)
+        studentsLoadedForClassId = null
+        const results = await Promise.all([refreshPrizes(), loadRecordsPage(1), ensureStudentsLoaded()])
+        if (isCurrentShopScope(scope) && results.some(refreshed => !refreshed)) {
+            ElMessage.warning("兑换已完成，部分数据刷新失败，请刷新页面查看最新库存和记录。")
+        }
     } catch (error) {
-        console.error(error)
+        if (isCurrentShopScope(scope)) {
+            exchangeError.value = error instanceof Error ? error.message : "兑换失败，请稍后重试"
+        }
+    } finally {
+        exchangeSubmitting.value = false
     }
 }
 
@@ -616,60 +656,67 @@ async function confirmImport(items: CreatePrizeReq[]): Promise<void> {
 }
 
 /** 按需加载当前班级学生数据。 */
-async function ensureStudentsLoaded(): Promise<void> {
+async function ensureStudentsLoaded(): Promise<boolean> {
     const classId = activeClassId.value
+    const scope = captureShopScope()
     if (!classId) {
         students.value = []
         studentsLoadedForClassId = null
-        return
+        return true
     }
 
     if (studentsLoadedForClassId === classId && students.value.length > 0) {
-        return
+        return true
     }
 
     const requestId = ++lastStudentsRequestId
 
     try {
         const studentList = await studentManager.list(classId)
-        if (requestId !== lastStudentsRequestId) {
-            return
+        if (requestId !== lastStudentsRequestId || !isCurrentShopScope(scope)) {
+            return false
         }
 
         students.value = studentList
         studentsLoadedForClassId = classId
+        return true
     } catch (error) {
         console.error(error)
-        if (requestId !== lastStudentsRequestId) {
-            return
+        if (requestId !== lastStudentsRequestId || !isCurrentShopScope(scope)) {
+            return false
         }
 
         students.value = []
         studentsLoadedForClassId = null
+        return false
     }
 }
 
 /** 刷新商品列表。 */
-async function refreshPrizes(): Promise<void> {
+async function refreshPrizes(): Promise<boolean> {
     try {
-        prizes.value = await shopManager.listPrizes()
+        const userId = cacheStore.profile?.id
+        const nextPrizes = await shopManager.listPrizes()
+        if (!shopViewActive || userId !== cacheStore.profile?.id) return false
+        prizes.value = nextPrizes
+        return true
     } catch (error) {
         console.error(error)
-        prizes.value = []
+        return false
     }
 }
 
 /** 按页加载兑换记录。 */
-async function loadRecordsPage(page: number): Promise<void> {
-    if (recordsLoading.value) {
-        return
-    }
-
-    if (!activeClassId.value) {
+async function loadRecordsPage(page: number): Promise<boolean> {
+    const scope = captureShopScope()
+    const requestId = ++lastRecordsRequestId
+    const classId = activeClassId.value
+    if (!classId) {
         records.value = []
         recordsTotal.value = 0
         recordsCurrentPage.value = 1
-        return
+        recordsLoading.value = false
+        return true
     }
 
     recordsLoading.value = true
@@ -679,21 +726,22 @@ async function loadRecordsPage(page: number): Promise<void> {
         recordsCurrentPage.value = nextPage
 
         const response = await shopManager.listPrizeRecords({
-            class_id: activeClassId.value,
+            class_id: classId,
             limit: recordsPageSize.value,
             offset: (nextPage - 1) * recordsPageSize.value,
         })
 
+        if (requestId !== lastRecordsRequestId || !isCurrentShopScope(scope)) return false
         records.value = [...(response.items ?? [])].sort((currentItem, nextItem) => {
             return toNumber(nextItem.id, 0) - toNumber(currentItem.id, 0)
         })
         recordsTotal.value = toNumber(response.total, 0)
+        return true
     } catch (error) {
         console.error(error)
-        records.value = []
-        recordsTotal.value = 0
+        return false
     } finally {
-        recordsLoading.value = false
+        if (requestId === lastRecordsRequestId) recordsLoading.value = false
     }
 }
 
@@ -736,6 +784,7 @@ watch(recordsLoading, (loading) => {
 
 onMounted(() => window.addEventListener(AGENT_ACTION_SUCCEEDED_EVENT, handleAgentActionSucceeded))
 onBeforeUnmount(() => {
+    shopViewActive = false
     window.removeEventListener(AGENT_ACTION_SUCCEEDED_EVENT, handleAgentActionSucceeded)
     pendingAgentRecordsRefresh = null
 })
@@ -747,10 +796,23 @@ onMounted(async () => {
     ])
 })
 
-watch(activeClassId, async () => {
+watch([activeClassId, () => cacheStore.profile?.id, () => cacheStore.getActiveSemesterId()], async () => {
+    lastStudentsRequestId += 1
+    exchangeDialogVisible.value = false
+    exchangeError.value = ""
     students.value = []
     studentsLoadedForClassId = null
+    records.value = []
+    recordsTotal.value = 0
     await loadRecordsPage(1)
+})
+
+watch(() => [exchangeForm.studentId, exchangeForm.count], () => {
+    exchangeError.value = ""
+})
+
+watch(canMutateShop, allowed => {
+    if (!allowed) exchangeDialogVisible.value = false
 })
 
 watch(activeTab, async (tab) => {
@@ -820,17 +882,6 @@ watch(activeTab, async (tab) => {
     grid-template-columns: minmax(0, 1fr) 350px;
     gap: 20px;
     align-items: stretch;
-}
-
-.content-panel-enter-active,
-.content-panel-leave-active {
-    transition: opacity 180ms ease, transform 210ms cubic-bezier(.2, .8, .2, 1);
-}
-
-.content-panel-enter-from,
-.content-panel-leave-to {
-    opacity: 0;
-    transform: translateY(5px);
 }
 
 @media (min-width: 1800px) {

@@ -1,7 +1,7 @@
 <template>
     <AppDialogShell v-model="visible" :title="currentTab === 'minus' ? '选择扣分规则' : currentTab === 'plus' ? '选择加分规则' : '选择积分规则'"
         eyebrow="积分操作" :description="targetLabel ? `本次操作：${targetLabel}` : '选择本次加分或扣分项目'"
-        width="640px" :busy="applying">
+        width="640px" max-height="min(720px, calc(100dvh - 40px))" :busy="applying">
         <section v-if="loading" class="rules-state" role="status" aria-live="polite">
             <el-skeleton :rows="4" animated />
             <p>正在加载积分规则…</p>
@@ -40,6 +40,7 @@
                         {{ group.name }} <small>{{ group.rules.length }}</small>
                     </button>
                 </div>
+                <p class="rules-hint"><strong>点击规则立即执行</strong> · 分值为每位学生本次获得或扣除的积分。</p>
                 <div class="rule-grid">
                     <button v-for="rule in activeGroup.rules" :key="rule.id" type="button" class="rule-card"
                         :class="{ 'rule-card--minus': rule.sign === 'minus' }" :disabled="!canWrite || applying || !validCount" @click="handleSelectRule(rule)">
@@ -50,7 +51,7 @@
                         </span>
                     </button>
                 </div>
-                <p class="rules-hint">{{ filteredGroups.length }} 个分组 · {{ filteredRuleCount }} 项规则，点击规则立即执行。</p>
+                <p class="rules-hint">{{ filteredGroups.length }} 个分组 · {{ filteredRuleCount }} 项规则</p>
             </template>
             <section v-else class="rules-state">
                 <strong>当前条件下暂无可用规则</strong>
@@ -269,7 +270,7 @@ watch(filteredGroups, (groups) => {
 <style scoped>
 .students-points-rule-dialog {
     display: grid;
-    gap: 16px;
+    gap: 12px;
 }
 
 .rules-state {
@@ -355,7 +356,7 @@ watch(filteredGroups, (groups) => {
 
 .rule-repeat-count input {
     width: 78px;
-    min-height: 40px;
+    min-height: 36px;
     box-sizing: border-box;
     padding: 0 10px;
     border: 1px solid var(--ta-line-strong);

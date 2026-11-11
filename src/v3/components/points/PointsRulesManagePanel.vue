@@ -30,7 +30,15 @@
             </div>
         </div>
 
-        <div v-if="ruleGroups.length > 0" class="rule-shell" v-loading="ruleGroupsLoading">
+        <div v-if="ruleGroupsError" class="load-status" role="alert">
+            <span>{{ ruleGroupsError }}{{ ruleGroups.length ? "，当前保留上次成功加载的数据。" : "。" }}</span>
+            <button type="button" class="ghost-button ghost-button--small" :disabled="ruleGroupsLoading" @click="emit('retry')">重新加载</button>
+        </div>
+        <div v-if="ruleGroupsLoading && !ruleGroups.length" class="empty-state" role="status">
+            <el-skeleton :rows="4" />
+            <span>正在加载积分规则…</span>
+        </div>
+        <div v-else-if="ruleGroups.length > 0" class="rule-shell" v-loading="ruleGroupsLoading" :aria-busy="ruleGroupsLoading">
             <div class="rules-workspace">
                 <aside class="rule-groups-panel">
                     <div class="rule-groups-panel__head">
@@ -183,7 +191,7 @@
             </div>
         </div>
 
-        <div v-else class="empty-state">
+        <div v-else-if="!ruleGroupsError" class="empty-state">
             <strong>还没有积分规则</strong>
             <p>可以先新增规则组，或者直接通过 Excel 批量导入积分项。</p>
             <button
@@ -214,6 +222,7 @@ interface PointsRulesManagePanelProps {
     hasActiveClass: boolean
     ruleGroups: RuleGroup[]
     ruleGroupsLoading: boolean
+    ruleGroupsError?: string
     selectedRuleGroup: RuleGroup | null
     selectedRuleGroupId: number
     selectedRuleGroupRules: Rule[]
@@ -225,6 +234,7 @@ type RuleViewFilter = "all" | "plus" | "minus"
 const props = defineProps<PointsRulesManagePanelProps>()
 
 const emit = defineEmits<{
+    (e: "retry"): void
     (e: "create-group"): void
     (e: "create-rule"): void
     (e: "delete-group"): void
@@ -304,6 +314,16 @@ function handleSelectRuleViewFilter(filter: RuleViewFilter): void {
     border-radius: var(--ta-radius-large);
     background: var(--ta-surface);
     box-shadow: var(--ta-shadow-1);
+}
+
+.load-status {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--ta-text-secondary);
+    font-size: 13px;
 }
 
 .panel-head,

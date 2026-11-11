@@ -11,7 +11,8 @@ const mocks = vi.hoisted(() => ({
         isAuthenticated: true, displayName: '老师', isExpired: false, dataVersion: 0,
         getActiveClassId: () => 1, getActiveClassName: () => '一班',
         getActiveSemesterName: () => '第一学期', getActiveSemesterStatus: () => 1,
-        hasLockPassword: () => false,
+        hasLockPassword: vi.fn(), verifyLockPassword: vi.fn(), setLockPassword: vi.fn(),
+        clearLockPassword: vi.fn(),
         setActiveClassName: vi.fn(), clearActiveClassName: vi.fn(),
         setActiveSemesterId: vi.fn(), setActiveSemesterName: vi.fn(),
         clearActiveSemesterName: vi.fn(), setActiveSemesterStatus: vi.fn(),
@@ -38,6 +39,13 @@ vi.mock('@/v3/components/settings/SettingsNextSemesterDialog.vue', () => ({ defa
 vi.mock('@/v3/components/settings/SettingsRenameClassDialog.vue', () => ({ default: { render: () => null } }))
 
 interface SettingsState {
+    oldPwd: string
+    newPwd: string
+    confirmPwd: string
+    savingPwd: boolean
+    lockPasswordErrors: { oldPassword: string, newPassword: string, confirmPassword: string }
+    onSaveLockPassword: () => Promise<void>
+    onClearLockPassword: () => Promise<void>
     renameClassDialogVisible: boolean
     renameClassName: string
     nextSemesterDialogVisible: boolean
@@ -76,6 +84,9 @@ beforeEach(() => {
     mocks.list.mockResolvedValue([{ id: 1, name: '一班', semester: { id: 1, name: '第一学期', status: 1 } }])
     mocks.confirm.mockResolvedValue('confirm')
     mocks.submitOpinion.mockResolvedValue(undefined)
+    mocks.cache.hasLockPassword.mockReturnValue(false)
+    mocks.cache.verifyLockPassword.mockResolvedValue(true)
+    mocks.cache.setLockPassword.mockResolvedValue(true)
 })
 
 afterEach(() => {
@@ -84,6 +95,67 @@ afterEach(() => {
 })
 
 describe('SettingsView commercial restrictions', () => {
+    it('exposes field errors for short and mismatched lock passwords without saving', async () => {
+        const settings = await mountSettings()
+        settings.newPwd = '12'
+        settings.confirmPwd = '1234'
+        expect(settings.lockPasswordErrors.newPassword).toBe('密码长度至少为 4 位')
+        expect(settings.lockPasswordErrors.confirmPassword).toBe('两次输入的密码不一致')
+        await settings.onSaveLockPassword()
+        expect(mocks.cache.setLockPassword).not.toHaveBeenCalled()
+    })
+
+    it('keeps an incorrect original password error beside that field', async () => {
+        mocks.cache.hasLockPassword.mockReturnValue(true)
+        mocks.cache.verifyLockPassword.mockResolvedValue(false)
+        const settings = await mountSettings()
+        settings.oldPwd = 'wrong'
+        settings.newPwd = '5678'
+        settings.confirmPwd = '5678'
+        await settings.onSaveLockPassword()
+        expect(settings.lockPasswordErrors.oldPassword).toBe('原密码不正确')
+        expect(mocks.cache.setLockPassword).not.toHaveBeenCalled()
+        settings.oldPwd = 'correct'
+        await nextTick()
+        expect(settings.lockPasswordErrors.oldPassword).toBe('')
+    })
+
+    it('blocks another save while verifying the original password', async () => {
+        mocks.cache.hasLockPassword.mockReturnValue(true)
+        let finish!: (value: boolean) => void
+        mocks.cache.verifyLockPassword.mockReturnValue(new Promise(resolve => { finish = resolve }))
+        const settings = await mountSettings()
+        settings.oldPwd = '1234'
+        settings.newPwd = '5678'
+        settings.confirmPwd = '5678'
+        const pending = settings.onSaveLockPassword()
+        await settings.onSaveLockPassword()
+        expect(settings.savingPwd).toBe(true)
+        expect(mocks.cache.verifyLockPassword).toHaveBeenCalledOnce()
+        finish(true)
+        await pending
+        expect(mocks.cache.setLockPassword).toHaveBeenCalledExactlyOnceWith('5678')
+        expect(settings.savingPwd).toBe(false)
+        expect(settings.newPwd).toBe('')
+    })
+
+    it('shows an original-password error before asking to clear and preserves input after cancellation', async () => {
+        mocks.cache.hasLockPassword.mockReturnValue(true)
+        mocks.cache.verifyLockPassword.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+        const settings = await mountSettings()
+        settings.oldPwd = 'wrong'
+        await settings.onClearLockPassword()
+        expect(settings.lockPasswordErrors.oldPassword).toBe('原密码不正确')
+        expect(mocks.confirm).not.toHaveBeenCalled()
+        settings.oldPwd = 'correct'
+        await nextTick()
+        mocks.confirm.mockRejectedValueOnce(new Error('cancel'))
+        await settings.onClearLockPassword()
+        expect(mocks.cache.clearLockPassword).not.toHaveBeenCalled()
+        expect(settings.oldPwd).toBe('correct')
+        expect(settings.savingPwd).toBe(false)
+    })
+
     it('allows reading class state but blocks rename, next semester and feedback before trial or after expiry', async () => {
         mocks.session.canWrite = false
         const settings = await mountSettings()

@@ -57,6 +57,7 @@
             <StudentsListPanel class="student-panel" :has-active-class="hasActiveClass"
                 :groups="visibleGroupChips" :is-all-selected="isAllFilteredStudentsSelected" :layout-mode="layoutMode"
                 :loading="loading" :multi-select-enabled="multiSelectEnabled" :selected-student-ids="selectedStudentIds"
+                :points-feedback="pointsFeedback"
                 :sort-by="sortBy" :students="filteredStudents" @edit-student="openEdit"
                 @remove-student="requestRemoveStudent" @select-student="handleSelectStudent"
                 @toggle-group-selection="handleToggleGroupSelection" @toggle-multi-select="toggleMultiSelectEnabled"
@@ -206,6 +207,13 @@ const groups = ref<StudentGroupDTO[]>([])
 const keyword = ref("")
 const selectedGroupId = ref<number | null>(null)
 const selectedStudentIds = ref<number[]>([])
+const pointsFeedback = ref<{ studentIds: number[], sign: "plus" | "minus" } | null>(null)
+let pointsFeedbackTimeout: ReturnType<typeof setTimeout> | undefined
+
+function clearPointsFeedback(): void {
+    clearTimeout(pointsFeedbackTimeout)
+    pointsFeedback.value = null
+}
 const multiSelectEnabled = ref(false)
 const studentSearchIndexMap = ref<Map<number, StudentSearchIndexItem>>(new Map())
 const addStudentDialogVisible = ref(false)
@@ -251,6 +259,7 @@ onMounted(() => {
     window.addEventListener(AGENT_ACTION_SUCCEEDED_EVENT, handleAgentActionSucceeded)
 })
 onBeforeUnmount(() => {
+    clearPointsFeedback()
     compactViewport.removeEventListener("change", syncCompactViewport)
     window.removeEventListener(AGENT_ACTION_SUCCEEDED_EVENT, handleAgentActionSucceeded)
     studentsViewActive = false
@@ -623,16 +632,20 @@ function syncSelectedStudents(): void {
 }
 
 /** 加载当前班级的学生与分组数据。 */
-async function loadStudentData(): Promise<void> {
+async function loadStudentData(): Promise<boolean> {
     const requestId = ++studentLoadRequestId
     const classId = activeClassId.value
+    const semesterId = cacheStore.getActiveSemesterId()
+    const userId = cacheStore.profile?.id
+    const isCurrent = () => requestId === studentLoadRequestId && classId === activeClassId.value
+        && semesterId === cacheStore.getActiveSemesterId() && userId === cacheStore.profile?.id && studentsViewActive
     if (!classId) {
         students.value = []
         groups.value = []
         selectedStudentIds.value = []
         studentSearchIndexMap.value = new Map()
         loading.value = false
-        return
+        return false
     }
 
     loading.value = true
@@ -642,7 +655,7 @@ async function loadStudentData(): Promise<void> {
             supportsStudentGroups.value ? studentManager.listGroups(classId) : Promise.resolve([])
         ])
 
-        if (requestId !== studentLoadRequestId || classId !== activeClassId.value || !studentsViewActive) return
+        if (!isCurrent()) return false
 
         students.value = studentList
         groups.value = groupList
@@ -656,10 +669,12 @@ async function loadStudentData(): Promise<void> {
 
         rebuildStudentSearchIndexMap()
         syncSelectedStudents()
+        return true
     } catch (error) {
-        if (requestId !== studentLoadRequestId || classId !== activeClassId.value || !studentsViewActive) return
+        if (!isCurrent()) return false
         console.error("加载学生管理数据失败", error)
         ElMessage.error("加载学生管理数据失败")
+        return false
     } finally {
         if (requestId === studentLoadRequestId) loading.value = false
     }
@@ -764,12 +779,21 @@ async function handleSelectRule(rule: { id: number, name: string, sign: "plus" |
         return
     }
 
+    const classId = activeClassId.value
+    const semesterId = cacheStore.getActiveSemesterId()
+    const userId = cacheStore.profile?.id
+    const targets = [...selectorTargets.value]
+    const isCurrent = () => studentsViewActive && classId === activeClassId.value
+        && semesterId === cacheStore.getActiveSemesterId() && userId === cacheStore.profile?.id
+    clearPointsFeedback()
     pointsApplying.value = true
     try {
-        await pointsManager.applyRuleBatch(activeClassId.value, rule.id, selectorTargets.value, count)
+        await pointsManager.applyRuleBatch(classId, rule.id, targets, count)
+        if (!isCurrent()) return
         selectorVisible.value = false
-        ElMessage.success(`已对「${getPointsTargetLabel(selectorTargets.value)}」${rule.sign === "plus" ? "加" : "减"}${Math.abs(rule.points) * count} 分（${rule.name} × ${count} 次）`)
+        ElMessage.success(`已为 ${targets.length} 名学生${targets.length > 1 ? "各" : ""}${rule.sign === "plus" ? "加" : "减"} ${Math.abs(rule.points) * count} 分`)
     } catch (error) {
+        if (!isCurrent()) return
         console.error("执行积分操作失败", error)
         if (!(error instanceof ApiRequestError)) {
             ElMessage.error(error instanceof Error ? error.message : "执行积分操作失败")
@@ -778,7 +802,10 @@ async function handleSelectRule(rule: { id: number, name: string, sign: "plus" |
     } finally {
         pointsApplying.value = false
     }
-    await loadStudentData()
+    if (await loadStudentData() && isCurrent()) {
+        pointsFeedback.value = { studentIds: targets, sign: rule.sign }
+        pointsFeedbackTimeout = setTimeout(clearPointsFeedback, 1400)
+    }
 }
 
 /** 处理学生卡片选中。 */
@@ -1113,7 +1140,10 @@ async function handleConfirmGroupImport(payload: { groups: Array<{ groupName: st
     await loadStudentData()
 }
 
-watch(activeClassId, async () => {
+watch([activeClassId, () => cacheStore.getActiveSemesterId(), () => cacheStore.profile?.id], async () => {
+    clearPointsFeedback()
+    students.value = []
+    groups.value = []
     randomGroupVisible.value = false
     selectorVisible.value = false
     selectionDetailsVisible.value = false
@@ -1137,10 +1167,6 @@ watch(isArchivedSemester, () => {
     randomGroupVisible.value = false
     selectorVisible.value = false
     selectorTargets.value = []
-})
-
-watch(() => cacheStore.getActiveSemesterId(), () => {
-    randomGroupVisible.value = false
 })
 
 watch(selectedStudentIds, (ids) => {

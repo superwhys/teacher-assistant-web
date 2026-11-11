@@ -50,6 +50,13 @@ interface AssistantState {
     closeHistory(): void;
     selectConversation(id: string): Promise<void>;
     startNewConversation(): Promise<void>;
+    inputRef?: HTMLTextAreaElement;
+    conversationRef?: HTMLElement;
+    followLatest: boolean;
+    hasUnreadReply: boolean;
+    handleScroll(): void;
+    jumpToLatest(): Promise<void>;
+    handleInputKeydown(event: KeyboardEvent): void;
 }
 
 // Exercise the real component setup, lifecycle and click handlers without a browser drawer.
@@ -122,6 +129,122 @@ afterEach(() => {
 });
 
 describe("AgentAssistant server interaction", () => {
+    it("grows the draft input to its content, caps it and restores its height after clearing", async () => {
+        const state = mountAssistant();
+        let measuredHeight = 96;
+        const input = { style: { height: "51px" }, get scrollHeight() { return measuredHeight; } };
+        state.inputRef = input as unknown as HTMLTextAreaElement;
+        state.draft = "第一行\n第二行\n第三行";
+        await nextTick();
+        expect(input.style.height).toBe("96px");
+        measuredHeight = 320;
+        state.draft += "\n更多内容";
+        await nextTick();
+        expect(input.style.height).toBe("160px");
+        measuredHeight = 51;
+        state.draft = "";
+        await nextTick();
+        expect(input.style.height).toBe("51px");
+    });
+
+    it("restores the input height when changing context or returning from history", async () => {
+        const state = mountAssistant();
+        const input = { style: { height: "160px" }, scrollHeight: 51 };
+        state.inputRef = input as unknown as HTMLTextAreaElement;
+        state.draft = "旧班级的长草稿";
+        app!._instance!.props.classId = 99;
+        await nextTick();
+        expect(state.draft).toBe("");
+        expect(input.style.height).toBe("51px");
+        await state.openHistory();
+        input.style.height = "160px";
+        state.closeHistory();
+        await nextTick();
+        expect(input.style.height).toBe("51px");
+    });
+
+    it("shrinks the input after a successful send without changing the send contract", async () => {
+        const state = mountAssistant();
+        const input = { style: { height: "51px" }, get scrollHeight() { return state.draft ? 240 : 51; } };
+        state.inputRef = input as unknown as HTMLTextAreaElement;
+        state.draft = "多行长指令";
+        await nextTick();
+        expect(input.style.height).toBe("160px");
+        mocks.send.mockResolvedValueOnce(true);
+        await state.sendMessage();
+        await nextTick();
+        expect(mocks.send).toHaveBeenCalledExactlyOnceWith("多行长指令");
+        expect(input.style.height).toBe("51px");
+    });
+
+    it("keeps the reader's scroll position and offers an explicit return when a reply grows", async () => {
+        setAction(pendingAction());
+        const state = mountAssistant();
+        await nextTick();
+        const container = { scrollHeight: 1000, scrollTop: 100, clientHeight: 300 };
+        state.conversationRef = container as unknown as HTMLElement;
+        state.handleScroll();
+        expect(state.followLatest).toBe(false);
+        expect(state.hasUnreadReply).toBe(false);
+        chatState.conversation.value!.messages.push({
+            id: "assistant", run_id: "run", role: "assistant", content: "新回复内容",
+            created_at: "2026-11-03T10:00:00+08:00",
+        });
+        await nextTick();
+        await nextTick();
+        expect(container.scrollTop).toBe(100);
+        expect(state.hasUnreadReply).toBe(true);
+        const html = await renderToString(createSSRApp({ ...AgentAssistant, setup: () => state }, {
+            userId: "teacher", classId: 7, semesterId: 70,
+        }));
+        expect(html).toContain('aria-label="回到最新回复"');
+        expect(html).toContain("有新回复");
+        await state.jumpToLatest();
+        expect(container.scrollTop).toBe(1000);
+        expect(state.followLatest).toBe(true);
+        expect(state.hasUnreadReply).toBe(false);
+    });
+
+    it("clears the unread indicator when the reader scrolls back to the bottom", async () => {
+        const state = mountAssistant();
+        state.hasUnreadReply = true;
+        state.conversationRef = { scrollHeight: 1000, scrollTop: 700, clientHeight: 300 } as HTMLElement;
+        state.handleScroll();
+        expect(state.followLatest).toBe(true);
+        expect(state.hasUnreadReply).toBe(false);
+    });
+
+    it("does not mark timing metadata as a new reply", async () => {
+        setAction(pendingAction());
+        const state = mountAssistant();
+        await nextTick();
+        state.conversationRef = { scrollHeight: 1000, scrollTop: 100, clientHeight: 300 } as HTMLElement;
+        state.handleScroll();
+        chatState.conversation.value!.runs[0]!.duration_ms = 1000;
+        await nextTick();
+        expect(state.hasUnreadReply).toBe(false);
+    });
+
+    it("marks an updated action preview as new content while the reader is away", async () => {
+        setAction(pendingAction());
+        const state = mountAssistant();
+        await nextTick();
+        state.conversationRef = { scrollHeight: 1000, scrollTop: 100, clientHeight: 300 } as HTMLElement;
+        state.handleScroll();
+        chatState.conversation.value!.actions[0]!.description = "新增的操作说明";
+        await nextTick();
+        expect(state.hasUnreadReply).toBe(true);
+    });
+
+    it.each([{ shiftKey: true }, { isComposing: true }, { keyCode: 229 }])("keeps Enter for text editing or IME composition (%o)", async (fields) => {
+        const state = mountAssistant();
+        state.draft = "输入中的消息";
+        const event = { key: "Enter", shiftKey: false, isComposing: false, keyCode: 13, preventDefault: vi.fn(), ...fields };
+        state.handleInputKeydown(event as unknown as KeyboardEvent);
+        expect(event.preventDefault).not.toHaveBeenCalled();
+        expect(mocks.send).not.toHaveBeenCalled();
+    });
+
     it("opens history inside the assistant and returns without cancelling a running reply", async () => {
         const state = mountAssistant();
         chatState.responding.value = true;

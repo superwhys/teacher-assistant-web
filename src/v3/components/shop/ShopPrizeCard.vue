@@ -117,15 +117,11 @@ function toNumber(value: unknown, fallback = 0): number {
     border: 1px solid var(--ta-line);
     border-radius: var(--ta-radius-large);
     background: #ffffff;
-    transition: border-color 140ms ease, box-shadow 140ms ease, transform 100ms ease;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .shop-card:hover {
     border-color: rgba(24, 116, 100, 0.25);
-}
-
-.shop-card:active {
-    transform: scale(0.99);
 }
 
 .shop-card__footer,

@@ -2,7 +2,7 @@
     <el-dialog
         v-model="visible"
         :width="width"
-        :style="height ? { '--app-dialog-height': height } : undefined"
+        :style="{ '--app-dialog-height': height, '--app-dialog-max-height': maxHeight }"
         :title="title"
         :show-close="showClose && !busy"
         :close-on-click-modal="!busy"
@@ -47,6 +47,7 @@ interface AppDialogShellProps {
     busy?: boolean
     eyebrow?: string
     height?: string
+    maxHeight?: string
     modelValue: boolean
     showClose?: boolean
     title: string
@@ -89,7 +90,7 @@ const visible = computed({
     max-width: calc(100vw - 24px);
     height: var(--app-dialog-height, var(--ta-dialog-height)) !important;
     min-height: 0;
-    max-height: calc(100dvh - 40px);
+    max-height: var(--app-dialog-max-height, calc(100dvh - 40px));
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -191,7 +192,7 @@ const visible = computed({
         width: 100% !important;
         max-width: none;
         align-self: flex-end;
-        max-height: calc(100dvh - 16px);
+        max-height: min(var(--app-dialog-max-height, 100dvh), calc(100dvh - 16px));
         border-radius: 14px;
     }
 

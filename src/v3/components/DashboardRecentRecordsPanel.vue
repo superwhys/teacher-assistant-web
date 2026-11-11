@@ -9,12 +9,21 @@
             </button>
         </div>
 
-        <div v-if="recordPreview.length === 0" class="empty-state">
+        <div v-if="recordsError" class="panel-status" role="alert">
+            <span>{{ recordsError }}{{ recordPreview.length ? "，当前保留上次成功加载的数据。" : "。" }}</span>
+            <button class="text-button" type="button" :disabled="recordsLoading" @click="loadRecordPreview">重新加载</button>
+        </div>
+        <div v-if="recordsLoading && !recordPreview.length" class="empty-state" role="status">
+            <el-skeleton :rows="4" />
+            <span>正在加载积分记录…</span>
+        </div>
+        <div v-else-if="recordPreview.length === 0 && !recordsError" class="empty-state">
             <strong>暂无积分记录</strong>
             <p>当前班级还没有可展示的积分规则记录。</p>
         </div>
 
-        <div v-else class="preview-list">
+        <div v-else-if="recordPreview.length" class="preview-list" :aria-busy="recordsLoading">
+            <p v-if="recordsLoading" class="panel-status" role="status">正在刷新积分记录…</p>
             <article v-for="item in recordPreview" :key="item.id" class="preview-item">
                 <span class="preview-mark" :class="item.valueToneClass" aria-hidden="true">
                     <i-ep-minus v-if="item.valueToneClass === 'is-negative'" />
@@ -35,13 +44,15 @@
 <script setup lang="ts">
 import { pointsManager } from "@/managers/points"
 import type { ListApplyRecordsQuery, Record as PointsApplyRecord } from "@/types/points"
-import { computed, ref, watch } from "vue"
+import { useCacheStore } from "@/stores/cacheStore"
+import { computed, onBeforeUnmount, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 
 /** 定义最近积分记录面板属性。 */
 interface DashboardRecentRecordsPanelProps {
     activeClassId: number | null
     currentSemesterId: number | null
+    refreshVersion?: number
 }
 
 /** 定义积分记录展示结构。 */
@@ -56,7 +67,11 @@ interface RecordPreviewItem {
 const props = defineProps<DashboardRecentRecordsPanelProps>()
 
 const router = useRouter()
+const cacheStore = useCacheStore()
 const recordPreviewResponse = ref<PointsApplyRecord[]>([])
+const recordsLoading = ref(false)
+const recordsError = ref("")
+let recordsRequestId = 0
 
 /** 返回最近积分记录预览展示数据。 */
 const recordPreview = computed<RecordPreviewItem[]>(() => {
@@ -147,27 +162,44 @@ function buildRecordPreviewQuery(): ListApplyRecordsQuery {
 
 /** 加载最近积分记录接口数据。 */
 async function loadRecordPreview(): Promise<void> {
-    if (!props.activeClassId) {
+    const requestId = ++recordsRequestId
+    const classId = props.activeClassId
+    const semesterId = props.currentSemesterId
+    const userId = cacheStore.profile?.id
+    const isCurrent = () => requestId === recordsRequestId && classId === props.activeClassId
+        && semesterId === props.currentSemesterId && userId === cacheStore.profile?.id
+    recordsError.value = ""
+    if (!classId) {
         recordPreviewResponse.value = []
+        recordsLoading.value = false
         return
     }
 
+    recordsLoading.value = true
     try {
         const response = await pointsManager.listApplyRecords(buildRecordPreviewQuery())
+        if (!isCurrent()) return
         recordPreviewResponse.value = (response.items ?? [])
             .filter((item) => isRuleApplyRecord(item))
             .sort((prev, next) => getRecordTimestamp(next) - getRecordTimestamp(prev))
             .slice(0, 7)
     } catch (error) {
+        if (!isCurrent()) return
         console.error("获取最近积分记录失败", error)
-        recordPreviewResponse.value = []
+        recordsError.value = "积分记录加载失败"
+    } finally {
+        if (requestId === recordsRequestId) recordsLoading.value = false
     }
 }
 
 /** 监听班级与学期变化后重新加载最近积分记录。 */
-watch(() => [props.activeClassId, props.currentSemesterId], () => {
+watch(() => [cacheStore.profile?.id, props.activeClassId, props.currentSemesterId], () => {
+    recordPreviewResponse.value = []
     void loadRecordPreview()
 }, { immediate: true })
+
+watch(() => props.refreshVersion, () => { void loadRecordPreview() })
+onBeforeUnmount(() => { recordsRequestId += 1 })
 </script>
 
 <style scoped>
@@ -178,6 +210,16 @@ watch(() => [props.activeClassId, props.currentSemesterId], () => {
     border-radius: 14px;
     background: var(--ta-surface);
     box-shadow: var(--ta-shadow-1);
+}
+
+.panel-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 0 12px;
+    color: var(--ta-text-secondary);
+    font-size: 12px;
 }
 
 .panel-head {

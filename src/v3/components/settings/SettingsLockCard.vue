@@ -16,38 +16,57 @@
                     <span class="status-chip" :class="hasPwd ? 'status-chip--sky' : 'status-chip--slate'">
                         {{ hasPwd ? "已设置锁屏密码" : "未设置锁屏密码" }}
                     </span>
-                    <button type="button" class="ghost-button" @click="emit('lock-now')">立即锁屏</button>
+                    <button v-if="hasPwd" type="button" class="ghost-button" :disabled="savingPwd"
+                        @click="emit('lock-now')">立即锁屏</button>
+                    <button ref="editTrigger" type="button" class="ghost-button" :disabled="savingPwd"
+                        :aria-expanded="editing" aria-controls="lock-password-form" @click="toggleEditing">
+                        {{ editing ? "取消修改" : hasPwd ? "修改密码" : "设置密码" }}
+                    </button>
                 </div>
             </div>
 
-            <div class="settings-form-grid">
-                <label v-if="hasPwd" class="field-block">
-                    <span class="field-block__label">原密码</span>
-                    <el-input v-model="oldPasswordModel" type="password" show-password placeholder="输入当前锁屏密码" />
-                </label>
-                <label class="field-block">
-                    <span class="field-block__label">新密码</span>
-                    <el-input v-model="newPasswordModel" type="password" show-password placeholder="请输入新的锁屏密码（至少 4 位）" />
-                </label>
-                <label class="field-block" :class="{ 'field-block--full': hasPwd }">
-                    <span class="field-block__label">确认密码</span>
-                    <el-input v-model="confirmPasswordModel" type="password" show-password placeholder="再次输入锁屏密码" />
-                </label>
-            </div>
+            <form v-if="editing" id="lock-password-form" @submit.prevent="savePassword">
+                <div class="settings-form-grid">
+                    <label v-if="hasPwd" class="field-block">
+                        <span class="field-block__label">原密码</span>
+                        <el-input ref="oldPasswordInput" v-model="oldPasswordModel" type="password" show-password
+                            :disabled="savingPwd" :aria-invalid="Boolean(touched.oldPassword && errors.oldPassword)"
+                            :aria-describedby="touched.oldPassword && errors.oldPassword ? 'lock-old-error' : undefined"
+                            placeholder="输入当前锁屏密码" @blur="touched.oldPassword = true" />
+                        <p v-if="touched.oldPassword && errors.oldPassword" id="lock-old-error" class="field-error" role="alert">{{ errors.oldPassword }}</p>
+                    </label>
+                    <label class="field-block">
+                        <span class="field-block__label">新密码</span>
+                        <el-input ref="newPasswordInput" v-model="newPasswordModel" type="password" show-password
+                            :disabled="savingPwd" :aria-invalid="Boolean(touched.newPassword && errors.newPassword)"
+                            :aria-describedby="touched.newPassword && errors.newPassword ? 'lock-new-error' : undefined"
+                            placeholder="请输入新的锁屏密码（至少 4 位）" @blur="touched.newPassword = true" />
+                        <p v-if="touched.newPassword && errors.newPassword" id="lock-new-error" class="field-error" role="alert">{{ errors.newPassword }}</p>
+                    </label>
+                    <label class="field-block" :class="{ 'field-block--full': hasPwd }">
+                        <span class="field-block__label">确认密码</span>
+                        <el-input ref="confirmPasswordInput" v-model="confirmPasswordModel" type="password" show-password
+                            :disabled="savingPwd" :aria-invalid="Boolean(touched.confirmPassword && errors.confirmPassword)"
+                            :aria-describedby="touched.confirmPassword && errors.confirmPassword ? 'lock-confirm-error' : undefined"
+                            placeholder="再次输入锁屏密码" @blur="touched.confirmPassword = true" />
+                        <p v-if="touched.confirmPassword && errors.confirmPassword" id="lock-confirm-error" class="field-error" role="alert">{{ errors.confirmPassword }}</p>
+                    </label>
+                </div>
 
-            <div class="toolbar compact-toolbar">
-                <button type="button" class="primary-button" :disabled="savingPwd" @click="emit('save-password')">
-                    {{ savingPwd ? "保存中..." : "保存密码" }}
-                </button>
-                <button v-if="hasPwd" type="button" class="ghost-button" :disabled="savingPwd"
-                    @click="emit('clear-password')">清除密码</button>
-            </div>
+                <div class="toolbar compact-toolbar">
+                    <button type="submit" class="primary-button" :disabled="savingPwd">
+                        {{ savingPwd ? "保存中..." : "保存密码" }}
+                    </button>
+                    <button v-if="hasPwd" type="button" class="ghost-button" :disabled="savingPwd"
+                        @click="clearPassword">清除密码</button>
+                </div>
+            </form>
         </div>
     </article>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, nextTick, reactive, ref, watch } from "vue";
 
 /** 定义锁屏设置卡片属性。 */
 interface SettingsLockCardProps {
@@ -56,6 +75,7 @@ interface SettingsLockCardProps {
     newPassword: string
     oldPassword: string
     savingPwd: boolean
+    errors?: { oldPassword?: string, newPassword?: string, confirmPassword?: string }
 }
 
 /** 定义锁屏设置卡片事件。 */
@@ -68,8 +88,59 @@ interface SettingsLockCardEmits {
     (event: "update:oldPassword", value: string): void
 }
 
-const props = defineProps<SettingsLockCardProps>()
+const props = withDefaults(defineProps<SettingsLockCardProps>(), { errors: () => ({}) })
 const emit = defineEmits<SettingsLockCardEmits>()
+const editing = ref(false)
+const touched = reactive({ oldPassword: false, newPassword: false, confirmPassword: false })
+const editTrigger = ref<HTMLButtonElement | null>(null)
+const oldPasswordInput = ref<{ focus(): void } | null>(null)
+const newPasswordInput = ref<{ focus(): void } | null>(null)
+const confirmPasswordInput = ref<{ focus(): void } | null>(null)
+
+async function toggleEditing(): Promise<void> {
+    if (props.savingPwd) return
+    editing.value = !editing.value
+    Object.assign(touched, { oldPassword: false, newPassword: false, confirmPassword: false })
+    if (editing.value) {
+        await nextTick()
+        const input = props.hasPwd ? oldPasswordInput : newPasswordInput
+        input.value?.focus()
+    } else {
+        emit("update:oldPassword", "")
+        emit("update:newPassword", "")
+        emit("update:confirmPassword", "")
+        editTrigger.value?.focus()
+    }
+}
+
+function savePassword(): void {
+    if (props.savingPwd) return
+    Object.assign(touched, { oldPassword: true, newPassword: true, confirmPassword: true })
+    const invalidInput = props.hasPwd && props.errors.oldPassword ? oldPasswordInput
+        : props.errors.newPassword ? newPasswordInput : props.errors.confirmPassword ? confirmPasswordInput : null
+    if (invalidInput) {
+        invalidInput.value?.focus()
+        return
+    }
+    emit("save-password")
+}
+
+function clearPassword(): void {
+    if (props.savingPwd) return
+    touched.oldPassword = true
+    if (props.errors.oldPassword) {
+        oldPasswordInput.value?.focus()
+        return
+    }
+    emit("clear-password")
+}
+
+watch(() => props.savingPwd, (saving, wasSaving) => {
+    if (wasSaving && !saving && !props.newPassword && !props.confirmPassword && !props.oldPassword) {
+        editing.value = false
+        editTrigger.value?.focus()
+    }
+})
 
 /** 代理原密码输入值。 */
 const oldPasswordModel = computed({
@@ -188,6 +259,12 @@ const confirmPasswordModel = computed({
     color: var(--ta-text-secondary);
     font-size: 12px;
     font-weight: 600;
+}
+
+.field-error {
+    margin: 0;
+    color: var(--ta-red);
+    font-size: 12px;
 }
 
 .settings-section :deep(.el-input__wrapper) {

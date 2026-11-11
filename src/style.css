@@ -35,7 +35,7 @@ html:root {
   --ta-radius-small: 7px;
   --ta-radius-medium: 10px;
   --ta-radius-large: 14px;
-  --ta-dialog-height: 50dvh;
+  --ta-dialog-height: auto;
 
   --el-color-primary: #187464;
   --el-color-primary-light-3: #5d9e90;

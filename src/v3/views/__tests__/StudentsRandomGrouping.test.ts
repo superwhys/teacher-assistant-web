@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
     bumpDataVersion: vi.fn(),
     cache: {} as {
         classId: number
+        semesterId: number
         getActiveClassId: () => number
         getActiveSemesterId: () => number
         getActiveSemesterStatus: () => number
@@ -61,6 +62,7 @@ vi.mock('@/v3/components/students/StudentsRandomGroupDialog.vue', () => ({ defau
 vi.mock('@/v3/components/students/StudentsSelectionPanel.vue', () => ({ default: { render: () => null } }))
 
 interface StudentsState {
+    pointsFeedback: { studentIds: number[], sign: 'plus' | 'minus' } | null
     loading: boolean
     students: StudentDTO[]
     groups: StudentGroupDTO[]
@@ -132,7 +134,8 @@ beforeEach(() => {
     mocks.cache = reactive({
         classId: 7,
         getActiveClassId() { return this.classId },
-        getActiveSemesterId: () => 70,
+        semesterId: 70,
+        getActiveSemesterId() { return this.semesterId },
         getActiveSemesterStatus: () => 1,
         getClassLayout: () => 'card',
         getStudentsSort: () => 'default',
@@ -332,7 +335,8 @@ describe('StudentsView repeat points application', () => {
         state.selectorVisible = true
         await state.handleSelectRule(rule, 3)
         expect(mocks.applyRuleBatch).toHaveBeenCalledExactlyOnceWith(7, 3, [1], 3)
-        expect(mocks.success).toHaveBeenCalledWith('已对「甲」加6 分（课堂发言 × 3 次）')
+        expect(mocks.success).toHaveBeenCalledWith('已为 1 名学生加 6 分')
+        expect(state.pointsFeedback).toEqual({ studentIds: [1], sign: 'plus' })
         expect(state.selectorVisible).toBe(false)
         expect(state.pointsApplying).toBe(false)
     })
@@ -362,8 +366,37 @@ describe('StudentsView repeat points application', () => {
         mocks.list.mockRejectedValueOnce(new Error('offline'))
         await state.handleSelectRule(rule, 3)
         expect(state.selectorVisible).toBe(false)
-        expect(mocks.success).toHaveBeenCalledWith('已对「甲」加6 分（课堂发言 × 3 次）')
+        expect(mocks.success).toHaveBeenCalledWith('已为 1 名学生加 6 分')
+        expect(state.pointsFeedback).toBeNull()
         expect(mocks.error).toHaveBeenCalledWith('加载学生管理数据失败')
         expect(mocks.applyRuleBatch).toHaveBeenCalledOnce()
+    })
+
+    it('does not show feedback from an operation completed in another class', async () => {
+        const state = await mountStudents()
+        state.selectorTargets = [1, 2]
+        state.selectorVisible = true
+        const applying = deferred<void>()
+        mocks.applyRuleBatch.mockReturnValueOnce(applying.promise)
+        const pending = state.handleSelectRule(rule, 1)
+        mocks.cache.classId = 8
+        await nextTick()
+        applying.resolve()
+        await pending
+        expect(mocks.success).not.toHaveBeenCalled()
+        expect(state.pointsFeedback).toBeNull()
+    })
+
+    it('ignores a late student refresh after changing semester in the same class', async () => {
+        const state = await mountStudents()
+        const old = deferred<StudentDTO[]>()
+        mocks.list.mockReturnValueOnce(old.promise)
+        const pending = state.loadStudentData()
+        mocks.cache.semesterId = 71
+        await nextTick()
+        await vi.waitFor(() => expect(state.loading).toBe(false))
+        old.resolve([{ id: 1, name: '旧学期积分', available_points: 999 }])
+        await pending
+        expect(state.students[0]?.name).toBe('甲')
     })
 })

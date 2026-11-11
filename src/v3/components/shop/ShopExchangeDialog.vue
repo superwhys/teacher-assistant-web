@@ -5,6 +5,7 @@
         title="确认课堂奖励兑换"
         description="请先选择兑换学生，再确认数量与所需积分，系统会自动校验库存和可用积分。"
         width="720px"
+        :busy="busy"
     >
         <div class="exchange-layout">
             <aside class="exchange-preview">
@@ -42,13 +43,13 @@
                 <el-form :model="form" label-position="top">
                     <el-form-item label="选择学生" required>
                         <el-select
-                            v-model="form.studentId"
+                            v-model="selectedStudentId"
                             placeholder="请选择学生"
                             filterable
                             clearable
                             size="large"
                             style="width: 100%;"
-                         :disabled="!canWrite">
+                            :disabled="!canWrite || !canExchange || busy">
                             <el-option
                                 v-for="student in students"
                                 :key="student.id"
@@ -70,36 +71,40 @@
 
                     <el-form-item label="兑换数量" required>
                         <el-input-number
-                            v-model="form.count"
+                            v-model="exchangeCount"
                             :min="1"
                             :max="Math.max(1, maxCount)"
                             style="width: 100%;"
-                        :disabled="!canWrite" />
+                            :disabled="!canWrite || !canExchange || busy" />
                     </el-form-item>
                 </el-form>
 
                 <div class="exchange-notice">
                     <div class="notice-card">
                         <span>学生可用积分</span>
-                        <strong>{{ selectedStudentAvailablePoints }}</strong>
+                        <strong>{{ hasSelectedStudent ? selectedStudentAvailablePoints : "—" }}</strong>
                     </div>
                     <div class="notice-card">
-                        <span>是否足够兑换</span>
-                        <strong :class="selectedStudentCanExchange ? 'is-enough' : 'is-insufficient'">
-                            {{ selectedStudentCanExchange ? "可以兑换" : "积分不足" }}
+                        <span>兑换后剩余</span>
+                        <strong :class="{ 'is-enough': remainingPoints !== null && remainingPoints >= 0 }">
+                            {{ remainingPoints !== null && remainingPoints >= 0 ? remainingPoints : "—" }}
                         </strong>
                     </div>
                 </div>
+                <p class="exchange-status" :class="{ 'is-insufficient': hasSelectedStudent && !canConfirmExchange && !busy }"
+                    role="status" aria-live="polite">{{ exchangeStatusText }}</p>
+                <p v-if="error" class="exchange-error" role="alert">{{ error }}</p>
             </section>
         </div>
 
         <template #footer>
             <div class="dialog-footer">
-                <button type="button" class="dialog-button" @click="visible = false">
+                <button type="button" class="dialog-button" :disabled="busy" @click="visible = false">
                     取消
                 </button>
-                <button type="button" class="dialog-button dialog-button--primary" @click="emit('confirm')" :disabled="!canWrite">
-                    确认兑换
+                <button type="button" class="dialog-button dialog-button--primary" @click="emit('confirm')"
+                    :disabled="!canConfirmExchange" :aria-busy="busy">
+                    {{ busy ? "兑换中..." : "确认兑换" }}
                 </button>
             </div>
         </template>
@@ -148,13 +153,22 @@ interface ShopExchangeDialogProps {
     prize: ShopExchangePrizeInfo
     requiredPoints: number
     students: ShopExchangeStudentOption[]
+    busy?: boolean
+    canExchange?: boolean
+    error?: string
 }
 
-const props = defineProps<ShopExchangeDialogProps>()
+const props = withDefaults(defineProps<ShopExchangeDialogProps>(), {
+    busy: false,
+    canExchange: true,
+    error: ""
+})
 
 const emit = defineEmits<{
     (e: "confirm"): void
     (e: "update:modelValue", value: boolean): void
+    (e: "update:studentId", value: number | null): void
+    (e: "update:count", value: number): void
 }>()
 
 /** 返回弹窗显示状态。 */
@@ -162,6 +176,20 @@ const visible = computed({
     get: () => props.modelValue,
     set: (value: boolean) => emit("update:modelValue", value),
 })
+
+const selectedStudentId = computed({
+    get: () => props.form.studentId,
+    set: (value: number | null | undefined) => emit("update:studentId", value ?? null)
+})
+
+const exchangeCount = computed({
+    get: () => props.form.count,
+    set: (value: number | undefined) => emit("update:count", value ?? Number.NaN)
+})
+
+const hasSelectedStudent = computed(() => props.students.some(student => student.id === props.form.studentId))
+const validCount = computed(() => Number.isInteger(props.form.count) && props.form.count > 0
+    && props.form.count <= Math.min(prizeStock.value, props.maxCount))
 
 /** 返回当前商品图标组件。 */
 const iconComponent = computed(() => getShopIconComponent(props.prize.icon))
@@ -190,13 +218,20 @@ const selectedStudentAvailablePoints = computed<number>(() => {
     return normalizeNumber(props.availablePointsByStudentId[props.form.studentId], true)
 })
 
-/** 返回当前学生是否满足兑换条件。 */
-const selectedStudentCanExchange = computed<boolean>(() => {
-    if (!props.form.studentId) {
-        return false
-    }
+const remainingPoints = computed(() => hasSelectedStudent.value && validCount.value
+    && Number.isFinite(props.requiredPoints) ? selectedStudentAvailablePoints.value - props.requiredPoints : null)
 
-    return selectedStudentAvailablePoints.value >= props.requiredPoints
+const canConfirmExchange = computed(() => canWrite.value && props.canExchange && !props.busy
+    && hasSelectedStudent.value && validCount.value && props.prize.points > 0
+    && remainingPoints.value !== null && remainingPoints.value >= 0)
+
+const exchangeStatusText = computed(() => {
+    if (!canWrite.value || !props.canExchange) return "当前仅支持查看，暂不可兑换"
+    if (!hasSelectedStudent.value) return "请选择学生"
+    if (!Number.isInteger(props.form.count) || props.form.count <= 0) return "请输入大于 0 的整数数量"
+    if (!validCount.value) return `库存不足，当前可兑换 ${prizeStock.value} 个`
+    if (remainingPoints.value !== null && remainingPoints.value < 0) return `积分不足，还差 ${Math.abs(remainingPoints.value)} 分`
+    return "可以兑换"
 })
 
 /** 规范化数字展示值。 */
@@ -215,6 +250,18 @@ function normalizeNumber(value: unknown, allowZero = false): number {
 </script>
 
 <style scoped>
+.exchange-status,
+.exchange-error {
+    margin: 12px 0 0;
+    color: var(--ta-text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.exchange-error {
+    color: var(--ta-red);
+}
+
 .exchange-layout {
     display: grid;
     grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1fr);
@@ -390,21 +437,111 @@ function normalizeNumber(value: unknown, allowZero = false): number {
 }
 
 @media (max-width: 768px) {
-    .exchange-layout,
-    .exchange-preview__summary,
-    .exchange-notice,
-    .dialog-footer {
+    .exchange-layout {
         grid-template-columns: 1fr;
-        flex-direction: column;
+        gap: 12px;
     }
 
     .exchange-preview,
     .exchange-form {
-        padding: 16px;
+        padding: 12px;
+    }
+
+    .exchange-preview {
+        grid-template-columns: 64px minmax(0, 1fr);
+        gap: 12px;
+        align-items: start;
+    }
+
+    .exchange-preview__visual {
+        width: 64px;
+        height: 64px;
+        gap: 0;
+        border-radius: 10px;
+    }
+
+    .exchange-preview__visual span {
+        display: none;
+    }
+
+    .exchange-preview__meta {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .exchange-preview__meta strong {
+        font-size: 16px;
+        line-height: 1.4;
+    }
+
+    .exchange-preview__meta p {
+        margin-top: 4px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .exchange-preview__summary {
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .exchange-preview__summary > div {
+        padding: 8px 4px;
+        border-radius: 8px;
+    }
+
+    .exchange-preview__summary span {
+        font-size: 11px;
+    }
+
+    .exchange-preview__summary strong,
+    .notice-card strong {
+        margin-top: 3px;
+        font-size: 18px;
+        font-variant-numeric: tabular-nums;
+        overflow-wrap: anywhere;
+    }
+
+    .exchange-form,
+    .exchange-notice {
+        gap: 8px;
+    }
+
+    .exchange-form :deep(.el-form-item) {
+        margin-bottom: 12px;
+    }
+
+    .exchange-notice {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .notice-card {
+        padding: 10px;
+        border-radius: 8px;
+    }
+
+    .notice-card span,
+    .exchange-status,
+    .exchange-error {
+        font-size: 12px;
+    }
+
+    .exchange-status,
+    .exchange-error {
+        margin-top: 0;
+    }
+
+    .dialog-footer {
+        flex-direction: row;
+        gap: 8px;
     }
 
     .dialog-button {
-        width: 100%;
+        width: auto;
+        min-width: 0;
+        min-height: 40px;
+        flex: 1;
     }
 }
 </style>

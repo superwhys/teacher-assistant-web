@@ -28,12 +28,21 @@
             <span class="ranking-filter__label">总积分</span>
         </div>
 
-        <div v-if="rankingPreview.length === 0" class="ranking-empty-state">
+        <div v-if="rankingError" class="panel-status" role="alert">
+            <span>{{ rankingError }}{{ rankingPreview.length ? "，当前保留上次成功加载的数据。" : "。" }}</span>
+            <button class="text-button" type="button" :disabled="rankingLoading" @click="loadRankingPreview">重新加载</button>
+        </div>
+        <div v-if="rankingLoading && !rankingPreview.length" class="ranking-empty-state" role="status">
+            <el-skeleton :rows="4" />
+            <span>正在加载排行榜…</span>
+        </div>
+        <div v-else-if="rankingPreview.length === 0 && !rankingError" class="ranking-empty-state">
             <strong>暂无排行榜数据</strong>
             <p>当前周期下还没有可展示的积分排名。</p>
         </div>
 
-        <div v-else class="preview-list">
+        <div v-else-if="rankingPreview.length" class="preview-list" :aria-busy="rankingLoading">
+            <p v-if="rankingLoading" class="panel-status" role="status">正在刷新排行榜…</p>
             <article v-for="item in rankingPreview" :key="item.rank" class="preview-item">
                 <span class="preview-rank" :class="{ 'is-top': item.rank <= 3, 'is-first': item.rank === 1 }">
                     {{ String(item.rank).padStart(2, "0") }}
@@ -51,13 +60,14 @@ import { studentManager } from "@/managers/student"
 import { useCacheStore } from "@/stores/cacheStore"
 import type { RankingTimeRange, StudentRankingItem } from "@/types/points"
 import type { StudentDTO } from "@/types/student"
-import { computed, ref, watch } from "vue"
+import { computed, onBeforeUnmount, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 
 /** 定义排行榜面板属性。 */
 interface DashboardRankingPanelProps {
     activeClassId: number | null
     currentSemesterId: number | null
+    refreshVersion?: number
 }
 
 /** 定义排行榜列表项结构。 */
@@ -80,6 +90,9 @@ const router = useRouter()
 const rankingTimeRange = ref<RankingTimeRange>(cacheStore.getPointsRankingTimeRange())
 const rankingStudents = ref<StudentDTO[]>([])
 const rankingPreviewResponse = ref<StudentRankingItem[]>([])
+const rankingLoading = ref(false)
+const rankingError = ref("")
+let rankingRequestId = 0
 const isRankingPreviewMasked = ref<boolean>(cacheStore.getDashboardRankingPreviewMasked())
 const rankingTimeRangeOptions: RankingTimeRangeOption[] = [
     { value: "all", label: "全部" },
@@ -140,56 +153,55 @@ function goToPointsPage(): void {
     void router.push("/points")
 }
 
-/** 加载排行榜所需的学生姓名映射。 */
-async function loadRankingStudents(): Promise<void> {
-    const classId = props.activeClassId
-    if (!classId) {
-        rankingStudents.value = []
-        return
-    }
-
-    try {
-        rankingStudents.value = await studentManager.list(classId)
-    } catch (error) {
-        console.error("获取排行榜学生数据失败", error)
-        rankingStudents.value = []
-    }
-}
-
 /** 加载排行榜接口数据。 */
 async function loadRankingPreview(): Promise<void> {
+    const requestId = ++rankingRequestId
     const classId = props.activeClassId
+    const semesterId = props.currentSemesterId
+    const userId = cacheStore.profile?.id
+    const range = rankingTimeRange.value
+    const isCurrent = () => requestId === rankingRequestId && classId === props.activeClassId
+        && semesterId === props.currentSemesterId && userId === cacheStore.profile?.id && range === rankingTimeRange.value
+    rankingError.value = ""
     if (!classId) {
+        rankingStudents.value = []
         rankingPreviewResponse.value = []
+        rankingLoading.value = false
         return
     }
 
+    rankingLoading.value = true
     try {
-        const response = await pointsManager.getClassRanking({
-            class_id: classId,
-            time_range: rankingTimeRange.value,
-            limit: 10,
-        })
+        const [students, response] = await Promise.all([
+            studentManager.list(classId),
+            pointsManager.getClassRanking({ class_id: classId, time_range: range, limit: 10 }),
+        ])
+        if (!isCurrent()) return
+        rankingStudents.value = students
         rankingPreviewResponse.value = response.items ?? []
     } catch (error) {
+        if (!isCurrent()) return
         console.error("获取排行榜数据失败", error)
-        rankingPreviewResponse.value = []
+        rankingError.value = "排行榜加载失败"
+    } finally {
+        if (requestId === rankingRequestId) rankingLoading.value = false
     }
 }
 
 /** 监听排行榜周期并同步缓存。 */
 watch(rankingTimeRange, (value) => {
     cacheStore.setPointsRankingTimeRange(value)
-    void loadRankingPreview()
 })
 
 /** 监听班级与学期变化后重新加载排行榜数据。 */
-watch(() => [props.activeClassId, props.currentSemesterId], async () => {
-    await Promise.all([
-        loadRankingStudents(),
-        loadRankingPreview(),
-    ])
+watch(() => [cacheStore.profile?.id, props.activeClassId, props.currentSemesterId, rankingTimeRange.value], async () => {
+    rankingStudents.value = []
+    rankingPreviewResponse.value = []
+    await loadRankingPreview()
 }, { immediate: true })
+
+watch(() => props.refreshVersion, () => { void loadRankingPreview() })
+onBeforeUnmount(() => { rankingRequestId += 1 })
 </script>
 
 <style scoped>
@@ -200,6 +212,16 @@ watch(() => [props.activeClassId, props.currentSemesterId], async () => {
     border-radius: 14px;
     background: var(--ta-surface);
     box-shadow: var(--ta-shadow-1);
+}
+
+.panel-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 0 12px;
+    color: var(--ta-text-secondary);
+    font-size: 12px;
 }
 
 .panel-head {

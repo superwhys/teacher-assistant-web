@@ -70,6 +70,7 @@
                     <StudentsListCard v-for="student in group.students" :key="student.id" display-mode="group"
                         :points-change="getPointsChange(student.id)"
                         :selected="isStudentSelected(student.id)" :student="student"
+                        @view-report="emit('view-report', $event)"
                         @edit="emit('edit-student', $event)" @remove="emit('remove-student', $event)"
                         @select="emit('select-student', $event)" />
                 </div>
@@ -96,6 +97,7 @@
                             <StudentsListCard v-for="student in group.students" :key="student.id"
                                 :points-change="getPointsChange(student.id)"
                                 :display-mode="layoutMode" :selected="isStudentSelected(student.id)" :student="student"
+                                @view-report="emit('view-report', $event)"
                                 @edit="emit('edit-student', $event)" @remove="emit('remove-student', $event)"
                                 @select="emit('select-student', $event)" />
                         </div>
@@ -106,6 +108,7 @@
                     <StudentsListCard v-for="student in students" :key="student.id" :display-mode="layoutMode"
                         :points-change="getPointsChange(student.id)"
                         :selected="isStudentSelected(student.id)" :student="student"
+                        @view-report="emit('view-report', $event)"
                         @edit="emit('edit-student', $event)" @remove="emit('remove-student', $event)"
                         @select="emit('select-student', $event)" />
                 </div>
@@ -116,6 +119,7 @@
             <StudentsListCard v-for="student in students" :key="student.id" :display-mode="layoutMode"
                 :points-change="getPointsChange(student.id)"
                 :selected="isStudentSelected(student.id)" :student="student" @edit="emit('edit-student', $event)"
+                @view-report="emit('view-report', $event)"
                 @remove="emit('remove-student', $event)" @select="emit('select-student', $event)" />
         </div>
     </article>
@@ -156,6 +160,7 @@ interface StudentsListPanelProps {
 
 /** 定义学生列表面板事件结构。 */
 interface StudentsListPanelEmits {
+    (event: "view-report", student: StudentsListPanelItem): void
     (event: "edit-student", student: StudentsListPanelItem): void
     (event: "remove-student", student: StudentsListPanelItem): void
     (event: "select-student", studentId: number): void

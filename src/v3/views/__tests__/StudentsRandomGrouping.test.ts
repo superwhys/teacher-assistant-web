@@ -54,6 +54,7 @@ vi.mock('@/v3/components/AppDialogShell.vue', () => ({ default: { render: () => 
 vi.mock('@/v3/components/students/StudentsAddDialog.vue', () => ({ default: { render: () => null } }))
 vi.mock('@/v3/components/students/StudentsConfirmDialog.vue', () => ({ default: { render: () => null } }))
 vi.mock('@/v3/components/students/StudentsEditDialog.vue', () => ({ default: { render: () => null } }))
+vi.mock('@/v3/components/students/StudentGrowthReportDialog.vue', () => ({ default: { render: () => null } }))
 vi.mock('@/v3/components/students/StudentsGroupImportDialog.vue', () => ({ default: { render: () => null } }))
 vi.mock('@/v3/components/students/StudentsGroupManageDialog.vue', () => ({ default: { render: () => null } }))
 vi.mock('@/v3/components/students/StudentsListPanel.vue', () => ({ default: { render: () => null } }))
@@ -62,6 +63,8 @@ vi.mock('@/v3/components/students/StudentsRandomGroupDialog.vue', () => ({ defau
 vi.mock('@/v3/components/students/StudentsSelectionPanel.vue', () => ({ default: { render: () => null } }))
 
 interface StudentsState {
+    reportStudent: { id: number, name: string } | null
+    openGrowthReport: (student: { id: number, name: string }) => void
     pointsFeedback: { studentIds: number[], sign: 'plus' | 'minus' } | null
     loading: boolean
     students: StudentDTO[]
@@ -154,6 +157,14 @@ afterEach(() => {
 })
 
 describe('StudentsView random grouping', () => {
+    it('opens reports without changing student selection and clears the target on semester changes', async () => {
+        const state = await mountStudents()
+        state.openGrowthReport({ id: 1, name: '甲' })
+        expect(state.reportStudent).toEqual({ id: 1, name: '甲' })
+        mocks.cache.semesterId = 71
+        await nextTick()
+        expect(state.reportStudent).toBeNull()
+    })
     it('refreshes only the matching agent action scope and removes its listener on unmount', async () => {
         await mountStudents()
         mocks.list.mockClear()

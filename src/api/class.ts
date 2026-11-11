@@ -27,8 +27,8 @@ export const classApi = {
     nextSemester(classId: number, data: NextSemesterReq): Promise<ApiResponse<null>> {
         return post<null>(`/class/${classId}/semester/next`, data)
     },
-    listSemesters(classId: number): Promise<ApiResponse<ListSemestersResp>> {
-        return get<ListSemestersResp>(`/class/${classId}/semester/list`)
+    listSemesters(classId: number, signal?: AbortSignal): Promise<ApiResponse<ListSemestersResp>> {
+        return get<ListSemestersResp>(`/class/${classId}/semester/list`, undefined, { signal })
     },
     updateSemester(classId: number, data: UpdateSemesterReq): Promise<ApiResponse<null>> {
         return put<null>(`/class/${classId}/semester/update`, data)

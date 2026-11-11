@@ -59,6 +59,7 @@
                 :loading="loading" :multi-select-enabled="multiSelectEnabled" :selected-student-ids="selectedStudentIds"
                 :points-feedback="pointsFeedback"
                 :sort-by="sortBy" :students="filteredStudents" @edit-student="openEdit"
+                @view-report="openGrowthReport"
                 @remove-student="requestRemoveStudent" @select-student="handleSelectStudent"
                 @toggle-group-selection="handleToggleGroupSelection" @toggle-multi-select="toggleMultiSelectEnabled"
                 @toggle-select-all="toggleSelectAllStudents">
@@ -129,6 +130,11 @@
 
         <StudentsEditDialog v-model="editStudentVisible" :student="editingStudent" @save="handleSaveStudentEdit" />
 
+        <StudentGrowthReportDialog v-if="reportStudent && activeSemesterId && activeClassId"
+            :key="`${cacheStore.profile?.id}:${activeClassId}:${activeSemesterId}:${reportStudent.id}`"
+            :model-value="true" :student-id="reportStudent.id" :student-name="reportStudent.name" :class-id="activeClassId"
+            :semester-id="activeSemesterId" @update:model-value="!$event && (reportStudent = null)" />
+
         <StudentsConfirmDialog v-model="deleteStudentDialogVisible" title="删除学生" eyebrow="风险操作"
             description="删除学生后将同步移除其相关分组关系，请确认当前操作。" :message="deleteStudentMessage" confirm-text="确认删除"
             @confirm="confirmRemoveStudent" />
@@ -162,6 +168,7 @@ import { pinyin } from "pinyin-pro";
 import StudentsAddDialog, { type StudentAddMode } from "@/v3/components/students/StudentsAddDialog.vue";
 import StudentsConfirmDialog from "@/v3/components/students/StudentsConfirmDialog.vue";
 import StudentsEditDialog from "@/v3/components/students/StudentsEditDialog.vue";
+import StudentGrowthReportDialog from "@/v3/components/students/StudentGrowthReportDialog.vue";
 import StudentsGroupImportDialog from "@/v3/components/students/StudentsGroupImportDialog.vue";
 import StudentsGroupManageDialog, { type UiGroup } from "@/v3/components/students/StudentsGroupManageDialog.vue";
 import StudentsRandomGroupDialog from "@/v3/components/students/StudentsRandomGroupDialog.vue";
@@ -226,6 +233,7 @@ const randomGroupingError = ref("")
 const editStudentVisible = ref(false)
 const deleteStudentDialogVisible = ref(false)
 const editingStudent = ref<UiStudent | null>(null)
+const reportStudent = ref<StudentCardItem | null>(null)
 const pendingDeleteStudent = ref<StudentCardItem | null>(null)
 const ruleGroups = ref<RuleGroup[]>([])
 const selectorVisible = ref(false)
@@ -267,6 +275,7 @@ onBeforeUnmount(() => {
 })
 
 const activeClassId = computed<number | null>(() => cacheStore.getActiveClassId())
+const activeSemesterId = computed<number | null>(() => cacheStore.getActiveSemesterId())
 const hasActiveClass = computed<boolean>(() => typeof activeClassId.value === "number")
 const activeSemesterStatus = computed<number | null>(() => cacheStore.getActiveSemesterStatus())
 const isArchivedSemester = computed<boolean>(() => hasActiveClass.value && activeSemesterStatus.value === 2)
@@ -956,6 +965,12 @@ async function handleApplyRandomGroups(randomGroups: ApplyRandomGroupsReq["group
     }
 }
 
+/** 打开当前学生的独立成长报告。 */
+function openGrowthReport(student: StudentCardItem): void {
+    if (!activeClassId.value || !activeSemesterId.value || loading.value) return
+    reportStudent.value = student
+}
+
 /** 打开编辑学生弹窗。 */
 function openEdit(student: StudentCardItem): void {
     if (!allowWrite()) return
@@ -1142,6 +1157,7 @@ async function handleConfirmGroupImport(payload: { groups: Array<{ groupName: st
 
 watch([activeClassId, () => cacheStore.getActiveSemesterId(), () => cacheStore.profile?.id], async () => {
     clearPointsFeedback()
+    reportStudent.value = null
     students.value = []
     groups.value = []
     randomGroupVisible.value = false

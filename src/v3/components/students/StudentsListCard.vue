@@ -37,6 +37,10 @@
             <span v-else class="student-profile__total">积分 {{ student.totalPoints }}</span>
             <i-ep-circle-check-filled v-if="selected" class="student-card__selected-badge" aria-hidden="true" />
         </div>
+        <button type="button" class="student-card__report" :aria-label="`查看${student.name}的成长报告`"
+            @click.stop="emit('view-report', student)">
+            <i-ep-data-analysis aria-hidden="true" />查看报告
+        </button>
     </article>
 </template>
 
@@ -72,6 +76,7 @@ interface StudentsListCardProps {
 
 /** 定义学生卡片事件结构。 */
 interface StudentsListCardEmits {
+    (event: "view-report", student: StudentsListCardItem): void
     (event: "edit", student: StudentsListCardItem): void
     (event: "remove", student: StudentsListCardItem): void
     (event: "select", studentId: number): void
@@ -220,6 +225,32 @@ function getGenderLabel(gender: UiGender): string {
     pointer-events: none;
 }
 
+.student-card__report {
+    position: relative;
+    z-index: 2;
+    justify-self: start;
+    min-height: 32px;
+    padding: 5px 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid var(--ta-line);
+    border-radius: 7px;
+    color: var(--ta-blue);
+    background: var(--ta-surface-solid);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.student-card__report svg {
+    width: 14px;
+    height: 14px;
+}
+
+.student-card.is-list .student-card__report {
+    grid-column: 1 / -1;
+}
+
 .student-profile__available strong {
     color: #365642;
     font-size: 25px;
@@ -280,6 +311,9 @@ function getGenderLabel(gender: UiGender): string {
 }
 
 @media (max-width: 920px) {
+    .student-card__report {
+        min-height: 40px;
+    }
     .student-card__menu {
         width: 44px;
         height: 44px;

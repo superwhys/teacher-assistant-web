@@ -24,6 +24,7 @@ export function editionRequestMessage(profile: UserProfile | null, method: strin
     if (profile?.roleCode !== 'common') return ''
     const path = url.split('?')[0]!.split('#')[0]!
     if (path === '/agent' || path.startsWith('/agent/')) return PRO_AGENT_MESSAGE
+    if (method === 'POST' && /^\/student\/[^/]+\/growth-report\/interpretation$/.test(path)) return '成长报告 AI 解读仅限 Pro 版。'
     if ((method === 'POST' && studentGroupWrites.has(path))
         || (method === 'DELETE' && /^\/student\/group\/[^/]+$/.test(path))) return PRO_GROUPING_MESSAGE
     return isImportExportRequest(method, path) ? PRO_IMPORT_EXPORT_MESSAGE : ''
@@ -115,6 +116,7 @@ export function allowsEntitlementRequest(profile: UserProfile | null, method: st
         || (method === 'POST' && (path === '/subscription/purchase-link'
             || /^\/subscription\/orders\/[^/]+\/cancel$/.test(path)))) return true
     if (editionRequestMessage(profile, method, path)) return false
+    if (method === 'GET' && /^\/student\/[^/]+\/(growth-report|growth-reports(?:\/[^/]+)?)$/.test(path)) return true
     // Agent transport 本身不修改业务数据，工具读取及确认写入由服务端逐项校验。
     if (method === 'GET' && (path === '/agent/conversations'
         || /^\/agent\/(conversations\/[^/]+|runs\/[^/]+\/events)$/.test(path))) return true

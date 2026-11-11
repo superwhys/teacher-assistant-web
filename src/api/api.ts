@@ -302,7 +302,8 @@ async function requestStream(url: string, signal?: AbortSignal) {
  */
 function get<T>(
     url: string,
-    params?: Record<string, any>
+    params?: Record<string, any>,
+    options: Pick<RequestInit, "signal"> = {}
 ): Promise<ApiResponse<T>> {
     const searchParams = new URLSearchParams();
     if (params) {
@@ -316,16 +317,17 @@ function get<T>(
     const queryString = searchParams.toString();
     const fullUrl = queryString ? `${url}?${queryString}` : url;
 
-    return request<T>(fullUrl, { method: "GET" });
+    return request<T>(fullUrl, { method: "GET", ...options });
 }
 
 /**
  * 发送 POST 请求。
  */
-function post<T>(url: string, data?: any): Promise<ApiResponse<T>> {
+function post<T>(url: string, data?: any, options: Pick<RequestInit, "signal"> = {}): Promise<ApiResponse<T>> {
     return request<T>(url, {
         method: "POST",
         body: data ? JSON.stringify(data) : undefined,
+        ...options,
     });
 }
 

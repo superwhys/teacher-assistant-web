@@ -117,6 +117,7 @@ export function allowsEntitlementRequest(profile: UserProfile | null, method: st
             || /^\/subscription\/orders\/[^/]+\/cancel$/.test(path)))) return true
     if (editionRequestMessage(profile, method, path)) return false
     if (method === 'GET' && /^\/student\/[^/]+\/(growth-report|growth-reports(?:\/[^/]+)?)$/.test(path)) return true
+    if (method === 'GET' && /^\/student\/[^/]+\/growth-report\/interpretation(?:\/[^/]+)?$/.test(path)) return true
     // Agent transport 本身不修改业务数据，工具读取及确认写入由服务端逐项校验。
     if (method === 'GET' && (path === '/agent/conversations'
         || /^\/agent\/(conversations\/[^/]+|runs\/[^/]+\/events)$/.test(path))) return true

@@ -6,6 +6,7 @@ import StudentGrowthStatistics from '@/v3/components/students/StudentGrowthStati
 import { useBusinessAccess } from '@/composables/useBusinessAccess'
 import { useCacheStore } from '@/stores/cacheStore'
 import { useStudentGrowthReport } from '@/v3/composables/useStudentGrowthReport'
+import { useGrowthInterpretationTask } from '@/v3/composables/useGrowthInterpretationTask'
 import { classApi } from '@/api/class'
 import { constrainGrowthPeriod, growthPeriodError, growthReportHtml, growthSemesterDate, previousGrowthPeriod, shanghaiToday } from '@/utils/studentGrowth'
 
@@ -23,9 +24,19 @@ const { canWrite, canImportExport, allowWrite, allowImportExport } = useBusiness
 const canInterpret = computed(() => canWrite.value && cache.profile?.roleCode !== 'common')
 const isCommon = computed(() => cache.profile?.roleCode === 'common')
 const {
-    report, history, loading, saving, interpreting, historyLoading, error, historyError,
-    actionError, dataChanged, loadReport, loadHistory, save, interpret, retry,
+    report, history, loading, saving, historyLoading, error, historyError,
+    actionError, dataChanged: reportDataChanged, loadReport, loadHistory, save, retry,
 } = useStudentGrowthReport({ studentId: props.studentId, semesterId: props.semesterId })
+const {
+    task, querying: taskQuerying, submitting: taskSubmitting, pending: taskPending,
+    error: taskError, otherData: taskOtherData, reportStale: taskReportStale,
+    submissionUncertain, completedTask, canRetryQuery, retryQuery, generate: startInterpretationTask,
+} = useGrowthInterpretationTask(() => report.value, {
+    userId: cache.profile?.id ?? '',
+    canRead: () => props.modelValue && !isCommon.value,
+    canGenerate: () => canInterpret.value && !reportDataChanged.value && !saving.value,
+})
+const dataChanged = computed(() => reportDataChanged.value || taskReportStale.value)
 const initialPeriod = previousGrowthPeriod('week')
 const preset = shallowRef<'week' | 'month' | 'custom'>('week')
 const from = shallowRef(initialPeriod.from)
@@ -43,17 +54,35 @@ const maxDate = computed(() => semesterEnd.value && semesterEnd.value < shanghai
 const periodError = computed(() => growthPeriodError({ from: from.value, to: to.value })
     || (semesterStart.value && from.value < semesterStart.value ? '开始日期不能早于当前学期开始日期' : '')
     || (to.value > maxDate.value ? '结束日期不能晚于当前学期结束日期' : ''))
-const busy = computed(() => semesterLoading.value || loading.value || saving.value || interpreting.value)
+const busy = computed(() => semesterLoading.value || loading.value || saving.value)
 const displayError = computed(() => semesterError.value || error.value)
 const hasDraftChanges = computed(() => !!report.value && (teacherNote.value !== report.value.teacher_note
     || interpretation.value !== report.value.interpretation))
 const originalExportOnly = computed(() => dataChanged.value && !!report.value?.id)
+const generatedSuggestion = computed(() => completedTask.value?.snapshot_hash === report.value?.snapshot_hash
+    && completedTask.value?.interpretation !== interpretation.value ? completedTask.value : null)
+const interpretationButtonLabel = computed(() => {
+    if (isCommon.value) return 'Pro 版可生成 AI 解读'
+    if (dataChanged.value) return '刷新报告后生成解读'
+    if (taskSubmitting.value) return '正在提交任务…'
+    if (submissionUncertain.value) return '重试提交解读任务'
+    if (taskPending.value) return task.value?.status === 'queued' ? '解读已排队' : '正在后台生成'
+    if (taskQuerying.value) return '正在查询已有解读…'
+    return task.value || interpretation.value ? '重新生成 AI 解读' : '生成 AI 解读'
+})
 
 watch(report, value => {
     teacherNote.value = value?.teacher_note ?? ''
     interpretation.value = value?.interpretation ?? ''
     savedMessage.value = ''
 })
+
+watch(completedTask, value => {
+    if (value && report.value && !report.value.id && value.snapshot_hash === report.value.snapshot_hash
+        && !interpretation.value.trim() && !saving.value) {
+        interpretation.value = value.interpretation
+    }
+}, { flush: 'post' })
 
 async function applyPeriod(): Promise<void> {
     if (busy.value || periodError.value) return
@@ -85,14 +114,18 @@ async function openSaved(id: number): Promise<void> {
 }
 
 async function saveSnapshot(): Promise<void> {
-    if (!allowWrite()) return
+    if (dataChanged.value || !allowWrite()) return
     if (await save(teacherNote.value, interpretation.value)) savedMessage.value = '已保存一份报告快照，可在历史中重新打开。'
 }
 
 async function generateInterpretation(): Promise<void> {
     if (!canInterpret.value || !allowWrite()) return
-    const value = await interpret()
-    if (value !== null && canInterpret.value) interpretation.value = value
+    await startInterpretationTask()
+}
+
+function useGeneratedInterpretation(): void {
+    if (!canWrite.value || saving.value || dataChanged.value || !generatedSuggestion.value) return
+    interpretation.value = generatedSuggestion.value.interpretation
 }
 
 function exportReport(): void {
@@ -196,6 +229,7 @@ void loadHistory()
                     <span>{{ report.id ? `已保存快照 #${report.id}` : '实时报告 · 尚未保存' }}</span>
                 </div>
                 <p v-if="report.id" class="growth-caption">当前展示保存时的统计数据。修改寄语后会另存一份，原报告保持不变。</p>
+                <p v-if="report.id && hasDraftChanges" class="growth-caption">当前文字尚未保存，可另存一份快照保留修改。</p>
                 <StudentGrowthStatistics :report="report" />
 
                 <section class="growth-editor" aria-label="老师寄语">
@@ -208,12 +242,31 @@ void loadHistory()
                 <section class="growth-editor" aria-label="可选 AI 解读">
                     <div class="growth-section-head">
                         <label for="growth-interpretation">AI 解读 <span class="growth-optional">可选</span></label>
-                        <button type="button" class="secondary-button" :disabled="!canInterpret || busy || dataChanged || report.summary.records === 0"
-                            @click="generateInterpretation">{{ interpreting ? '正在生成解读…' : isCommon ? 'Pro 版可生成 AI 解读' : interpretation ? '重新生成 AI 解读' : '生成 AI 解读' }}</button>
+                        <button type="button" class="secondary-button"
+                            :disabled="!canInterpret || busy || taskSubmitting || taskQuerying || taskPending || canRetryQuery || dataChanged || report.summary.records === 0"
+                            @click="generateInterpretation">{{ interpretationButtonLabel }}</button>
                     </div>
-                    <p class="growth-caption">仅依据本报告记录生成，可能需要约 45 秒。请结合课堂实际核对并编辑，不推断学生能力或成绩。</p>
+                    <p class="growth-caption">解读仅依据本报告记录在后台生成，可能需要几分钟。关闭或切换报告后任务仍会继续，重新打开时会查询当前报告的任务。</p>
+                    <div class="growth-task-status" aria-live="polite">
+                        <p v-if="taskReportStale" class="growth-caption">当前报告数据已变化，已停止查询旧解读任务。请刷新报告后重新生成。</p>
+                        <p v-else-if="taskSubmitting" class="growth-caption">正在提交解读任务…</p>
+                        <p v-else-if="submissionUncertain" class="growth-caption">上次提交结果尚未确认，请重试提交；同一次请求不会重复创建任务。</p>
+                        <p v-else-if="task?.status === 'queued'" class="growth-caption">解读任务已排队，等待后台处理。你可以继续编辑寄语或查看其他报告。</p>
+                        <p v-else-if="task?.status === 'running'" class="growth-caption">解读正在后台生成。你可以继续编辑，生成结果不会覆盖已填写的文字。</p>
+                        <p v-else-if="task?.status === 'failed'" class="growth-error" role="alert">解读生成失败：{{ task.error || '请重新生成解读' }}</p>
+                        <p v-else-if="completedTask" class="growth-success">{{ generatedSuggestion ? '解读已生成，可选择使用这份解读。' : '解读已生成，请结合课堂实际核对并编辑。' }}</p>
+                        <p v-else-if="taskQuerying" class="growth-caption">正在查询已有解读任务…</p>
+                        <p v-if="taskOtherData" class="growth-caption">该周期的旧解读基于其他数据。可以为当前报告重新生成解读。</p>
+                        <p v-if="taskError && !taskReportStale" class="growth-error" role="alert">
+                            {{ taskError }}
+                            <button v-if="canRetryQuery" type="button" class="growth-text-button" :disabled="taskQuerying" @click="retryQuery">重试查询</button>
+                        </p>
+                        <button v-if="generatedSuggestion" type="button" class="secondary-button"
+                            :disabled="!canWrite || saving || dataChanged" @click="useGeneratedInterpretation">解读已生成，使用这份解读</button>
+                    </div>
                     <textarea id="growth-interpretation" v-model="interpretation" rows="5" maxlength="4000"
-                        :disabled="!canWrite || saving || interpreting" placeholder="可选择生成 AI 解读，也可以直接填写老师寄语并保存报告。" />
+                        :disabled="!canWrite || saving" placeholder="可选择生成 AI 解读，也可以直接填写老师寄语并保存报告。" />
+                    <p class="growth-caption">AI 解读不推断学生能力或成绩，请老师结合课堂实际核对。保存和导出使用当前输入框中的文字。</p>
                 </section>
 
                 <p v-if="dataChanged" class="growth-error" role="alert">报告数据已变化，请点击“生成报告”重新获取数据后再保存或生成解读。{{ originalExportOnly ? '仍可导出原已保存报告，不含当前未保存的修改。' : '导出保留当前快照和生成时间。' }}</p>
@@ -433,6 +486,12 @@ void loadHistory()
 .growth-editor label {
     font-size: 15px;
     font-weight: 600;
+}
+
+.growth-task-status {
+    display: grid;
+    justify-items: start;
+    gap: 8px;
 }
 
 .growth-optional {

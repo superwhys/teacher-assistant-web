@@ -11,7 +11,11 @@ function profile(state: UserEntitlement['state'], deadline: string | null = null
 
 describe('independent commercial access', () => {
     it('keeps standalone report reads available at expiry and gates AI by edition and active entitlement', () => {
-        for (const path of ['/student/1/growth-report?semester_id=7', '/student/1/growth-reports', '/student/1/growth-reports/42']) {
+        for (const path of [
+            '/student/1/growth-report?semester_id=7', '/student/1/growth-reports', '/student/1/growth-reports/42',
+            '/student/1/growth-report/interpretation?semester_id=7&snapshot_hash=hash',
+            '/student/1/growth-report/interpretation/task-id',
+        ]) {
             expect(allowsEntitlementRequest(profile('paid_expired'), 'GET', path, now)).toBe(true)
         }
         const interpretationPath = '/student/1/growth-report/interpretation'

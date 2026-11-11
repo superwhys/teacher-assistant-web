@@ -5,7 +5,7 @@ import { growthReportFixture } from '@/utils/__tests__/growthReportFixture'
 import { ApiRequestError, type ApiResponse } from '@/types/api'
 import type { GrowthReport } from '@/types/studentGrowth'
 
-const api = vi.hoisted(() => ({ getReport: vi.fn(), getSavedReport: vi.fn(), listReports: vi.fn(), saveReport: vi.fn(), interpret: vi.fn() }))
+const api = vi.hoisted(() => ({ getReport: vi.fn(), getSavedReport: vi.fn(), listReports: vi.fn(), saveReport: vi.fn() }))
 vi.mock('@/api/studentGrowth', () => ({ studentGrowthApi: api }))
 const response = <T>(data: T): ApiResponse<T> => ({ code: 0, message: '', data })
 const period = { from: '2026-11-02', to: '2026-11-08' }
@@ -91,21 +91,10 @@ describe('student report request lifecycle', () => {
         expect(await state.save('未丢失的输入', '')).toBe(false)
         expect(state.dataChanged.value).toBe(true)
         expect(state.report.value?.snapshot_hash).toBe('snapshot-1')
-        expect(await state.interpret()).toBeNull()
-        expect(api.interpret).not.toHaveBeenCalled()
+        expect(await state.save('未丢失的输入', '')).toBe(false)
+        expect(api.saveReport).toHaveBeenCalledOnce()
         await state.loadReport(period)
         expect(state.dataChanged.value).toBe(false)
     })
 
-    it('does not apply AI output to a different report selected during generation', async () => {
-        const ai = deferred<ApiResponse<{ interpretation: string }>>()
-        api.interpret.mockReturnValueOnce(ai.promise)
-        const state = setup()
-        await state.loadReport(period)
-        const generating = state.interpret()
-        await state.loadReport(42)
-        ai.resolve(response({ interpretation: '旧报告的解读' }))
-        expect(await generating).toBeNull()
-        expect(state.interpreting.value).toBe(false)
-    })
 })

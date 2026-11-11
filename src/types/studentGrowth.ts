@@ -76,3 +76,18 @@ export interface GrowthReportHistoryItem {
     to: string
     created_at: string
 }
+
+export interface GrowthInterpretationTask {
+    id: string
+    snapshot_hash: string
+    status: 'queued' | 'running' | 'succeeded' | 'failed'
+    interpretation: string
+    error: string
+    error_code: number
+    created_at: string
+    updated_at: string
+}
+
+export interface GrowthInterpretationQuery extends GrowthReportQuery {
+    snapshot_hash: string
+}

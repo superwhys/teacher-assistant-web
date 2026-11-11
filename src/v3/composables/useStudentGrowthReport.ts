@@ -15,7 +15,6 @@ export function useStudentGrowthReport(target: GrowthReportTarget) {
     const history = shallowRef<GrowthReportHistoryItem[]>([])
     const loading = shallowRef(false)
     const saving = shallowRef(false)
-    const interpreting = shallowRef(false)
     const historyLoading = shallowRef(false)
     const error = shallowRef('')
     const historyError = shallowRef('')
@@ -35,7 +34,6 @@ export function useStudentGrowthReport(target: GrowthReportTarget) {
     }
 
     function message(cause: unknown): string {
-        if (cause instanceof Error && cause.name === 'TimeoutError') return 'AI 解读等待超时，请稍后重试'
         return cause instanceof Error ? cause.message : '请求失败，请重试'
     }
 
@@ -76,7 +74,6 @@ export function useStudentGrowthReport(target: GrowthReportTarget) {
         report.value = null
         loading.value = true
         saving.value = false
-        interpreting.value = false
         error.value = ''
         actionError.value = ''
         dataChanged.value = false
@@ -98,7 +95,7 @@ export function useStudentGrowthReport(target: GrowthReportTarget) {
 
     async function save(teacherNote: string, interpretation: string): Promise<boolean> {
         const snapshot = report.value
-        if (!snapshot || saving.value || interpreting.value || dataChanged.value) return false
+        if (!snapshot || saving.value || dataChanged.value) return false
         const requestId = revision
         const request = controller()
         saving.value = true
@@ -122,29 +119,6 @@ export function useStudentGrowthReport(target: GrowthReportTarget) {
         }
     }
 
-    async function interpret(): Promise<string | null> {
-        const snapshot = report.value
-        if (!snapshot || interpreting.value || saving.value || dataChanged.value) return null
-        const requestId = revision
-        const request = controller()
-        interpreting.value = true
-        actionError.value = ''
-        try {
-            const response = await studentGrowthApi.interpret(target.studentId, {
-                semester_id: target.semesterId, from: snapshot.from, to: snapshot.to,
-                snapshot_hash: snapshot.snapshot_hash,
-            }, request.signal)
-            if (!active || requestId !== revision || request.signal.aborted) return null
-            return response.data?.interpretation ?? ''
-        } catch (cause) {
-            if (active && requestId === revision && !request.signal.aborted) handleActionError(cause)
-            return null
-        } finally {
-            controllers.delete(request)
-            if (active && requestId === revision) interpreting.value = false
-        }
-    }
-
     onScopeDispose(() => {
         active = false
         revision += 1
@@ -155,9 +129,9 @@ export function useStudentGrowthReport(target: GrowthReportTarget) {
 
     return {
         report: shallowReadonly(report), history: shallowReadonly(history), loading: shallowReadonly(loading),
-        saving: shallowReadonly(saving), interpreting: shallowReadonly(interpreting), historyLoading: shallowReadonly(historyLoading),
+        saving: shallowReadonly(saving), historyLoading: shallowReadonly(historyLoading),
         error: shallowReadonly(error), historyError: shallowReadonly(historyError), actionError: shallowReadonly(actionError),
-        dataChanged: shallowReadonly(dataChanged), loadReport: select, loadHistory, save, interpret,
+        dataChanged: shallowReadonly(dataChanged), loadReport: select, loadHistory, save,
         retry: () => lastSelection !== null ? select(lastSelection) : Promise.resolve(),
     }
 }

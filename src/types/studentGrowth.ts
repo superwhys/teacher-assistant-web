@@ -54,7 +54,6 @@ export interface GrowthReport {
     daily: GrowthDaily[]
     rules: GrowthRule[]
     records: GrowthRecord[]
-    teacher_note: string
     interpretation: string
 }
 
@@ -66,7 +65,6 @@ export interface GrowthReportQuery {
 
 export interface SaveGrowthReportRequest extends GrowthReportQuery {
     snapshot_hash: string
-    teacher_note: string
     interpretation: string
 }
 

@@ -9,6 +9,11 @@ export interface GrowthReportTarget {
     semesterId: number
 }
 
+function withoutLegacyNote(snapshot: GrowthReport): GrowthReport {
+    const { teacher_note: _legacyNote, ...report } = snapshot as GrowthReport & { teacher_note?: unknown }
+    return report
+}
+
 /** 每个弹窗持有独立的报告请求，切换报告或关闭时取消并隔离晚到结果。 */
 export function useStudentGrowthReport(target: GrowthReportTarget) {
     const report = shallowRef<GrowthReport | null>(null)
@@ -83,7 +88,7 @@ export function useStudentGrowthReport(target: GrowthReportTarget) {
                 : await studentGrowthApi.getReport(target.studentId, { ...selection, semester_id: target.semesterId }, request.signal)
             if (active && requestId === revision) {
                 if (!response.data) throw new Error('报告暂时不可用，请重试')
-                report.value = response.data
+                report.value = withoutLegacyNote(response.data)
             }
         } catch (cause) {
             if (active && requestId === revision && !request.signal.aborted) error.value = message(cause)
@@ -93,7 +98,7 @@ export function useStudentGrowthReport(target: GrowthReportTarget) {
         }
     }
 
-    async function save(teacherNote: string, interpretation: string): Promise<boolean> {
+    async function save(interpretation: string): Promise<boolean> {
         const snapshot = report.value
         if (!snapshot || saving.value || dataChanged.value) return false
         const requestId = revision
@@ -103,11 +108,11 @@ export function useStudentGrowthReport(target: GrowthReportTarget) {
         try {
             const response = await studentGrowthApi.saveReport(target.studentId, {
                 semester_id: target.semesterId, from: snapshot.from, to: snapshot.to,
-                snapshot_hash: snapshot.snapshot_hash, teacher_note: teacherNote, interpretation,
+                snapshot_hash: snapshot.snapshot_hash, interpretation,
             }, request.signal)
             if (!active || requestId !== revision || request.signal.aborted) return false
             if (!response.data) throw new Error('保存结果未确认，请重试')
-            report.value = response.data
+            report.value = withoutLegacyNote(response.data)
             void loadHistory()
             return true
         } catch (cause) {

@@ -21,7 +21,7 @@ const formatTime = (value: string) => Number.isFinite(Date.parse(value))
     <div class="growth-statistics">
         <div v-if="report.summary.records === 0" class="growth-empty" role="status">
             <strong>本期暂无奖励或提醒记录</strong>
-            <p>没有记录不代表学生没有表现或进步，可结合课堂观察填写寄语。</p>
+            <p>没有记录不代表学生没有表现或进步，可结合课堂观察补充解读。</p>
         </div>
 
         <section aria-label="本期与上期统计">

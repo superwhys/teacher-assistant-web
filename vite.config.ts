@@ -53,7 +53,9 @@ export default defineConfig(({ mode }) => ({
           return 'assets/[name]-[hash][extname]';
         },
         manualChunks(id) {
+          if (id.includes('commonjsHelpers')) return 'vendor';
           if (id.includes('node_modules')) {
+            if (id.includes('/pdfmake/')) return 'pdf-export';
             if (id.includes('/element-plus/')) return 'element-plus';
             if (id.includes('@element-plus/icons-vue')) return 'element-plus';
             if (id.includes('/vue-router/')) return 'vue-vendor';

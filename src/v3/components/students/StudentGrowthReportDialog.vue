@@ -8,7 +8,7 @@ import { useCacheStore } from '@/stores/cacheStore'
 import { useStudentGrowthReport } from '@/v3/composables/useStudentGrowthReport'
 import { useGrowthInterpretationTask } from '@/v3/composables/useGrowthInterpretationTask'
 import { classApi } from '@/api/class'
-import { constrainGrowthPeriod, growthPeriodError, growthReportHtml, growthSemesterDate, previousGrowthPeriod, shanghaiToday } from '@/utils/studentGrowth'
+import { constrainGrowthPeriod, growthPeriodError, growthSemesterDate, previousGrowthPeriod, shanghaiToday } from '@/utils/studentGrowth'
 
 const props = defineProps<{
     modelValue: boolean
@@ -26,6 +26,8 @@ const {
     report, history, loading, saving, historyLoading, error, historyError,
     actionError, dataChanged: reportDataChanged, loadReport, loadHistory, save, retry,
 } = useStudentGrowthReport({ studentId: props.studentId, semesterId: props.semesterId })
+const exporting = shallowRef(false)
+const exportError = shallowRef('')
 const {
     task, querying: taskQuerying, submitting: taskSubmitting, pending: taskPending,
     error: taskError, otherData: taskOtherData, reportStale: taskReportStale,
@@ -33,14 +35,13 @@ const {
 } = useGrowthInterpretationTask(() => report.value, {
     userId: cache.profile?.id ?? '',
     canRead: () => props.modelValue && canViewGrowthReports.value,
-    canGenerate: () => canInterpret.value && !reportDataChanged.value && !saving.value,
+    canGenerate: () => canInterpret.value && !reportDataChanged.value && !saving.value && !exporting.value,
 })
 const dataChanged = computed(() => reportDataChanged.value || taskReportStale.value)
 const initialPeriod = previousGrowthPeriod('week')
 const preset = shallowRef<'week' | 'month' | 'custom'>('week')
 const from = shallowRef(initialPeriod.from)
 const to = shallowRef(initialPeriod.to)
-const teacherNote = shallowRef('')
 const interpretation = shallowRef('')
 const savedMessage = shallowRef('')
 const historyVisible = shallowRef(false)
@@ -53,10 +54,9 @@ const maxDate = computed(() => semesterEnd.value && semesterEnd.value < shanghai
 const periodError = computed(() => growthPeriodError({ from: from.value, to: to.value })
     || (semesterStart.value && from.value < semesterStart.value ? '开始日期不能早于当前学期开始日期' : '')
     || (to.value > maxDate.value ? '结束日期不能晚于当前学期结束日期' : ''))
-const busy = computed(() => semesterLoading.value || loading.value || saving.value)
+const busy = computed(() => semesterLoading.value || loading.value || saving.value || exporting.value)
 const displayError = computed(() => semesterError.value || error.value)
-const hasDraftChanges = computed(() => !!report.value && (teacherNote.value !== report.value.teacher_note
-    || interpretation.value !== report.value.interpretation))
+const hasDraftChanges = computed(() => !!report.value && interpretation.value !== report.value.interpretation)
 const originalExportOnly = computed(() => dataChanged.value && !!report.value?.id)
 const generatedSuggestion = computed(() => completedTask.value?.snapshot_hash === report.value?.snapshot_hash
     && completedTask.value?.interpretation !== interpretation.value ? completedTask.value : null)
@@ -71,14 +71,14 @@ const interpretationButtonLabel = computed(() => {
 })
 
 watch(report, value => {
-    teacherNote.value = value?.teacher_note ?? ''
     interpretation.value = value?.interpretation ?? ''
     savedMessage.value = ''
+    exportError.value = ''
 })
 
 watch(completedTask, value => {
     if (value && report.value && !report.value.id && value.snapshot_hash === report.value.snapshot_hash
-        && !interpretation.value.trim() && !saving.value) {
+        && !interpretation.value.trim() && !saving.value && !exporting.value) {
         interpretation.value = value.interpretation
     }
 }, { flush: 'post' })
@@ -89,6 +89,7 @@ async function applyPeriod(): Promise<void> {
 }
 
 async function selectPreset(value: 'week' | 'month' | 'custom'): Promise<void> {
+    if (busy.value) return
     preset.value = value
     if (value === 'custom') {
         periodAdjusted.value = false
@@ -113,38 +114,44 @@ async function openSaved(id: number): Promise<void> {
 }
 
 async function saveSnapshot(): Promise<void> {
-    if (dataChanged.value || !allowWrite()) return
-    if (await save(teacherNote.value, interpretation.value)) savedMessage.value = '已保存一份报告快照，可在历史中重新打开。'
+    if (busy.value || dataChanged.value || !allowWrite()) return
+    if (await save(interpretation.value)) savedMessage.value = '已保存一份报告快照，可在历史中重新打开。'
 }
 
 async function generateInterpretation(): Promise<void> {
-    if (!canInterpret.value || !allowWrite()) return
+    if (busy.value || !canInterpret.value || !allowWrite()) return
     await startInterpretationTask()
 }
 
 function useGeneratedInterpretation(): void {
-    if (!canWrite.value || saving.value || dataChanged.value || !generatedSuggestion.value) return
+    if (!canWrite.value || busy.value || dataChanged.value || !generatedSuggestion.value) return
     interpretation.value = generatedSuggestion.value.interpretation
 }
 
-function exportReport(): void {
-    if (!allowImportExport() || !report.value) return
+async function exportReport(): Promise<void> {
+    if (busy.value || !canViewGrowthReports.value || !allowImportExport() || !report.value) return
     const snapshot = originalExportOnly.value ? report.value : {
         ...report.value,
         id: hasDraftChanges.value ? 0 : report.value.id,
-        teacher_note: teacherNote.value,
         interpretation: interpretation.value,
     }
-    const file = new Blob([growthReportHtml(snapshot)], { type: 'text/html;charset=utf-8' })
-    const url = URL.createObjectURL(file)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${snapshot.student_name.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_')}_成长报告_${snapshot.from}_${snapshot.to}.html`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-    ElMessage.success('已导出离线报告，可用浏览器打开并打印为 PDF')
+    exporting.value = true
+    exportError.value = ''
+    try {
+        const { downloadGrowthReportPdf } = await import('@/utils/studentGrowthPdf')
+        if (semesterRequest.signal.aborted || !canViewGrowthReports.value || !allowImportExport()) return
+        await downloadGrowthReportPdf(snapshot, {
+            signal: semesterRequest.signal,
+            canDownload: () => canViewGrowthReports.value && allowImportExport(),
+        })
+        if (!semesterRequest.signal.aborted && canViewGrowthReports.value && canImportExport.value) ElMessage.success('已导出 PDF 报告')
+    } catch (cause) {
+        if (!semesterRequest.signal.aborted && !(cause instanceof DOMException && cause.name === 'AbortError')) {
+            exportError.value = 'PDF 导出失败，请重试。'
+        }
+    } finally {
+        exporting.value = false
+    }
 }
 
 const semesterRequest = new AbortController()
@@ -179,7 +186,7 @@ void loadHistory()
 
 <template>
     <AppDialogShell v-model="visible" :title="`${studentName}的成长报告`" eyebrow="STUDENT GROWTH"
-        description="基于课堂奖励与提醒记录，回看具体变化，留下老师的观察与鼓励。"
+        description="基于课堂奖励与提醒记录，回看具体变化，按需生成并编辑 AI 解读。"
         width="980px" height="min(900px, calc(100dvh - 40px))">
         <div class="growth-report">
             <section class="growth-period" aria-label="报告周期">
@@ -215,7 +222,7 @@ void loadHistory()
                             <strong>{{ item.from }} — {{ item.to }}</strong><span>保存于 {{ item.created_at.slice(0, 19).replace('T', ' ') }}</span>
                         </button></li>
                     </ul>
-                    <p v-else class="growth-caption">尚无已保存报告。填写寄语后可保存一份快照。</p>
+                    <p v-else class="growth-caption">尚无已保存报告。可直接保存统计快照，也可加入 AI 解读后保存。</p>
                 </div>
             </section>
 
@@ -227,16 +234,9 @@ void loadHistory()
                     <span>{{ report.from }} — {{ report.to }}</span>
                     <span>{{ report.id ? `已保存快照 #${report.id}` : '实时报告 · 尚未保存' }}</span>
                 </div>
-                <p v-if="report.id" class="growth-caption">当前展示保存时的统计数据。修改寄语后会另存一份，原报告保持不变。</p>
+                <p v-if="report.id" class="growth-caption">当前展示保存时的统计数据。修改解读后会另存一份，原报告保持不变。</p>
                 <p v-if="report.id && hasDraftChanges" class="growth-caption">当前文字尚未保存，可另存一份快照保留修改。</p>
                 <StudentGrowthStatistics :report="report" />
-
-                <section class="growth-editor" aria-label="老师寄语">
-                    <label for="growth-teacher-note">老师寄语</label>
-                    <p class="growth-caption">记录你亲眼观察到的变化，给学生一句具体的鼓励。</p>
-                    <textarea id="growth-teacher-note" v-model="teacherNote" rows="4" maxlength="4000"
-                        :disabled="!canWrite || saving" placeholder="例如：这周你主动举手分享了自己的想法，希望你继续保持这份勇气。" />
-                </section>
 
                 <section class="growth-editor" aria-label="可选 AI 解读">
                     <div class="growth-section-head">
@@ -250,7 +250,7 @@ void loadHistory()
                         <p v-if="taskReportStale" class="growth-caption">当前报告数据已变化，已停止查询旧解读任务。请刷新报告后重新生成。</p>
                         <p v-else-if="taskSubmitting" class="growth-caption">正在提交解读任务…</p>
                         <p v-else-if="submissionUncertain" class="growth-caption">上次提交结果尚未确认，请重试提交；同一次请求不会重复创建任务。</p>
-                        <p v-else-if="task?.status === 'queued'" class="growth-caption">解读任务已排队，等待后台处理。你可以继续编辑寄语或查看其他报告。</p>
+                        <p v-else-if="task?.status === 'queued'" class="growth-caption">解读任务已排队，等待后台处理。你可以继续查看其他报告。</p>
                         <p v-else-if="task?.status === 'running'" class="growth-caption">解读正在后台生成。你可以继续编辑，生成结果不会覆盖已填写的文字。</p>
                         <p v-else-if="task?.status === 'failed'" class="growth-error" role="alert">解读生成失败：{{ task.error || '请重新生成解读' }}</p>
                         <p v-else-if="completedTask" class="growth-success">{{ generatedSuggestion ? '解读已生成，可选择使用这份解读。' : '解读已生成，请结合课堂实际核对并编辑。' }}</p>
@@ -261,24 +261,25 @@ void loadHistory()
                             <button v-if="canRetryQuery" type="button" class="growth-text-button" :disabled="taskQuerying" @click="retryQuery">重试查询</button>
                         </p>
                         <button v-if="generatedSuggestion" type="button" class="secondary-button"
-                            :disabled="!canWrite || saving || dataChanged" @click="useGeneratedInterpretation">解读已生成，使用这份解读</button>
+                            :disabled="!canWrite || busy || dataChanged" @click="useGeneratedInterpretation">解读已生成，使用这份解读</button>
                     </div>
                     <textarea id="growth-interpretation" v-model="interpretation" rows="5" maxlength="4000"
-                        :disabled="!canWrite || saving" placeholder="可选择生成 AI 解读，也可以直接填写老师寄语并保存报告。" />
+                        :disabled="!canWrite || busy" placeholder="可生成 AI 解读，再结合课堂实际修改或补充；也可以留空保存报告。" />
                     <p class="growth-caption">AI 解读不推断学生能力或成绩，请老师结合课堂实际核对。保存和导出使用当前输入框中的文字。</p>
                 </section>
 
                 <p v-if="dataChanged" class="growth-error" role="alert">报告数据已变化，请点击“生成报告”重新获取数据后再保存或生成解读。{{ originalExportOnly ? '仍可导出原已保存报告，不含当前未保存的修改。' : '导出保留当前快照和生成时间。' }}</p>
                 <p v-else-if="actionError" class="growth-error" role="alert">{{ actionError }}</p>
+                <p v-if="exportError" class="growth-error" role="alert">{{ exportError }}</p>
                 <p v-if="savedMessage" class="growth-success" role="status">{{ savedMessage }}</p>
-                <p v-if="!canWrite" class="growth-caption">当前仅可查看报告，权益有效时可编辑寄语、保存和生成解读。</p>
+                <p v-if="!canWrite" class="growth-caption">当前仅可查看报告，权益有效时可编辑解读、保存和生成解读。</p>
                 <p class="growth-caption">数据生成于 {{ report.generated_at }}。记录次数反映记录情况，不等同于学生能力或成绩。</p>
             </template>
         </div>
         <template #footer>
             <div class="growth-footer">
-                <span>离线 HTML 可直接打开，或通过浏览器打印为 PDF。</span>
-                <button type="button" class="secondary-button" :disabled="!report || busy || !canImportExport" @click="exportReport">{{ originalExportOnly ? '导出原已保存报告' : '导出报告' }}</button>
+                <span>直接下载 PDF，包含报告统计和解读内容。</span>
+                <button type="button" class="secondary-button" :disabled="!report || busy || !canImportExport" @click="exportReport">{{ exporting ? '正在导出…' : originalExportOnly ? '导出原报告 PDF' : '导出 PDF' }}</button>
                 <button type="button" class="primary-button" :disabled="!report || busy || !canWrite || dataChanged" @click="saveSnapshot">{{ saving ? '正在保存…' : report?.id ? '另存一份快照' : '保存报告快照' }}</button>
             </div>
         </template>

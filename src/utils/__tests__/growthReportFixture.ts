@@ -11,6 +11,6 @@ export function growthReportFixture(overrides: Partial<GrowthReport> = {}): Grow
         daily: [{ date: '2026-11-02', awarded_count: 2, deducted_count: 1, awarded_points: 4, deducted_points: 1 }],
         rules: [{ rule_id: 3, rule_name: '积极发言', type: 1, count: 2, points: 4, previous_count: 0, previous_points: 0 }],
         records: [{ id: 8, rule_id: 3, description: '积极发言', type: 1, amount: 2, created_at: '2026-11-02T10:00:00+08:00' }],
-        teacher_note: '', interpretation: '', ...overrides,
+        interpretation: '', ...overrides,
     }
 }

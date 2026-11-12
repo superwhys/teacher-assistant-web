@@ -56,13 +56,13 @@ describe('student report request lifecycle', () => {
 
     it('loads a saved snapshot and retries a failed selection without regenerating data', async () => {
         api.getSavedReport.mockRejectedValueOnce(new Error('网络断开'))
-        api.getSavedReport.mockResolvedValueOnce(response(growthReportFixture({ id: 42, teacher_note: '原寄语' })))
+        api.getSavedReport.mockResolvedValueOnce(response({ ...growthReportFixture({ id: 42 }), teacher_note: '已废弃寄语' }))
         const state = setup()
         await state.loadReport(42)
         expect(state.error.value).toBe('网络断开')
         await state.retry()
         expect(state.report.value?.id).toBe(42)
-        expect(state.report.value?.teacher_note).toBe('原寄语')
+        expect(state.report.value).not.toHaveProperty('teacher_note')
         expect(api.getReport).not.toHaveBeenCalled()
     })
 
@@ -72,14 +72,15 @@ describe('student report request lifecycle', () => {
         api.listReports.mockRejectedValueOnce(new Error('历史暂不可用'))
         const state = setup()
         await state.loadReport(period)
-        const firstSave = state.save('继续加油', '根据记录解读')
-        expect(await state.save('重复', '')).toBe(false)
-        saving.resolve(response(growthReportFixture({ id: 43, teacher_note: '继续加油' })))
+        const firstSave = state.save('根据记录解读')
+        expect(await state.save('重复')).toBe(false)
+        saving.resolve(response({ ...growthReportFixture({ id: 43 }), teacher_note: '已废弃寄语' }))
         expect(await firstSave).toBe(true)
         expect(api.saveReport).toHaveBeenCalledExactlyOnceWith(11, {
-            semester_id: 70, ...period, snapshot_hash: 'snapshot-1', teacher_note: '继续加油', interpretation: '根据记录解读',
+            semester_id: 70, ...period, snapshot_hash: 'snapshot-1', interpretation: '根据记录解读',
         }, expect.any(AbortSignal))
         expect(state.report.value?.id).toBe(43)
+        expect(state.report.value).not.toHaveProperty('teacher_note')
         expect(state.actionError.value).toBe('')
         await vi.waitFor(() => expect(state.historyError.value).toBe('历史暂不可用'))
     })
@@ -88,10 +89,10 @@ describe('student report request lifecycle', () => {
         api.saveReport.mockRejectedValueOnce(new ApiRequestError('报告数据已变化，请刷新报告后重试', 100409))
         const state = setup()
         await state.loadReport(period)
-        expect(await state.save('未丢失的输入', '')).toBe(false)
+        expect(await state.save('未丢失的输入')).toBe(false)
         expect(state.dataChanged.value).toBe(true)
         expect(state.report.value?.snapshot_hash).toBe('snapshot-1')
-        expect(await state.save('未丢失的输入', '')).toBe(false)
+        expect(await state.save('未丢失的输入')).toBe(false)
         expect(api.saveReport).toHaveBeenCalledOnce()
         await state.loadReport(period)
         expect(state.dataChanged.value).toBe(false)

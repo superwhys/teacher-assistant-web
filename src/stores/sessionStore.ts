@@ -179,6 +179,8 @@ export const useSessionStore = defineStore('session', () => {
     function canAccess(path: string): boolean {
         if (isPlatformPath(path)) return isSuperAdmin.value && isPlatformPage(path)
         if (path === '/settings/mini-program' || path === '/subscription' || path === '/subscription/orders') return true
+        if (path.replace(/\/+$/, '') === '/students/collection-tasks' &&
+            (isPreparation.value || entitlementState.value === 'unavailable')) return false
         if (!canWrite.value && (path === '/tools/timer' || path === '/tools/rollcall')) return false
         return canAccessPath(sidebar.value, path)
     }

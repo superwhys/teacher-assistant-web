@@ -10,6 +10,7 @@ export type Wallet = {
 }
 
 export type ApplyPointsReq = {
+    semester_id?: number
     class_id?: number
     count?: number
     rule_id?: number

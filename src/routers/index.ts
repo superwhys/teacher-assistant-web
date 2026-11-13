@@ -25,6 +25,10 @@ const routes = [
         component: () => import('@/v3/views/StudentsView.vue'),
       },
       {
+        path: 'students/collection-tasks',
+        component: () => import('@/v3/views/CollectionTasksView.vue'),
+      },
+      {
         path: 'points',
         component: () => import('@/v3/views/PointsView.vue'),
       },

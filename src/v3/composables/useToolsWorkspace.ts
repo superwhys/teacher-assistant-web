@@ -1,25 +1,14 @@
 import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { mallApi } from "@/api/mall";
 import { lotteryManager, type UiLotteryPool } from "@/managers/lottery";
-import { studentManager } from "@/managers/student";
 import { useCacheStore } from "@/stores/cacheStore";
 import type { Prize } from "@/types/mall";
-import type { StudentDTO } from "@/types/student";
 import {
     createStageTimerState, isValidTimerStages, restoreStageTimer, stageTimerProgress,
     syncStageTimer, toggleStageTimer as toggleStageTimerState, type TimerStage
 } from "@/utils/stageTimer";
 import { ElMessage } from "element-plus";
 import { computed, effectScope, reactive, ref, watch } from "vue";
-
-/** 定义点名卡片学生预览结构。 */
-interface RollCallPreviewStudent {
-    availablePoints: number
-    id: number
-    initials: string
-    name: string
-    totalPoints: number
-}
 
 /** 定义计时器时长单位。 */
 type TimerPresetUnit = "minute" | "second"
@@ -449,23 +438,6 @@ export function useStageTimer() {
     }
 }
 
-/** 将接口学生数据转换为点名卡片预览结构。 */
-function normalizeStudentPreview(student: StudentDTO): RollCallPreviewStudent | null {
-    const studentId = typeof student.id === "number" ? student.id : null
-    const studentName = student.name?.trim() ?? ""
-    if (!studentId || !studentName) {
-        return null
-    }
-
-    return {
-        id: studentId,
-        name: studentName,
-        initials: studentName.slice(0, 1).toUpperCase(),
-        availablePoints: Number(student.available_points ?? 0) || 0,
-        totalPoints: Number(student.total_points ?? 0) || 0
-    }
-}
-
 /** 将秒数格式化为计时器展示文案。 */
 function formatDisplayTime(totalSeconds: number): string {
     const safeSeconds = Math.max(0, totalSeconds)
@@ -578,13 +550,10 @@ export function useSharedTimer() {
 
 /** 提供课堂工具工作区的共享状态与交互。 */
 export function useToolsWorkspace() {
-    const { allowWrite } = useBusinessAccess()
     const cacheStore = useCacheStore()
 
-    const students = ref<RollCallPreviewStudent[]>([])
     const shopPrizes = ref<Prize[]>([])
     const lotteryPools = ref<UiLotteryPool[]>([])
-    const currentRollCallStudentId = ref<number | null>(null)
     const isDataLoading = ref(false)
     const {
         applyTimerPreset,
@@ -603,54 +572,12 @@ export function useToolsWorkspace() {
     const activeClassId = computed<number | null>(() => cacheStore.getActiveClassId())
     const activeSemesterId = computed<number | null>(() => cacheStore.getActiveSemesterId())
 
-    /** 返回当前点名卡片展示的学生。 */
-    const currentRollCallStudent = computed<RollCallPreviewStudent | null>(() => {
-        if (students.value.length === 0) {
-            return null
-        }
-
-        const matchedStudent = students.value.find((item) => item.id === currentRollCallStudentId.value)
-        return matchedStudent ?? students.value[0] ?? null
-    })
-
-    /** 返回当前点名卡片展示的姓名。 */
-    const currentRollCallName = computed<string>(() => {
-        return currentRollCallStudent.value?.name ?? "准备就绪"
-    })
-
-    /** 返回当前点名卡片展示的头像简称。 */
-    const currentRollCallInitials = computed<string>(() => {
-        return currentRollCallStudent.value?.initials ?? "TA"
-    })
-
-    /** 返回当前点名卡片展示的说明文案。 */
-    const currentRollCallMeta = computed<string>(() => {
-        if (!currentRollCallStudent.value) {
-            return isDataLoading.value ? "正在加载当前班级学生数据" : "当前班级还没有可用于点名的学生"
-        }
-
-        return `当前班级共 ${students.value.length} 名学生 · 可用积分 ${currentRollCallStudent.value.availablePoints}`
-    })
-
     /** 返回启用中的抽奖奖品数量。 */
     const activeLotteryPrizeCount = computed<number>(() => {
         return lotteryPools.value.reduce((total, pool) => {
             return total + pool.prizes.filter((item) => item.enabled && item.weight > 0).length
         }, 0)
     })
-
-    /** 同步当前点名学生到可用学生列表。 */
-    function syncCurrentRollCallStudent(): void {
-        if (students.value.length === 0) {
-            currentRollCallStudentId.value = null
-            return
-        }
-
-        const hasSelectedStudent = students.value.some((item) => item.id === currentRollCallStudentId.value)
-        if (!hasSelectedStudent) {
-            currentRollCallStudentId.value = students.value[0]?.id ?? null
-        }
-    }
 
     /** 加载课堂工具页所需的业务数据。 */
     async function loadToolsPageData(): Promise<void> {
@@ -660,41 +587,19 @@ export function useToolsWorkspace() {
 
         isDataLoading.value = true
         try {
-            const classId = activeClassId.value
-            const studentTask = typeof classId === "number"
-                ? studentManager.list(classId)
-                : Promise.resolve([] as StudentDTO[])
-
-            const [studentList, shopResp, poolList] = await Promise.all([
-                studentTask,
+            const [shopResp, poolList] = await Promise.all([
                 mallApi.listPrizes(),
                 lotteryManager.listPools()
             ])
 
-            students.value = studentList
-                .map((item) => normalizeStudentPreview(item))
-                .filter((item): item is RollCallPreviewStudent => item !== null)
             shopPrizes.value = shopResp.data?.items ?? []
             lotteryPools.value = poolList
-            syncCurrentRollCallStudent()
         } catch (error) {
             console.error("加载课堂工具页数据失败", error)
             ElMessage.error("加载课堂工具数据失败")
         } finally {
             isDataLoading.value = false
         }
-    }
-
-    /** 随机抽取当前班级中的一名学生预览。 */
-    function drawRandomStudent(): void {
-        if (!allowWrite()) return
-        if (students.value.length === 0) {
-            ElMessage.warning("请先在学生管理中维护当前班级名册")
-            return
-        }
-
-        const randomIndex = Math.floor(Math.random() * students.value.length)
-        currentRollCallStudentId.value = students.value[randomIndex]?.id ?? currentRollCallStudentId.value
     }
 
     watch([activeClassId, activeSemesterId], async () => {
@@ -704,14 +609,9 @@ export function useToolsWorkspace() {
     return {
         activeLotteryPrizeCount,
         applyTimerPreset,
-        currentRollCallInitials,
-        currentRollCallMeta,
-        currentRollCallName,
-        drawRandomStudent,
         lotteryPools,
         resetTimer,
         shopPrizes,
-        students,
         timerDisplayTime,
         timerPresetOptions,
         timerPresetUnitLabel,

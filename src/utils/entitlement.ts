@@ -139,4 +139,5 @@ export function allowsEntitlementRequest(profile: UserProfile | null, method: st
         '/points/rule/group/list', '/points/rule/apply/list', '/points/ranking/class', '/points/ranking/rule',
         '/mall/prizes/list', '/mall/prizes/records', '/lottery/pools/list', '/lottery/records/list', '/dashboard/statistics',
     ]).has(path) || /^\/lottery\/pools\/[^/]+$/.test(path)
+        || ((state === 'trial_expired' || state === 'paid_expired') && /^\/class\/\d+\/collection-tasks(?:\/\d+)?$/.test(path))
 }

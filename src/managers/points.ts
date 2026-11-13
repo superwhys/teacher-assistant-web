@@ -45,6 +45,33 @@ function inferRuleSign(rule: Rule): PointsRuleSign {
     return p < 0 ? 'minus' : 'plus'
 }
 
+export function flattenRuleGroups(groups: RuleGroup[]): UiPointsRule[] {
+    const flat: UiPointsRule[] = []
+
+    for (const g of groups) {
+        const groupId = toNumber(g.id, 0)
+        const groupName = (g.name ?? '').trim()
+        const groupIcon = (g.icon ?? '').trim()
+        const rules = g.rules ?? []
+
+        for (const r of rules) {
+            const id = toNumber(r.id, 0)
+            const name = (r.name ?? '').trim()
+            if (!id || !name) continue
+            flat.push({
+                id,
+                name,
+                icon: (r.icon ?? '').trim() || groupIcon,
+                points: toNumber(r.points, 0),
+                sign: inferRuleSign(r),
+                groupId,
+                groupName,
+            })
+        }
+    }
+    return flat
+}
+
 export const pointsManager = {
     async listRuleGroups(): Promise<RuleGroup[]> {
         const resp = await pointsApi.listGroups()
@@ -135,37 +162,14 @@ export const pointsManager = {
 
     async listRulesFlat(): Promise<UiPointsRule[]> {
         const groups = await this.listRuleGroups()
-        const flat: UiPointsRule[] = []
-
-        for (const g of groups) {
-            const groupId = toNumber(g.id, 0)
-            const groupName = (g.name ?? '').trim()
-            const groupIcon = (g.icon ?? '').trim()
-            const rules = g.rules ?? []
-
-            for (const r of rules) {
-                const id = toNumber(r.id, 0)
-                const name = (r.name ?? '').trim()
-                if (!id || !name) continue
-                flat.push({
-                    id,
-                    name,
-                    icon: (r.icon ?? '').trim() || groupIcon,
-                    points: toNumber(r.points, 0),
-                    sign: inferRuleSign(r),
-                    groupId,
-                    groupName,
-                })
-            }
-        }
-        return flat
+        return flattenRuleGroups(groups)
     },
 
-    async applyRule(classId: number, ruleId: number, studentId: number, count = 1): Promise<Wallet> {
+    async applyRule(classId: number, ruleId: number, studentId: number, count = 1, semesterId?: number): Promise<Wallet> {
         if (!Number.isInteger(count) || count < 1 || count > 100) {
             throw new Error('应用次数须为 1–100 的整数')
         }
-        const resp = await pointsApi.applyRule({ class_id: classId, rule_id: ruleId, student_id: studentId, count })
+        const resp = await pointsApi.applyRule({ class_id: classId, rule_id: ruleId, student_id: studentId, count, semester_id: semesterId })
         return resp.data ?? {}
     },
 

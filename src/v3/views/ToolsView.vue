@@ -13,10 +13,8 @@
                 @open-timer="openToolRoute('/tools/timer')" @reset="resetPreviewTimer" @select-preset="applyTimerPreset"
                 @toggle="togglePreviewTimer" @toggle-unit="toggleTimerPresetUnit" @select-mode="selectTimerPreviewMode" />
 
-            <ToolsRollCallCard :disabled="students.length === 0" :initials="currentRollCallInitials"
-                :student-count="students.length" :student-meta="currentRollCallMeta" :student-name="currentRollCallName"
-                @open-roll-call="openToolRoute('/tools/rollcall')" @open-students="openToolRoute('/students')"
-                @random="drawRandomStudent" />
+            <ToolsRollCallCard @open-roll-call="openToolRoute('/tools/rollcall')"
+                @open-students="openToolRoute('/students')" />
 
             <ToolsLotteryCard :pool-count="lotteryPools.length" :prize-count="activeLotteryPrizeCount"
                 :shop-prize-count="shopPrizes.length"
@@ -40,14 +38,9 @@ const router = useRouter()
 const {
     activeLotteryPrizeCount,
     applyTimerPreset,
-    currentRollCallInitials,
-    currentRollCallMeta,
-    currentRollCallName,
-    drawRandomStudent,
     lotteryPools,
     resetTimer,
     shopPrizes,
-    students,
     timerDisplayTime,
     timerPresetOptions,
     timerPresetUnitLabel,

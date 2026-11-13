@@ -35,7 +35,7 @@ vi.mock('@/managers/student', () => ({ studentManager: {
     addStudentsToGroup: mocks.addMembers, removeStudentsFromGroup: mocks.removeMembers,
 } }))
 vi.mock('@/managers/points', () => ({ pointsManager: { applyRuleBatch: mocks.applyRuleBatch } }))
-const businessSession = reactive({ canWrite: true, canPrepare: true, canImportExport: true,
+const businessSession = reactive({ canAccess: () => true, canWrite: true, canPrepare: true, canImportExport: true,
     supportsStudentGroups: true, canManageGroups: true, canViewGrowthReports: true, groupingDisabledReason: '学生分组仅限 Pro 版，普通版提供基础学生名单。',
     entitlementMessage: '试用已到期，仅可查看' })
 vi.mock('@/stores/sessionStore', () => ({ useSessionStore: () => businessSession }))

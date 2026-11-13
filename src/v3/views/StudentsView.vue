@@ -3,6 +3,10 @@
         <PageHeader eyebrow="STUDENT MANAGEMENT" title="学生管理"
             :description="supportsStudentGroups ? `${studentCards.length} 名学生 · ${groupChips.length} 个小组` : `${studentCards.length} 名学生 · 基础学生名单`">
             <template #actions>
+                <router-link v-if="session.canAccess('/students/collection-tasks')" class="ghost-button" to="/students/collection-tasks">
+                    <i-ep-tickets aria-hidden="true" />
+                    作业收交清单
+                </router-link>
                 <button type="button" class="primary-button" :disabled="!hasActiveClass || !canPrepare" @click="openAddStudentDialog('single')">
                     <i-ep-plus aria-hidden="true" />
                     添加学生
@@ -153,6 +157,7 @@ import { ApiRequestError } from "@/types/api";
 import { pointsManager } from "@/managers/points";
 import { studentManager } from "@/managers/student";
 import { useCacheStore } from "@/stores/cacheStore";
+import { useSessionStore } from "@/stores/sessionStore";
 import { AGENT_ACTION_SUCCEEDED_EVENT, type AgentActionSucceededDetail } from "@/utils/agentEvents";
 import type { RuleGroup } from "@/types/points";
 import type {
@@ -208,6 +213,7 @@ interface StudentSearchIndexItem {
 const { canWrite, canPrepare, canImportExport, supportsStudentGroups, canManageGroups, canViewGrowthReports,
     allowWrite, allowPrepare, allowImportExport, allowGrowthReports, allowStudentGroups, allowManageGroups } = useBusinessAccess()
 const cacheStore = useCacheStore()
+const session = useSessionStore()
 const loading = ref(false)
 const students = ref<StudentDTO[]>([])
 const groups = ref<StudentGroupDTO[]>([])

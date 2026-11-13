@@ -55,6 +55,20 @@ beforeEach(() => {
 })
 afterEach(() => { disposePinia(pinia); vi.useRealTimers(); vi.unstubAllGlobals() })
 
+describe('作业收交入口', () => {
+    it.each([
+        ['not_started', ['students'], false],
+        ['permanent', ['students'], true],
+        ['permanent', ['tools'], false],
+        ['trial_expired', ['students'], true],
+    ] as const)('uses the student menu and account state (%s, %j)', async (state, routes, allowed) => {
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(state), [...routes]))
+        const session = useSessionStore()
+        await session.initialize()
+        expect(session.canAccess('/students/collection-tasks')).toBe(allowed)
+    })
+})
+
 describe('AI assistant module access', () => {
     it('denies a common account even when its role was mistakenly granted the agent menu', async () => {
         mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['agent', 'students']))

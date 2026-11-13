@@ -124,10 +124,15 @@ describe('independent commercial access', () => {
         expect(allowsEntitlementRequest(teacher, 'PUT', '/student/1', now)).toBe(false)
         expect(allowsEntitlementRequest(teacher, 'GET', '/dashboard/statistics', now)).toBe(false)
         expect(allowsEntitlementRequest(teacher, 'GET', '/class/1/semester/list', now)).toBe(true)
+        expect(allowsEntitlementRequest(teacher, 'GET', '/class/1/collection-tasks', now)).toBe(false)
     })
 
     it('allows reads and authentication at expiry while rejecting all writes and export previews', () => {
         const teacher = profile('trial_expired', '2026-11-01T00:00:00Z')
+        expect(allowsEntitlementRequest(teacher, 'GET', '/class/1/collection-tasks?semester_id=3', now)).toBe(true)
+        expect(allowsEntitlementRequest(teacher, 'GET', '/class/1/collection-tasks/9', now)).toBe(true)
+        expect(allowsEntitlementRequest(teacher, 'PUT', '/class/1/collection-tasks/9', now)).toBe(false)
+        expect(allowsEntitlementRequest(teacher, 'POST', '/class/1/collection-tasks/9/award', now)).toBe(false)
         expect(allowsEntitlementRequest(teacher, 'GET', '/points/ranking/class?class_id=1', now)).toBe(true)
         expect(allowsEntitlementRequest(teacher, 'POST', '/auth/logout', now)).toBe(true)
         expect(allowsEntitlementRequest(teacher, 'POST', '/auth/wechat/bind-email', now)).toBe(true)

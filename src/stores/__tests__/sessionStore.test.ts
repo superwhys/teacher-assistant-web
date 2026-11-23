@@ -58,7 +58,7 @@ afterEach(() => { disposePinia(pinia); vi.useRealTimers(); vi.unstubAllGlobals()
 describe('作业收交入口', () => {
     it.each([
         ['not_started', ['students'], false],
-        ['permanent', ['students'], true],
+        ['permanent', ['students'], false],
         ['permanent', ['tools'], false],
         ['trial_expired', ['students'], true],
     ] as const)('uses the student menu and account state (%s, %j)', async (state, routes, allowed) => {
@@ -66,6 +66,37 @@ describe('作业收交入口', () => {
         const session = useSessionStore()
         await session.initialize()
         expect(session.canAccess('/students/collection-tasks')).toBe(allowed)
+    })
+})
+
+describe('subscription feature scope', () => {
+    const routes = ['dashboard', 'students', 'points', 'shop', 'tools', 'settings', 'agent']
+    it.each(['paid_active', 'permanent', 'paid_expired'] as const)('limits a common %s subscription to its business routes', async state => {
+        const user = profile(state)
+        user.entitlement.paid_expires_at = new Date(Date.now() + 86400000).toISOString()
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(user, routes))
+        const session = useSessionStore()
+        await session.initialize()
+        expect(session.sidebar.map(item => item.route_key)).toEqual(['students', 'points', 'tools', 'settings'])
+        expect(session.firstRoute).toBe('/students')
+        for (const path of ['/dashboard', '/shop', '/tools/lottery/', '/students/collection-tasks', '/tools/future']) {
+            expect(session.canAccess(path), path).toBe(false)
+        }
+        for (const path of ['/students', '/points', '/tools', '/settings', '/settings/mini-program', '/subscription/orders']) {
+            expect(session.canAccess(path), path).toBe(true)
+        }
+        for (const path of ['/tools/rollcall', '/tools/timer']) {
+            expect(session.canAccess(path), path).toBe(state !== 'paid_expired')
+        }
+    })
+    it.each(['pro', 'trial', 'common'])('retains the existing menu grants for Pro and active trials (%s)', async roleCode => {
+        const user = roleCode === 'pro' ? profile() : profile('trial_active', new Date(Date.now() + 86400000).toISOString())
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(user, routes, roleCode))
+        const session = useSessionStore()
+        await session.initialize()
+        for (const path of ['/dashboard', '/shop', '/tools/lottery', '/students/collection-tasks']) {
+            expect(session.canAccess(path), path).toBe(true)
+        }
     })
 })
 
@@ -259,14 +290,15 @@ describe('commercial session permissions', () => {
         expect(mocks.startTrial).toHaveBeenCalledTimes(2)
     })
     it('keeps account binding independent of settings permission without fabricating other menus', async () => {
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['students']))
         const session = useSessionStore()
         await session.initialize()
         expect(session.canAccess('/settings/mini-program')).toBe(true)
         expect(session.canAccess('/subscription')).toBe(true)
-        expect(session.canAccess('/dashboard')).toBe(true)
+        expect(session.canAccess('/students')).toBe(true)
         expect(session.canAccess('/settings')).toBe(false)
         expect(session.canAccess('/settings/mini-program/other')).toBe(false)
-        expect(session.firstRoute).toBe('/dashboard')
+        expect(session.firstRoute).toBe('/students')
         expect(mocks.setAuth).toHaveBeenCalledWith('web-session', expect.objectContaining({ wechatBound: false }), false, null)
     })
 
@@ -436,13 +468,14 @@ describe('platform administration access', () => {
         const session = useSessionStore()
         await session.initialize()
         expect(session.isSuperAdmin).toBe(true)
-        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['dashboard']))
+        mocks.fetchSessionInit.mockResolvedValue(sessionResponse(profile(), ['dashboard', 'students']))
         await session.initialize(true)
         expect(session.isSuperAdmin).toBe(false)
         expect(session.platformSidebar).toEqual([])
         expect(session.canAccess('/platform/users')).toBe(false)
         expect(session.entitlementState).toBe('permanent')
-        expect(session.firstRoute).toBe('/dashboard')
+        expect(session.canAccess('/dashboard')).toBe(false)
+        expect(session.firstRoute).toBe('/students')
     })
 
     it('clears platform grants immediately when the account changes', async () => {

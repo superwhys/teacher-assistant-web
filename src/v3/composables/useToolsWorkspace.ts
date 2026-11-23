@@ -2,6 +2,7 @@ import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { mallApi } from "@/api/mall";
 import { lotteryManager, type UiLotteryPool } from "@/managers/lottery";
 import { useCacheStore } from "@/stores/cacheStore";
+import { useSessionStore } from "@/stores/sessionStore";
 import type { Prize } from "@/types/mall";
 import {
     createStageTimerState, isValidTimerStages, restoreStageTimer, stageTimerProgress,
@@ -554,7 +555,8 @@ export function useToolsWorkspace() {
 
     const shopPrizes = ref<Prize[]>([])
     const lotteryPools = ref<UiLotteryPool[]>([])
-    const isDataLoading = ref(false)
+    const session = useSessionStore()
+    const showLottery = computed(() => session.canAccess('/tools/lottery'))
     const {
         applyTimerPreset,
         resetTimer,
@@ -580,30 +582,23 @@ export function useToolsWorkspace() {
     })
 
     /** 加载课堂工具页所需的业务数据。 */
-    async function loadToolsPageData(): Promise<void> {
-        if (isDataLoading.value) {
-            return
-        }
+    watch([showLottery, activeClassId, activeSemesterId], async ([allowed], _previous, onCleanup) => {
+        shopPrizes.value = []
+        lotteryPools.value = []
+        if (!allowed) return
 
-        isDataLoading.value = true
+        let current = true
+        onCleanup(() => { current = false })
         try {
-            const [shopResp, poolList] = await Promise.all([
-                mallApi.listPrizes(),
-                lotteryManager.listPools()
-            ])
-
+            const [shopResp, poolList] = await Promise.all([mallApi.listPrizes(), lotteryManager.listPools()])
+            if (!current) return
             shopPrizes.value = shopResp.data?.items ?? []
             lotteryPools.value = poolList
         } catch (error) {
+            if (!current) return
             console.error("加载课堂工具页数据失败", error)
             ElMessage.error("加载课堂工具数据失败")
-        } finally {
-            isDataLoading.value = false
         }
-    }
-
-    watch([activeClassId, activeSemesterId], async () => {
-        await loadToolsPageData()
     }, { immediate: true })
 
     return {
@@ -612,6 +607,7 @@ export function useToolsWorkspace() {
         lotteryPools,
         resetTimer,
         shopPrizes,
+        showLottery,
         timerDisplayTime,
         timerPresetOptions,
         timerPresetUnitLabel,

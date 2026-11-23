@@ -1,6 +1,6 @@
 <template>
     <section class="points-content-panel">
-        <section class="panel-surface content-switch-panel">
+        <section v-if="showRanking" class="panel-surface content-switch-panel">
             <div class="panel-head">
                 <div class="content-switch-copy">
                     <h3>数据切换</h3>
@@ -242,6 +242,7 @@ interface RankingDisplayItem {
 
 /** 定义榜单与历史记录面板属性。 */
 interface PointsContentPanelProps {
+    showRanking: boolean
     activeContentTab: PointsContentTab
     activeRankingTab: "total" | "item"
     canMutatePoints: boolean

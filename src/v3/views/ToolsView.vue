@@ -1,7 +1,8 @@
 <template>
     <div class="tools-view">
-        <PageHeader eyebrow="CLASSROOM TOOLS" title="课堂工具" description="计时、点名与抽奖，掌握课堂节奏。" />
-        <section class="tools-view__grid">
+        <PageHeader eyebrow="CLASSROOM TOOLS" title="课堂工具"
+            :description="showLottery ? '计时、点名与抽奖，掌握课堂节奏。' : '计时和随机点名。'" />
+        <section class="tools-view__grid" :class="{ 'tools-view__grid--pair': !showLottery }">
             <ToolsTimerCard :display-time="timerPreview.displayTime" :is-running="timerPreview.isRunning"
                 :mode="timerMode" :show-mode-switch="true" :has-started="timerPreview.hasStarted"
                 :completed="timerPreview.completed" :progress="timerPreview.progress"
@@ -16,7 +17,7 @@
             <ToolsRollCallCard @open-roll-call="openToolRoute('/tools/rollcall')"
                 @open-students="openToolRoute('/students')" />
 
-            <ToolsLotteryCard :pool-count="lotteryPools.length" :prize-count="activeLotteryPrizeCount"
+            <ToolsLotteryCard v-if="showLottery" :pool-count="lotteryPools.length" :prize-count="activeLotteryPrizeCount"
                 :shop-prize-count="shopPrizes.length"
                 @open-lottery="openToolRoute('/tools/lottery')" @open-shop="openToolRoute('/shop')" />
         </section>
@@ -41,6 +42,7 @@ const {
     lotteryPools,
     resetTimer,
     shopPrizes,
+    showLottery,
     timerDisplayTime,
     timerPresetOptions,
     timerPresetUnitLabel,
@@ -118,6 +120,10 @@ function openToolRoute(path: string): void {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
     align-items: stretch;
+}
+
+.tools-view__grid--pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 @media (max-width: 1180px) {

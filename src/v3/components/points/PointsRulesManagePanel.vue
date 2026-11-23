@@ -5,14 +5,14 @@
                 <h3>积分规则</h3>
             </div>
             <div class="toolbar-row toolbar-row--wrap">
-                <button type="button" class="toolbar-action-button" :disabled="!canMutatePoints" @click="emit('import-items')">
+                <button type="button" class="toolbar-action-button" :disabled="!canMutatePoints || !canImportExport" @click="emit('import-items')">
                     <i-ep-upload-filled />
                     导入积分项
                 </button>
                 <button
                     type="button"
                     class="toolbar-action-button"
-                    :disabled="!canMutatePoints"
+                    :disabled="!canMutatePoints || !canImportExport"
                     @click="emit('import-records')"
                 >
                     <i-ep-upload-filled />
@@ -103,7 +103,7 @@
                     </div>
 
                     <div class="rule-items-panel__toolbar">
-                        <span class="rule-items-panel__hint">当前规则组下的积分项会直接用于课堂积分操作与单项榜展示。</span>
+                        <span class="rule-items-panel__hint">在学生管理或随机点名中选择积分项，即可给学生加分或扣分。</span>
                         <div class="rule-items-panel__toolbar-actions">
                             <div class="filter-button-group">
                                 <button
@@ -193,7 +193,7 @@
 
         <div v-else-if="!ruleGroupsError" class="empty-state">
             <strong>还没有积分规则</strong>
-            <p>可以先新增规则组，或者直接通过 Excel 批量导入积分项。</p>
+            <p v-if="canMutatePoints">{{ canImportExport ? "可以先新增规则组，或者直接通过 Excel 批量导入积分项。" : "先新增规则组，再添加加分或扣分项。" }}</p>
             <button
                 type="button"
                 class="primary-button primary-button--small"

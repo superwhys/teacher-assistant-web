@@ -7,6 +7,11 @@ export const PRO_GROUPING_MESSAGE = '学生分组仅限 Pro 版，普通版提�
 export const PRO_GROWTH_REPORT_MESSAGE = '成长报告仅限有效的 Pro 订阅账号使用。'
 export const PRO_AGENT_MESSAGE = 'AI 助手仅限 Pro 版，普通版可直接使用日常教学功能。'
 
+export function hasCommonSubscription(profile: UserProfile | null): boolean {
+    const state = profile?.entitlement?.state
+    return profile?.roleCode === 'common' && (state === 'paid_active' || state === 'paid_expired' || state === 'permanent')
+}
+
 const importExportPaths = new Set([
     '/student/create.batch', '/points/rule/record/import',
     '/points/rule/record/export/preview', '/points/rule/record/export',
@@ -29,6 +34,11 @@ export function editionRequestMessage(profile: UserProfile | null, method: strin
     if (path === '/agent' || path.startsWith('/agent/')) return PRO_AGENT_MESSAGE
     if ((method === 'POST' && studentGroupWrites.has(path))
         || (method === 'DELETE' && /^\/student\/group\/[^/]+$/.test(path))) return PRO_GROUPING_MESSAGE
+    if (hasCommonSubscription(profile)) {
+        if (/^\/(mall|lottery|dashboard)\//.test(path)
+            || /^\/class\/[^/]+\/collection-tasks(?:\/|$)/.test(path)) return '普通版不包含此功能。'
+        if (path.startsWith('/points/ranking/')) return '普通版不包含积分排行榜。'
+    }
     return isImportExportRequest(method, path) ? PRO_IMPORT_EXPORT_MESSAGE : ''
 }
 

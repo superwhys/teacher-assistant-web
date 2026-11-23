@@ -6,6 +6,7 @@ import { notifyAgentActionSucceeded } from "@/utils/agentEvents";
 
 const mocks = vi.hoisted(() => ({
     ranking: vi.fn(), records: vi.fn(), rules: vi.fn(), statistics: vi.fn(), error: vi.fn(),
+    session: { canWrite: true, canImportExport: true, isCommonSubscription: false },
     cache: {
         profile: { id: "teacher" }, classId: 7, semesterId: 70,
         getActiveClassId() { return this.classId; },
@@ -20,7 +21,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/stores/cacheStore", () => ({ useCacheStore: () => mocks.cache }));
-vi.mock("@/stores/sessionStore", () => ({ useSessionStore: () => ({ canWrite: true, canImportExport: true }) }));
+vi.mock("@/stores/sessionStore", () => ({ useSessionStore: () => mocks.session }));
 vi.mock("@/managers/student", () => ({ studentManager: { listGroups: vi.fn().mockResolvedValue([]) } }));
 vi.mock("@/managers/points", () => ({ pointsManager: {
     listRuleGroups: mocks.rules, getClassRanking: mocks.ranking, listApplyRecords: mocks.records,
@@ -101,6 +102,7 @@ function summary(value: number) {
 
 beforeEach(() => {
     vi.clearAllMocks();
+    mocks.session.isCommonSubscription = false;
     mocks.cache = reactive({ ...mocks.cache, profile: { id: "teacher" }, classId: 7, semesterId: 70 });
     const events = new EventTarget();
     vi.stubGlobal("window", {
@@ -123,6 +125,19 @@ afterEach(() => {
 });
 
 describe("agent write refresh request ordering", () => {
+    it("opens records with editable rules and ignores the cached ranking tab for common subscriptions", async () => {
+        mocks.session.isCommonSubscription = true;
+        const state = mount<PointsState>(PointsView);
+        await vi.waitFor(() => expect(state.pageLoading).toBe(false));
+        expect(state.activeContentTab).toBe("records");
+        expect(mocks.rules).toHaveBeenCalledOnce();
+        expect(mocks.records).toHaveBeenCalledOnce();
+        state.activeContentTab = "ranking";
+        await flush();
+        expect(state.activeContentTab).toBe("records");
+        expect(mocks.ranking).not.toHaveBeenCalled();
+    });
+
     it.each(["ranking", "records"] as const)("keeps successful %s data and exposes a retryable refresh error", async tab => {
         const state = mount<PointsState>(PointsView);
         await vi.waitFor(() => expect(state.pageLoading).toBe(false));

@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/api/mall', () => ({ mallApi: { listPrizes: mocks.listPrizes } }))
 vi.mock('@/managers/lottery', () => ({ lotteryManager: { listPools: mocks.listPools } }))
 vi.mock('@/managers/student', () => ({ studentManager: { list: mocks.listStudents } }))
-const businessSession = reactive({ canWrite: true, canPrepare: true, canImportExport: true, entitlementMessage: '试用已到期，仅可查看' })
+const businessSession = reactive({ canAccess: (_path: string): boolean => true, canWrite: true, canPrepare: true, canImportExport: true, entitlementMessage: '试用已到期，仅可查看' })
 vi.mock('@/stores/sessionStore', () => ({ useSessionStore: () => businessSession }))
 vi.mock('@/stores/cacheStore', () => ({ useCacheStore: () => ({
     getActiveClassId: () => null,
@@ -72,6 +72,7 @@ async function mountTools() {
 
 beforeEach(() => {
     Object.assign(businessSession, { canWrite: true, canPrepare: true, canImportExport: true })
+    businessSession.canAccess = () => true
     vi.resetAllMocks()
     vi.resetModules()
     vi.useFakeTimers()
@@ -106,6 +107,17 @@ afterEach(() => {
 })
 
 describe('ToolsView timer preview', () => {
+    it('skips lottery and shop requests when only timer and roll call are available', async () => {
+        businessSession.canAccess = path => path !== '/tools/lottery'
+        await mountTools()
+        expect(mocks.listPools).not.toHaveBeenCalled()
+        expect(mocks.listPrizes).not.toHaveBeenCalled()
+        businessSession.canAccess = () => true
+        await nextTick()
+        expect(mocks.listPools).toHaveBeenCalledOnce()
+        expect(mocks.listPrizes).toHaveBeenCalledOnce()
+    })
+
     it('shows the active multi-stage flow when returning from the full timer page', async () => {
         const flow = (await import('@/v3/composables/useToolsWorkspace')).useStageTimer()
         flow.configureStages(shortStages)

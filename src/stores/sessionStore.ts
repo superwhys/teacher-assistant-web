@@ -6,11 +6,13 @@ import { userApi } from '@/api/user'
 import { useCacheStore } from '@/stores/cacheStore'
 import type { SessionRole, SidebarMenu } from '@/types/session'
 import { ApiRequestError, isApiRequestError } from '@/types/api'
-import { canAccessPath, firstAllowedPath, normalizeSidebar } from '@/utils/menuAccess'
+import { canAccessPath, firstAllowedPath, normalizeSidebar, routeKeyForPath } from '@/utils/menuAccess'
 import { computeTrialFromProfile, normalizeUserProfile } from '@/utils/userProfile'
-import { effectiveEntitlementState, entitlementDeadline, entitlementMessage as describeEntitlement, hasCommercialAccess, hasGrowthReportAccess, PRO_GROUPING_MESSAGE, PRO_IMPORT_EXPORT_MESSAGE } from '@/utils/entitlement'
+import { effectiveEntitlementState, entitlementDeadline, entitlementMessage as describeEntitlement, hasCommercialAccess, hasCommonSubscription, hasGrowthReportAccess, PRO_GROUPING_MESSAGE, PRO_IMPORT_EXPORT_MESSAGE } from '@/utils/entitlement'
 import { ENTITLEMENT_REJECTED_EVENT } from '@/utils/entitlementEvents'
 import { isPlatformPage, isPlatformPath, PLATFORM_MENUS } from '@/utils/platformAccess'
+
+const commonRoutes = new Set(['students', 'points', 'tools', 'tools/timer', 'tools/rollcall', 'settings'])
 
 export const useSessionStore = defineStore('session', () => {
     const cacheStore = useCacheStore()
@@ -30,6 +32,7 @@ export const useSessionStore = defineStore('session', () => {
     const entitlementState = computed(() => effectiveEntitlementState(cacheStore.profile, now.value))
     const trialExpiresAt = computed(() => entitlementDeadline(cacheStore.profile?.entitlement?.trial_expires_at))
     const paidExpiresAt = computed(() => entitlementDeadline(cacheStore.profile?.entitlement?.paid_expires_at))
+    const isCommonSubscription = computed(() => hasCommonSubscription(cacheStore.profile))
     const canWrite = computed(() => hasCommercialAccess(entitlementState.value))
     const canPrepare = computed(() => canWrite.value || entitlementState.value === 'not_started')
     const supportsStudentGroups = computed(() => cacheStore.profile?.roleCode !== 'common')
@@ -47,12 +50,17 @@ export const useSessionStore = defineStore('session', () => {
         && allSidebar.value.some(menu => menu.code === 'agent'))
     const isSuperAdmin = computed(() => initialized.value && !!cacheStore.token && role.value?.code === 'admin')
     const platformSidebar = computed(() => isSuperAdmin.value ? PLATFORM_MENUS : [])
+    function allowsBusinessRoute(routeKey: string): boolean {
+        if (isCommonSubscription.value && !commonRoutes.has(routeKey)) return false
+        if (routeKey === 'students/collection-tasks') return !isPreparation.value && entitlementState.value !== 'unavailable'
+        return canWrite.value || (routeKey !== 'tools/timer' && routeKey !== 'tools/rollcall')
+    }
     const sidebar = computed(() => {
         const menus = allSidebar.value.filter(menu => menu.code !== 'agent' && !isPlatformPath(menu.route_key))
         if (isPreparation.value || entitlementState.value === 'unavailable') {
             return menus.filter(menu => menu.route_key === 'students' || menu.route_key === 'settings')
         }
-        return menus
+        return isCommonSubscription.value ? menus.filter(menu => allowsBusinessRoute(menu.route_key)) : menus
     })
     const firstRoute = computed(() => firstAllowedPath(sidebar.value) || firstAllowedPath([...platformSidebar.value]))
 
@@ -178,11 +186,9 @@ export const useSessionStore = defineStore('session', () => {
 
     function canAccess(path: string): boolean {
         if (isPlatformPath(path)) return isSuperAdmin.value && isPlatformPage(path)
-        if (path === '/settings/mini-program' || path === '/subscription' || path === '/subscription/orders') return true
-        if (path.replace(/\/+$/, '') === '/students/collection-tasks' &&
-            (isPreparation.value || entitlementState.value === 'unavailable')) return false
-        if (!canWrite.value && (path === '/tools/timer' || path === '/tools/rollcall')) return false
-        return canAccessPath(sidebar.value, path)
+        const routeKey = routeKeyForPath(path)
+        if (routeKey === 'settings/mini-program' || routeKey === 'subscription' || routeKey === 'subscription/orders') return true
+        return allowsBusinessRoute(routeKey) && canAccessPath(sidebar.value, path)
     }
 
     function refreshEntitlement(event?: Event): void {
@@ -217,7 +223,7 @@ export const useSessionStore = defineStore('session', () => {
 
     return {
         sidebar, platformSidebar, isSuperAdmin, role, initialized, loading, error, firstRoute, initialize, refreshAfterMutation, reset, canAccess, canUseAgent,
-        entitlementState, trialExpiresAt, paidExpiresAt, canWrite, canPrepare, canImportExport, canViewGrowthReports,
+        entitlementState, isCommonSubscription, trialExpiresAt, paidExpiresAt, canWrite, canPrepare, canImportExport, canViewGrowthReports,
         isPreparation, isReadOnly, entitlementMessage, importExportDisabledReason, supportsStudentGroups, canManageGroups, groupingDisabledReason, startingTrial, startTrial,
     }
 })

@@ -1497,7 +1497,7 @@ onMounted(() => {
         height: 66px;
         padding: 6px;
         display: grid;
-        grid-template-columns: repeat(6, minmax(0, 1fr));
+        grid-template-columns: repeat(v-bind('navItems.length'), minmax(0, 1fr));
         gap: 2px;
         border: 1px solid var(--ta-line);
         border-radius: 10px;

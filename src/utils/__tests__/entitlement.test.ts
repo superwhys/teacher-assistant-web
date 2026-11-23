@@ -19,6 +19,24 @@ const growthRequests = [
 ]
 
 describe('independent commercial access', () => {
+    it('permits recording points but blocks other modules for a common subscription', () => {
+        const teacher = profile('paid_active', '2026-12-01T00:00:00Z')
+        for (const [method, path] of [
+            ['GET', '/dashboard/statistics'], ['GET', '/mall/prizes/list'], ['POST', '/mall/prizes/exchange'],
+            ['GET', '/lottery/records/list'], ['GET', '/class/3/collection-tasks?semester_id=7'],
+            ['PUT', '/class/3/collection-tasks/9'], ['GET', '/points/ranking/class'],
+        ] as const) {
+            expect(allowsEntitlementRequest(teacher, method, path, now), path).toBe(false)
+            expect(allowsEntitlementRequest({ ...teacher, roleCode: 'pro' }, method, path, now), path).toBe(true)
+            expect(allowsEntitlementRequest(profile('trial_active', '2026-12-01T00:00:00Z'), method, path, now), path).toBe(true)
+        }
+        for (const [method, path] of [
+            ['GET', '/points/rule/group/list'], ['POST', '/points/rule/apply'], ['GET', '/points/rule/apply/list'],
+            ['POST', '/points/rule/apply/undo/2'], ['PUT', '/student/2'],
+            ['POST', '/points/rule/group/create'], ['PUT', '/points/rule/group/3'], ['DELETE', '/points/rule/group/3'],
+            ['POST', '/points/rule/create'], ['PUT', '/points/rule/12'], ['DELETE', '/points/rule/12'],
+        ] as const) expect(allowsEntitlementRequest(teacher, method, path, now), path).toBe(true)
+    })
     it.each(['common', 'trial', 'custom', 'pro'])('rejects growth report reads and writes for inactive or non-Pro %s accounts', roleCode => {
         const states = roleCode === 'pro' ? ['not_started', 'trial_active', 'trial_expired', 'paid_expired'] as const
             : ['not_started', 'trial_active', 'trial_expired', 'paid_active', 'paid_expired', 'permanent'] as const

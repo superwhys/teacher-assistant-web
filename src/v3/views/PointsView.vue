@@ -1,6 +1,7 @@
 <template>
     <div class="points-view">
-        <PageHeader eyebrow="POINTS CENTER" title="积分中心" description="管理课堂积分规则，查看积分记录与学生排行。" />
+        <PageHeader eyebrow="POINTS CENTER" title="积分中心"
+            :description="session.isCommonSubscription ? '管理课堂积分规则，查看和撤回积分记录。' : '管理课堂积分规则，查看积分记录与学生排行。'" />
         <section class="metrics-grid">
             <article class="metric-card metric-card--blue">
                 <span>积分规则组</span>
@@ -35,7 +36,7 @@
             @import-items="handleOpenImportItemsDialog" @import-records="handleOpenImportRecordsDialog"
             @open-export="handleOpenExportDialog" @update:selected-rule-group-id="selectedRuleGroupId = $event" />
 
-        <PointsContentPanel :active-content-tab="activeContentTab" :active-ranking-tab="activeRankingTab"
+        <PointsContentPanel :show-ranking="!session.isCommonSubscription" :active-content-tab="activeContentTab" :active-ranking-tab="activeRankingTab"
             :can-mutate-points="canMutatePoints" :can-undo-record="canUndoRecord"
             :get-record-source-label="getRecordSourceLabel" :get-record-time-label="getRecordTimeLabel"
             :history-keyword="historyKeyword" :history-page="historyPage" :history-page-count="historyPageCount"
@@ -77,6 +78,7 @@ import { useBusinessAccess } from "@/composables/useBusinessAccess";
 import { pointsManager } from "@/managers/points";
 import { studentManager } from "@/managers/student";
 import { useCacheStore } from "@/stores/cacheStore";
+import { useSessionStore } from "@/stores/sessionStore";
 import type {
     RankingTimeRange,
     Record as PointsApplyRecord,
@@ -157,6 +159,7 @@ interface RuleFormSubmitPayload {
 const { canWrite, canImportExport, allowWrite, allowImportExport } = useBusinessAccess()
 const cacheStore = useCacheStore()
 const route = useRoute()
+const session = useSessionStore()
 
 const studentGroups = ref<StudentGroupDTO[]>([])
 const ruleGroups = ref<RuleGroup[]>([])
@@ -196,7 +199,11 @@ const deleteDialogVisible = ref(false)
 
 const selectedRuleGroupId = ref<number>(0)
 const selectedRankingRuleId = ref<number>(0)
-const activeContentTab = ref<PointsContentTab>(route.query.tab === "records" ? "records" : cacheStore.getPointsContentTab())
+const selectedContentTab = ref<PointsContentTab>(route.query.tab === "records" ? "records" : cacheStore.getPointsContentTab())
+const activeContentTab = computed<PointsContentTab>({
+    get: () => session.isCommonSubscription ? "records" : selectedContentTab.value,
+    set: (tab) => { if (!session.isCommonSubscription) selectedContentTab.value = tab }
+})
 const activeRankingTab = ref<"total" | "item">(cacheStore.getPointsRankingTab())
 const rankingTimeRange = ref<RankingTimeRange>(cacheStore.getPointsRankingTimeRange())
 const historyKeyword = ref("")

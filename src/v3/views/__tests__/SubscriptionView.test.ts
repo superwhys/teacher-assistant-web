@@ -177,15 +177,15 @@ describe('SubscriptionView', () => {
         ])
         expect(view.editionGroups[1]?.highlights).toEqual(proHighlights)
         expect(view.editionGroups[0]?.features.map(feature => feature.title)).toEqual([
-            '学生维护', '学生分组', 'AI 助手', '日常课堂功能',
+            '学生管理', '积分规则与记录', '课堂工具', '积分商城',
         ])
         expect(view.editionGroups[1]?.features.map(feature => feature.title)).toEqual([
-            '学生维护', '学生分组', 'AI 助手', '日常课堂功能',
+            '学生管理', '积分管理', '全部课堂工具', '积分商城', 'AI 助手',
         ])
-        expect(view.editionGroups[0]?.features.filter(feature => feature.included === false).map(feature => feature.title)).toEqual(['学生分组', 'AI 助手'])
+        expect(view.editionGroups[0]?.features.filter(feature => feature.included === false).map(feature => feature.title)).toEqual(['积分商城'])
         expect(view.editionGroups[1]?.features.every(feature => feature.included !== false)).toBe(true)
-        expect(view.editionGroups[0]?.features.find(feature => feature.title === '学生维护')?.description).toBe('逐条添加、编辑学生')
-        expect(view.editionGroups[1]?.features.find(feature => feature.title === '学生分组')?.description).toBe('手动分组、随机自动分组；分组导入在网页版使用')
+        expect(view.editionGroups[0]?.features.find(feature => feature.title === '课堂工具')?.description).toContain('计时和随机点名')
+        expect(view.editionGroups[1]?.features.find(feature => feature.title === '全部课堂工具')?.description).toContain('抽奖')
         expect(view.editionGroups[0]?.activePlan.price_fen).toBe(190)
         view.selectEditionPlan('common', 'common_year')
         expect(view.editionGroups[0]?.activePlan.id).toBe('common_year')

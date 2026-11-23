@@ -18,7 +18,7 @@
                     @click="emit('open-rename-class')">修改班级名称</button>
                 <button type="button" class="ghost-button" :disabled="!canWrite || !activeClassId || classesLoading"
                     @click="emit('open-next-semester')">切换到新学期</button>
-                <button type="button" class="ghost-button" @click="emit('go-dashboard')">返回工作台</button>
+                <button v-if="showDashboard" type="button" class="ghost-button" @click="emit('go-dashboard')">返回工作台</button>
             </div>
         </div>
     </article>
@@ -28,6 +28,7 @@
 /** 定义班级状态卡片属性。 */
 interface SettingsClassStatusCardProps {
     canWrite: boolean
+    showDashboard: boolean
     activeClassId: number | null
     classesLoading: boolean
     currentClassName: string

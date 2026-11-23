@@ -13,7 +13,7 @@
                 <SettingsMiniProgramCard :user-id="userId" :wechat-bound="profile?.wechatBound" @bound="onMiniProgramBound" />
 
                 <SettingsClassStatusCard :active-class-id="activeClassId" :classes-loading="classesLoading"
-                    :can-write="sessionStore.canWrite"
+                    :can-write="sessionStore.canWrite" :show-dashboard="sessionStore.canAccess('/dashboard')"
                     :current-class-name="currentClassName" :current-semester-name="currentSemesterName"
                     :semester-notice-text="semesterNoticeText" :semester-permission-text="semesterPermissionText"
                     :semester-permission-tone-class="semesterPermissionToneClass"
@@ -173,7 +173,7 @@ const semesterPermissionText = computed(() => {
 const semesterNoticeText = computed(() => {
     if (!sessionStore.canWrite) return sessionStore.entitlementMessage
     return currentSemesterStatus.value === 2
-        ? "当前学期已归档，仅支持查看历史记录和排行榜。"
+        ? "当前学期已归档，可以查看历史积分记录。"
         : "当前学期状态正常。"
 })
 

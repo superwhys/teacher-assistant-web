@@ -50,7 +50,7 @@
                     </ul>
 
                     <div class="subscription-edition__contents">
-                        <p class="subscription-edition__caption">角色功能</p>
+                        <p class="subscription-edition__caption">{{ edition.id === 'pro' ? '包含全部教学功能' : '普通版使用范围' }}</p>
                         <ul class="subscription-features">
                             <li v-for="feature in edition.features" :key="feature.title"
                                 :class="{ 'subscription-features__item--excluded': feature.included === false }">
@@ -163,10 +163,10 @@ const editionDetails: { id: EditionID; name: string; label: string; highlights: 
         { title: '1 个班级', description: '最多创建 1 个班级' },
         { title: '不支持批量导入导出', description: '可逐条维护数据' },
     ], features: [
-        { title: '学生维护', description: '逐条添加、编辑学生' },
-        { title: '学生分组', description: '基础学生名单，不提供分组操作', included: false },
-        { title: 'AI 助手', description: '不提供', included: false },
-        { title: '日常课堂功能', description: '积分评分、排行榜、商城兑换、计时、点名、抽奖' },
+        { title: '学生管理', description: '逐个添加、编辑学生，使用积分规则加减分' },
+        { title: '积分规则与记录', description: '管理评分规则，查询和撤回积分记录' },
+        { title: '课堂工具', description: '计时和随机点名，点名后可加减分' },
+        { title: '积分商城', description: '普通版不含商品管理和兑换', included: false },
     ], plans: [
         { id: 'common_month', name: '普通版月卡', days: 30, price_fen: 190 },
         { id: 'common_year', name: '普通版年卡', days: 365, price_fen: 1290 },
@@ -175,10 +175,11 @@ const editionDetails: { id: EditionID; name: string; label: string; highlights: 
         { title: '多班级管理', description: '支持创建和管理多个班级' },
         { title: '批量导入导出', description: '名单、评分规则、积分记录等批量处理' },
     ], features: [
-        { title: '学生维护', description: '逐条维护、批量添加；Excel 导入在网页版使用' },
-        { title: '学生分组', description: '手动分组、随机自动分组；分组导入在网页版使用' },
-        { title: 'AI 助手', description: '在网页版查学生和积分、汇总记录，确认后加分或兑换奖品' },
-        { title: '日常课堂功能', description: '积分评分、排行榜、商城兑换、计时、点名、抽奖' },
+        { title: '学生管理', description: '支持分组、作业收交清单和学生成长报告' },
+        { title: '积分管理', description: '积分规则、评分记录、排行榜和班级总览' },
+        { title: '全部课堂工具', description: '计时、随机点名和抽奖' },
+        { title: '积分商城', description: '管理奖品、兑换和兑换记录' },
+        { title: 'AI 助手', description: '在网页版查询课堂数据，确认后可评分或兑换奖品' },
     ], plans: [
         { id: 'pro_month', name: 'Pro 月卡', days: 30, price_fen: 390 },
         { id: 'pro_year', name: 'Pro 年卡', days: 365, price_fen: 1990 },
